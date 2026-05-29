@@ -55,9 +55,8 @@ function BotCard({ bot }) {
           查看
         </button>
         <button
-          disabled
-          title="待開發"
-          className="flex items-center gap-1 px-3 py-1 text-xs border border-slate-200 text-slate-400 rounded cursor-not-allowed"
+          onClick={() => navigate('/agent/' + bot.id)}
+          className="flex items-center gap-1 px-3 py-1 text-xs border border-slate-300 text-slate-600 rounded hover:bg-slate-100 transition-colors"
         >
           <Settings size={11} />
           設定

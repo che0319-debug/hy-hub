@@ -12,6 +12,7 @@ import LineXiaoyin from './pages/LineXiaoyin'
 import Line950157 from './pages/Line950157'
 import LineSam from './pages/LineSam'
 import Settings from './pages/Settings'
+import AgentConfig from './pages/AgentConfig'
 
 createRoot(document.getElementById('root')).render(
   <StrictMode>
@@ -26,6 +27,7 @@ createRoot(document.getElementById('root')).render(
           <Route path="line/xiaoyin" element={<LineXiaoyin />} />
           <Route path="line/950157" element={<Line950157 />} />
           <Route path="line/sam" element={<LineSam />} />
+          <Route path="agent/:id" element={<AgentConfig />} />
           <Route path="settings" element={<Settings />} />
         </Route>
       </Routes>

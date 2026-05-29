@@ -16,11 +16,52 @@ export const homeSummary = {
 
 // Bot 團隊
 // status: "running"（執行中）| "idle"（閒置）| "collab"（協作中）| "error"（出錯）
+// agent 配置欄位：mock·待接 Claude Managed Agent API 核對（決策 #15）
 export const bots = [
-  { id: "hy",       name: "HY",     role: "個人核心・總管", username: "@HY_Host_Bot",     todayDone: 1, cost: 0.05, status: "idle" },
-  { id: "xiaoyin",  name: "小因",   role: "家庭守護者",     username: "@HY_MyFamily_bot", todayDone: 0, cost: 0.00, status: "idle" },
-  { id: "950157",   name: "950157", role: "ITRI 工作分身",  username: "",                 todayDone: 2, cost: 0.18, status: "running" },
-  { id: "sam",      name: "Sam",    role: "副業統籌",       username: "@HY_Sam_bot",      todayDone: 0, cost: 0.19, status: "idle" }
+  {
+    id: "hy", name: "HY", role: "個人核心・總管", username: "@HY_Host_Bot",
+    todayDone: 1, cost: 0.05, status: "idle",
+    model: "Groq llama-3.3-70b",
+    systemPrompt: "個人核心助理，負責個人目標追蹤、行程管理、OKR 回顧與行政雜務協調。（mock）",
+    tools: ["milestone add/delete/update_due"],
+    mcpServers: [],
+    skills: [],
+    memory: { scope: "personal", store: "personal_data.json" },
+    triggers: ["07:00 個人日報", "09:00 executor", "21:10 history snapshot"],
+  },
+  {
+    id: "xiaoyin", name: "小因", role: "家庭守護者", username: "@HY_MyFamily_bot",
+    todayDone: 0, cost: 0.00, status: "idle",
+    model: "Gemini 2.5 Flash",
+    systemPrompt: "家庭守護助理，負責家庭任務追蹤、居家事務排程與家庭週報產出。（mock）",
+    tools: ["milestone CRUD", "採訪框架"],
+    mcpServers: [],
+    skills: [],
+    memory: { scope: "family", store: "family_data.json" },
+    triggers: ["09:00 executor", "21:05 history snapshot", "週日 07:30 家庭週包"],
+  },
+  {
+    id: "950157", name: "950157", role: "ITRI 工作分身", username: "",
+    todayDone: 2, cost: 0.18, status: "running",
+    model: "Gemini 2.5 (primary) + Groq llama-3.3-70b (fallback)",
+    systemPrompt: "ITRI 工作分身，協助專案管理、行事曆解析、週報產出與多 executor 任務委派。（mock）",
+    tools: ["milestone CRUD", "auto-scheduler", "行事曆截圖匯入", "executor 1/2/3 委派"],
+    mcpServers: [],
+    skills: [],
+    memory: { scope: "950157", store: "progress_data.json" },
+    triggers: ["06:25 排程器", "06:30 早安日報", "17:00 下班日報", "09:00 executor", "22:00 Cal 提醒", "週二 11:50 科技週報"],
+  },
+  {
+    id: "sam", name: "Sam", role: "副業統籌", username: "@HY_Sam_bot",
+    todayDone: 0, cost: 0.19, status: "idle",
+    model: "有 LLM（型號待確認）",
+    systemPrompt: "副業統籌助理，負責投資組合追蹤、接案排程、LLM 策略建議與月度結算。（mock）",
+    tools: ["milestone add/delete", "executor 1/2/3", "LLM 策略建議", "monthly rollover"],
+    mcpServers: [],
+    skills: [],
+    memory: { scope: "sam", store: "sam_data.json + business_ops" },
+    triggers: ["06:00 monthly rollover", "09:30 milestone 提醒", "21:15 history snapshot"],
+  },
 ];
 
 // 派工 Session 清單

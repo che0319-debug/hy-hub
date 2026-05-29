@@ -8,7 +8,9 @@
       "Bash(npm run *)",
       "Bash(curl -s http://localhost:5173/)",
       "Bash(node *)",
-      "Bash(pkill -f \"vite\")"
+      "Bash(pkill -f \"vite\")",
+      "Bash(git rm *)",
+      "Bash(git commit *)"
     ]
   }
 }
