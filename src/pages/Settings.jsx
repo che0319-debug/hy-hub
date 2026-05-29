@@ -1,8 +1,211 @@
+import { Wrench, Clock, Cpu, Sparkles, Database, Server, ExternalLink } from 'lucide-react'
+import { bots } from '../mock/data'
+
+// 彙整：tool → 使用的 agent name 清單
+const toolMap = {}
+bots.forEach(b => (b.tools || []).forEach(t => {
+  (toolMap[t] ||= []).push(b.name)
+}))
+
+// 彙整：[ { trigger, agentName } ]，依 agent 順序排列
+const allTriggers = bots.flatMap(b =>
+  (b.triggers || []).map(t => ({ trigger: t, agentName: b.name }))
+)
+
+// 彙整：model → 使用的 agent name 清單（去重）
+const modelMap = {}
+bots.forEach(b => {
+  (modelMap[b.model] ||= []).push(b.name)
+})
+
+// ─── 共用小元件 ────────────────────────────────────────────────
+
+function Badge({ text, color = 'bg-slate-100 text-slate-500' }) {
+  return (
+    <span className={`inline-block px-2 py-0.5 rounded-full text-xs font-medium ${color}`}>
+      {text}
+    </span>
+  )
+}
+
+function Section({ icon: Icon, title, badge, children }) {
+  return (
+    <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-5">
+      <div className="flex items-start justify-between mb-4">
+        <div className="flex items-center gap-2">
+          <Icon size={14} className="text-slate-400 flex-shrink-0 mt-0.5" />
+          <p className="text-sm font-semibold text-slate-700">{title}</p>
+        </div>
+        <Badge text={badge} />
+      </div>
+      {children}
+    </div>
+  )
+}
+
+function AgentTags({ names }) {
+  return (
+    <span className="flex flex-wrap gap-1 ml-1">
+      {names.map(n => (
+        <span key={n} className="bg-blue-50 text-blue-600 text-xs px-1.5 py-0.5 rounded">
+          {n}
+        </span>
+      ))}
+    </span>
+  )
+}
+
+// ─── 六區塊 ────────────────────────────────────────────────────
+
+function ToolRegistry() {
+  return (
+    <Section icon={Wrench} title="Tool 註冊" badge="彙整自各 agent">
+      <ul className="space-y-2">
+        {Object.entries(toolMap).map(([tool, agents]) => (
+          <li key={tool} className="flex items-start gap-2 text-xs">
+            <span className="text-slate-300 mt-0.5 flex-shrink-0">·</span>
+            <span className="text-slate-700 flex-shrink-0">{tool}</span>
+            <AgentTags names={agents} />
+          </li>
+        ))}
+      </ul>
+    </Section>
+  )
+}
+
+function CronTable() {
+  return (
+    <Section icon={Clock} title="cron 總表" badge="彙整自各 agent · 外連管理後台">
+      <div className="overflow-x-auto">
+        <table className="w-full text-xs">
+          <thead>
+            <tr className="border-b border-slate-100 text-slate-400 text-left">
+              <th className="pb-2 font-medium w-36">Agent</th>
+              <th className="pb-2 font-medium">排程</th>
+            </tr>
+          </thead>
+          <tbody>
+            {allTriggers.map(({ trigger, agentName }, i) => (
+              <tr key={i} className="border-b border-slate-50">
+                <td className="py-1.5 text-blue-600 font-medium">{agentName}</td>
+                <td className="py-1.5 text-slate-700">{trigger}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+      <div className="flex flex-wrap gap-2 mt-4 pt-3 border-t border-slate-100 items-center">
+        <a
+          href="https://cron-job.org"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="flex items-center gap-1 px-3 py-1 text-xs border border-slate-300 text-slate-600 rounded hover:bg-slate-100 transition-colors"
+        >
+          <ExternalLink size={11} />
+          cron-job.org
+        </a>
+        <a
+          href="https://dashboard.render.com"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="flex items-center gap-1 px-3 py-1 text-xs border border-slate-300 text-slate-600 rounded hover:bg-slate-100 transition-colors"
+        >
+          <ExternalLink size={11} />
+          Render Logs
+        </a>
+        <span className="text-xs text-slate-400">（深連結待 HY 補）</span>
+      </div>
+    </Section>
+  )
+}
+
+function ModelList() {
+  return (
+    <Section icon={Cpu} title="模型清單" badge="現況模型 · 目標態待拍板">
+      <ul className="space-y-2 mb-4">
+        {Object.entries(modelMap).map(([model, agents]) => (
+          <li key={model} className="flex items-start gap-2 text-xs">
+            <span className="text-slate-300 mt-0.5 flex-shrink-0">·</span>
+            <span className="text-slate-700 flex-shrink-0">{model}</span>
+            <AgentTags names={agents} />
+          </li>
+        ))}
+      </ul>
+      <div className="pt-3 border-t border-slate-100 flex gap-6">
+        <div>
+          <p className="text-xs text-slate-400">金鑰管理</p>
+          <p className="text-xs text-slate-400 italic">待接後端</p>
+        </div>
+        <div>
+          <p className="text-xs text-slate-400">用量統計</p>
+          <p className="text-xs text-slate-400 italic">待接後端</p>
+        </div>
+      </div>
+    </Section>
+  )
+}
+
+function SkillLibrary() {
+  return (
+    <Section icon={Sparkles} title="Skill 庫" badge="藍圖目標 · 尚未實作">
+      <p className="text-xs text-slate-400">
+        （尚無）藍圖 §5 目標能力，系統尚未實作 skill 熱插拔。
+      </p>
+    </Section>
+  )
+}
+
+function McpConnectors() {
+  return (
+    <Section icon={Database} title="MCP 連接器" badge="藍圖目標 · 尚未實作">
+      <p className="text-xs text-slate-400">
+        （尚無）目標態對接外部系統用，現況未實作。
+      </p>
+    </Section>
+  )
+}
+
+function EnvDeploy() {
+  return (
+    <Section icon={Server} title="環境 / 部署" badge="現況 Render · 移植目標 Zeabur">
+      <div className="space-y-2 text-xs">
+        <div>
+          <p className="text-slate-400 mb-0.5">現況</p>
+          <p className="text-slate-700">Bot 後端：Render（telegram-bot-t82n.onrender.com）</p>
+          <p className="text-slate-700">Hub 前端：GitHub Pages（目標部署位置）</p>
+        </div>
+        <div className="pt-2 border-t border-slate-100">
+          <p className="text-slate-400 mb-0.5">移植目標</p>
+          <p className="text-slate-700">Zeabur — service 編排、Redis / Postgres+pgvector</p>
+          <p className="text-slate-400 italic mt-0.5">（移植規劃中，尚未遷移）</p>
+        </div>
+      </div>
+    </Section>
+  )
+}
+
+// ─── 頁面主體 ──────────────────────────────────────────────────
+
 export default function Settings() {
   return (
-    <div className="bg-white rounded-xl p-6 border border-slate-200 shadow-sm">
-      <h1 className="text-xl font-semibold text-slate-800 mb-2">設定</h1>
-      <p className="text-slate-400">（此頁內容後續批次實作）</p>
+    <div>
+      <div className="flex items-center gap-2 mb-1">
+        <span className="inline-block w-3 h-3 rounded-full bg-slate-500" />
+        <h1 className="text-xl font-bold text-slate-800">設定 · 平台全域</h1>
+      </div>
+      <p className="text-sm text-slate-400 mb-6 ml-5">跨 agent 共享資源 · 環境 · 監控</p>
+
+      <div className="flex flex-col gap-4">
+        <ToolRegistry />
+        <CronTable />
+        <ModelList />
+
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <SkillLibrary />
+          <McpConnectors />
+          <EnvDeploy />
+        </div>
+      </div>
     </div>
   )
 }
