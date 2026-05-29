@@ -224,3 +224,26 @@ export const financeData = {
     { id: 'exp-8', name: '個人娛樂', amount: 15000, layer: '個人' },
   ],
 };
+
+// 人生目標：mock·結構參考 HY 現有編輯器（待接後端持久化 + agent 自動拆解）
+export const goalsData = {
+  dimensions: [
+    { id: 'dim-1', name: '事業（跨國企業）', goals: [
+      { id: 'g-1', title: '完成一副業', current: '0', required: true,  achieved: false, owner: 'HY', collaborator: 'sam' },
+    ]},
+    { id: 'dim-2', name: '財務（淨資產 1 億、現金流 >10萬/月）', goals: [
+      { id: 'g-2', title: '資產 > 100 萬', current: '30 萬', required: false, achieved: false, owner: 'HY', collaborator: 'sam' },
+    ]},
+    { id: 'dim-3', name: '健康', goals: [
+      { id: 'g-3', title: '每周運動 2 次', current: '', required: false, achieved: false, owner: 'HY', collaborator: 'xiaoyin' },
+    ]},
+    { id: 'dim-4', name: '休閒', goals: [
+      { id: 'g-4', title: '每月吃一家新餐廳',       current: '', required: false, achieved: true,  owner: 'HY', collaborator: null },
+      { id: 'g-5', title: '每季去台灣一個地方旅遊', current: '', required: false, achieved: false, owner: 'HY', collaborator: null },
+      { id: 'g-6', title: '每年出國一次',           current: '', required: false, achieved: false, owner: 'HY', collaborator: null },
+    ]},
+    { id: 'dim-5', name: '成長', goals: [
+      { id: 'g-7', title: '每季線上學習一次', current: '', required: false, achieved: false, owner: 'HY', collaborator: '950157' },
+    ]},
+  ],
+};

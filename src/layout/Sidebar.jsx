@@ -1,7 +1,7 @@
 import { NavLink } from 'react-router-dom'
 import {
   Home, Bot, ClipboardList, GitMerge,
-  MessageSquare, Settings
+  MessageSquare, Settings, Target
 } from 'lucide-react'
 
 const navItems = [
@@ -9,6 +9,7 @@ const navItems = [
   { to: '/helpers',    label: '我的小幫手', icon: Bot },
   { to: '/dispatch',   label: '派工與回報', icon: ClipboardList },
   { to: '/cross',      label: '跨域彙總',  icon: GitMerge },
+  { to: '/goals',      label: '人生目標',  icon: Target },
 ]
 
 const botItems = [
