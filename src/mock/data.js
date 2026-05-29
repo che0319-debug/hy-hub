@@ -66,3 +66,75 @@ export const board950157 = {
     }
   ]
 };
+
+// ⚠️ 以下三份待校正：內容目視估算，接後端前需拿真實資料對齊
+// 卡片 id 加 bot 前綴，防跨 bot _milestoneId 撞 id
+
+export const boardHY = {
+  botId: "hy",
+  columns: [
+    {
+      id: "hy-personal",
+      name: "個人目標",
+      color: "#7c3aed",
+      items: [
+        { id: "hy-m1", title: "(追蹤) 年度 OKR 回顧", due: "2026-06-30", desc: "", assigned: false },
+        { id: "hy-m2", title: "(規劃) 下季學習計畫",  due: "2026-07-01", desc: "", assigned: false }
+      ]
+    },
+    {
+      id: "hy-admin",
+      name: "行政雜務",
+      color: "#0891b2",
+      items: [
+        { id: "hy-m3", title: "(待辦) 健保卡更新", due: "2026-06-15", desc: "", assigned: false }
+      ]
+    }
+  ]
+};
+
+export const boardXiaoyin = {
+  botId: "xiaoyin",
+  columns: [
+    {
+      id: "xy-family",
+      name: "家庭任務",
+      color: "#16a34a",
+      items: [
+        { id: "xy-m1", title: "(追蹤) 孩子健康檢查", due: "2026-06-20", desc: "", assigned: false },
+        { id: "xy-m2", title: "(規劃) 暑假行程",     due: "2026-07-01", desc: "", assigned: false }
+      ]
+    },
+    {
+      id: "xy-home",
+      name: "居家事務",
+      color: "#d97706",
+      items: [
+        { id: "xy-m3", title: "(待辦) 冷氣保養預約", due: "2026-06-10", desc: "", assigned: false }
+      ]
+    }
+  ]
+};
+
+export const boardSam = {
+  botId: "sam",
+  columns: [
+    {
+      id: "sam-invest",
+      name: "投資組合",
+      color: "#ea580c",
+      items: [
+        { id: "sam-m1", title: "(追蹤) ETF 定期定額", due: "2026-06-05", desc: "", assigned: false },
+        { id: "sam-m2", title: "(研究) 新標的評估",   due: "2026-06-30", desc: "", assigned: false }
+      ]
+    },
+    {
+      id: "sam-side",
+      name: "副業項目",
+      color: "#7c3aed",
+      items: [
+        { id: "sam-m3", title: "(執行) 接案報價", due: "2026-06-08", desc: "", assigned: false }
+      ]
+    }
+  ]
+};
