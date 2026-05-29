@@ -74,6 +74,15 @@ export const sessions = [
   { id: 37, title: "LLM 解析",   sourceMilestone: null,             assignee: "小因",    status: "failed"  }
 ];
 
+// 今日行程：mock·待接 Google Calendar API（格式為合理猜測，接 API 時須對齊真實回傳）
+export const todaySchedule = [
+  { id: 'sch-1', time: '09:00', title: 'ITRI 團隊站會',  source: '950157' },
+  { id: 'sch-2', time: '11:50', title: '科技週報產出',    source: '950157' },
+  { id: 'sch-3', time: '14:00', title: '專案進度審查',    source: '950157' },
+  { id: 'sch-4', time: '19:30', title: '家庭時間',        source: '小因'   },
+  { id: 'sch-5', time: '21:00', title: '副業策略檢視',    source: 'Sam'    },
+];
+
 // ⚠️ 此結構為目視截圖估算，非真實 progress_data.json
 // 待校正：未來接後端前，需拿真實 schema 對齊，不一致就改這裡
 // column 對應現有 dashboard 的「專案」，items 對應「milestone」
