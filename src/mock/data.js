@@ -225,25 +225,35 @@ export const financeData = {
   ],
 };
 
-// 人生目標：mock·結構參考 HY 現有編輯器（待接後端持久化 + agent 自動拆解）
+// 人生目標：mock·七維度三層·人生自由指數（公式 + 數字皆 mock，待 HY 校準 + 接後端）
 export const goalsData = {
+  // 北極星：人生自由指數（mock 加權公式，待校準）
+  freedomIndex: {
+    score: 53,                                   // mock·待校準
+    note: '卡在財務覆蓋 47% · 身心靈尚可',       // mock 診斷文字
+    formula: 'mock·加權公式待定',
+  },
   dimensions: [
-    { id: 'dim-1', name: '事業（跨國企業）', goals: [
-      { id: 'g-1', title: '完成一副業', current: '0', required: true,  achieved: false, owner: 'HY', collaborator: 'sam' },
-    ]},
-    { id: 'dim-2', name: '財務（淨資產 1 億、現金流 >10萬/月）', goals: [
-      { id: 'g-2', title: '資產 > 100 萬', current: '30 萬', required: false, achieved: false, owner: 'HY', collaborator: 'sam' },
-    ]},
-    { id: 'dim-3', name: '健康', goals: [
-      { id: 'g-3', title: '每周運動 2 次', current: '', required: false, achieved: false, owner: 'HY', collaborator: 'xiaoyin' },
-    ]},
-    { id: 'dim-4', name: '休閒', goals: [
-      { id: 'g-4', title: '每月吃一家新餐廳',       current: '', required: false, achieved: true,  owner: 'HY', collaborator: null },
-      { id: 'g-5', title: '每季去台灣一個地方旅遊', current: '', required: false, achieved: false, owner: 'HY', collaborator: null },
-      { id: 'g-6', title: '每年出國一次',           current: '', required: false, achieved: false, owner: 'HY', collaborator: null },
-    ]},
-    { id: 'dim-5', name: '成長', goals: [
-      { id: 'g-7', title: '每季線上學習一次', current: '', required: false, achieved: false, owner: 'HY', collaborator: '950157' },
-    ]},
+    // ── 引擎層 engine ──
+    { id: 'dim-biz', layer: 'engine', name: '事業', totalGoal: '成立一個複合式跨國企業', current: '籌備中',
+      goals: [ { id: 'g-1', title: '完成一副業', current: '0', required: true, achieved: false, owner: 'HY', collaborator: 'sam' } ] },
+    { id: 'dim-fin', layer: 'engine', name: '財務', totalGoal: '財務自由覆蓋率 100%（被動 ≥ 支出）', current: '覆蓋率 47%（mock）',
+      goals: [ { id: 'g-2', title: '資產 > 100 萬', current: '30 萬', required: false, achieved: false, owner: 'HY', collaborator: 'sam' } ] },
+    // ── 地基層 base ──
+    { id: 'dim-health', layer: 'base', name: '健康', totalGoal: '總目標待定 · HY 校準中', current: '',
+      goals: [ { id: 'g-3', title: '每週運動 2 次', current: '', required: false, achieved: false, owner: 'HY', collaborator: 'xiaoyin' } ] },
+    { id: 'dim-family', layer: 'base', name: '家庭', totalGoal: '總目標待定 · HY 校準中', current: '',
+      goals: [] },
+    { id: 'dim-job', layer: 'base', name: '本業（950157）', totalGoal: '總目標待定 · HY 校準中', current: '現金牛·維運中',
+      goals: [] },
+    // ── 續航層 sustain ──
+    { id: 'dim-leisure', layer: 'sustain', name: '休閒／娛樂', totalGoal: '總目標待定 · HY 校準中', current: '',
+      goals: [
+        { id: 'g-4', title: '每月吃一家新餐廳',       current: '', required: false, achieved: true,  owner: 'HY', collaborator: null },
+        { id: 'g-5', title: '每季去台灣一個地方旅遊', current: '', required: false, achieved: false, owner: 'HY', collaborator: null },
+        { id: 'g-6', title: '每年出國一次',           current: '', required: false, achieved: false, owner: 'HY', collaborator: null },
+      ] },
+    { id: 'dim-growth', layer: 'sustain', name: '成長', totalGoal: '總目標待定 · HY 校準中', current: '',
+      goals: [ { id: 'g-7', title: '每季線上學習一次', current: '', required: false, achieved: false, owner: 'HY', collaborator: null } ] },
   ],
 };
