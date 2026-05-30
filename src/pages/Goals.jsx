@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { goalsData } from '../mock/data'
+import { goalsData, computeScore } from '../mock/data'
 
 const BOT_DISPLAY = {
   hy:       { name: 'HY',     color: 'bg-blue-100 text-blue-700' },
@@ -21,7 +21,7 @@ const COLLAB_OPTIONS = [
 const LAYER_CONFIG = {
   engine:  { label: '引擎層', emoji: '⚙️',  desc: '推進自由',    barColor: 'bg-blue-500',  badgeColor: 'bg-blue-100 text-blue-600' },
   base:    { label: '地基層', emoji: '🛡️', desc: '守住才跑得動', barColor: 'bg-amber-400', badgeColor: 'bg-amber-100 text-amber-700' },
-  sustain: { label: '續航層', emoji: '🔋',  desc: '防燒壞',      barColor: 'bg-slate-400', badgeColor: 'bg-slate-100 text-slate-500' },
+  sustain: { label: '續航層', emoji: '🔋',  desc: '自我滿足',    barColor: 'bg-slate-400', badgeColor: 'bg-slate-100 text-slate-500' },
 }
 const LAYER_ORDER = ['engine', 'base', 'sustain']
 
@@ -112,8 +112,8 @@ export default function Goals() {
   const [newDimName, setNewDimName] = useState('')
   const [saveMsg, setSaveMsg] = useState('')
 
-  // freedomIndex 為靜態 mock，不放進 state（僅展示）
   const { freedomIndex } = goalsData
+  const score = computeScore(dimensions)
 
   // required 欄位保留待未來「關卡/解鎖條件」系統復用（H13 暫不顯示）
 
@@ -179,7 +179,7 @@ export default function Goals() {
     setTimeout(() => setSaveMsg(''), 3000)
   }
 
-  const colors = scoreColor(freedomIndex.score)
+  const colors = scoreColor(score)
 
   return (
     <div className="p-6 space-y-6 max-w-4xl">
@@ -193,7 +193,7 @@ export default function Goals() {
             <span className="text-xs px-2 py-0.5 rounded-full bg-slate-100 text-slate-400">mock · 公式待校準</span>
           </div>
           <div className={`text-5xl font-bold mt-2 transition-colors ${colors.text}`}>
-            {freedomIndex.score}
+            {score}
             <span className="text-2xl font-normal text-slate-400 ml-1">/ 100</span>
           </div>
           <div className="mt-3 text-sm text-slate-500">{freedomIndex.note}</div>
@@ -219,8 +219,8 @@ export default function Goals() {
                   {dims.map(dim => {
                     const dimAchieved = dim.goals.filter(g => g.achieved).length
                     const dimTotal    = dim.goals.length
-                    const pct         = dimTotal > 0 ? Math.round((dimAchieved / dimTotal) * 100) : 0
-                    const noData      = dimTotal === 0 || (dimAchieved === 0 && !dim.current)
+                    const pct         = dim.progress != null ? dim.progress : (dimTotal > 0 ? Math.round((dimAchieved / dimTotal) * 100) : 0)
+                    const noData      = dim.progress == null && (dimTotal === 0 || (dimAchieved === 0 && !dim.current))
                     const collab      = dimAgent(dim)
                     return (
                       <div key={dim.id} className="flex items-center gap-3 px-4 py-3">
@@ -248,7 +248,9 @@ export default function Goals() {
                         <div className="text-xs text-slate-400 w-16 text-right flex-shrink-0">
                           {noData
                             ? <span className="text-slate-300">待設定</span>
-                            : <>{dimAchieved}/{dimTotal}（{pct}%）</>
+                            : dim.progress != null
+                              ? <>{pct}%</>
+                              : <>{dimAchieved}/{dimTotal}（{pct}%）</>
                           }
                         </div>
                         <div className="flex-shrink-0">

@@ -225,35 +225,47 @@ export const financeData = {
   ],
 };
 
-// 人生目標：mock·七維度三層·人生自由指數（公式 + 數字皆 mock，待 HY 校準 + 接後端）
+// 人生目標：mock·七維度三層·人生自由指數（HY 5/30 拍板第一版·接後端前先用此 mock）
+// score = Σ(維度進度 × 權重 / 100)，四捨五入
+export function computeScore(dimensions) {
+  return Math.round(
+    dimensions.reduce((sum, d) => sum + (d.progress ?? 0) * (d.weight ?? 0), 0) / 100
+  )
+}
+
 export const goalsData = {
-  // 北極星：人生自由指數（mock 加權公式，待校準）
   freedomIndex: {
-    score: 53,                                   // mock·待校準
-    note: '卡在財務覆蓋 47% · 身心靈尚可',       // mock 診斷文字
-    formula: 'mock·加權公式待定',
+    note: '卡在事業 0%、財務 10%；地基穩、續航待強化',
+    formula: 'Σ(維度進度 × 權重) · mock · 公式待校準',
   },
   dimensions: [
     // ── 引擎層 engine ──
-    { id: 'dim-biz', layer: 'engine', name: '事業', totalGoal: '成立一個複合式跨國企業', current: '籌備中',
-      goals: [ { id: 'g-1', title: '完成一副業', current: '0', required: true, achieved: false, owner: 'HY', collaborator: 'sam' } ] },
-    { id: 'dim-fin', layer: 'engine', name: '財務', totalGoal: '財務自由覆蓋率 100%（被動 ≥ 支出）', current: '覆蓋率 47%（mock）',
-      goals: [ { id: 'g-2', title: '資產 > 100 萬', current: '30 萬', required: false, achieved: false, owner: 'HY', collaborator: 'sam' } ] },
+    { id: 'dim-biz',     layer: 'engine',  name: '事業',       weight: 20, progress:  0,
+      totalGoal: '成立複合式跨國企業',              current: '籌備中',
+      goals: [ { id: 'g-1', title: '完成一副業',     current: '0', required: true,  achieved: false, owner: 'HY', collaborator: 'sam' } ] },
+    { id: 'dim-fin',     layer: 'engine',  name: '財務',       weight: 20, progress: 10,
+      totalGoal: '財務自由覆蓋率 100%（被動 ≥ 支出）', current: '覆蓋率 10%（mock）',
+      goals: [ { id: 'g-2', title: '資產 > 100 萬',  current: '30 萬', required: false, achieved: false, owner: 'HY', collaborator: 'sam' } ] },
     // ── 地基層 base ──
-    { id: 'dim-health', layer: 'base', name: '健康', totalGoal: '總目標待定 · HY 校準中', current: '',
-      goals: [ { id: 'g-3', title: '每週運動 2 次', current: '', required: false, achieved: false, owner: 'HY', collaborator: 'xiaoyin' } ] },
-    { id: 'dim-family', layer: 'base', name: '家庭', totalGoal: '總目標待定 · HY 校準中', current: '',
+    { id: 'dim-health',  layer: 'base',    name: '健康',       weight: 15, progress: 50,
+      totalGoal: '身體檢查都正常',                  current: '進度 50%（mock）',
+      goals: [ { id: 'g-3', title: '每週運動 2 次',  current: '', required: false, achieved: false, owner: 'HY', collaborator: 'xiaoyin' } ] },
+    { id: 'dim-family',  layer: 'base',    name: '家庭',       weight: 15, progress: 30,
+      totalGoal: '家庭安心與和諧',                  current: '進度 30%（mock）',
       goals: [] },
-    { id: 'dim-job', layer: 'base', name: '本業（950157）', totalGoal: '總目標待定 · HY 校準中', current: '現金牛·維運中',
-      goals: [] },
+    { id: 'dim-job',     layer: 'base',    name: '本業（950157）', weight: 5, progress: 60,
+      totalGoal: '可準時下班',                      current: '現金牛·維運中',
+      goals: [ { id: 'g-job-1', title: '維持可準時下班', current: '', required: false, achieved: false, owner: 'HY', collaborator: '950157' } ] },
     // ── 續航層 sustain ──
-    { id: 'dim-leisure', layer: 'sustain', name: '休閒／娛樂', totalGoal: '總目標待定 · HY 校準中', current: '',
+    { id: 'dim-leisure', layer: 'sustain', name: '休閒',        weight: 15, progress: 20,
+      totalGoal: '滿足新體驗',                      current: '進度 20%（mock）',
       goals: [
         { id: 'g-4', title: '每月吃一家新餐廳',       current: '', required: false, achieved: true,  owner: 'HY', collaborator: null },
         { id: 'g-5', title: '每季去台灣一個地方旅遊', current: '', required: false, achieved: false, owner: 'HY', collaborator: null },
         { id: 'g-6', title: '每年出國一次',           current: '', required: false, achieved: false, owner: 'HY', collaborator: null },
       ] },
-    { id: 'dim-growth', layer: 'sustain', name: '成長', totalGoal: '總目標待定 · HY 校準中', current: '',
+    { id: 'dim-growth',  layer: 'sustain', name: '成長',        weight: 10, progress: 40,
+      totalGoal: '提升新知識',                      current: '進度 40%（mock）',
       goals: [ { id: 'g-7', title: '每季線上學習一次', current: '', required: false, achieved: false, owner: 'HY', collaborator: null } ] },
   ],
 };
