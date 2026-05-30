@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { Bell, CheckCircle, Coins } from 'lucide-react'
 import { homeSummary, todaySchedule } from '../mock/data'
 import { useSessionContext } from '../App'
+import PixelWorld from '../components/PixelWorld'
 
 // 待我處理定義：需要我介入的 session（等我確認 + 失敗待處理）
 const PENDING_STATUSES = ['await', 'failed']
@@ -162,8 +163,8 @@ export default function Home() {
           </div>
         </div>
       ) : (
-        <div className="bg-white rounded-xl p-10 border border-slate-200 shadow-sm text-center text-slate-400">
-          HY-World 像素場景（後續批次實作）
+        <div className="bg-white rounded-xl overflow-hidden border border-slate-200 shadow-sm" style={{ height: '500px' }}>
+          <PixelWorld />
         </div>
       )}
     </div>
