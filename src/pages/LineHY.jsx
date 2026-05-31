@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import AgentBoard from '../components/AgentBoard'
 import { fetchPersonalData } from '../api'
 import { adaptPersonalData } from '../lib/adaptPersonalData'
@@ -6,12 +6,26 @@ import { adaptPersonalData } from '../lib/adaptPersonalData'
 export default function LineHY() {
   const [boardData, setBoardData] = useState(null)
   const [error, setError] = useState(null)
+  const [version, setVersion] = useState(0)
 
-  useEffect(() => {
+  const fetchData = useCallback(() => {
     fetchPersonalData()
-      .then(data => setBoardData(adaptPersonalData(data)))
+      .then(data => {
+        setBoardData(adaptPersonalData(data))
+        setError(null)
+      })
       .catch(err => setError(err.message))
   }, [])
+
+  useEffect(() => {
+    fetchData()
+  }, [fetchData])
+
+  function refetch() {
+    setBoardData(null)         // 卸載 AgentBoard，清空 useState 一次性初始化
+    setVersion(v => v + 1)    // key 變化確保重新掛載
+    fetchData()
+  }
 
   return (
     <div>
@@ -24,7 +38,12 @@ export default function LineHY() {
       {error && <p className="text-red-500 text-sm">讀取失敗：{error}</p>}
       {!error && !boardData && <p className="text-slate-400 text-sm">載入中…</p>}
       {boardData && (
-        <AgentBoard boardData={boardData} botConfig={{ id: "hy", name: "HY" }} />
+        <AgentBoard
+          key={version}
+          boardData={boardData}
+          botConfig={{ id: "hy", name: "HY" }}
+          onMutate={refetch}
+        />
       )}
     </div>
   )

@@ -11,3 +11,13 @@ export async function fetchPersonalData() {
   }
   return res.json();
 }
+
+export async function postMilestone(payload) {
+  const res = await fetch(`${API_BASE}/api/milestone`, {
+    method: "POST",
+    headers: { "X-Read-Secret": READ_SECRET, "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  });
+  if (!res.ok) throw new Error(`postMilestone failed: ${res.status}`);
+  return res.json();
+}
