@@ -38,6 +38,10 @@ jobs:
           VITE_READ_SECRET: ${{ secrets.VITE_READ_SECRET }}
         run: npm run build
 
+      - name: Inject dashboard secret
+        run: |
+          sed -i "s/__READ_SECRET__/${{ secrets.VITE_READ_SECRET }}/g" dist/personal-dashboard.html
+
       - name: Encrypt gate (StatiCrypt)
         env:
           STATICRYPT_PASSWORD: ${{ secrets.PAGE_PASSWORD }}

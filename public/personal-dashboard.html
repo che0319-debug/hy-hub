@@ -1,0 +1,959 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>HY 個人控制中心</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=Noto+Sans+TC:wght@400;500;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Sortable/1.15.2/Sortable.min.js"></script>
+<style>
+:root {
+  /* Bot 識別變數（HY 專屬） */
+  --brand-color: #16a34a;
+  --brand-name: 'HY';
+  --brand-sub: 'HY 領域';
+
+  --bg: #f0f2f5;
+  --col-bg: #e4e6ea;
+  --card-bg: #ffffff;
+  --border: #d8dce4;
+  --text: #172b4d;
+  --text-muted: #5e6c84;
+  --text-dim: #97a0af;
+  --blue: #0052cc;
+  --blue-light: #deebff;
+  --green: #006644;
+  --orange: #974f0c;
+  --red: #de350b;
+  --header-bg: #0a1628;
+  --shadow-sm: 0 1px 3px rgba(0,0,0,0.08);
+  --shadow-md: 0 4px 12px rgba(0,0,0,0.12);
+  --shadow-lg: 0 8px 32px rgba(0,0,0,0.18);
+  --radius: 8px;
+}
+* { margin:0; padding:0; box-sizing:border-box; }
+html, body { height:100%; }
+body { background:var(--bg); color:var(--text); font-family:'Noto Sans TC',sans-serif; display:flex; flex-direction:column; }
+
+/* Header */
+header { background:var(--header-bg); padding:0 24px; display:flex; align-items:center; gap:16px; height:56px; flex-shrink:0; border-bottom:1px solid rgba(255,255,255,.06); }
+.logo-wrap { display:flex; align-items:center; gap:10px; }
+.logo-badge { background:var(--brand-color); color:#fff; font-family:'Syne',sans-serif; font-weight:800; font-size:14px; padding:3px 10px; border-radius:4px; letter-spacing:.5px; }
+.logo-sub { font-size:13px; color:rgba(255,255,255,.45); font-weight:500; }
+.header-right { margin-left:auto; display:flex; align-items:center; gap:10px; }
+.last-updated { font-size:12px; color:rgba(255,255,255,.4); background:rgba(255,255,255,.06); padding:4px 10px; border-radius:20px; border:1px solid rgba(255,255,255,.08); }
+.btn { padding:7px 14px; border-radius:6px; font-size:13px; font-weight:500; cursor:pointer; border:none; transition:all .15s; font-family:'Noto Sans TC',sans-serif; display:inline-flex; align-items:center; gap:5px; }
+.btn-blue { background:var(--blue); color:#fff; }
+.btn-blue:hover { background:#0065ff; }
+.btn-blue:disabled { opacity:.6; cursor:not-allowed; }
+.btn-blue.saved { background: var(--green); }
+.btn-ghost { background:rgba(255,255,255,.08); color:rgba(255,255,255,.75); border:1px solid rgba(255,255,255,.12); }
+.btn-ghost:hover { background:rgba(255,255,255,.14); color:#fff; }
+
+/* Tabs */
+.tabs { background:#fff; border-bottom:1px solid var(--border); padding:0 24px; display:flex; box-shadow:var(--shadow-sm); flex-shrink:0; }
+.tab { padding:14px 18px; font-size:13px; font-weight:500; color:var(--text-muted); cursor:pointer; border-bottom:2px solid transparent; margin-bottom:-1px; transition:all .15s; user-select:none; white-space:nowrap; }
+.tab:hover { color:var(--text); }
+.tab.active { color:var(--brand-color); border-bottom-color:var(--brand-color); font-weight:700; }
+
+/* Tab content */
+.tab-content { display:none; flex:1; min-height:0; }
+.tab-content.active { display:flex; flex-direction:column; }
+
+/* ══════════════ PROGRESS (Kanban) ══════════════ */
+.board-wrap { flex: 1; overflow-x: auto; overflow-y: auto; padding: 20px 24px; min-height: 0; }
+.board { display: flex; gap: 14px; align-items: flex-start; }
+
+.column {
+  width: 284px;
+  flex-shrink: 0;
+  background: var(--col-bg);
+  border-radius: 10px;
+  display: flex;
+  flex-direction: column;
+  border: 1px solid rgba(0,0,0,0.06);
+}
+.col-header {
+  padding: 12px 12px 8px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.col-dot { width: 9px; height: 9px; border-radius: 50%; flex-shrink: 0; }
+.col-title {
+  font-weight: 700;
+  font-size: 13px;
+  color: var(--text);
+  flex: 1;
+  cursor: text;
+  outline: none;
+  border-radius: 4px;
+  padding: 2px 5px;
+  margin: -2px -5px;
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.col-title:focus {
+  background: #fff;
+  box-shadow: 0 0 0 2px var(--brand-color);
+  white-space: normal;
+  overflow: visible;
+}
+.col-count {
+  font-size: 11px;
+  color: var(--text-muted);
+  background: rgba(0,0,0,0.07);
+  padding: 1px 7px;
+  border-radius: 10px;
+  font-weight: 600;
+  flex-shrink: 0;
+}
+.col-del {
+  background: none;
+  border: none;
+  color: var(--text-dim);
+  cursor: pointer;
+  font-size: 16px;
+  padding: 2px 5px;
+  border-radius: 4px;
+  line-height: 1;
+  opacity: 0;
+  transition: opacity 0.15s;
+}
+.column:hover .col-del { opacity: 1; }
+.col-del:hover { background: rgba(0,0,0,0.08); color: var(--red); }
+.card-del-btn {
+  background: none; border: none; cursor: pointer; padding: 2px 4px;
+  color: var(--text-dim); font-size: 13px; border-radius: 4px;
+  opacity: 0; transition: opacity 0.15s; flex-shrink: 0;
+}
+.card:hover .card-del-btn { opacity: 1; }
+.card-del-btn:hover { background: rgba(0,0,0,0.08); color: var(--red); }
+
+.col-cards {
+  padding: 0 8px;
+  flex: 1;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  min-height: 48px;
+}
+.sortable-ghost { opacity: 0.35; }
+.sortable-drag { opacity: 0.9; box-shadow: var(--shadow-lg) !important; }
+
+.card {
+  background: #fff;
+  border-radius: 7px;
+  padding: 11px 12px;
+  cursor: grab;
+  transition: box-shadow 0.15s, transform 0.15s;
+  box-shadow: var(--shadow-sm);
+  border: 1px solid var(--border);
+  position: relative;
+}
+.card:hover {
+  box-shadow: var(--shadow-md);
+  transform: translateY(-1px);
+}
+.card:active { cursor: grabbing; }
+.card-top { display: flex; align-items: flex-start; gap: 8px; margin-bottom: 9px; }
+.card-title { font-size: 13px; font-weight: 600; color: var(--text); flex: 1; line-height: 1.45; }
+.card-desc { font-size: 12px; color: var(--text-muted); margin-bottom: 7px; line-height: 1.5; white-space: pre-wrap; }
+.card-footer {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  color: var(--text-muted);
+  margin-top: 7px;
+}
+.due-chip {
+  background: var(--bg);
+  padding: 2px 7px;
+  border-radius: 4px;
+  font-weight: 500;
+  font-size: 11px;
+}
+.due-chip.overdue { color: var(--red); background: #fff0ee; }
+
+.add-card-btn {
+  margin: 5px 8px 8px;
+  background: none;
+  border: none;
+  border-radius: 6px;
+  color: var(--text-muted);
+  font-size: 12px;
+  padding: 7px 10px;
+  cursor: pointer;
+  width: calc(100% - 16px);
+  text-align: left;
+  font-family: 'Noto Sans TC', sans-serif;
+  transition: all 0.15s;
+  font-weight: 500;
+}
+.add-card-btn:hover { background: rgba(0,0,0,0.05); color: var(--text); }
+
+.add-col { width: 220px; flex-shrink: 0; }
+.add-col-btn {
+  width: 100%;
+  background: rgba(0,0,0,0.04);
+  border: 2px dashed rgba(0,0,0,0.12);
+  border-radius: 10px;
+  color: var(--text-muted);
+  font-size: 13px;
+  padding: 14px 16px;
+  cursor: pointer;
+  font-family: 'Noto Sans TC', sans-serif;
+  text-align: left;
+  font-weight: 500;
+  transition: all 0.15s;
+}
+.add-col-btn:hover { background: rgba(0,0,0,0.07); border-color: rgba(0,0,0,0.2); color: var(--text); }
+
+
+/* ══════════════ MODAL ══════════════ */
+.modal-overlay { position:fixed; inset:0; background:rgba(0,0,0,.45); z-index:500; display:none; align-items:center; justify-content:center; }
+.modal-overlay.open { display:flex; }
+.modal-box { background:#fff; border-radius:10px; width:440px; max-width:95vw; max-height:90vh; display:flex; flex-direction:column; box-shadow:var(--shadow-lg); }
+.modal-header { padding:18px 20px 14px; border-bottom:1px solid var(--border); display:flex; align-items:center; justify-content:space-between; flex-shrink:0; }
+.modal-title { font-family:'Syne',sans-serif; font-size:15px; font-weight:700; color:var(--text); }
+.modal-close { background:none; border:none; font-size:18px; cursor:pointer; color:var(--text-dim); padding:2px 6px; border-radius:4px; }
+.modal-close:hover { color:var(--text); background:var(--col-bg); }
+.modal-body { overflow-y:auto; padding:18px 20px; flex:1; display:flex; flex-direction:column; gap:14px; }
+.modal-footer { padding:14px 20px; border-top:1px solid var(--border); display:flex; gap:8px; align-items:center; flex-shrink:0; }
+.modal-footer .del-side { margin-right:auto; }
+.m-field { display:flex; flex-direction:column; gap:5px; }
+.m-label { font-size:11px; font-weight:700; color:var(--text-muted); text-transform:uppercase; letter-spacing:.5px; }
+.m-input,.m-select,.m-textarea { width:100%; background:#fff; border:1.5px solid var(--border); border-radius:6px; color:var(--text); font-size:13px; padding:8px 10px; font-family:'Noto Sans TC',sans-serif; transition:border-color .15s; }
+.m-input:focus,.m-select:focus,.m-textarea:focus { outline:none; border-color:var(--blue); box-shadow:0 0 0 3px rgba(0,82,204,.1); }
+.m-textarea { resize:vertical; min-height:76px; line-height:1.55; }
+.m-row2 { display:flex; gap:12px; }
+.m-row2 .m-field { flex:1; }
+.btn-del { background:#fff; border:1.5px solid #ffd2cc; color:var(--red); padding:7px 14px; border-radius:6px; font-size:13px; cursor:pointer; font-family:'Noto Sans TC',sans-serif; transition:all .15s; }
+.btn-del:hover { background:#ffebe6; }
+.btn-cancel { background:var(--col-bg); border:none; color:var(--text-muted); padding:7px 14px; border-radius:6px; font-size:13px; cursor:pointer; font-family:'Noto Sans TC',sans-serif; transition:background .15s; }
+.btn-cancel:hover { background:#d2d6dc; color:var(--text); }
+.btn-save { background:var(--blue); color:#fff; border:none; padding:7px 18px; border-radius:6px; font-size:13px; font-weight:700; cursor:pointer; font-family:'Noto Sans TC',sans-serif; transition:all .15s; }
+.btn-save:hover { background:#0065ff; }
+
+/* ══════════════ GOAL TABS ══════════════ */
+.content-wrap { padding:20px 24px 48px; max-width:860px; }
+.section-card { background:var(--card-bg); border:1px solid var(--border); border-radius:var(--radius); padding:20px 22px; margin-bottom:16px; box-shadow:var(--shadow-sm); }
+.section-title { font-family:'Syne',sans-serif; font-size:14px; font-weight:700; color:var(--text); margin-bottom:16px; padding-bottom:11px; border-bottom:1px solid var(--border); display:flex; align-items:center; gap:8px; }
+.goal-item { display:flex; align-items:center; gap:8px; margin-bottom:8px; }
+.goal-check { width:16px; height:16px; cursor:pointer; accent-color:var(--blue); flex-shrink:0; }
+.goal-label { flex:1; background:#fff; border:1.5px solid var(--border); border-radius:6px; color:var(--text); font-size:13px; padding:6px 10px; font-family:'Noto Sans TC',sans-serif; transition:border-color .15s; }
+.goal-label:focus { outline:none; border-color:var(--blue); }
+.goal-item.done .goal-label { text-decoration:line-through; color:var(--text-dim); background:#f8f9fb; }
+.del-btn { background:none; border:1px solid #ffd2cc; color:var(--red); cursor:pointer; padding:4px 8px; font-size:12px; border-radius:4px; flex-shrink:0; transition:all .15s; }
+.del-btn:hover { background:#ffebe6; }
+.add-list-btn { display:inline-flex; align-items:center; gap:6px; background:#fff; border:2px dashed var(--border); border-radius:6px; color:var(--text-muted); font-size:12px; font-family:'Noto Sans TC',sans-serif; padding:6px 14px; cursor:pointer; margin-top:4px; transition:all .15s; font-weight:500; }
+.add-list-btn:hover { border-color:var(--blue); color:var(--blue); background:var(--blue-light); }
+.save-btn { background:var(--blue); color:#fff; font-weight:700; padding:9px 24px; border-radius:6px; border:none; cursor:pointer; font-family:'Noto Sans TC',sans-serif; font-size:14px; margin-top:8px; transition:all .15s; }
+.save-btn:hover { background:#0065ff; }
+.save-btn:disabled { opacity:.6; cursor:not-allowed; }
+
+/* Toast */
+.toast { position:fixed; bottom:24px; right:24px; padding:11px 18px; border-radius:7px; font-size:13px; font-weight:600; opacity:0; transform:translateY(10px); transition:all .22s; pointer-events:none; z-index:999; box-shadow:var(--shadow-md); }
+.toast.show { opacity:1; transform:translateY(0); }
+.toast-success { background:var(--green); color:#fff; }
+.toast-error   { background:var(--red);   color:#fff; }
+
+/* ══════════════ GOALS MATRIX ══════════════ */
+.dim-card { background:var(--card-bg); border:1px solid var(--border); border-radius:var(--radius); padding:20px 22px; margin-bottom:16px; box-shadow:var(--shadow-sm); }
+.dim-header { display:flex; align-items:center; gap:8px; margin-bottom:14px; padding-bottom:11px; border-bottom:1px solid var(--border); }
+.dim-name-input { flex:1; background:#fff; border:1.5px solid var(--border); border-radius:6px; color:var(--text); font-size:14px; font-weight:700; padding:6px 10px; font-family:'Noto Sans TC',sans-serif; transition:border-color .15s; }
+.dim-name-input:focus { outline:none; border-color:var(--blue); }
+.dim-del-btn { background:none; border:1px solid #ffd2cc; color:var(--red); cursor:pointer; padding:4px 10px; font-size:12px; border-radius:4px; flex-shrink:0; transition:all .15s; }
+.dim-del-btn:hover { background:#ffebe6; }
+.goal-matrix-row { display:flex; align-items:center; gap:8px; margin-bottom:8px; flex-wrap:wrap; }
+.goal-content-input { flex:2; min-width:120px; background:#fff; border:1.5px solid var(--border); border-radius:6px; color:var(--text); font-size:13px; padding:6px 10px; font-family:'Noto Sans TC',sans-serif; transition:border-color .15s; }
+.goal-content-input:focus { outline:none; border-color:var(--blue); }
+.goal-status-input { flex:2; min-width:100px; background:#fff; border:1.5px solid var(--border); border-radius:6px; color:var(--text); font-size:13px; padding:6px 10px; font-family:'Noto Sans TC',sans-serif; transition:border-color .15s; }
+.goal-status-input:focus { outline:none; border-color:var(--blue); }
+.goal-check-group { display:flex; align-items:center; gap:4px; flex-shrink:0; cursor:pointer; }
+.goal-check-group input[type="checkbox"] { width:15px; height:15px; accent-color:var(--blue); cursor:pointer; }
+.goal-check-group .check-label { font-size:11px; color:var(--text-muted); white-space:nowrap; user-select:none; }
+.goal-matrix-row.achieved .goal-content-input { text-decoration:line-through; color:var(--text-dim); background:#f8f9fb; }
+
+::-webkit-scrollbar { width:5px; height:5px; }
+::-webkit-scrollbar-track { background:transparent; }
+::-webkit-scrollbar-thumb { background:#c1c7d0; border-radius:3px; }
+::-webkit-scrollbar-thumb:hover { background:#97a0af; }
+
+/* ══════════════ WEEKLY REVIEW ══════════════ */
+#tab-weekly.active { overflow-y:auto; }
+.weekly-wrap { padding:20px 24px 48px; max-width:900px; }
+.weekly-toolbar { display:flex; align-items:center; gap:10px; margin-bottom:16px; flex-wrap:wrap; }
+.weekly-toolbar label { font-size:13px; font-weight:600; color:var(--text-muted); }
+.weekly-select { background:#fff; border:1.5px solid var(--border); border-radius:6px; color:var(--text); font-size:13px; padding:6px 10px; font-family:'Noto Sans TC',sans-serif; cursor:pointer; }
+.weekly-select:focus { outline:none; border-color:var(--blue); }
+.weekly-actions { margin-left:auto; display:flex; gap:8px; }
+#weeklyDownloadBtn { background:#fff; color:#1a1a1a; border:1.5px solid #6b778c; }
+#weeklyDownloadBtn:hover { background:#f4f5f7; color:#172b4d; border-color:#172b4d; }
+.stat-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:12px; margin-bottom:16px; }
+.stat-card { background:var(--card-bg); border:1px solid var(--border); border-radius:var(--radius); padding:14px 16px; box-shadow:var(--shadow-sm); text-align:center; }
+.stat-num { font-family:'Syne',sans-serif; font-size:28px; font-weight:800; color:var(--blue); line-height:1.1; }
+.stat-label { font-size:11px; color:var(--text-muted); margin-top:4px; font-weight:500; }
+.goal-progress-list { display:flex; flex-direction:column; gap:10px; }
+.goal-prog-row { display:flex; flex-direction:column; gap:4px; }
+.goal-prog-header { display:flex; justify-content:space-between; align-items:center; }
+.goal-prog-name { font-size:13px; font-weight:600; color:var(--text); }
+.goal-prog-pct { font-size:12px; font-weight:700; color:var(--blue); }
+.prog-bar-bg { background:#e4e6ea; border-radius:4px; height:8px; overflow:hidden; }
+.prog-bar-fill { height:100%; border-radius:4px; background:var(--blue); transition:width .4s; }
+.prog-bar-fill.green { background:#36b37e; }
+.prog-bar-fill.orange { background:#ff8b00; }
+.prog-bar-fill.red { background:var(--red); }
+.domain-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:12px; margin-bottom:16px; }
+.domain-card { background:var(--card-bg); border:1px solid var(--border); border-radius:var(--radius); padding:14px 16px; box-shadow:var(--shadow-sm); }
+.domain-title { font-family:'Syne',sans-serif; font-size:13px; font-weight:700; color:var(--text); margin-bottom:10px; padding-bottom:8px; border-bottom:1px solid var(--border); }
+.domain-row { display:flex; justify-content:space-between; font-size:12px; margin-bottom:5px; }
+.domain-row-label { color:var(--text-muted); }
+.domain-row-val { font-weight:700; color:var(--text); }
+.due-list { list-style:none; display:flex; flex-direction:column; gap:6px; }
+.due-item { display:flex; align-items:center; gap:8px; font-size:13px; }
+.due-item::before { content:''; width:6px; height:6px; border-radius:50%; background:var(--blue); flex-shrink:0; }
+.due-title { flex:1; color:var(--text); }
+.due-date { font-size:11px; color:var(--text-muted); white-space:nowrap; }
+.weekly-loading { text-align:center; padding:48px; color:var(--text-muted); font-size:14px; }
+.cross-stat-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:12px; }
+.cross-stat-card { background:var(--card-bg); border:1px solid var(--border); border-radius:var(--radius); padding:14px 16px; box-shadow:var(--shadow-sm); }
+.cross-stat-title { font-size:11px; color:var(--text-muted); font-weight:600; text-transform:uppercase; letter-spacing:.5px; margin-bottom:10px; }
+.cross-stat-nums { display:flex; gap:8px; }
+.cross-stat-item { flex:1; text-align:center; }
+.cross-stat-num { font-family:'Syne',sans-serif; font-size:20px; font-weight:800; color:var(--text); }
+.cross-stat-sub { font-size:10px; color:var(--text-muted); }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo-wrap">
+    <div class="logo-badge">HY</div>
+    <div class="logo-sub">HY 領域</div>
+  </div>
+  <div class="header-right">
+    <span class="last-updated" id="lastUpdated">載入中…</span>
+    <button class="btn btn-ghost" id="refreshBtn">↺ 重新整理</button>
+    <button class="btn btn-blue" id="saveBtn">✓ 儲存</button>
+  </div>
+</header>
+
+<div class="tabs">
+  <div class="tab active" data-tab="progress">🎯 進度追蹤</div>
+  <div class="tab" data-tab="weekly">📋 週覆盤</div>
+</div>
+
+
+<!-- Milestone Modal -->
+<div class="modal-overlay" id="msModal">
+  <div class="modal-box">
+    <div class="modal-header">
+      <div class="modal-title" id="ms-modal-title">編輯里程碑</div>
+      <button class="modal-close" id="ms-close">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="m-field">
+        <label class="m-label">標題</label>
+        <input class="m-input" id="ms-title" placeholder="里程碑標題…">
+      </div>
+      <div class="m-field">
+        <label class="m-label">截止日期</label>
+        <input class="m-input" type="date" id="ms-due">
+      </div>
+      <div class="m-field">
+        <label class="m-label">執行描述（HY bot 會指派其他 bot 執行）</label>
+        <textarea class="m-textarea" id="ms-desc" placeholder="詳細說明任務內容…"></textarea>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <div class="del-side"><button class="btn-del" id="ms-delete">刪除</button></div>
+      <button class="btn-cancel" id="ms-cancel">取消</button>
+      <button class="btn-save" id="ms-save">儲存</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+var API         = 'https://hy-agent-v2.onrender.com';
+var SECRET      = '__READ_SECRET__';
+var HEADERS     = { 'Content-Type':'application/json', 'X-Read-Secret':SECRET };
+var GET_HEADERS = { 'X-Read-Secret':SECRET, 'Cache-Control':'no-store' };
+
+var personalData = {};
+var progressData = [];
+var today        = new Date().toISOString().slice(0,10);
+
+var msProjIdx = null, msMsIdx = null, msIsNew = false;
+var sortables = [];
+var isDragging = false;
+
+function esc(s){ return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+function showToast(msg,type){ var t=document.getElementById('toast'); t.textContent=msg; t.className='toast show toast-'+(type||'success'); setTimeout(function(){ t.className='toast'; },2200); }
+
+// ── Tabs ──
+document.querySelectorAll('.tab').forEach(function(tab){
+  tab.addEventListener('click', function(){
+    document.querySelectorAll('.tab').forEach(function(t){ t.classList.remove('active'); });
+    document.querySelectorAll('.tab-content').forEach(function(c){ c.classList.remove('active'); });
+    tab.classList.add('active');
+    document.getElementById('tab-'+tab.dataset.tab).classList.add('active');
+  });
+});
+
+// ── Date helpers ──
+function dueToInput(d){ return d ? d.replace(/\//g,'-') : ''; }
+function inputToDue(d){ return d ? d.replace(/-/g,'/') : ''; }
+function dueDisplay(d){
+  if (!d) return null;
+  var cmp=d.replace(/\//g,'-'), p=d.split('/');
+  if (p.length<3) return null;
+  return { text: p[1]+'/'+p[2], over: cmp < today };
+}
+
+// ═══════════════ PROGRESS (Kanban) ═══════════════
+
+function escHtml(s){ return String(s||'').replace(/[&<>"]/g, function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]; }); }
+
+function updateColCount(pid){
+  var p = progressData.find(function(x){ return x.id === pid; });
+  if (!p) return;
+  var el = document.querySelector('[data-pid="'+pid+'"] .col-count');
+  if (el) el.textContent = (p.milestones||[]).length;
+}
+
+function renderCardHTML(p, m, mi){
+  var dueHtml = '';
+  if (m.due){
+    var dd = dueDisplay(m.due);
+    if (dd){
+      dueHtml = '<div class="due-chip'+(dd.over?' overdue':'')+'">📅 '+(dd.over?'⚠ ':'')+escHtml(dd.text)+'</div>';
+    }
+  }
+  var descHtml = m.description
+    ? '<div class="card-desc">📋 '+escHtml(m.description)+'</div>'
+    : '';
+  return '<div class="card" data-pid="'+p.id+'" data-mi="'+mi+'">'
+    + '<div class="card-top">'
+    +   '<div class="card-title">'+escHtml(m.title)+'</div>'
+    +   '<button class="card-del-btn" title="刪除此里程碑" data-action="del-card" data-pid="'+p.id+'" data-mi="'+mi+'">✗</button>'
+    + '</div>'
+    + descHtml
+    + (dueHtml ? '<div class="card-footer">'+dueHtml+'</div>' : '')
+    + '</div>';
+}
+
+function renderColumnHTML(p){
+  return '<div class="column" data-pid="'+p.id+'">'
+    + '<div class="col-header" style="cursor:grab">'
+    +   '<div class="col-dot" style="background:'+(p.color||'#6b778c')+'"></div>'
+    +   '<div class="col-title" contenteditable="true"'
+    +     ' data-pid="'+p.id+'"'
+    +     ' onblur="updateProjectName(\''+p.id+'\',this.textContent)"'
+    +     ' onkeydown="if(event.key===\'Enter\'){event.preventDefault();this.blur();}"'
+    +   '>'+escHtml(p.name)+'</div>'
+    +   '<div class="col-count">'+(p.milestones||[]).length+'</div>'
+    +   '<button class="col-del" title="刪除專案" data-action="del-project" data-pid="'+p.id+'">✕</button>'
+    + '</div>'
+    + '<div class="col-cards">'
+    +   (p.milestones||[]).map(function(m,mi){ return renderCardHTML(p,m,mi); }).join('')
+    + '</div>'
+    + '<button class="add-card-btn" data-action="add-card" data-pid="'+p.id+'">＋ 新增里程碑</button>'
+    + '</div>';
+}
+
+function renderProgress(){
+  progressData.forEach(function(p, i){
+    if (!p.id) p.id = 'P_legacy_'+i+'_'+Math.random().toString(36).slice(2,6);
+    if (!p.milestones) p.milestones = [];
+    p.milestones.forEach(function(m, mi){
+      if (!m.id) m.id = p.id + '_M' + mi;
+    });
+  });
+
+  sortables.forEach(function(s){ s.destroy(); });
+  sortables = [];
+
+  var board = document.getElementById('board');
+  if (!progressData.length){
+    board.innerHTML = '<div style="color:var(--text-dim);padding:32px 0;width:100%;text-align:center;font-size:14px;">尚無專案，點擊右側「＋ 新增專案」開始追蹤</div>'
+      + '<div class="add-col"><button class="add-col-btn" data-action="add-project">＋ 新增專案</button></div>';
+    return;
+  }
+
+  board.innerHTML = progressData.map(renderColumnHTML).join('')
+    + '<div class="add-col"><button class="add-col-btn" data-action="add-project">＋ 新增專案</button></div>';
+
+  progressData.forEach(function(p){
+    var el = document.querySelector('[data-pid="'+p.id+'"] .col-cards');
+    if (!el) return;
+    var s = Sortable.create(el, {
+      group: 'cards',
+      animation: 160,
+      ghostClass: 'sortable-ghost',
+      dragClass: 'sortable-drag',
+      handle: '.card',
+      onStart: function(){ isDragging = true; },
+      onEnd: function(evt){
+        setTimeout(function(){ isDragging = false; }, 100);
+        var fromPid = evt.from.closest('[data-pid]').dataset.pid;
+        var toPid   = evt.to.closest('[data-pid]').dataset.pid;
+        var fromP   = progressData.find(function(x){ return x.id === fromPid; });
+        var toP     = progressData.find(function(x){ return x.id === toPid; });
+        var moved   = fromP.milestones.splice(evt.oldIndex, 1)[0];
+        toP.milestones.splice(evt.newIndex, 0, moved);
+        updateColCount(fromPid);
+        updateColCount(toPid);
+        saveProgress(null);
+      }
+    });
+    sortables.push(s);
+  });
+
+  var boardEl = document.getElementById('board');
+  var colSort = Sortable.create(boardEl, {
+    animation: 160,
+    handle: '.col-header',
+    ghostClass: 'sortable-ghost',
+    filter: '.add-col',
+    onEnd: function(evt){
+      if (evt.newIndex >= progressData.length) return;
+      var moved = progressData.splice(evt.oldIndex, 1)[0];
+      progressData.splice(evt.newIndex, 0, moved);
+      saveProgress(null);
+    }
+  });
+  sortables.push(colSort);
+}
+
+function updateProjectName(pid, name){
+  var trimmed = (name||'').trim();
+  if (!trimmed) return;
+  var p = progressData.find(function(x){ return x.id === pid; });
+  if (p){ p.name = trimmed; saveProgress(null); }
+}
+
+function addProject(){
+  var name = prompt('新專案名稱：');
+  if (!name || !name.trim()) return;
+  var colors = ['#0052cc','#006644','#974f0c','#5243aa','#006b75','#403294'];
+  progressData.push({
+    id: 'P_'+Date.now(),
+    name: name.trim(),
+    color: colors[progressData.length % colors.length],
+    milestones: []
+  });
+  renderProgress();
+  saveProgress(null);
+}
+
+function removeProject(pid){
+  var p = progressData.find(function(x){ return x.id === pid; });
+  if (!p) return;
+  if (p.milestones && p.milestones.length){
+    if (!confirm('確定刪除「'+p.name+'」及其 '+p.milestones.length+' 個里程碑？')) return;
+  } else {
+    if (!confirm('確定刪除專案「'+p.name+'」？')) return;
+  }
+  progressData = progressData.filter(function(x){ return x.id !== pid; });
+  renderProgress();
+  saveProgress(null);
+}
+
+function deleteCardDirect(pid, mi){
+  var p = progressData.find(function(x){ return x.id === pid; });
+  if (!p) return;
+  var m = p.milestones[mi];
+  var title = m ? m.title : '此里程碑';
+  if (!confirm('確定移除「'+title+'」？')) return;
+  p.milestones.splice(mi, 1);
+  renderProgress();
+  saveProgress(null);
+}
+
+document.getElementById('board').addEventListener('click', function(e){
+  if (isDragging) return;
+  var delCardBtn = e.target.closest('[data-action="del-card"]');
+  if (delCardBtn){
+    e.stopPropagation();
+    deleteCardDirect(delCardBtn.dataset.pid, parseInt(delCardBtn.dataset.mi));
+    return;
+  }
+  var card = e.target.closest('.card');
+  if (card){
+    var pi = progressData.findIndex(function(x){ return x.id === card.dataset.pid; });
+    var mi = parseInt(card.dataset.mi);
+    if (pi >= 0) openMsModal(pi, mi, false);
+    return;
+  }
+  var addBtn = e.target.closest('[data-action="add-card"]');
+  if (addBtn){
+    var pi2 = progressData.findIndex(function(x){ return x.id === addBtn.dataset.pid; });
+    if (pi2 >= 0) openMsModal(pi2, null, true);
+    return;
+  }
+  var delProj = e.target.closest('[data-action="del-project"]');
+  if (delProj){
+    removeProject(delProj.dataset.pid);
+    return;
+  }
+  var addProj = e.target.closest('[data-action="add-project"]');
+  if (addProj){
+    addProject();
+    return;
+  }
+});
+
+// ─── Milestone Modal ───
+
+function openMsModal(pi, mi, isNew){
+  msProjIdx=pi; msMsIdx=mi; msIsNew=isNew;
+  var m=isNew ? { title:'', due:'', description:'' } : progressData[pi].milestones[mi];
+  document.getElementById('ms-modal-title').textContent=isNew?'新增里程碑':'編輯里程碑';
+  document.getElementById('ms-delete').style.display=isNew?'none':'';
+  document.getElementById('ms-title').value=m.title||'';
+  document.getElementById('ms-due').value=dueToInput(m.due);
+  document.getElementById('ms-desc').value=m.description||'';
+  document.getElementById('msModal').classList.add('open');
+  setTimeout(function(){ document.getElementById('ms-title').focus(); },50);
+}
+
+function closeMsModal(){ document.getElementById('msModal').classList.remove('open'); }
+
+function saveMsModal(){
+  var title=document.getElementById('ms-title').value.trim();
+  if (!title){ showToast('請輸入標題','error'); return; }
+  var m={ title:title, due:inputToDue(document.getElementById('ms-due').value), description:document.getElementById('ms-desc').value };
+  if (msIsNew){
+    m.id='M_'+Date.now();
+    progressData[msProjIdx].milestones.push(m);
+  } else {
+    var old=progressData[msProjIdx].milestones[msMsIdx];
+    m.id=old.id;
+    progressData[msProjIdx].milestones[msMsIdx]=m;
+  }
+  closeMsModal(); renderProgress(); saveProgress('milestone');
+}
+
+function deleteMsModal(){
+  if (msIsNew) return;
+  progressData[msProjIdx].milestones.splice(msMsIdx, 1);
+  closeMsModal(); renderProgress(); saveProgress(null);
+}
+
+document.getElementById('ms-save').addEventListener('click', saveMsModal);
+document.getElementById('ms-cancel').addEventListener('click', closeMsModal);
+document.getElementById('ms-close').addEventListener('click', closeMsModal);
+document.getElementById('ms-delete').addEventListener('click', deleteMsModal);
+document.getElementById('msModal').addEventListener('click', function(e){ if (e.target===this) closeMsModal(); });
+
+document.addEventListener('keydown', function(e){
+  if (e.key==='Escape') closeMsModal();
+  if ((e.ctrlKey||e.metaKey)&&e.key==='s'){ e.preventDefault(); if (document.getElementById('msModal').classList.contains('open')) saveMsModal(); }
+});
+
+
+// ═══════════════ API ═══════════════
+
+function saveProgress(ctx, cb){
+  var btn = document.getElementById('saveBtn');
+  fetch(API+'/api/personal-progress',{ method:'POST', headers:HEADERS, body:JSON.stringify({ projects:progressData }), cache:'no-store' })
+    .then(function(r){ if (!r.ok) throw new Error('HTTP '+r.status); return r.json(); })
+    .then(function(d){
+      if (d.projects) progressData=d.projects;
+      if (ctx) showToast('✓ 已儲存','success');
+      if (btn){
+        btn.classList.add('saved');
+        btn.textContent = '✓ 已儲存';
+        setTimeout(function(){
+          btn.classList.remove('saved');
+          btn.textContent = '✓ 儲存';
+        }, 2500);
+      }
+      if (cb) cb();
+    })
+    .catch(function(e){ showToast('❌ 儲存失敗','error'); console.error('[progress] save:',e); if (cb) cb(); });
+}
+
+
+function loadData(){
+  document.getElementById('lastUpdated').textContent='載入中…';
+  Promise.all([
+    fetch(API+'/api/personal-data?t='+Date.now(),{ cache:'no-store', headers:GET_HEADERS }).then(function(r){ if (!r.ok) throw new Error('HTTP '+r.status); return r.json(); }),
+    fetch(API+'/api/personal-progress?t='+Date.now(),{ cache:'no-store', headers:GET_HEADERS }).then(function(r){ if (!r.ok) throw new Error('HTTP '+r.status); return r.json(); })
+  ]).then(function(results){
+    personalData=results[0];
+    progressData=results[1].projects||[];
+    var lu=(personalData.summary&&personalData.summary.last_updated)||'—';
+    document.getElementById('lastUpdated').textContent='更新：'+lu.slice(0,10);
+    renderProgress();
+  }).catch(function(e){
+    personalData={}; progressData=[];
+    document.getElementById('lastUpdated').textContent='⚠ 離線模式';
+    console.error('[personal-dashboard] load:',e);
+    renderProgress();
+  });
+}
+
+document.getElementById('refreshBtn').addEventListener('click', loadData);
+document.getElementById('saveBtn').addEventListener('click', function(){
+  saveProgress('manual');
+});
+loadData();
+
+// ═══════════════ WEEKLY REVIEW ═══════════════
+
+var WEEKLY_API = 'https://hy-agent-v2.onrender.com';
+var weeklyData = null;
+var weeklyListLoaded = false;
+
+function weeklyPct(val, total) {
+  if (!total) return 0;
+  return Math.min(100, Math.round(val / total * 100));
+}
+
+function weeklyBarClass(pct) {
+  if (pct >= 80) return 'green';
+  if (pct >= 50) return 'orange';
+  return 'red';
+}
+
+function renderWeekly(data) {
+  weeklyData = data;
+  var s = data.summary || {};
+  var g = data.goals || {};
+  var tw = data.this_week || {};
+  var next = data.next_week || {};
+  var cross = data.cross_domain || {};
+
+  var coworkUrl = data.cowork_url || '';
+  var dlBtn = document.getElementById('weeklyDownloadBtn');
+  var coBtn = document.getElementById('weeklyCoworkBtn');
+  dlBtn.style.display = data.raw_markdown ? '' : 'none';
+  coBtn.style.display = coworkUrl ? '' : 'none';
+  coBtn.onclick = function() { window.open(coworkUrl, '_blank'); };
+
+  var html = '';
+
+  // ── 摘要卡片 ──
+  html += '<div class="stat-grid">';
+  var cdNext = cross.next_week_due || {};
+  var stats = [
+    { num: s.work_completed || 0, label: '工作 milestone 本週完成' },
+    { num: s.personal_done  || 0, label: '個人本週完成' },
+    { num: s.family_done    || 0, label: '家庭本週完成' },
+    { num: cdNext.work      || 0, label: '下週工作 due' },
+    { num: s.work_wip       || 0, label: '工作進行中' },
+    { num: s.family_wip     || 0, label: '家庭進行中' },
+  ];
+  stats.forEach(function(st) {
+    html += '<div class="stat-card"><div class="stat-num">'+st.num+'</div><div class="stat-label">'+esc(st.label)+'</div></div>';
+  });
+  html += '</div>';
+
+  // ── 四大目標達成 ──
+  html += '<div class="section-card"><div class="section-title">🎯 四大目標達成狀況</div><div class="goal-progress-list">';
+  var gh = g.health  || {};
+  var gf = g.finance || {};
+  var gg = g.growth  || {};
+  var gl = g.leisure || {};
+  var goalRows = [
+    { icon:'💪', label:'健康',  done: gh.exercise_count || 0, total: gh.exercise_target || 0 },
+    { icon:'💰', label:'財務',  done: gf.saved || 0, total: gf.target || 0 },
+    { icon:'📚', label:'成長',  done: (gg.skills||[]).length, noBar: true, extra: gg.current_focus ? '目前專注：'+gg.current_focus : null },
+    { icon:'🎉', label:'休閒',  done: (gl.restaurant_visited||[]).length, total: gl.restaurant_target || 0 },
+  ];
+  goalRows.forEach(function(gr) {
+    html += '<div class="goal-prog-row">';
+    if (gr.noBar) {
+      html += '<div class="goal-prog-header"><span class="goal-prog-name">'+gr.icon+' '+gr.label+'</span><span class="goal-prog-pct">進行中 '+gr.done+' 項</span></div>';
+      if (gr.extra) html += '<div style="font-size:12px;color:var(--text-muted);margin-top:2px;">'+esc(gr.extra)+'</div>';
+    } else {
+      var pct = weeklyPct(gr.done, gr.total);
+      var cls = weeklyBarClass(pct);
+      html += '<div class="goal-prog-header"><span class="goal-prog-name">'+gr.icon+' '+gr.label+'</span><span class="goal-prog-pct">'+gr.done+'/'+gr.total+' ('+pct+'%)</span></div>';
+      html += '<div class="prog-bar-bg"><div class="prog-bar-fill '+cls+'" style="width:'+pct+'%"></div></div>';
+    }
+    html += '</div>';
+  });
+  html += '</div></div>';
+
+  // ── 本週進展（個人 / 工作 / 家庭）──
+  html += '<div class="domain-grid">';
+  var pk = tw.personal_kanban || {};
+  var fk = tw.family_kanban   || {};
+  var domainData = [
+    { label:'👤 個人', done: pk.this_week_done || 0, wip: pk.in_progress || 0, added: pk.this_week_new || 0 },
+    { label:'💼 工作', done: s.work_completed  || 0, wip: s.work_wip     || 0, added: 0 },
+    { label:'🏠 家庭', done: fk.this_week_done || 0, wip: fk.in_progress || 0, added: fk.this_week_new || 0 },
+  ];
+  domainData.forEach(function(dd) {
+    html += '<div class="domain-card"><div class="domain-title">'+dd.label+'</div>';
+    html += '<div class="domain-row"><span class="domain-row-label">本週完成</span><span class="domain-row-val">'+dd.done+'</span></div>';
+    html += '<div class="domain-row"><span class="domain-row-label">進行中</span><span class="domain-row-val">'+dd.wip+'</span></div>';
+    html += '<div class="domain-row"><span class="domain-row-label">本週新增</span><span class="domain-row-val">'+dd.added+'</span></div>';
+    html += '</div>';
+  });
+  html += '</div>';
+
+  // ── 下週關鍵事項 ──
+  html += '<div class="section-card"><div class="section-title">📅 下週關鍵事項</div>';
+  var personalDue = next.personal_due  || [];
+  var workUpcoming = next.work_upcoming || [];
+  var familyDue   = next.family_due    || [];
+  var anyNext = personalDue.length || workUpcoming.length || familyDue.length;
+
+  if (personalDue.length) {
+    html += '<div style="margin-bottom:12px"><div style="font-size:12px;font-weight:700;color:var(--text-muted);margin-bottom:6px;">👤 個人</div><ul class="due-list">';
+    personalDue.forEach(function(it) {
+      html += '<li class="due-item"><span class="due-title">'+esc(it.title||it)+'</span>';
+      if (it.due) html += '<span class="due-date">'+esc(it.due)+'</span>';
+      html += '</li>';
+    });
+    html += '</ul></div>';
+  }
+  if (workUpcoming.length) {
+    html += '<div style="margin-bottom:12px"><div style="font-size:12px;font-weight:700;color:var(--text-muted);margin-bottom:6px;">💼 工作</div><ul class="due-list">';
+    workUpcoming.forEach(function(it) {
+      var titleText = it.project ? '['+it.project+'] '+it.title : (it.title||it);
+      html += '<li class="due-item"><span class="due-title">'+esc(titleText)+'</span>';
+      if (it.due) html += '<span class="due-date">'+esc(it.due)+'</span>';
+      html += '</li>';
+    });
+    html += '</ul></div>';
+  }
+  if (familyDue.length) {
+    html += '<div style="margin-bottom:12px"><div style="font-size:12px;font-weight:700;color:var(--text-muted);margin-bottom:6px;">🏠 家庭</div><ul class="due-list">';
+    familyDue.forEach(function(it) {
+      html += '<li class="due-item"><span class="due-title">'+esc(it.title||it)+'</span>';
+      if (it.due) html += '<span class="due-date">'+esc(it.due)+'</span>';
+      html += '</li>';
+    });
+    html += '</ul></div>';
+  }
+  if (!anyNext) html += '<div style="color:var(--text-dim);font-size:13px;">無待辦事項</div>';
+  html += '</div>';
+
+  // ── 跨域數字概況 ──
+  html += '<div class="section-card"><div class="section-title">📊 跨域數字概況</div>';
+  html += '<div class="cross-stat-grid">';
+  var crossDefs = [
+    { key:'in_progress',    label:'進行中' },
+    { key:'this_week_done', label:'本週完成' },
+    { key:'next_week_due',  label:'下週 due' },
+  ];
+  var domainKeys = [
+    { key:'personal', label:'個人' },
+    { key:'work',     label:'工作' },
+    { key:'family',   label:'家庭' },
+  ];
+  crossDefs.forEach(function(cd) {
+    var cv = cross[cd.key] || {};
+    html += '<div class="cross-stat-card"><div class="cross-stat-title">'+esc(cd.label)+'</div><div class="cross-stat-nums">';
+    domainKeys.forEach(function(dk) {
+      html += '<div class="cross-stat-item"><div class="cross-stat-num">'+(cv[dk.key]||0)+'</div><div class="cross-stat-sub">'+dk.label+'</div></div>';
+    });
+    html += '</div></div>';
+  });
+  html += '</div></div>';
+
+  document.getElementById('weeklyContent').innerHTML = html;
+}
+
+function loadWeeklyData(weekId) {
+  document.getElementById('weeklyContent').innerHTML = '<div class="weekly-loading">載入中…</div>';
+  document.getElementById('weeklyDownloadBtn').style.display = 'none';
+  document.getElementById('weeklyCoworkBtn').style.display = 'none';
+  var url = WEEKLY_API + '/api/weekly-package?type=hy&week=' + encodeURIComponent(weekId);
+  fetch(url, { cache:'no-store', headers:{ 'X-Read-Secret': SECRET } })
+    .then(function(r) { if (!r.ok) throw new Error('HTTP '+r.status); return r.json(); })
+    .then(function(data) { renderWeekly(data); })
+    .catch(function(e) {
+      document.getElementById('weeklyContent').innerHTML = '<div class="weekly-loading">⚠ 載入失敗：'+esc(e.message)+'</div>';
+      console.error('[weekly]', e);
+    });
+}
+
+function loadWeeklyList(targetWeek) {
+  fetch(WEEKLY_API + '/api/weekly-package/list?type=hy', { cache:'no-store', headers:{ 'X-Read-Secret': SECRET } })
+    .then(function(r) { if (!r.ok) throw new Error('HTTP '+r.status); return r.json(); })
+    .then(function(data) {
+      var weeks = data.weeks || data || [];
+      var sel = document.getElementById('weeklySelect');
+      sel.innerHTML = '';
+      if (!weeks.length) {
+        var opt = document.createElement('option');
+        opt.value = 'latest'; opt.textContent = '最新';
+        sel.appendChild(opt);
+      } else {
+        weeks.forEach(function(w) {
+          var opt = document.createElement('option');
+          var wid = typeof w === 'string' ? w : (w.week_id || w.week || w);
+          opt.value = wid; opt.textContent = wid;
+          sel.appendChild(opt);
+        });
+      }
+      var found = false;
+      if (targetWeek) {
+        for (var i = 0; i < sel.options.length; i++) {
+          if (sel.options[i].value === targetWeek) { sel.selectedIndex = i; found = true; break; }
+        }
+      }
+      if (!found) sel.selectedIndex = 0;
+      weeklyListLoaded = true;
+      loadWeeklyData(sel.value);
+    })
+    .catch(function(e) {
+      var sel = document.getElementById('weeklySelect');
+      sel.innerHTML = '<option value="latest">最新</option>';
+      weeklyListLoaded = true;
+      loadWeeklyData('latest');
+      console.error('[weekly list]', e);
+    });
+}
+
+document.getElementById('weeklySelect').addEventListener('change', function() {
+  loadWeeklyData(this.value);
+});
+
+document.getElementById('weeklyDownloadBtn').addEventListener('click', function() {
+  if (!weeklyData || !weeklyData.raw_markdown) return;
+  var blob = new Blob([weeklyData.raw_markdown], { type:'text/markdown;charset=utf-8' });
+  var url = URL.createObjectURL(blob);
+  var a = document.createElement('a');
+  a.href = url;
+  a.download = (weeklyData.week_id || 'weekly-review') + '.md';
+  document.body.appendChild(a); a.click();
+  document.body.removeChild(a); URL.revokeObjectURL(url);
+});
+
+// ── URL query string: ?tab=weekly&week=2026-W19 ──
+(function() {
+  var params = new URLSearchParams(window.location.search);
+  var tabParam  = params.get('tab');
+  var weekParam = params.get('week');
+
+  if (tabParam === 'weekly') {
+    document.querySelectorAll('.tab').forEach(function(t) { t.classList.remove('active'); });
+    document.querySelectorAll('.tab-content').forEach(function(c) { c.classList.remove('active'); });
+    document.querySelector('[data-tab="weekly"]').classList.add('active');
+    document.getElementById('tab-weekly').classList.add('active');
+    loadWeeklyList(weekParam || null);
+  }
+})();
+
+// Load weekly list when tab is first clicked
+document.querySelector('[data-tab="weekly"]').addEventListener('click', function() {
+  if (!weeklyListLoaded) {
+    loadWeeklyList(null);
+  }
+});
+
+</script>
+</body>
