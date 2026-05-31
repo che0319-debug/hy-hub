@@ -348,6 +348,29 @@ header { background:var(--header-bg); padding:0 24px; display:flex; align-items:
   <div class="tab" data-tab="weekly">📋 週覆盤</div>
 </div>
 
+<!-- 進度追蹤 -->
+<div class="tab-content active" id="tab-progress">
+  <div class="board-wrap">
+    <div class="board" id="board">
+      <div style="color:var(--text-dim);padding:32px 0;width:100%;text-align:center;">⏳ 載入中…</div>
+    </div>
+  </div>
+</div>
+
+<!-- 週覆盤 -->
+<div class="tab-content" id="tab-weekly">
+  <div class="weekly-wrap">
+    <div class="weekly-toolbar">
+      <label>週次：</label>
+      <select class="weekly-select" id="weeklySelect"></select>
+      <div class="weekly-actions">
+        <button class="btn btn-ghost" id="weeklyDownloadBtn" style="display:none">⬇ 下載 Markdown</button>
+        <button class="btn btn-blue" id="weeklyCoworkBtn" style="display:none">🤝 開啟 Cowork</button>
+      </div>
+    </div>
+    <div id="weeklyContent"><div class="weekly-loading">選擇週次以載入資料…</div></div>
+  </div>
+</div>
 
 <!-- Milestone Modal -->
 <div class="modal-overlay" id="msModal">
