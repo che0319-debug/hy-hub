@@ -411,6 +411,7 @@ var GET_HEADERS = { 'X-Read-Secret':SECRET, 'Cache-Control':'no-store' };
 
 var personalData = {};
 var progressData = [];
+var dataLoaded   = false;   // loadData 成功才 true；失敗保持 false，禁止寫入
 var today        = new Date().toISOString().slice(0,10);
 
 var msProjIdx = null, msMsIdx = null, msIsNew = false;
@@ -685,6 +686,11 @@ document.addEventListener('keydown', function(e){
 // ═══════════════ API ═══════════════
 
 function saveProgress(ctx, cb){
+  if (!dataLoaded){
+    showToast('⚠ 資料未成功載入，已阻止儲存（避免覆寫）', 'error');
+    if (cb) cb();
+    return;
+  }
   var btn = document.getElementById('saveBtn');
   fetch(API+'/api/personal-progress',{ method:'POST', headers:HEADERS, body:JSON.stringify({ projects:progressData }), cache:'no-store' })
     .then(function(r){ if (!r.ok) throw new Error('HTTP '+r.status); return r.json(); })
@@ -713,11 +719,17 @@ function loadData(){
   ]).then(function(results){
     personalData=results[0];
     progressData=results[1].projects||[];
+    dataLoaded = true;
+    var sb = document.getElementById('saveBtn');
+    if (sb){ sb.disabled = false; sb.title = ''; }
     var lu=(personalData.summary&&personalData.summary.last_updated)||'—';
     document.getElementById('lastUpdated').textContent='更新：'+lu.slice(0,10);
     renderProgress();
   }).catch(function(e){
     personalData={}; progressData=[];
+    dataLoaded = false;
+    var sb = document.getElementById('saveBtn');
+    if (sb){ sb.disabled = true; sb.title = '資料未載入，無法儲存'; }
     document.getElementById('lastUpdated').textContent='⚠ 離線模式';
     console.error('[personal-dashboard] load:',e);
     renderProgress();
