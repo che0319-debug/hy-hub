@@ -759,7 +759,7 @@ function saveProgress(ctx, cb){
       }
       if (cb) cb();
     })
-    .catch(function(e){ showToast('❌ 儲存失敗（Step 2 尚未實作）','error'); console.error('[950157] save:',e); if (cb) cb(); });
+    .catch(function(e){ showToast('❌ 儲存失敗','error'); console.error('[950157] save:',e); if (cb) cb(); });
 }
 
 
