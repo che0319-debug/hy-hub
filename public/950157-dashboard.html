@@ -701,17 +701,26 @@ function closeMsModal(){ document.getElementById('msModal').classList.remove('op
 function saveMsModal(){
   var title=document.getElementById('ms-title').value.trim();
   if (!title){ showToast('請輸入標題','error'); return; }
-  var m={ title:title, due:inputToDue(document.getElementById('ms-due').value), description:document.getElementById('ms-desc').value };
+  var m;
   if (msIsNew){
-    m.id='M_'+Date.now();
-    m.execute_status = '';
-    m.delegated_to_950157 = false;
+    m={
+      id:'M_'+Date.now(),
+      title:title,
+      due:inputToDue(document.getElementById('ms-due').value),
+      description:document.getElementById('ms-desc').value,
+      execute_status:'',
+      delegated_to_950157:false
+    };
     progressData[msProjIdx].milestones.push(m);
   } else {
     var old=progressData[msProjIdx].milestones[msMsIdx];
-    m.id=old.id;
-    m.execute_status = old.execute_status || '';
-    m.delegated_to_950157 = old.delegated_to_950157 || false;
+    // 先展開既有所有欄位（保留 scheduled_date / scheduled_event_id / gcal_event_id / reminder_sent 等）
+    // 再覆蓋使用者實際編輯的三個欄位
+    m=Object.assign({}, old, {
+      title:title,
+      due:inputToDue(document.getElementById('ms-due').value),
+      description:document.getElementById('ms-desc').value
+    });
     progressData[msProjIdx].milestones[msMsIdx]=m;
   }
   closeMsModal(); renderProgress(); saveProgress('milestone');
