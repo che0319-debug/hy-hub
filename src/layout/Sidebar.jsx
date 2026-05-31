@@ -16,6 +16,7 @@ const botItems = [
   { to: '/line/hy',      label: 'HY',     icon: MessageSquare },
   { to: '/line/xiaoyin', label: '小因',   icon: MessageSquare },
   { to: '/line/950157',  label: '950157', icon: MessageSquare },
+  { to: '/line/family',  label: '家庭',   icon: MessageSquare },
   { to: '/line/sam',     label: 'Sam',    icon: MessageSquare },
 ]
 

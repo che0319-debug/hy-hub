@@ -10,6 +10,7 @@ import CrossDomain from './pages/CrossDomain'
 import LineHY from './pages/LineHY'
 import LineXiaoyin from './pages/LineXiaoyin'
 import Line950157 from './pages/Line950157'
+import LineFamily from './pages/LineFamily'
 import LineSam from './pages/LineSam'
 import Settings from './pages/Settings'
 import AgentConfig from './pages/AgentConfig'
@@ -27,6 +28,7 @@ createRoot(document.getElementById('root')).render(
           <Route path="line/hy" element={<LineHY />} />
           <Route path="line/xiaoyin" element={<LineXiaoyin />} />
           <Route path="line/950157" element={<Line950157 />} />
+          <Route path="line/family" element={<LineFamily />} />
           <Route path="line/sam" element={<LineSam />} />
           <Route path="agent/:id" element={<AgentConfig />} />
           <Route path="goals" element={<Goals />} />

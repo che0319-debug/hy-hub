@@ -1,0 +1,738 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>家庭控制台</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=Noto+Sans+TC:wght@400;500;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Sortable/1.15.2/Sortable.min.js"></script>
+<style>
+:root {
+  /* Bot 識別變數（小因專屬） */
+  --brand-color: #c0392b;
+  --brand-name: '家庭';
+  --brand-sub: '小因管家';
+
+  /* 通用變數（不變） */
+  --bg: #f0f2f5;
+  --col-bg: #e4e6ea;
+  --card-bg: #ffffff;
+  --border: #d8dce4;
+  --text: #172b4d;
+  --text-muted: #5e6c84;
+  --text-dim: #97a0af;
+  --blue: #0052cc;
+  --blue-light: #deebff;
+  --green: #006644;
+  --orange: #974f0c;
+  --red: #de350b;
+  --header-bg: #0a1628;
+  --shadow-sm: 0 1px 3px rgba(0,0,0,0.08);
+  --shadow-md: 0 4px 12px rgba(0,0,0,0.12);
+  --shadow-lg: 0 8px 32px rgba(0,0,0,0.18);
+  --radius: 8px;
+}
+* { margin:0; padding:0; box-sizing:border-box; }
+html, body { height:100%; }
+body { background:var(--bg); color:var(--text); font-family:'Noto Sans TC',sans-serif; display:flex; flex-direction:column; }
+
+/* Header */
+header { background:var(--header-bg); padding:0 24px; display:flex; align-items:center; gap:16px; height:56px; flex-shrink:0; border-bottom:1px solid rgba(255,255,255,.06); }
+.logo-wrap { display:flex; align-items:center; gap:10px; }
+.logo-badge { background:var(--brand-color); color:#fff; font-family:'Syne',sans-serif; font-weight:800; font-size:14px; padding:3px 10px; border-radius:4px; letter-spacing:.5px; }
+.logo-sub { font-size:13px; color:rgba(255,255,255,.45); font-weight:500; }
+.header-right { margin-left:auto; display:flex; align-items:center; gap:10px; }
+.last-updated { font-size:12px; color:rgba(255,255,255,.4); background:rgba(255,255,255,.06); padding:4px 10px; border-radius:20px; border:1px solid rgba(255,255,255,.08); }
+.btn { padding:7px 14px; border-radius:6px; font-size:13px; font-weight:500; cursor:pointer; border:none; transition:all .15s; font-family:'Noto Sans TC',sans-serif; display:inline-flex; align-items:center; gap:5px; }
+.btn-ghost { background:rgba(255,255,255,.08); color:rgba(255,255,255,.75); border:1px solid rgba(255,255,255,.12); }
+.btn-ghost:hover { background:rgba(255,255,255,.14); color:#fff; }
+.btn-blue { background:var(--blue); color:#fff; }
+.btn-blue:hover { background:#0065ff; }
+.btn-blue:disabled { opacity:.6; cursor:not-allowed; }
+
+/* Tabs */
+.tabs { background:#fff; border-bottom:1px solid var(--border); padding:0 24px; display:flex; box-shadow:var(--shadow-sm); flex-shrink:0; }
+.tab { padding:14px 18px; font-size:13px; font-weight:500; color:var(--text-muted); cursor:pointer; border-bottom:2px solid transparent; margin-bottom:-1px; transition:all .15s; user-select:none; white-space:nowrap; }
+.tab:hover { color:var(--text); }
+.tab.active { color:var(--brand-color); border-bottom-color:var(--brand-color); font-weight:700; }
+
+/* Tab content */
+.tab-content { display:none; flex:1; min-height:0; }
+.tab-content.active { display:flex; flex-direction:column; }
+
+/* ══════════════ BOARD ══════════════ */
+.board-area { flex:1; display:flex; overflow-x:auto; overflow-y:hidden; padding:16px; gap:14px; align-items:flex-start; }
+
+.board-col { display:flex; flex-direction:column; width:284px; min-width:284px; max-height:100%; background:var(--col-bg); border-radius:10px; overflow:hidden; flex-shrink:0; }
+.col-header { padding:12px 14px 10px; display:flex; align-items:center; gap:7px; border-bottom:1px solid rgba(0,0,0,.07); flex-shrink:0; }
+.col-color-dot { width:10px; height:10px; border-radius:50%; flex-shrink:0; }
+.col-name-text { font-weight:700; font-size:13px; color:var(--text); flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.col-count { font-size:11px; font-weight:700; color:var(--text-muted); background:rgba(0,0,0,.08); padding:1px 7px; border-radius:10px; flex-shrink:0; }
+.col-icon-btn { background:none; border:none; cursor:pointer; color:var(--text-dim); font-size:13px; padding:3px 5px; border-radius:4px; transition:all .15s; flex-shrink:0; }
+.col-icon-btn:hover { color:var(--blue); background:var(--blue-light); }
+.col-icon-btn.del:hover { color:var(--red); background:#ffebe6; }
+
+.card-list { flex:1; overflow-y:auto; padding:10px 10px 4px; display:flex; flex-direction:column; gap:8px; min-height:60px; }
+.card-list::-webkit-scrollbar { width:4px; }
+.card-list::-webkit-scrollbar-thumb { background:#c1c7d0; border-radius:2px; }
+
+/* Kanban card */
+.kanban-card { background:var(--card-bg); border:1px solid var(--border); border-radius:8px; padding:12px; cursor:pointer; box-shadow:var(--shadow-sm); transition:box-shadow .15s,transform .15s; user-select:none; }
+.kanban-card:hover { box-shadow:var(--shadow-md); transform:translateY(-1px); }
+.sortable-ghost { opacity:.4; }
+
+.kcard-title { font-size:13px; font-weight:600; color:var(--text); line-height:1.4; margin-bottom:8px; }
+.kcard-meta { display:flex; flex-wrap:wrap; gap:5px; margin-bottom:6px; align-items:center; }
+.due-chip { font-size:11px; padding:2px 7px; border-radius:10px; background:#f4f5f7; color:var(--text-muted); font-weight:500; }
+.due-chip.overdue { background:#ffebe6; color:var(--red); font-weight:700; }
+.kcard-desc { font-size:12px; color:var(--text-muted); line-height:1.45; margin-bottom:6px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+
+.kcard-execute { display:flex; align-items:center; justify-content:space-between; padding-top:8px; border-top:1px solid var(--border); margin-top:2px; }
+.execute-label { display:flex; align-items:center; gap:6px; font-size:11px; color:var(--text-muted); cursor:pointer; }
+.execute-label input[type=checkbox] { cursor:pointer; accent-color:var(--blue); width:14px; height:14px; }
+.exec-badge { font-size:10px; font-weight:600; padding:2px 7px; border-radius:10px; }
+.exec-pending_execute { background:#fff0e6; color:var(--orange); }
+.exec-confirming { background:var(--blue-light); color:var(--blue); }
+.exec-executing  { background:#e3fcef; color:var(--green); }
+.exec-done       { background:#e3fcef; color:var(--green); }
+.exec-cancelled  { background:#ffebe6; color:var(--red); }
+.exec-failed     { background:#ffebe6; color:var(--red); }
+
+.add-card-btn { margin:8px 10px 10px; padding:7px 12px; background:transparent; border:2px dashed var(--border); border-radius:6px; color:var(--text-muted); font-size:12px; font-family:'Noto Sans TC',sans-serif; cursor:pointer; transition:all .15s; text-align:left; flex-shrink:0; }
+.add-card-btn:hover { border-color:var(--blue); color:var(--blue); background:var(--blue-light); }
+
+.add-col-btn { flex-shrink:0; align-self:flex-start; margin-top:2px; width:44px; height:44px; border-radius:8px; background:rgba(0,0,0,.06); border:2px dashed #b3bac5; color:var(--text-muted); font-size:20px; cursor:pointer; display:flex; align-items:center; justify-content:center; transition:all .15s; }
+.add-col-btn:hover { background:var(--blue-light); border-color:var(--blue); color:var(--blue); }
+
+/* ══════════════ MODAL ══════════════ */
+.modal-overlay { position:fixed; inset:0; background:rgba(0,0,0,.45); z-index:500; display:none; align-items:center; justify-content:center; }
+.modal-overlay.open { display:flex; }
+.modal-box { background:#fff; border-radius:10px; width:560px; max-width:95vw; max-height:90vh; display:flex; flex-direction:column; box-shadow:var(--shadow-lg); }
+.modal-header { padding:18px 20px 14px; border-bottom:1px solid var(--border); display:flex; align-items:center; justify-content:space-between; flex-shrink:0; }
+.modal-title { font-family:'Syne',sans-serif; font-size:15px; font-weight:700; color:var(--text); }
+.modal-close { background:none; border:none; font-size:18px; cursor:pointer; color:var(--text-dim); padding:2px 6px; border-radius:4px; }
+.modal-close:hover { color:var(--text); background:var(--col-bg); }
+.modal-body { overflow-y:auto; padding:18px 20px; flex:1; display:flex; flex-direction:column; gap:14px; }
+.modal-footer { padding:14px 20px; border-top:1px solid var(--border); display:flex; gap:8px; align-items:center; flex-shrink:0; }
+.modal-footer .del-side { margin-right:auto; }
+
+.m-field { display:flex; flex-direction:column; gap:5px; }
+.m-label { font-size:11px; font-weight:700; color:var(--text-muted); text-transform:uppercase; letter-spacing:.5px; }
+.m-input,.m-select,.m-textarea { width:100%; background:#fff; border:1.5px solid var(--border); border-radius:6px; color:var(--text); font-size:13px; padding:8px 10px; font-family:'Noto Sans TC',sans-serif; transition:border-color .15s; }
+.m-input:focus,.m-select:focus,.m-textarea:focus { outline:none; border-color:var(--blue); box-shadow:0 0 0 3px rgba(0,82,204,.1); }
+.m-textarea { resize:vertical; min-height:76px; line-height:1.55; }
+.m-row2 { display:flex; gap:12px; }
+.m-row2 .m-field { flex:1; }
+
+.btn-del { background:#fff; border:1.5px solid #ffd2cc; color:var(--red); padding:7px 14px; border-radius:6px; font-size:13px; cursor:pointer; font-family:'Noto Sans TC',sans-serif; transition:all .15s; }
+.btn-del:hover { background:#ffebe6; }
+.btn-cancel { background:var(--col-bg); border:none; color:var(--text-muted); padding:7px 14px; border-radius:6px; font-size:13px; cursor:pointer; font-family:'Noto Sans TC',sans-serif; transition:background .15s; }
+.btn-cancel:hover { background:#d2d6dc; color:var(--text); }
+.btn-save { background:var(--blue); color:#fff; border:none; padding:7px 18px; border-radius:6px; font-size:13px; font-weight:700; cursor:pointer; font-family:'Noto Sans TC',sans-serif; transition:all .15s; }
+.btn-save:hover { background:#0065ff; }
+
+/* Toast */
+.toast { position:fixed; bottom:24px; right:24px; padding:11px 18px; border-radius:7px; font-size:13px; font-weight:600; opacity:0; transform:translateY(10px); transition:all .22s; pointer-events:none; z-index:999; box-shadow:var(--shadow-md); }
+.toast.show { opacity:1; transform:translateY(0); }
+.toast-success { background:var(--green); color:#fff; }
+.toast-error   { background:var(--red);   color:#fff; }
+
+::-webkit-scrollbar { width:5px; height:5px; }
+::-webkit-scrollbar-track { background:transparent; }
+::-webkit-scrollbar-thumb { background:#c1c7d0; border-radius:3px; }
+::-webkit-scrollbar-thumb:hover { background:#97a0af; }
+
+/* ══════════════ WEEKLY REVIEW ══════════════ */
+#tab-weekly.active { overflow-y:auto; }
+.weekly-wrap { padding:20px 24px 48px; max-width:900px; }
+.weekly-toolbar { display:flex; align-items:center; gap:10px; margin-bottom:16px; flex-wrap:wrap; }
+.weekly-toolbar label { font-size:13px; font-weight:600; color:var(--text-muted); }
+.weekly-select { background:#fff; border:1.5px solid var(--border); border-radius:6px; color:var(--text); font-size:13px; padding:6px 10px; font-family:'Noto Sans TC',sans-serif; cursor:pointer; }
+.weekly-select:focus { outline:none; border-color:var(--blue); }
+.weekly-actions { margin-left:auto; display:flex; gap:8px; }
+#weeklyDownloadBtn { background:#fff; color:#1a1a1a; border:1.5px solid #6b778c; }
+#weeklyDownloadBtn:hover { background:#f4f5f7; border-color:#172b4d; }
+.weekly-loading { text-align:center; padding:48px; color:var(--text-muted); font-size:14px; }
+.wk-stat-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:12px; margin-bottom:16px; }
+.wk-stat-card { background:var(--card-bg); border:1px solid var(--border); border-radius:var(--radius); padding:14px 16px; box-shadow:var(--shadow-sm); text-align:center; }
+.wk-stat-num { font-family:'Syne',sans-serif; font-size:28px; font-weight:800; color:var(--blue); line-height:1.1; }
+.wk-stat-label { font-size:11px; color:var(--text-muted); margin-top:4px; font-weight:500; }
+.wk-section { background:var(--card-bg); border:1px solid var(--border); border-radius:var(--radius); padding:16px 20px; margin-bottom:14px; box-shadow:var(--shadow-sm); }
+.wk-section-title { font-family:'Syne',sans-serif; font-size:14px; font-weight:700; color:var(--text); margin-bottom:12px; padding-bottom:8px; border-bottom:1px solid var(--border); }
+.wk-sub { font-size:12px; font-weight:700; color:var(--text-muted); text-transform:uppercase; letter-spacing:.4px; margin:10px 0 6px; }
+.wk-list { list-style:none; display:flex; flex-direction:column; gap:6px; }
+.wk-list li { display:flex; align-items:center; gap:8px; font-size:13px; }
+.wk-list li::before { content:''; width:6px; height:6px; border-radius:50%; background:var(--blue); flex-shrink:0; }
+.wk-item-title { flex:1; color:var(--text); }
+.wk-item-meta { font-size:11px; color:var(--text-muted); white-space:nowrap; }
+.wk-cal-table { width:100%; border-collapse:collapse; font-size:13px; }
+.wk-cal-table th { font-size:11px; color:var(--text-muted); font-weight:700; text-transform:uppercase; letter-spacing:.4px; padding:4px 8px; border-bottom:1px solid var(--border); text-align:left; }
+.wk-cal-table td { padding:6px 8px; border-bottom:1px solid #f4f5f7; }
+.wk-member-grid { display:grid; grid-template-columns:repeat(2,1fr); gap:10px; }
+.wk-member-card { background:#f8f9fa; border-radius:6px; padding:12px 14px; }
+.wk-member-name { font-size:12px; font-weight:700; color:var(--text); margin-bottom:4px; }
+.wk-member-note { font-size:12px; color:var(--text-muted); line-height:1.5; }
+.wk-tag-pending { display:inline-block; background:#fffae6; color:#974f0c; font-size:11px; font-weight:700; padding:2px 7px; border-radius:10px; border:1px solid #ffe58f; }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo-wrap">
+    <div class="logo-badge">家庭</div>
+    <div class="logo-sub">小因管家</div>
+  </div>
+  <div class="header-right">
+    <span class="last-updated" id="lastUpdated">載入中…</span>
+    <button class="btn btn-ghost" id="refreshBtn">↺ 重新整理</button>
+    <button class="btn btn-blue" id="saveBtn">✓ 儲存</button>
+  </div>
+</header>
+
+<div class="tabs">
+  <div class="tab active" data-tab="tasks">✅ 任務清單</div>
+  <div class="tab" data-tab="weekly">📋 週覆盤</div>
+</div>
+
+<!-- 任務清單 Kanban -->
+<div class="tab-content active" id="tab-tasks">
+  <div class="board-area" id="board"></div>
+</div>
+
+<!-- 週覆盤 -->
+<div class="tab-content" id="tab-weekly">
+  <div class="weekly-wrap">
+    <div class="weekly-toolbar">
+      <label>週次：</label>
+      <select class="weekly-select" id="weeklySelect"></select>
+      <div class="weekly-actions">
+        <button class="btn" id="weeklyDownloadBtn" style="display:none">⬇ 下載 Markdown</button>
+        <button class="btn btn-blue" id="weeklyCoworkBtn" style="display:none">🤝 開啟 Cowork</button>
+      </div>
+    </div>
+    <div id="weeklyContent"><div class="weekly-loading">選擇週次以載入資料…</div></div>
+  </div>
+</div>
+
+<!-- Card Modal -->
+<div class="modal-overlay" id="cardModal">
+  <div class="modal-box">
+    <div class="modal-header">
+      <div class="modal-title" id="m-modal-title">編輯任務</div>
+      <button class="modal-close" id="m-close">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="m-field">
+        <label class="m-label">標題</label>
+        <input class="m-input" id="m-title" placeholder="任務標題…">
+      </div>
+      <div class="m-field">
+        <label class="m-label">截止日期</label>
+        <input class="m-input" type="date" id="m-due">
+      </div>
+      <div class="m-field">
+        <label class="m-label">執行描述（告訴小因要做什麼）</label>
+        <textarea class="m-textarea" id="m-desc" placeholder="詳細說明任務內容…"></textarea>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <div class="del-side"><button class="btn-del" id="m-delete">刪除</button></div>
+      <button class="btn-cancel" id="m-cancel">取消</button>
+      <button class="btn-save" id="m-save">儲存</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+var API         = 'https://hy-agent-v2.onrender.com';
+var SECRET      = '__READ_SECRET__';
+var HEADERS     = { 'Content-Type':'application/json', 'X-Read-Secret':SECRET };
+var GET_HEADERS = { 'X-Read-Secret':SECRET, 'Cache-Control':'no-store' };
+
+var familyData = {};
+var kanban     = { projects:[] };
+var today      = new Date().toISOString().slice(0,10);
+
+var DEFAULT_PROJECTS = [
+  { id:'P_規劃',    name:'規劃',    color:'#5243aa', milestones:[] },
+  { id:'P_成員',    name:'成員',    color:'#0052cc', milestones:[] },
+  { id:'P_日常習慣', name:'日常習慣', color:'#006644', milestones:[] }
+];
+var EXEC_LABELS = {
+  pending_execute:'⏳ 等待確認', pending_confirm:'💬 確認中', confirming:'💬 確認中',
+  executing:'⚡ 執行中', done:'✅ 已完成', cancelled:'❌ 已取消', failed:'⚠️ 失敗'
+};
+// modal state
+var mProjId = null, mMilestone = null, mIsNew = false;
+
+function esc(s){ return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+function showToast(msg,type){ var t=document.getElementById('toast'); t.textContent=msg; t.className='toast show toast-'+(type||'success'); setTimeout(function(){ t.className='toast'; },2200); }
+
+// ── Tabs ──
+document.querySelectorAll('.tab').forEach(function(tab){
+  tab.addEventListener('click', function(){
+    document.querySelectorAll('.tab').forEach(function(t){ t.classList.remove('active'); });
+    document.querySelectorAll('.tab-content').forEach(function(c){ c.classList.remove('active'); });
+    tab.classList.add('active');
+    document.getElementById('tab-'+tab.dataset.tab).classList.add('active');
+  });
+});
+
+// ── Date helpers ──
+function dueToInput(d){ return d ? d.replace(/\//g,'-') : ''; }
+function inputToDue(d){ return d ? d.replace(/-/g,'/') : ''; }
+function dueDisplay(d){
+  if (!d) return null;
+  var cmp = d.replace(/\//g,'-');
+  var p = d.split('/');
+  return { text: p[1]+'/'+p[2], over: cmp < today };
+}
+
+// ═══════════════ BOARD ═══════════════
+
+function renderBoard(){
+  var board = document.getElementById('board');
+  board.innerHTML = '';
+  kanban.projects.forEach(function(p){
+    p.milestones.forEach(function(m){
+      if (m.delegated_to_family === undefined) m.delegated_to_family = false;
+    });
+  });
+  kanban.projects.forEach(function(proj){ board.appendChild(makeCol(proj)); });
+  var btn = document.createElement('button');
+  btn.className = 'add-col-btn'; btn.title = '新增欄位'; btn.textContent = '＋';
+  btn.addEventListener('click', addColumn);
+  board.appendChild(btn);
+  kanban.projects.forEach(function(proj){ initSortable(proj.id); });
+}
+
+function makeCol(proj){
+  var col = document.createElement('div');
+  col.className = 'board-col'; col.id = 'col-'+proj.id;
+
+  // header
+  var hdr = document.createElement('div'); hdr.className = 'col-header';
+  var dot = document.createElement('div'); dot.className = 'col-color-dot'; dot.style.background = proj.color||'#6b778c';
+  var nm  = document.createElement('span'); nm.className = 'col-name-text'; nm.textContent = proj.name;
+  var cnt = document.createElement('span'); cnt.className = 'col-count'; cnt.textContent = proj.milestones.length;
+  var editBtn = document.createElement('button'); editBtn.className='col-icon-btn'; editBtn.textContent='✏'; editBtn.title='重新命名';
+  editBtn.addEventListener('click', function(e){ e.stopPropagation(); renameColumn(proj.id); });
+  var delBtn = document.createElement('button'); delBtn.className='col-icon-btn del'; delBtn.textContent='✕'; delBtn.title='刪除欄位';
+  delBtn.addEventListener('click', function(e){ e.stopPropagation(); deleteColumn(proj.id); });
+  hdr.appendChild(dot); hdr.appendChild(nm); hdr.appendChild(cnt); hdr.appendChild(editBtn); hdr.appendChild(delBtn);
+  col.appendChild(hdr);
+
+  // card list
+  var list = document.createElement('div'); list.className='card-list'; list.id='list-'+proj.id;
+  proj.milestones.forEach(function(m){ list.appendChild(makeCard(m, proj.id)); });
+  col.appendChild(list);
+
+  // add card btn
+  var add = document.createElement('button'); add.className='add-card-btn'; add.textContent='＋ 新增卡片';
+  add.addEventListener('click', function(){ openModal(proj.id, null, true); });
+  col.appendChild(add);
+  return col;
+}
+
+function makeCard(m, projId){
+  var card = document.createElement('div');
+  card.className = 'kanban-card'; card.dataset.id = m.id; card.dataset.col = projId;
+
+  var titleEl = document.createElement('div'); titleEl.className='kcard-title'; titleEl.textContent = m.title;
+  card.appendChild(titleEl);
+
+  var meta = document.createElement('div'); meta.className='kcard-meta';
+  if (m.due){
+    var dd = dueDisplay(m.due);
+    var chip = document.createElement('span'); chip.className='due-chip'+(dd.over?' overdue':'');
+    chip.textContent = (dd.over?'⚠ ':'')+dd.text; meta.appendChild(chip);
+  }
+  card.appendChild(meta);
+
+  if (m.description){
+    var desc = document.createElement('div'); desc.className='kcard-desc'; desc.textContent = m.description;
+    card.appendChild(desc);
+  }
+  // execute row
+  var execRow = document.createElement('div'); execRow.className='kcard-execute';
+  var lbl = document.createElement('label'); lbl.className='execute-label';
+  lbl.addEventListener('click', function(e){ e.stopPropagation(); });
+  var cb = document.createElement('input'); cb.type='checkbox'; cb.checked=!!m.delegated_to_family;
+  cb.addEventListener('change', function(e){ e.stopPropagation(); toggleExecute(m.id); });
+  lbl.appendChild(cb); lbl.appendChild(document.createTextNode('交給小因'));
+  execRow.appendChild(lbl);
+  if (m.execute_status && EXEC_LABELS[m.execute_status]){
+    var badge = document.createElement('span'); badge.className='exec-badge exec-'+m.execute_status;
+    badge.textContent = EXEC_LABELS[m.execute_status]; execRow.appendChild(badge);
+  }
+  card.appendChild(execRow);
+
+  card.addEventListener('click', function(){ openModal(projId, m, false); });
+  return card;
+}
+
+function initSortable(projId){
+  var el = document.getElementById('list-'+projId);
+  if (!el || !window.Sortable) return;
+  new Sortable(el, {
+    group:'kanban', animation:150, ghostClass:'sortable-ghost',
+    onEnd: function(){ syncBoardToData(); familyData._kanban=kanban; saveData(null); }
+  });
+}
+
+function syncBoardToData(){
+  kanban.projects.forEach(function(proj){
+    var list = document.getElementById('list-'+proj.id); if (!list) return;
+    var newMs = [];
+    list.querySelectorAll('.kanban-card').forEach(function(card){
+      var m = findM(card.dataset.id); if (m) newMs.push(m);
+    });
+    proj.milestones = newMs;
+  });
+}
+
+function findM(mid){
+  for (var i=0;i<kanban.projects.length;i++){
+    var ms=kanban.projects[i].milestones;
+    for (var j=0;j<ms.length;j++){ if (ms[j].id===mid) return ms[j]; }
+  }
+  return null;
+}
+
+function toggleExecute(mid){
+  var m=findM(mid); if (!m) return;
+  m.delegated_to_family = !m.delegated_to_family;
+  if (!m.delegated_to_family) m.execute_status = '';
+  renderBoard(); familyData._kanban=kanban; saveData(null);
+}
+
+function addColumn(){
+  var name=prompt('新欄位名稱：'); if (!name||!name.trim()) return;
+  kanban.projects.push({ id:'P_'+Date.now(), name:name.trim(), color:'#6b778c', milestones:[] });
+  renderBoard(); familyData._kanban=kanban; saveData('kanban');
+}
+
+function renameColumn(projId){
+  var proj=kanban.projects.find(function(p){ return p.id===projId; }); if (!proj) return;
+  var name=prompt('新名稱：', proj.name); if (!name||!name.trim()) return;
+  proj.name=name.trim(); renderBoard(); familyData._kanban=kanban; saveData('kanban');
+}
+
+function deleteColumn(projId){
+  var proj=kanban.projects.find(function(p){ return p.id===projId; }); if (!proj) return;
+  if (proj.milestones.length && !confirm('此欄位有 '+proj.milestones.length+' 張卡片，確定要刪除？')) return;
+  kanban.projects=kanban.projects.filter(function(p){ return p.id!==projId; });
+  renderBoard(); familyData._kanban=kanban; saveData('kanban');
+}
+
+// ═══════════════ MODAL ═══════════════
+
+function openModal(projId, m, isNew){
+  mProjId=projId; mIsNew=isNew;
+  if (isNew){
+    mMilestone = { id:'M_'+Date.now(), title:'', due:'', description:'', execute_status:'' };
+    document.getElementById('m-modal-title').textContent='新增任務';
+    document.getElementById('m-delete').style.display='none';
+  } else {
+    mMilestone=m;
+    document.getElementById('m-modal-title').textContent='編輯任務';
+    document.getElementById('m-delete').style.display='';
+  }
+  document.getElementById('m-title').value = mMilestone.title||'';
+  document.getElementById('m-due').value   = dueToInput(mMilestone.due);
+  document.getElementById('m-desc').value  = mMilestone.description||'';
+  document.getElementById('cardModal').classList.add('open');
+  setTimeout(function(){ document.getElementById('m-title').focus(); },50);
+}
+
+function closeModal(){ document.getElementById('cardModal').classList.remove('open'); mMilestone=null; }
+
+function saveModal(){
+  if (!mMilestone) return;
+  var title=document.getElementById('m-title').value.trim();
+  if (!title){ showToast('請輸入標題','error'); return; }
+  mMilestone.title       = title;
+  mMilestone.due         = inputToDue(document.getElementById('m-due').value);
+  mMilestone.description = document.getElementById('m-desc').value.trim();
+  if (mIsNew){
+    var proj=kanban.projects.find(function(p){ return p.id===mProjId; });
+    if (proj) proj.milestones.push(mMilestone);
+  }
+  closeModal(); renderBoard(); familyData._kanban=kanban; saveData('kanban');
+}
+
+function deleteModal(){
+  if (!mMilestone||mIsNew) return;
+  var mid=mMilestone.id;
+  kanban.projects.forEach(function(p){ p.milestones=p.milestones.filter(function(m){ return m.id!==mid; }); });
+  closeModal(); renderBoard(); familyData._kanban=kanban; saveData('kanban');
+}
+
+document.getElementById('m-save').addEventListener('click', saveModal);
+document.getElementById('m-cancel').addEventListener('click', closeModal);
+document.getElementById('m-close').addEventListener('click', closeModal);
+document.getElementById('m-delete').addEventListener('click', deleteModal);
+document.getElementById('cardModal').addEventListener('click', function(e){ if (e.target===this) closeModal(); });
+
+document.addEventListener('keydown', function(e){
+  if ((e.ctrlKey||e.metaKey)&&e.key==='s'){ e.preventDefault(); document.getElementById('cardModal').classList.contains('open') ? saveModal() : triggerSave(); }
+  if (e.key==='Escape') closeModal();
+});
+
+// ═══════════════ API ═══════════════
+
+function saveData(ctx, cb){
+  var payload=JSON.parse(JSON.stringify(familyData));
+  if (!payload.summary) payload.summary={};
+  payload.summary.last_updated=new Date().toISOString();
+  if (payload._kanban) payload._kanban.last_updated=payload.summary.last_updated;
+  fetch(API+'/api/family-progress',{ method:'POST', headers:HEADERS, body:JSON.stringify(payload), cache:'no-store' })
+    .then(function(r){ if (!r.ok) throw new Error('HTTP '+r.status); return r.json(); })
+    .then(function(){ familyData=payload; document.getElementById('lastUpdated').textContent='更新：'+payload.summary.last_updated.slice(0,10); if (ctx) showToast('✓ 已儲存到 GitHub','success'); if (cb) cb(); })
+    .catch(function(e){ showToast('❌ 儲存失敗','error'); console.error('[family-dashboard] save:',e); if (cb) cb(); });
+}
+
+function triggerSave(){
+  var btn=document.getElementById('saveBtn'); btn.disabled=true;
+  saveData('global', function(){ btn.disabled=false; });
+}
+
+function loadData(){
+  document.getElementById('lastUpdated').textContent='載入中…';
+  fetch(API+'/api/family-progress?t='+Date.now(),{ cache:'no-store', headers:GET_HEADERS })
+    .then(function(r){ if (!r.ok) throw new Error('HTTP '+r.status); return r.json(); })
+    .then(function(d){
+      familyData=d; initKanban();
+      var lu=(familyData.summary&&familyData.summary.last_updated)||'—';
+      document.getElementById('lastUpdated').textContent='更新：'+lu.slice(0,10);
+      renderBoard();
+    })
+    .catch(function(e){
+      familyData={};
+      document.getElementById('lastUpdated').textContent='⚠ 離線模式';
+      console.error('[family-dashboard] load:',e);
+      initKanban(); renderBoard();
+    });
+}
+
+function initKanban(){
+  if (familyData._kanban&&familyData._kanban.projects&&familyData._kanban.projects.length){
+    kanban=familyData._kanban;
+  } else {
+    kanban={ projects:DEFAULT_PROJECTS.map(function(p){ return JSON.parse(JSON.stringify(p)); }), last_updated:'' };
+    familyData._kanban=kanban;
+  }
+}
+
+document.getElementById('refreshBtn').addEventListener('click', loadData);
+document.getElementById('saveBtn').addEventListener('click', triggerSave);
+loadData();
+
+// ══════════════ WEEKLY REVIEW ══════════════
+var weeklyData = null;
+
+function renderWeekly(data) {
+  weeklyData = data;
+  var s       = data.summary        || {};
+  var kanban  = data.kanban         || {};
+  var cal     = data.calendar_stats || {};
+  var members = data.member_updates || {};
+  var nw      = data.next_week      || {};
+  var stale   = data.stale_items    || [];
+  var coworkUrl = data.cowork_url   || '';
+
+  var dlBtn = document.getElementById('weeklyDownloadBtn');
+  var coBtn = document.getElementById('weeklyCoworkBtn');
+  dlBtn.style.display = data.raw_markdown ? '' : 'none';
+  coBtn.style.display = coworkUrl ? '' : 'none';
+  coBtn.onclick = function(){ window.open(coworkUrl, '_blank'); };
+
+  var html = '';
+
+  // 摘要卡片
+  html += '<div class="wk-stat-grid">';
+  [
+    { num: s.tasks_new   || 0,           label: 'kanban 本週新增' },
+    { num: s.tasks_done  || 0,           label: 'kanban 本週完成' },
+    { num: s.tasks_stale || 0,           label: 'kanban 停滯' },
+    { num: s.event_count || 0,           label: '家庭活動場數' },
+    { num: (s.total_hours || 0) + 'h',   label: '家庭活動時數' },
+    { num: s.member_update_count || 0,   label: '成員狀態更新' },
+  ].forEach(function(st){
+    html += '<div class="wk-stat-card"><div class="wk-stat-num">'+esc(st.num)+'</div><div class="wk-stat-label">'+esc(st.label)+'</div></div>';
+  });
+  html += '</div>';
+
+  // kanban 變化
+  html += '<div class="wk-section"><div class="wk-section-title">📋 kanban 變化</div>';
+  var knNew  = kanban.new             || [];
+  var knDone = kanban.done            || [];
+  var knStale= kanban.stale           || [];
+  var knPend = kanban.pending_execute || [];
+
+  html += '<div class="wk-sub">本週新增</div>';
+  if (knNew.length) {
+    html += '<ul class="wk-list">';
+    knNew.forEach(function(ms){ html += '<li><span class="wk-item-title">'+esc(ms.title)+'</span><span class="wk-item-meta">'+esc(ms.project_name+(ms.due?' · '+ms.due:''))+'</span></li>'; });
+    html += '</ul>';
+  } else { html += '<div style="font-size:13px;color:var(--text-dim);">（無）</div>'; }
+
+  html += '<div class="wk-sub" style="margin-top:12px;">本週完成</div>';
+  if (knDone.length) {
+    html += '<ul class="wk-list">';
+    knDone.forEach(function(ms){ html += '<li><span class="wk-item-title">'+esc(ms.title)+' ✅</span><span class="wk-item-meta">'+esc(ms.project_name)+'</span></li>'; });
+    html += '</ul>';
+  } else { html += '<div style="font-size:13px;color:var(--text-dim);">（無）</div>'; }
+
+  html += '<div class="wk-sub" style="margin-top:12px;">停滯（連續兩週未推進）</div>';
+  if (kanban.first_run) {
+    html += '<div style="font-size:13px;color:var(--text-dim);">首次產出，無歷史可比對</div>';
+  } else if (knStale.length) {
+    html += '<ul class="wk-list">';
+    knStale.forEach(function(ms){ html += '<li><span class="wk-item-title">'+esc(ms.title)+'</span><span class="wk-item-meta">'+esc(ms.project_name+(ms.due?' · '+ms.due:''))+'</span></li>'; });
+    html += '</ul>';
+  } else { html += '<div style="font-size:13px;color:var(--text-dim);">（無）</div>'; }
+
+  if (knPend.length) {
+    html += '<div class="wk-sub" style="margin-top:12px;">等待 HY 確認 <span class="wk-tag-pending">pending</span></div>';
+    html += '<ul class="wk-list">';
+    knPend.forEach(function(ms){ html += '<li><span class="wk-item-title">'+esc(ms.title)+'</span><span class="wk-item-meta">'+esc(ms.project_name)+'</span></li>'; });
+    html += '</ul>';
+  }
+  html += '</div>';
+
+  // 行事曆實況
+  html += '<div class="wk-section"><div class="wk-section-title">📅 本週家庭行事曆實況</div>';
+  if (cal && cal.total_count !== undefined) {
+    html += '<table class="wk-cal-table"><thead><tr><th>分類</th><th>場數</th><th>時數</th></tr></thead><tbody>';
+    [['pickup','接送相關'],['family','家庭活動'],['medical','醫療/長照'],['other','其他']].forEach(function(c){
+      var d = cal[c[0]] || {};
+      html += '<tr><td>'+esc(c[1])+'</td><td>'+esc(d.count||0)+'</td><td>'+esc(d.hours||0)+'h</td></tr>';
+    });
+    html += '<tr style="font-weight:700;border-top:2px solid var(--border)"><td>合計</td><td>'+esc(cal.total_count)+'</td><td>'+esc(cal.total_hours)+'h</td></tr>';
+    html += '</tbody></table>';
+  } else { html += '<div style="font-size:13px;color:var(--text-dim);">日曆讀取失敗</div>'; }
+  html += '</div>';
+
+  // 成員狀態
+  html += '<div class="wk-section"><div class="wk-section-title">👥 成員狀態變化</div><div class="wk-member-grid">';
+  var memberEntries = Object.entries(members);
+  if (memberEntries.length) {
+    memberEntries.forEach(function(entry){
+      var notes = entry[1] || [];
+      html += '<div class="wk-member-card"><div class="wk-member-name">'+esc(entry[0])+'</div>';
+      if (notes.length) { notes.forEach(function(n){ html += '<div class="wk-member-note">'+esc(n)+'</div>'; }); }
+      else { html += '<div class="wk-member-note" style="color:var(--text-dim);">本週無新紀錄</div>'; }
+      html += '</div>';
+    });
+  } else { html += '<div style="font-size:13px;color:var(--text-dim);">無成員資料</div>'; }
+  html += '</div></div>';
+
+  // 下週關鍵事項
+  var nwStart = (nw.date_range||{}).start||''; var nwEnd = (nw.date_range||{}).end||'';
+  var nwTitle = nwStart ? ' ('+esc(nwStart)+' - '+esc(nwEnd)+')' : '';
+  html += '<div class="wk-section"><div class="wk-section-title">📅 下週關鍵事項'+nwTitle+'</div>';
+  var nwCal = nw.calendar_events||[]; var nwMs = nw.upcoming_milestones||[]; var nwFix = nw.fixed_reminders||[];
+  if (nwCal.length) {
+    html += '<div class="wk-sub">行事曆預告</div><ul class="wk-list">';
+    nwCal.slice(0,10).forEach(function(ev){ html += '<li><span class="wk-item-title">'+esc(ev)+'</span></li>'; });
+    html += '</ul>';
+  }
+  if (nwMs.length) {
+    html += '<div class="wk-sub" style="margin-top:10px;">7天內到期</div><ul class="wk-list">';
+    nwMs.forEach(function(m){ html += '<li><span class="wk-item-title">'+esc(m.title||m)+'</span>'+(m.due?'<span class="wk-item-meta">'+esc(m.due)+'</span>':'')+'</li>'; });
+    html += '</ul>';
+  }
+  if (nwFix.length) {
+    html += '<div class="wk-sub" style="margin-top:10px;">固定提醒</div><ul class="wk-list">';
+    nwFix.forEach(function(r){ html += '<li><span class="wk-item-title">'+esc(r)+'</span></li>'; });
+    html += '</ul>';
+  }
+  if (!nwCal.length && !nwMs.length && !nwFix.length) html += '<div style="font-size:13px;color:var(--text-dim);">無下週資料</div>';
+  html += '</div>';
+
+  // 停滯偵測
+  if (stale.length) {
+    html += '<div class="wk-section"><div class="wk-section-title">⚠ 停滯偵測</div><ul class="wk-list">';
+    stale.forEach(function(it){ html += '<li><span class="wk-item-title">'+esc(it.title)+'</span><span class="wk-item-meta">'+(it.type==='decision'?'決策':'kanban')+'</span></li>'; });
+    html += '</ul></div>';
+  }
+
+  document.getElementById('weeklyContent').innerHTML = html;
+}
+
+function loadWeeklyData(weekId) {
+  document.getElementById('weeklyContent').innerHTML = '<div class="weekly-loading">載入中…</div>';
+  document.getElementById('weeklyDownloadBtn').style.display = 'none';
+  document.getElementById('weeklyCoworkBtn').style.display = 'none';
+  fetch(API + '/api/weekly-package?type=family&week=' + encodeURIComponent(weekId),
+    { cache:'no-store', headers: GET_HEADERS })
+    .then(function(r){ if (!r.ok) throw new Error('HTTP '+r.status); return r.json(); })
+    .then(function(d){ renderWeekly(d); })
+    .catch(function(e){
+      document.getElementById('weeklyContent').innerHTML = '<div class="weekly-loading">⚠ 載入失敗：'+esc(e.message)+'</div>';
+      console.error('[weekly]', e);
+    });
+}
+
+function loadWeeklyList(targetWeek) {
+  fetch(API + '/api/weekly-package/list?type=family', { cache:'no-store', headers: GET_HEADERS })
+    .then(function(r){ if (!r.ok) throw new Error('HTTP '+r.status); return r.json(); })
+    .then(function(data){
+      var weeks = data.packages || data.weeks || [];
+      var sel = document.getElementById('weeklySelect');
+      sel.innerHTML = '';
+      if (!weeks.length) {
+        sel.innerHTML = '<option value="latest">最新</option>';
+      } else {
+        weeks.forEach(function(w){
+          var opt = document.createElement('option');
+          var wid = typeof w === 'string' ? w : (w.week_id || w.week || w);
+          opt.value = wid; opt.textContent = wid;
+          sel.appendChild(opt);
+        });
+      }
+      var found = false;
+      if (targetWeek) {
+        for (var i = 0; i < sel.options.length; i++) {
+          if (sel.options[i].value === targetWeek) { sel.selectedIndex = i; found = true; break; }
+        }
+      }
+      if (!found) sel.selectedIndex = 0;
+      loadWeeklyData(sel.value);
+    })
+    .catch(function(e){
+      document.getElementById('weeklySelect').innerHTML = '<option value="latest">最新</option>';
+      loadWeeklyData('latest');
+      console.error('[weekly list]', e);
+    });
+}
+
+document.getElementById('weeklySelect').addEventListener('change', function(){ loadWeeklyData(this.value); });
+
+document.getElementById('weeklyDownloadBtn').addEventListener('click', function(){
+  if (!weeklyData || !weeklyData.raw_markdown) return;
+  var blob = new Blob([weeklyData.raw_markdown], { type:'text/markdown;charset=utf-8' });
+  var url  = URL.createObjectURL(blob);
+  var a    = document.createElement('a');
+  a.href = url; a.download = (weeklyData.week_id || 'weekly-review') + '.md';
+  document.body.appendChild(a); a.click();
+  document.body.removeChild(a); URL.revokeObjectURL(url);
+});
+
+// URL 深度連結: ?tab=weekly&week=2026-W19
+(function(){
+  var p = new URLSearchParams(window.location.search);
+  if (p.get('tab') === 'weekly') {
+    document.querySelectorAll('.tab').forEach(function(t){ t.classList.remove('active'); });
+    document.querySelectorAll('.tab-content').forEach(function(c){ c.classList.remove('active'); });
+    document.querySelector('[data-tab="weekly"]').classList.add('active');
+    document.getElementById('tab-weekly').classList.add('active');
+    loadWeeklyList(p.get('week') || null);
+  }
+})();
+</script>
+</body>
+</html>
