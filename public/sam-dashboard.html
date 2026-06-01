@@ -1,0 +1,2235 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Sam 事業助理</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=Noto+Sans+TC:wght@400;500;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Sortable/1.15.2/Sortable.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<style>
+:root {
+  /* Bot 識別變數（Sam 專屬） */
+  --brand-color: #2d7a3e;        /* 莫蘭迪綠 */
+  --brand-name: 'Sam';
+  --brand-sub: '事業助理';
+
+  /* 通用變數（保留原有） */
+  --bg: #f0f2f5;
+  --col-bg: #e4e6ea;
+  --card-bg: #ffffff;
+  --border: #d8dce4;
+  --text: #172b4d;
+  --text-muted: #5e6c84;
+  --text-dim: #97a0af;
+  --blue: #0052cc;
+  --blue-light: #deebff;
+  --green: #006644;
+  --orange: #974f0c;
+  --red: #de350b;
+  --header-bg: #0a1628;
+  --header-accent: #0052cc;
+  --shadow-sm: 0 1px 3px rgba(0,0,0,0.08), 0 1px 2px rgba(0,0,0,0.06);
+  --shadow-md: 0 4px 12px rgba(0,0,0,0.12);
+  --shadow-lg: 0 8px 32px rgba(0,0,0,0.18);
+  --radius: 8px;
+}
+* { margin:0; padding:0; box-sizing:border-box; }
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'Noto Sans TC', sans-serif;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+/* ── HEADER ── */
+header {
+  background: var(--header-bg);
+  padding: 0 24px;
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  height: 56px;
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  border-bottom: 1px solid rgba(255,255,255,0.06);
+}
+.logo-wrap { display: flex; align-items: center; gap: 10px; }
+.logo-badge {
+  background: var(--brand-color);
+  color: #fff;
+  font-family: 'Syne', sans-serif;
+  font-weight: 800;
+  font-size: 14px;
+  padding: 3px 10px;
+  border-radius: 4px;
+  letter-spacing: 0.5px;
+}
+.logo-sub { font-size: 13px; color: rgba(255,255,255,0.45); font-weight: 500; }
+.header-right { margin-left: auto; display: flex; align-items: center; gap: 10px; }
+.last-updated {
+  font-size: 12px;
+  color: rgba(255,255,255,0.4);
+  background: rgba(255,255,255,0.06);
+  padding: 4px 10px;
+  border-radius: 20px;
+  border: 1px solid rgba(255,255,255,0.08);
+}
+
+/* ── BTNS ── */
+.btn {
+  padding: 7px 14px;
+  border-radius: 6px;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  border: none;
+  transition: all 0.15s;
+  font-family: 'Noto Sans TC', sans-serif;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+.btn-blue { background: var(--blue); color: #fff; }
+.btn-blue:hover { background: #0065ff; }
+.btn-blue.saved { background: #006644; }
+.btn-ghost { background: rgba(255,255,255,0.08); color: rgba(255,255,255,0.75); border: 1px solid rgba(255,255,255,0.12); }
+.btn-ghost:hover { background: rgba(255,255,255,0.14); color: #fff; }
+.btn-outline { background: #fff; color: var(--text); border: 1px solid var(--border); }
+.btn-outline:hover { background: var(--bg); }
+.btn-danger { background: #fff0ee; color: var(--red); border: 1px solid #ffcdc7; }
+.btn-danger:hover { background: #ffcdc7; }
+.btn-green { background: var(--green); color: #fff; }
+.btn-green:hover { background: #0b875b; }
+.btn-sm { padding: 4px 10px; font-size: 12px; }
+.btn-icon { padding: 6px 8px; font-size: 15px; }
+
+/* ── TABS ── */
+.tabs {
+  background: #fff;
+  border-bottom: 1px solid var(--border);
+  padding: 0 24px;
+  display: flex;
+  gap: 0;
+  box-shadow: var(--shadow-sm);
+}
+.tab {
+  padding: 14px 18px;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-muted);
+  cursor: pointer;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -1px;
+  transition: all 0.15s;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  user-select: none;
+}
+.tab:hover { color: var(--text); }
+.tab.active { color: var(--brand-color); border-bottom-color: var(--brand-color); font-weight: 700; }
+
+/* ── TAB CONTENT ── */
+.tab-content { display: none; flex: 1; }
+.tab-content.active { display: block; }
+
+/* ── BOARD ── */
+.board-wrap { overflow-x: auto; padding: 20px 24px; min-height: calc(100vh - 112px); }
+.board { display: flex; gap: 14px; align-items: flex-start; }
+
+.column {
+  width: 284px;
+  flex-shrink: 0;
+  background: var(--col-bg);
+  border-radius: 10px;
+  display: flex;
+  flex-direction: column;
+  border: 1px solid rgba(0,0,0,0.06);
+}
+.col-header {
+  padding: 12px 12px 8px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.col-dot { width: 9px; height: 9px; border-radius: 50%; flex-shrink: 0; }
+.col-title {
+  font-weight: 700;
+  font-size: 13px;
+  color: var(--text);
+  flex: 1;
+  cursor: text;
+  outline: none;
+  border-radius: 4px;
+  padding: 2px 5px;
+  margin: -2px -5px;
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.col-title:focus {
+  background: #fff;
+  box-shadow: 0 0 0 2px var(--blue);
+  white-space: normal;
+  overflow: visible;
+}
+.col-count {
+  font-size: 11px;
+  color: var(--text-muted);
+  background: rgba(0,0,0,0.07);
+  padding: 1px 7px;
+  border-radius: 10px;
+  font-weight: 600;
+  flex-shrink: 0;
+}
+.col-del {
+  background: none;
+  border: none;
+  color: var(--text-dim);
+  cursor: pointer;
+  font-size: 16px;
+  padding: 2px 5px;
+  border-radius: 4px;
+  line-height: 1;
+  opacity: 0;
+  transition: opacity 0.15s;
+}
+.column:hover .col-del { opacity: 1; }
+.col-del:hover { background: rgba(0,0,0,0.08); color: var(--red); }
+.card-del-btn {
+  background: none; border: none; cursor: pointer; padding: 2px 4px;
+  color: var(--text-dim); font-size: 13px; border-radius: 4px;
+  opacity: 0; transition: opacity 0.15s; flex-shrink: 0;
+}
+.card:hover .card-del-btn { opacity: 1; }
+.card-del-btn:hover { background: rgba(0,0,0,0.08); color: var(--red); }
+
+.col-cards {
+  padding: 0 8px;
+  flex: 1;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  min-height: 48px;
+}
+/* Sortable placeholder */
+.sortable-ghost { opacity: 0.35; }
+.sortable-drag { opacity: 0.9; box-shadow: var(--shadow-lg) !important; }
+
+/* ── CARD ── */
+.card {
+  background: #fff;
+  border-radius: 7px;
+  padding: 11px 12px;
+  cursor: grab;
+  transition: box-shadow 0.15s, transform 0.15s;
+  box-shadow: var(--shadow-sm);
+  border: 1px solid var(--border);
+  position: relative;
+}
+.card:hover {
+  box-shadow: var(--shadow-md);
+  transform: translateY(-1px);
+}
+.card:active { cursor: grabbing; }
+.card-top { display: flex; align-items: flex-start; gap: 8px; margin-bottom: 9px; }
+.card-title { font-size: 13px; font-weight: 600; color: var(--text); flex: 1; line-height: 1.45; }
+.card-edit-btn {
+  background: none;
+  border: none;
+  font-size: 14px;
+  color: var(--text-dim);
+  cursor: pointer;
+  padding: 0 2px;
+  opacity: 0;
+  transition: opacity 0.15s;
+  flex-shrink: 0;
+}
+.card:hover .card-edit-btn { opacity: 1; }
+.card-edit-btn:hover { color: var(--blue); }
+
+.status-pill {
+  font-size: 10px;
+  padding: 2px 7px;
+  border-radius: 10px;
+  white-space: nowrap;
+  font-weight: 700;
+  flex-shrink: 0;
+  letter-spacing: 0.2px;
+}
+.s-進行中 { background: #e6f0ff; color: #0052cc; }
+.s-完成    { background: #e3fcef; color: #006644; }
+.s-延遲    { background: #ffebe6; color: #de350b; }
+.s-未開始  { background: #f4f5f7; color: #5e6c84; border: 1px solid #dfe1e6; }
+.s-擱置    { background: #fffae6; color: #974f0c; }
+
+.card-desc { font-size: 12px; color: var(--text-muted); margin-bottom: 7px; line-height: 1.5; white-space: pre-wrap; }
+.execute-row { display: flex; align-items: center; gap: 6px; margin-top: 5px; }
+.execute-checkbox { width: 15px; height: 15px; cursor: pointer; accent-color: var(--blue); flex-shrink: 0; }
+.execute-label { font-size: 11px; color: var(--text-muted); font-weight: 600; user-select: none; }
+.card.pending-execute { border-color: #0052cc; box-shadow: 0 0 0 2px rgba(0,82,204,0.15); }
+.card.confirming   { border-color: #974f0c; box-shadow: 0 0 0 2px rgba(151,79,12,0.15); }
+.card.executing    { border-color: #006644; box-shadow: 0 0 0 2px rgba(0,102,68,0.15); }
+.card.done-execute { border-color: #36B37E; }
+.card.failed-execute { border-color: #de350b; box-shadow: 0 0 0 2px rgba(222,53,11,0.15); }
+.execute-badge { font-size: 10px; border-radius: 4px; padding: 2px 7px; font-weight: 700; white-space: nowrap; }
+.eb-pending    { background: #deebff; color: #0052cc; }
+.eb-confirming { background: #fffae6; color: #974f0c; }
+.eb-executing  { background: #e3fcef; color: #006644; animation: ebpulse 1.2s infinite; }
+.eb-done       { background: #e3fcef; color: #006644; }
+.eb-cancelled  { background: #f4f5f7; color: #5e6c84; border: 1px solid #dfe1e6; }
+.eb-failed     { background: #ffebe6; color: #de350b; }
+@keyframes ebpulse { 0%,100%{opacity:1} 50%{opacity:0.55} }
+
+.blocker-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11px;
+  color: var(--red);
+  background: #fff0ee;
+  border-radius: 4px;
+  padding: 3px 7px;
+  font-weight: 500;
+  margin-top: 5px;
+  border: 1px solid #ffd2cc;
+}
+.card-footer {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  color: var(--text-muted);
+  margin-top: 7px;
+}
+.due-chip {
+  background: var(--bg);
+  padding: 2px 7px;
+  border-radius: 4px;
+  font-weight: 500;
+  font-size: 11px;
+}
+.due-chip.overdue { color: var(--red); background: #fff0ee; }
+
+.add-card-btn {
+  margin: 5px 8px 8px;
+  background: none;
+  border: none;
+  border-radius: 6px;
+  color: var(--text-muted);
+  font-size: 12px;
+  padding: 7px 10px;
+  cursor: pointer;
+  width: calc(100% - 16px);
+  text-align: left;
+  font-family: 'Noto Sans TC', sans-serif;
+  transition: all 0.15s;
+  font-weight: 500;
+}
+.add-card-btn:hover { background: rgba(0,0,0,0.05); color: var(--text); }
+
+.add-col { width: 220px; flex-shrink: 0; }
+.add-col-btn {
+  width: 100%;
+  background: rgba(0,0,0,0.04);
+  border: 2px dashed rgba(0,0,0,0.12);
+  border-radius: 10px;
+  color: var(--text-muted);
+  font-size: 13px;
+  padding: 14px 16px;
+  cursor: pointer;
+  font-family: 'Noto Sans TC', sans-serif;
+  text-align: left;
+  font-weight: 500;
+  transition: all 0.15s;
+}
+.add-col-btn:hover { background: rgba(0,0,0,0.07); border-color: rgba(0,0,0,0.2); color: var(--text); }
+
+/* ── SHARED FORM STYLES（modal 使用） ── */
+.section-title {
+  font-family: 'Syne', sans-serif;
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--text);
+  margin-bottom: 16px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.form-group { flex: 1; min-width: 150px; }
+.form-label { display: block; font-size: 11px; font-weight: 700; color: var(--text-muted); margin-bottom: 5px; text-transform: uppercase; letter-spacing: 0.6px; }
+.form-input {
+  width: 100%;
+  background: #fff;
+  border: 1.5px solid var(--border);
+  border-radius: 5px;
+  color: var(--text);
+  font-size: 13px;
+  padding: 7px 10px;
+  font-family: 'Noto Sans TC', sans-serif;
+  transition: border-color 0.15s;
+}
+.form-input:focus { outline: none; border-color: var(--blue); box-shadow: 0 0 0 3px rgba(0,82,204,0.1); }
+
+/* ── MODAL ── */
+.modal-overlay {
+  position: fixed; inset: 0;
+  background: rgba(9,18,36,0.55);
+  backdrop-filter: blur(3px);
+  z-index: 200;
+  display: flex; align-items: center; justify-content: center;
+}
+.modal {
+  background: #fff;
+  border-radius: 10px;
+  width: 520px; max-width: 95vw; max-height: 90vh;
+  overflow-y: auto;
+  padding: 24px;
+  box-shadow: var(--shadow-lg);
+  animation: modalIn 0.2s ease;
+}
+@keyframes modalIn {
+  from { opacity: 0; transform: scale(0.96) translateY(8px); }
+  to { opacity: 1; transform: scale(1) translateY(0); }
+}
+.modal-header { display: flex; align-items: center; gap: 10px; margin-bottom: 20px; padding-bottom: 14px; border-bottom: 1px solid var(--border); }
+.modal-project-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+.modal-title { font-family: 'Syne', sans-serif; font-size: 16px; font-weight: 700; flex: 1; }
+.modal-close { background: none; border: none; color: var(--text-muted); font-size: 18px; cursor: pointer; padding: 4px 8px; border-radius: 4px; line-height: 1; }
+.modal-close:hover { background: var(--bg); color: var(--text); }
+.modal-footer { display: flex; justify-content: space-between; align-items: center; margin-top: 20px; padding-top: 16px; border-top: 1px solid var(--border); }
+
+.progress-display { font-size: 28px; font-weight: 800; color: var(--blue); text-align: center; margin-bottom: 10px; font-family: 'Syne', sans-serif; }
+.progress-slider { width: 100%; accent-color: var(--blue); height: 6px; }
+
+.blocker-list { display: flex; flex-direction: column; gap: 6px; margin-bottom: 8px; }
+.blocker-row { display: flex; align-items: center; gap: 8px; background: #fff5f4; border: 1px solid #ffd2cc; border-radius: 5px; padding: 8px 10px; }
+.blocker-row-type { font-size: 11px; color: var(--red); white-space: nowrap; font-weight: 700; }
+.blocker-row-desc { flex: 1; font-size: 13px; color: var(--text); }
+.blocker-row-del { background: none; border: none; color: var(--text-dim); cursor: pointer; font-size: 15px; }
+.blocker-row-del:hover { color: var(--red); }
+.add-blocker-row { display: flex; gap: 8px; }
+
+/* ── TOAST ── */
+.toast {
+  position: fixed; bottom: 24px; right: 24px;
+  padding: 11px 18px; border-radius: 7px;
+  font-size: 13px; font-weight: 600;
+  opacity: 0; transform: translateY(10px);
+  transition: all 0.22s; pointer-events: none;
+  z-index: 999; box-shadow: var(--shadow-md);
+  display: flex; align-items: center; gap: 8px;
+}
+.toast.show { opacity: 1; transform: translateY(0); }
+.toast-success { background: #006644; color: #fff; }
+.toast-error { background: var(--red); color: #fff; }
+.toast-info { background: var(--blue); color: #fff; }
+
+/* ── LOADING ── */
+.loading-state { color: var(--text-muted); padding: 48px; text-align: center; font-size: 14px; }
+
+::-webkit-scrollbar { width: 5px; height: 5px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: #c1c7d0; border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: #97a0af; }
+
+/* Date input fix */
+input[type="date"] { color-scheme: light; }
+
+/* ── PORTFOLIO TAB ── */
+.portfolio-wrap { padding: 24px; max-width: 860px; }
+.portfolio-header-row { display:flex; align-items:center; gap:16px; margin-bottom:20px; }
+.biz-list { display:flex; flex-direction:column; gap:10px; margin-top:12px; }
+.biz-item {
+  background: var(--card-bg); border-radius: var(--radius);
+  border: 1px solid var(--border); padding: 14px 16px;
+  display:flex; align-items:center; gap:12px;
+  box-shadow: var(--shadow-sm);
+}
+.biz-item-name { font-size:14px; font-weight:600; color:var(--text); flex:1; }
+.biz-item-meta { font-size:12px; color:var(--text-muted); }
+.biz-empty { color:var(--text-muted); font-size:13px; padding:32px 0; text-align:center; }
+.help-text { font-size:11px; color:var(--text-muted); margin-top:4px; line-height:1.5; }
+.freq-fields { display:none; }
+.freq-fields.active { display:block; }
+.form-row { display:flex; gap:12px; margin-bottom:14px; }
+.section-divider {
+  font-size:12px; font-weight:700; text-transform:uppercase; letter-spacing:0.8px;
+  color:var(--text-muted); margin: 18px 0 12px; padding-bottom:6px;
+  border-bottom:1px solid var(--border);
+}
+.biz-modal .modal { width:600px; }
+.monthly-records-list { display:flex; flex-wrap:wrap; gap:6px; margin-top:6px; }
+.monthly-rec-chip {
+  font-size:11px; background:var(--bg); border:1px solid var(--border);
+  border-radius:4px; padding:3px 8px; color:var(--text-muted);
+}
+
+/* ── PORTFOLIO 5.8-B ── */
+.cashflow-card { background:var(--card-bg); border-radius:var(--radius); border:1px solid var(--border); padding:16px 20px; margin-bottom:20px; box-shadow:var(--shadow-sm); }
+.cashflow-month-row { display:flex; align-items:center; gap:10px; margin-bottom:14px; }
+.cashflow-month-sel { padding:5px 10px; border-radius:5px; border:1px solid var(--border); font-size:13px; background:#fff; color:var(--text); cursor:pointer; font-family:'Noto Sans TC',sans-serif; }
+.cashflow-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:10px; margin-bottom:10px; }
+.cashflow-item { background:var(--bg); border-radius:6px; padding:10px 14px; }
+.cashflow-item-label { font-size:11px; color:var(--text-muted); margin-bottom:4px; }
+.cashflow-item-val { font-size:18px; font-weight:700; color:var(--text); }
+.cashflow-item-val.green { color:var(--green); }
+.cashflow-item-val.red { color:var(--red); }
+.biz-table-wrap { margin-bottom:20px; }
+.biz-table { width:100%; border-collapse:collapse; font-size:13px; }
+.biz-table th { text-align:left; padding:8px 10px; background:var(--bg); color:var(--text-muted); font-weight:600; font-size:11px; text-transform:uppercase; letter-spacing:0.5px; }
+.biz-table td { padding:10px 10px; border-top:1px solid var(--border); vertical-align:middle; }
+.biz-table tr:hover td { background:var(--bg); }
+.timeline-wrap { background:var(--card-bg); border:1px solid var(--border); border-radius:var(--radius); padding:16px 20px; margin-bottom:20px; box-shadow:var(--shadow-sm); }
+.timeline-title { font-weight:700; font-size:14px; margin-bottom:14px; }
+.timeline-row { display:flex; align-items:center; gap:10px; margin-bottom:7px; font-size:12px; }
+.timeline-month { width:52px; flex-shrink:0; color:var(--text-muted); }
+.timeline-bar-wrap { flex:1; background:var(--bg); border-radius:4px; height:16px; overflow:hidden; }
+.timeline-bar { height:100%; background:var(--brand-color); border-radius:4px; min-width:2px; }
+.timeline-bar.has-actual { background:var(--green); }
+.timeline-amount { width:160px; font-size:12px; color:var(--text-muted); flex-shrink:0; text-align:right; }
+.health-wrap { background:var(--card-bg); border:1px solid var(--border); border-radius:var(--radius); padding:16px 20px; margin-bottom:20px; box-shadow:var(--shadow-sm); }
+.health-title { font-weight:700; font-size:14px; margin-bottom:14px; }
+.health-row { display:flex; align-items:center; gap:10px; padding:8px 0; border-bottom:1px solid var(--border); font-size:13px; }
+.health-row:last-child { border-bottom:none; }
+.health-label { flex:1; color:var(--text-muted); }
+.health-val { font-weight:600; }
+.alerts-wrap { background:var(--card-bg); border:1px solid var(--border); border-radius:var(--radius); padding:16px 20px; margin-bottom:20px; box-shadow:var(--shadow-sm); }
+.alerts-title { font-weight:700; font-size:14px; margin-bottom:10px; }
+.alert-row { padding:6px 0; border-bottom:1px solid var(--border); font-size:13px; }
+.alert-row:last-child { border-bottom:none; }
+.month-grid-year { margin-bottom:12px; }
+.month-grid-year-label { font-size:12px; font-weight:700; color:var(--text-muted); margin-bottom:6px; display:flex; align-items:center; gap:8px; user-select:none; }
+.toggle-year-btn { font-size:11px; color:var(--blue); cursor:pointer; }
+.month-grid-cells { display:grid; gap:4px; margin-bottom:6px; }
+.month-cell { border:1.5px solid var(--border); border-radius:4px; padding:5px 2px; text-align:center; cursor:pointer; font-size:11px; font-weight:600; color:var(--text-muted); background:#fff; transition:all 0.12s; user-select:none; }
+.month-cell:hover { border-color:var(--brand-color); color:var(--brand-color); }
+.month-cell.checked { background:var(--brand-color); border-color:var(--brand-color); color:#fff; }
+.month-cell.future { opacity:0.45; cursor:default; }
+.month-grid-amount { font-size:12px; color:var(--text-muted); display:flex; align-items:center; gap:6px; }
+
+/* ── WEEKLY TAB ── */
+.weekly-wrap { padding: 24px; max-width: 900px; }
+.weekly-header-row { display:flex; align-items:center; gap:16px; margin-bottom:24px; flex-wrap:wrap; }
+.weekly-controls { display:flex; align-items:center; gap:10px; margin-left:auto; flex-wrap:wrap; }
+.weekly-controls select {
+  padding: 7px 12px; border-radius: 6px; border: 1px solid var(--border);
+  font-size: 13px; background: var(--card-bg); color: var(--text); cursor:pointer;
+}
+.weekly-summary-grid {
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 16px; margin-bottom: 20px;
+}
+.weekly-stat-card {
+  background: var(--card-bg); border-radius: var(--radius); padding: 20px 16px;
+  box-shadow: var(--shadow-sm); text-align:center;
+}
+.weekly-stat-num { font-size: 28px; font-weight: 700; color: var(--blue); line-height:1; }
+.weekly-stat-label { font-size: 12px; color: var(--text-muted); margin-top: 6px; }
+.weekly-card {
+  background: var(--card-bg); border-radius: var(--radius);
+  box-shadow: var(--shadow-sm); padding: 20px; margin-bottom: 16px;
+}
+.weekly-risk-card { background: #fff8f0; border: 1px solid #f5dab8; }
+.weekly-card-title { font-weight: 700; font-size: 15px; margin-bottom: 14px; }
+.weekly-table { width:100%; border-collapse:collapse; font-size:13px; }
+.weekly-table th { text-align:left; padding: 8px 10px; background: var(--bg); color: var(--text-muted); font-weight:500; }
+.weekly-table td { padding: 8px 10px; border-top: 1px solid var(--border); }
+.weekly-table tr:hover td { background: var(--bg); }
+.weekly-change-item { padding: 6px 0; border-bottom: 1px solid var(--border); font-size:13px; }
+.weekly-change-item:last-child { border-bottom: none; }
+.weekly-risk-item { padding: 8px 0; border-bottom: 1px solid #f5dab8; font-size:13px; }
+.weekly-risk-item:last-child { border-bottom: none; }
+.risk-high { color: var(--red); font-weight:600; }
+.risk-medium { color: var(--orange); font-weight:600; }
+.weekly-empty { color: var(--text-dim); font-size:13px; padding: 8px 0; }
+/* Phase 5.8-C: 戰略視角 */
+.strategy-wrap { padding:20px; max-width:900px; }
+.strategy-card { background:var(--card-bg); border:1px solid var(--border); border-radius:var(--radius); padding:16px 20px; margin-bottom:20px; box-shadow:var(--shadow-sm); }
+.strategy-title { font-weight:700; font-size:14px; margin-bottom:14px; }
+.strategy-row { display:flex; align-items:center; gap:12px; padding:8px 0; border-bottom:1px solid var(--border); font-size:13px; }
+.strategy-row:last-child { border-bottom:none; }
+.strategy-label { flex:1; color:var(--text-muted); }
+.strategy-val { font-weight:600; }
+.strategy-chart-wrap { position:relative; height:320px; width:100%; }
+.strategy-chart-summary { font-size:13px; color:var(--text-muted); margin-top:10px; }
+.contrib-table { width:100%; border-collapse:collapse; font-size:13px; }
+.contrib-table th { text-align:left; padding:8px 10px; background:var(--bg); color:var(--text-muted); font-weight:600; font-size:11px; text-transform:uppercase; letter-spacing:0.5px; }
+.contrib-table td { padding:10px 10px; border-top:1px solid var(--border); vertical-align:middle; }
+.contrib-table tr:hover td { background:var(--bg); }
+.contrib-table tfoot td { font-weight:700; border-top:2px solid var(--border); }
+.strategy-suggestion-text { font-size:13px; color:var(--text-muted); line-height:1.7; }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo-wrap">
+    <div class="logo-badge">Sam</div>
+    <div class="logo-sub">事業助理</div>
+  </div>
+  <div class="header-right">
+    <span class="last-updated" id="lastUpdated">載入中...</span>
+    <button class="btn btn-ghost" onclick="loadData()">↺ 重新整理</button>
+    <button class="btn btn-blue" id="saveBtn" onclick="saveData()">✓ 儲存</button>
+  </div>
+</header>
+
+<div class="tabs">
+  <div class="tab active" onclick="switchTab('progress')">📊 進度追蹤</div>
+  <div class="tab" onclick="switchTab('weekly')">📅 週覆盤</div>
+  <div class="tab" onclick="switchTab('portfolio')">💼 投資組合</div>
+  <div class="tab" onclick="switchTab('strategy')">🎯 戰略視角</div>
+</div>
+
+<!-- TAB 1: PROGRESS -->
+<div class="tab-content active" id="tab-progress">
+  <div class="board-wrap">
+    <div class="board" id="board">
+      <div class="loading-state">⏳ 載入中...</div>
+    </div>
+  </div>
+</div>
+
+<!-- TAB 2: WEEKLY -->
+<div class="tab-content" id="tab-weekly">
+  <div class="weekly-wrap">
+    <div class="weekly-header-row">
+      <div class="section-title" style="margin:0">📅 週覆盤</div>
+      <div class="weekly-controls">
+        <select id="weekSelect" onchange="loadWeeklyPackage(this.value)">
+          <option value="latest">載入中...</option>
+        </select>
+        <button class="btn btn-outline" onclick="downloadMarkdown()">📥 下載 Markdown</button>
+        <button class="btn btn-blue" id="coworkBtn" onclick="openCowork()" style="display:none">🔗 開啟 Cowork</button>
+      </div>
+    </div>
+
+    <div id="weeklyLoading" style="text-align:center;padding:48px;color:var(--text-muted)">⏳ 載入週包中...</div>
+    <div id="weeklyContent" style="display:none">
+
+      <!-- 摘要卡片 -->
+      <div class="weekly-summary-grid" id="weeklySummary"></div>
+
+      <!-- Milestone 變化 -->
+      <div class="weekly-card">
+        <div class="weekly-card-title">📝 本週 Milestone 變化</div>
+        <div id="weeklyChanges"></div>
+      </div>
+
+      <!-- 4 週趨勢 -->
+      <div class="weekly-card">
+        <div class="weekly-card-title">📈 近 4 週趨勢</div>
+        <div id="weeklyTrend"></div>
+      </div>
+
+      <!-- 下週預覽 -->
+      <div class="weekly-card">
+        <div class="weekly-card-title" id="weeklyNextTitle">📅 下週預覽</div>
+        <div id="weeklyUpcoming"></div>
+        <div id="weeklyNextCal" style="margin-top:16px"></div>
+      </div>
+
+      <!-- 風險偵測 -->
+      <div class="weekly-card weekly-risk-card" id="weeklyRiskCard">
+        <div class="weekly-card-title">⚠️ 風險偵測</div>
+        <div id="weeklyRisks"></div>
+      </div>
+
+      <!-- 長期停滯 -->
+      <div class="weekly-card">
+        <div class="weekly-card-title">🐢 長期停滯 Milestone</div>
+        <div id="weeklyStalled"></div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<!-- TAB 3: PORTFOLIO -->
+<div class="tab-content" id="tab-portfolio">
+  <div class="portfolio-wrap">
+    <div class="portfolio-header-row">
+      <div class="section-title" style="margin:0">💼 投資組合</div>
+      <button class="btn btn-green btn-sm" style="margin-left:auto" onclick="openNewBiz()">＋ 新增副業</button>
+    </div>
+    <div id="bizList">
+      <div class="biz-empty">⏳ 載入中...</div>
+    </div>
+  </div>
+</div>
+
+<!-- TAB 4: STRATEGY -->
+<div class="tab-content" id="tab-strategy">
+  <div class="strategy-wrap">
+    <div id="strategy-alignment"></div>
+    <div id="strategy-contribution"></div>
+    <div id="strategy-chart"></div>
+    <div id="strategy-health"></div>
+    <div id="strategy-suggestion"></div>
+  </div>
+</div>
+
+<!-- BIZ MODAL -->
+<div class="modal-overlay biz-modal" id="bizModalOverlay" style="display:none" onclick="closeBizModalOverlay(event)">
+  <div class="modal" style="width:600px" onclick="event.stopPropagation()">
+    <div class="modal-header">
+      <div class="modal-title" id="bizModalTitle">新增副業</div>
+      <button class="modal-close" onclick="closeBizModal()">✕</button>
+    </div>
+
+    <!-- 基本資料 -->
+    <div class="section-divider">基本資料</div>
+    <div class="form-row">
+      <div class="form-group">
+        <label class="form-label">顯示名稱</label>
+        <input class="form-input" id="bDisplayName" type="text" placeholder="北海岸海鮮">
+      </div>
+      <div class="form-group">
+        <label class="form-label">狀態</label>
+        <select class="form-input" id="bStatus">
+          <option value="active">active</option>
+          <option value="paused">paused</option>
+          <option value="closed">closed</option>
+        </select>
+      </div>
+    </div>
+    <div class="form-group" style="margin-bottom:14px">
+      <label class="form-label">Kanban Column 名稱</label>
+      <input class="form-input" id="bKanbanCol" type="text" placeholder="副業1. 北海岸">
+      <div class="help-text">對應到「進度追蹤」tab 的 column 名稱，rollover 結算卡會丟進這個 column</div>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label class="form-label">產業</label>
+        <input class="form-input" id="bIndustry" type="text" placeholder="食品 / 海鮮加工">
+      </div>
+      <div class="form-group">
+        <label class="form-label">地區</label>
+        <input class="form-input" id="bRegion" type="text" placeholder="北海岸">
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label class="form-label">上線日期</label>
+        <input class="form-input" id="bLaunchedAt" type="date">
+      </div>
+    </div>
+
+    <!-- 我的角色 -->
+    <div class="section-divider">我的角色</div>
+    <div class="form-row">
+      <div class="form-group">
+        <label class="form-label">角色</label>
+        <select class="form-input" id="bRole">
+          <option value="shareholder">shareholder</option>
+          <option value="shareholder_advisor">shareholder_advisor</option>
+          <option value="co_operator">co_operator</option>
+          <option value="self_operated">self_operated</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label class="form-label">持股 %</label>
+        <input class="form-input" id="bEquity" type="number" min="0" max="100" step="0.1" placeholder="40">
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label class="form-label">投資金額</label>
+        <input class="form-input" id="bInvestAmt" type="number" min="0" placeholder="200000">
+      </div>
+      <div class="form-group">
+        <label class="form-label">投資日期</label>
+        <input class="form-input" id="bInvestDate" type="date">
+      </div>
+    </div>
+
+    <!-- 財務約定 -->
+    <div class="section-divider">財務約定</div>
+    <div class="form-row">
+      <div class="form-group">
+        <label class="form-label">約定型態</label>
+        <select class="form-input" id="bAgreement">
+          <option value="guaranteed">guaranteed</option>
+          <option value="dividend">dividend</option>
+          <option value="mixed">mixed</option>
+          <option value="none">none</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label class="form-label">入帳節奏</label>
+        <select class="form-input" id="bFreq" onchange="onBizFreqChange(this.value)">
+          <option value="monthly">monthly</option>
+          <option value="quarterly">quarterly</option>
+          <option value="yearly">yearly</option>
+          <option value="irregular">irregular</option>
+        </select>
+      </div>
+    </div>
+    <!-- monthly fields -->
+    <div class="freq-fields active" id="freq-monthly">
+      <div class="form-row">
+        <div class="form-group" style="flex:0 0 100px">
+          <label class="form-label">結算日</label>
+          <input class="form-input" id="bSettleDay" type="number" min="1" max="31" placeholder="5">
+        </div>
+        <div class="form-group">
+          <label class="form-label">月入帳金額</label>
+          <input class="form-input" id="bMonthlyAmt" type="number" min="0" placeholder="8000">
+        </div>
+      </div>
+    </div>
+    <!-- quarterly fields -->
+    <div class="freq-fields" id="freq-quarterly">
+      <div class="form-row">
+        <div class="form-group" style="flex:0 0 100px">
+          <label class="form-label">結算日</label>
+          <input class="form-input" id="bQSettleDay" type="number" min="1" max="31" placeholder="5">
+        </div>
+        <div class="form-group">
+          <label class="form-label">季入帳金額</label>
+          <input class="form-input" id="bQuarterlyAmt" type="number" min="0" placeholder="">
+        </div>
+      </div>
+    </div>
+    <!-- yearly fields -->
+    <div class="freq-fields" id="freq-yearly">
+      <div class="form-row">
+        <div class="form-group" style="flex:0 0 100px">
+          <label class="form-label">結算月</label>
+          <input class="form-input" id="bSettleMonth" type="number" min="1" max="12" placeholder="12">
+        </div>
+        <div class="form-group" style="flex:0 0 100px">
+          <label class="form-label">結算日</label>
+          <input class="form-input" id="bYSettleDay" type="number" min="1" max="31" placeholder="5">
+        </div>
+        <div class="form-group">
+          <label class="form-label">年入帳金額</label>
+          <input class="form-input" id="bYearlyAmt" type="number" min="0" placeholder="">
+        </div>
+      </div>
+    </div>
+    <!-- irregular -->
+    <div class="freq-fields" id="freq-irregular">
+      <div style="font-size:12px;color:var(--text-muted);margin-bottom:14px">不規則入帳，不需填結算日</div>
+    </div>
+    <div class="form-group" style="margin-bottom:14px">
+      <label class="form-label">年化預估</label>
+      <input class="form-input" id="bExpectedAnnual" type="number" min="0" placeholder="">
+      <div class="help-text">= 月 × 12 / 季 × 4 / 年 × 1，可手動覆蓋</div>
+    </div>
+
+    <!-- 入帳追蹤 -->
+    <div class="section-divider">入帳追蹤</div>
+    <div style="font-size:14px;font-weight:700;color:var(--blue);margin-bottom:10px" id="bTotalDisplay">—</div>
+    <div class="form-row" style="align-items:center;margin-bottom:14px">
+      <div class="form-group">
+        <label class="form-label">手動覆蓋累計（留空則自動加總）</label>
+        <input class="form-input" id="bOverrideTotal" type="number" min="0" placeholder="留空則自動加總月記錄" oninput="updateMonthlyTotalDisplay()">
+      </div>
+      <div id="bInvestRef" style="font-size:12px;color:var(--text-muted);white-space:nowrap;flex-shrink:0">/ 投資 —</div>
+    </div>
+    <div>
+      <div style="font-size:11px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.6px;margin-bottom:8px">月度記錄</div>
+      <div id="bMonthlyGrid"></div>
+    </div>
+
+    <!-- 戰略標籤 -->
+    <div class="section-divider">戰略標籤</div>
+    <div class="form-row">
+      <div class="form-group">
+        <label class="form-label">客戶屬性（逗號分隔）</label>
+        <input class="form-input" id="bCustAttrs" type="text" placeholder="B2C, 家庭">
+      </div>
+      <div class="form-group">
+        <label class="form-label">通路（逗號分隔）</label>
+        <input class="form-input" id="bChannels" type="text" placeholder="線上, 實體">
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label class="form-label">季節性</label>
+        <select class="form-input" id="bSeasonality">
+          <option value="strong">strong</option>
+          <option value="mild">mild</option>
+          <option value="none">none</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label class="form-label">關鍵字（逗號分隔）</label>
+        <input class="form-input" id="bKeywords" type="text" placeholder="海鮮, 加工">
+      </div>
+    </div>
+
+    <div class="modal-footer">
+      <button class="btn btn-danger" id="bizDeleteBtn" onclick="deleteBiz()" style="display:none">🗑 刪除副業</button>
+      <div style="display:flex;gap:8px;margin-left:auto">
+        <button class="btn btn-outline" onclick="closeBizModal()">取消</button>
+        <button class="btn btn-blue" onclick="saveBiz()">✓ 儲存</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- CARD MODAL -->
+<div class="modal-overlay" id="modalOverlay" style="display:none" onclick="closeModalOverlay(event)">
+  <div class="modal" onclick="event.stopPropagation()">
+    <div class="modal-header">
+      <div class="modal-project-dot" id="modalDot"></div>
+      <div class="modal-title" id="modalTitle">里程碑</div>
+      <button class="modal-close" onclick="closeModal()">✕</button>
+    </div>
+
+    <div class="form-group" style="margin-bottom:16px">
+      <label class="form-label">標題</label>
+      <input class="form-input" id="mTitle" type="text" placeholder="里程碑名稱...">
+    </div>
+
+    <div class="form-group" style="margin-bottom:16px">
+      <label class="form-label">截止日期</label>
+      <input class="form-input" id="mDue" type="date">
+    </div>
+
+    <div class="form-group" style="margin-bottom:16px">
+      <label class="form-label">執行描述（告訴助理要做什麼）</label>
+      <textarea class="form-input" id="mDescription" rows="2" placeholder="例：整理相關資料並產出摘要..." style="resize:vertical;min-height:60px"></textarea>
+    </div>
+
+    <div class="modal-footer">
+      <button class="btn btn-danger" id="deleteBtn" onclick="deleteCard()" title="移除此 milestone（完成或取消都用這個）">🗑 移除</button>
+      <div style="display:flex;gap:8px">
+        <button class="btn btn-outline" onclick="closeModal()">取消</button>
+        <button class="btn btn-blue" onclick="saveCard()">✓ 儲存</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+var API = 'https://hy-agent-v2.onrender.com';
+var SECRET = '__READ_SECRET__';
+var HEADERS = { 'Content-Type':'application/json', 'X-Read-Secret':SECRET };
+var GET_HEADERS = { 'X-Read-Secret':SECRET, 'Cache-Control':'no-store' };
+var dataLoaded = false;
+
+// ── CONSTANTS ─────────────────────────────────────
+const BLOCKER_ICONS = {'等人回覆':'📨','技術問題':'🔧','安排會議':'📅','其他':'⚠️'};
+const PROJECT_COLORS = ['#2d7a3e','#006644','#974f0c','#5243aa','#de350b','#00a3bf','#6b3fa0'];
+const DAYS = [{v:'monday',l:'週一'},{v:'tuesday',l:'週二'},{v:'wednesday',l:'週三'},{v:'thursday',l:'週四'},{v:'friday',l:'週五'}];
+
+let data = null;
+let editingPid = null;
+let editingMi = null;
+let tempBlockers = [];
+let sortables = []; // track Sortable instances
+let isDragging = false; // prevent click-after-drag
+
+// ── TABS ──────────────────────────────────────────
+function switchTab(tab) {
+  const names = ['progress','weekly','portfolio','strategy'];
+  document.querySelectorAll('.tab').forEach((t,i) => {
+    t.classList.toggle('active', names[i] === tab);
+  });
+  document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+  document.getElementById('tab-' + tab).classList.add('active');
+  if (tab === 'weekly') initWeeklyTab();
+  if (tab === 'portfolio') renderPortfolioTab();
+  if (tab === 'strategy') { console.log('switching to strategy'); renderStrategyTab(); }
+}
+
+// ── WEEKLY PACKAGE ────────────────────────────────
+let weeklyData = null;
+let weeklyInited = false;
+
+async function initWeeklyTab() {
+  if (weeklyInited) return;
+  weeklyInited = true;
+  await loadWeeklyList();
+  await loadWeeklyPackage('latest');
+}
+
+async function loadWeeklyList() {
+  try {
+    // TODO 批次 2：確認 Sam 週包 type 名稱（目前暫用 type=sam，endpoint 待批次 2 建立）
+    const res = await fetch(API + '/api/weekly-package/list?type=sam&limit=12');
+    const json = await res.json();
+    const sel = document.getElementById('weekSelect');
+    sel.innerHTML = '';
+    (json.packages || []).forEach(p => {
+      const opt = document.createElement('option');
+      opt.value = p.week_id;
+      opt.textContent = `${p.week_id} (${p.date_range})`;
+      sel.appendChild(opt);
+    });
+    if (!json.packages || !json.packages.length) {
+      sel.innerHTML = '<option value="latest">尚無週包</option>';
+    }
+  } catch(e) {
+    console.error('loadWeeklyList error', e);
+  }
+}
+
+async function loadWeeklyPackage(weekId) {
+  document.getElementById('weeklyLoading').style.display = 'block';
+  document.getElementById('weeklyContent').style.display = 'none';
+  try {
+    // TODO 批次 2：確認 Sam 週包 type 名稱（目前暫用 type=sam，endpoint 待批次 2 建立）
+    const res = await fetch(API + `/api/weekly-package?type=sam&week=${weekId}`);
+    if (!res.ok) { document.getElementById('weeklyLoading').textContent = '尚無週包資料，請先觸發產出。'; return; }
+    weeklyData = await res.json();
+    renderWeeklyPackage(weeklyData);
+    document.getElementById('weeklyLoading').style.display = 'none';
+    document.getElementById('weeklyContent').style.display = 'block';
+  } catch(e) {
+    document.getElementById('weeklyLoading').textContent = '載入失敗：' + e.message;
+  }
+}
+
+function renderWeeklyPackage(pkg) {
+  const s = pkg.summary || {};
+  const dr = pkg.date_range || {};
+
+  // 摘要卡片
+  document.getElementById('weeklySummary').innerHTML = [
+    { num: s.completed_milestones ?? 0, label: 'Milestone 完成' },
+    { num: s.completed_tasks ?? 0,      label: '任務完成' },
+    { num: (s.meeting_hours ?? 0) + 'h', label: '開會時數' },
+    { num: (s.deep_work_hours ?? 0) + 'h', label: '深度工作' },
+    { num: s.risks_count ?? 0,           label: '風險項目' },
+    { num: s.stalled_count ?? 0,         label: '停滯 Milestone' },
+  ].map(c => `<div class="weekly-stat-card">
+    <div class="weekly-stat-num">${c.num}</div>
+    <div class="weekly-stat-label">${c.label}</div>
+  </div>`).join('');
+
+  // Milestone 變化
+  const changes = pkg.milestone_changes || [];
+  if (changes.length) {
+    const byProject = {};
+    changes.forEach(c => { (byProject[c.project_name] = byProject[c.project_name] || []).push(c); });
+    document.getElementById('weeklyChanges').innerHTML = Object.entries(byProject).map(([pname, cs]) => `
+      <div style="margin-bottom:12px"><strong>${escHtml(pname)}</strong></div>
+      ${cs.map(c => {
+        let txt = '';
+        if (c.type === 'added') txt = `${c.date} ➕ 新增：${c.milestone_title}`;
+        else if (c.type === 'removed') txt = `${c.date} ✅ 完成（刪除）：${c.milestone_title}`;
+        else if (c.field === 'due') txt = `${c.date} ${c.milestone_title} due 更新：${c.old_value} → ${c.new_value}`;
+        else txt = `${c.date} ${c.milestone_title}（${c.field} 更新）`;
+        return `<div class="weekly-change-item">${escHtml(txt)}</div>`;
+      }).join('')}
+    `).join('');
+  } else {
+    document.getElementById('weeklyChanges').innerHTML = '<div class="weekly-empty">本週無 milestone 變化</div>';
+  }
+
+  // 4 週趨勢
+  const trend = pkg.trend_4weeks || [];
+  document.getElementById('weeklyTrend').innerHTML = trend.length ? `
+    <table class="weekly-table">
+      <tr><th>週次</th><th>Milestone 完成</th><th>變化次數</th></tr>
+      ${trend.map(t => `<tr><td>${escHtml(t.week_id)} (${escHtml(t.date_range)})</td><td>${t.milestone_completed}</td><td>${t.changes}</td></tr>`).join('')}
+    </table>` : '<div class="weekly-empty">無趨勢資料</div>';
+
+  // 下週預覽
+  const nw = pkg.next_week || {};
+  const upcoming = nw.upcoming_milestones || [];
+  document.getElementById('weeklyNextTitle').textContent = `📅 下週預覽（預估開會 ${(nw.estimated_hours||{}).meeting||0}h / 深度工作 ${(nw.estimated_hours||{}).deep_work||0}h）`;
+  document.getElementById('weeklyUpcoming').innerHTML = upcoming.length ? `
+    <table class="weekly-table">
+      <tr><th>due</th><th>專案</th><th>Milestone</th><th>距今</th></tr>
+      ${upcoming.map(m => `<tr><td>${escHtml(m.due)}</td><td>${escHtml(m.project)}</td><td>${escHtml(m.title)}</td><td>${m.days_left} 天</td></tr>`).join('')}
+    </table>` : '<div class="weekly-empty">下週無到期 milestone</div>';
+
+  const nwcal = (nw.calendar || []).filter(d => !['週六','週日'].includes(d.weekday));
+  document.getElementById('weeklyNextCal').innerHTML = nwcal.length ? `
+    <table class="weekly-table">
+      <tr><th>日期</th><th>開會時數</th><th>主要事件</th></tr>
+      ${nwcal.map(d => `<tr><td>${escHtml(d.date)} ${escHtml(d.weekday)}</td><td>${d.meeting_hours}h</td><td>${escHtml((d.events||[]).slice(0,2).join('、') || '—')}</td></tr>`).join('')}
+    </table>` : '';
+
+  // 風險
+  const risks = pkg.risks || [];
+  document.getElementById('weeklyRiskCard').style.display = risks.length ? 'block' : 'none';
+  document.getElementById('weeklyRisks').innerHTML = risks.map(r => `
+    <div class="weekly-risk-item">
+      <span class="${r.level === 'high' ? 'risk-high' : 'risk-medium'}">${r.level === 'high' ? '🔴' : '🟡'} ${escHtml(r.message)}</span>
+      ${(r.items||[]).map(i => `<div style="padding-left:16px;color:var(--text-muted);font-size:12px">• ${escHtml(i)}</div>`).join('')}
+    </div>`).join('');
+
+  // 停滯
+  const stalled = pkg.stalled_milestones || [];
+  document.getElementById('weeklyStalled').innerHTML = stalled.length ? `
+    <table class="weekly-table">
+      <tr><th>專案</th><th>Milestone</th><th>上次更新</th><th>停滯天數</th></tr>
+      ${stalled.map(s => `<tr><td>${escHtml(s.project)}</td><td>${escHtml(s.title)}</td><td>${escHtml(s.last_update)}</td><td>${s.days_stalled} 天</td></tr>`).join('')}
+    </table>` : '<div class="weekly-empty">無長期停滯 milestone</div>';
+
+  // Cowork 按鈕
+  const coworkBtn = document.getElementById('coworkBtn');
+  coworkBtn.style.display = 'none'; // 預設隱藏，有 URL 才顯示
+}
+
+function downloadMarkdown() {
+  if (!weeklyData || !weeklyData.raw_markdown) return;
+  const blob = new Blob([weeklyData.raw_markdown], { type: 'text/markdown;charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `${weeklyData.week_id || 'weekly'}.md`;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+function openCowork() {
+  // COWORK_URL will be injected server-side in future; for now noop if no url
+  if (weeklyData && weeklyData._cowork_url) window.open(weeklyData._cowork_url, '_blank');
+}
+
+// ── DATE HELPERS ─────────────────────────────────
+// Storage: YYYY/MM/DD, input[type=date]: YYYY-MM-DD
+function toInputDate(s) {
+  if (!s) return '';
+  return s.replace(/\//g, '-');
+}
+function fromInputDate(s) {
+  if (!s) return '';
+  return s.replace(/-/g, '/');
+}
+function formatDisplayDate(s) {
+  // s is YYYY/MM/DD
+  if (!s) return '';
+  const [y, m, d] = s.split('/');
+  return `${m}/${d}`;
+}
+function isOverdue(due) {
+  if (!due) return false;
+  const today = new Date().toISOString().split('T')[0].replace(/-/g, '/');
+  return due < today;
+}
+
+// ── DATA ─────────────────────────────────────────
+async function loadData() {
+  document.getElementById('lastUpdated').textContent = '讀取中...';
+  try {
+    const progressRes = await fetch(API + '/api/sam-progress?t=' + Date.now(), { headers: GET_HEADERS });
+    if (!progressRes.ok) throw new Error(`HTTP ${progressRes.status}`);
+    data = await progressRes.json();
+    if (!data.business_ops) data.business_ops = { businesses: [], last_updated: '' };
+
+    dataLoaded = true;
+    document.getElementById('saveBtn').disabled = false;
+    renderBoard();
+    document.getElementById('lastUpdated').textContent = '更新：' + ((data.summary && data.summary.last_updated) || data._kanban.last_updated || '—');
+  } catch(e) {
+    dataLoaded = false;
+    document.getElementById('saveBtn').disabled = true;
+    showToast('⚠️ 無法載入資料：' + e.message, 'error');
+    document.getElementById('lastUpdated').textContent = '⚠ 離線模式（禁止儲存）';
+  }
+}
+
+async function saveData() {
+  if (!dataLoaded) { showToast('離線模式，禁止儲存', 'error'); return; }
+  const btn = document.getElementById('saveBtn');
+  btn.textContent = '儲存中...';
+  btn.disabled = true;
+
+  try {
+    const progressRes = await fetch(API + '/api/sam-progress', {
+      method: 'POST',
+      headers: HEADERS,
+      body: JSON.stringify(data)
+    });
+    const result = await progressRes.json();
+    if (!progressRes.ok || !result.ok) throw new Error(result.error || 'write failed');
+    showToast('✅ 設定已儲存', 'success');
+    btn.textContent = '✓ 已儲存';
+    btn.classList.add('saved');
+    document.getElementById('lastUpdated').textContent = '更新：' + (result.last_updated || '').slice(0, 10);
+    setTimeout(() => {
+      btn.textContent = '✓ 儲存';
+      btn.classList.remove('saved');
+      btn.disabled = false;
+    }, 2500);
+  } catch(e) {
+    showToast('⚠️ 儲存失敗：' + e.message, 'error');
+    btn.textContent = '✓ 儲存';
+    btn.disabled = false;
+  }
+}
+
+// ── BOARD ─────────────────────────────────────────
+function renderBoard() {
+  // 補齊舊資料缺少的 id（舊專案可能沒有 id 欄位）
+  data._kanban.projects.forEach((p, i) => {
+    if (!p.id) p.id = 'P_legacy_' + i + '_' + Math.random().toString(36).slice(2,6);
+    if (!p.milestones) p.milestones = [];
+    p.milestones.forEach((m, mi) => {
+      if (!m.id) m.id = p.id + '_M' + mi;
+      if (m.delegated_to_sam === undefined) m.delegated_to_sam = false;
+    });
+  });
+
+  // destroy old Sortable instances to avoid leaks
+  sortables.forEach(s => s.destroy());
+  sortables = [];
+
+  const board = document.getElementById('board');
+  board.innerHTML = data._kanban.projects.map(p => renderColumnHTML(p)).join('') + `
+    <div class="add-col">
+      <button class="add-col-btn" onclick="addProject()">＋ 新增專案</button>
+    </div>`;
+
+  // Init drag-drop for each column's cards
+  data._kanban.projects.forEach(p => {
+    const el = document.querySelector(`[data-pid="${p.id}"] .col-cards`);
+    if (!el) return;
+    const s = Sortable.create(el, {
+      group: 'cards',
+      animation: 160,
+      ghostClass: 'sortable-ghost',
+      dragClass: 'sortable-drag',
+      handle: '.card',
+      onStart() { isDragging = true; },
+      onEnd(evt) {
+        setTimeout(() => { isDragging = false; }, 100);
+        const fromPid = evt.from.closest('[data-pid]').dataset.pid;
+        const toPid   = evt.to.closest('[data-pid]').dataset.pid;
+        const fromP   = data._kanban.projects.find(x => x.id === fromPid);
+        const toP     = data._kanban.projects.find(x => x.id === toPid);
+        const [moved] = fromP.milestones.splice(evt.oldIndex, 1);
+        toP.milestones.splice(evt.newIndex, 0, moved);
+        updateColCount(fromPid);
+        updateColCount(toPid);
+      }
+    });
+    sortables.push(s);
+  });
+
+  // Init column-level drag (reorder projects)
+  const boardEl = document.getElementById('board');
+  const colSort = Sortable.create(boardEl, {
+    animation: 160,
+    handle: '.col-header',
+    ghostClass: 'sortable-ghost',
+    filter: '.add-col',
+    onEnd(evt) {
+      if (evt.newIndex >= data._kanban.projects.length) return; // dragged to add-col zone
+      const [moved] = data._kanban.projects.splice(evt.oldIndex, 1);
+      data._kanban.projects.splice(evt.newIndex, 0, moved);
+    }
+  });
+  sortables.push(colSort);
+}
+
+function updateColCount(pid) {
+  const p = data._kanban.projects.find(x => x.id === pid);
+  if (!p) return;
+  const el = document.querySelector(`[data-pid="${pid}"] .col-count`);
+  if (el) {
+    el.textContent = p.milestones.length;
+  }
+}
+
+function renderColumnHTML(p) {
+  return `<div class="column" data-pid="${p.id}">
+    <div class="col-header" style="cursor:grab">
+      <div class="col-dot" style="background:${p.color}"></div>
+      <div class="col-title" contenteditable="true"
+        onblur="updateProjectName('${p.id}',this.textContent)"
+        onkeydown="if(event.key==='Enter'){event.preventDefault();this.blur();}"
+      >${escHtml(p.name)}</div>
+      <div class="col-count">${p.milestones.length}</div>
+      <button class="col-del" title="刪除專案" data-action="del-project" data-pid="${p.id}">✕</button>
+    </div>
+    <div class="col-cards">
+      ${p.milestones.map((m,mi) => renderCardHTML(p,m,mi)).join('')}
+    </div>
+    <button class="add-card-btn" data-action="add-card" data-pid="${p.id}">＋ 新增里程碑</button>
+  </div>`;
+}
+
+function getExecuteBadge(es) {
+  const cfg = {
+    'pending_execute': ['eb-pending',   '⏳ 等待確認'],
+    'confirming':      ['eb-confirming','💬 確認中'],
+    'executing':       ['eb-executing', '⚡ 執行中'],
+    'done':            ['eb-done',      '✅ 已完成'],
+    'cancelled':       ['eb-cancelled', '❌ 已取消'],
+    'failed':          ['eb-failed',    '⚠️ 失敗'],
+  };
+  if (!es || !cfg[es]) return '';
+  const [cls, label] = cfg[es];
+  return `<span class="execute-badge ${cls}">${label}</span>`;
+}
+
+function getCardBorderClass(es) {
+  const map = {
+    'pending_execute':'pending-execute', 'confirming':'confirming',
+    'executing':'executing', 'done':'done-execute', 'failed':'failed-execute'
+  };
+  return map[es] ? ' ' + map[es] : '';
+}
+
+function renderCardHTML(p, m, mi) {
+  const overdue = isOverdue(m.due);
+  const dueHtml = m.due
+    ? `<div class="due-chip${overdue?' overdue':''}">📅 ${formatDisplayDate(m.due)}</div>`
+    : '';
+  const descHtml = m.description
+    ? `<div class="card-desc">📋 ${escHtml(m.description)}</div>`
+    : '';
+  const es = m.execute_status || '';
+  const delegated = m.delegated_to_sam || false;
+  const isFinished = ['done','cancelled','failed'].includes(es);
+  return `<div class="card${getCardBorderClass(es)}" data-pid="${p.id}" data-mi="${mi}">
+    <div class="card-top">
+      <div class="card-title">${escHtml(m.title)}</div>
+      <button class="card-del-btn" title="移除此 milestone（完成或取消都用這個）" onclick="event.stopPropagation();deleteCardDirect('${p.id}',${mi})">✗</button>
+    </div>
+    ${descHtml}
+    <div class="card-footer">
+      ${dueHtml}
+      ${getExecuteBadge(es)}
+      <div class="execute-row" style="margin-left:auto" onclick="event.stopPropagation()">
+        <input type="checkbox" class="execute-checkbox"
+          ${delegated?'checked':''} ${isFinished?'disabled':''}
+          data-pid="${p.id}" data-mi="${mi}"
+          title="${isFinished?'已結束':'勾選後助理自動執行'}"
+          onchange="toggleExecute(event,'${p.id}',${mi},this.checked)">
+        <span class="execute-label" style="${isFinished?'color:var(--text-dim)':''}">交給助理</span>
+      </div>
+    </div>
+  </div>`;
+}
+
+function toggleExecute(event, pid, mi, checked) {
+  const m = getProject(pid).milestones[mi];
+  m.delegated_to_sam = checked;
+  if (!checked) m.execute_status = '';
+  // Auto-save to GitHub so Bot can pick it up
+  saveData();
+  renderBoard();
+}
+
+function deleteCardDirect(pid, mi) {
+  const p = getProject(pid);
+  const m = p.milestones[mi];
+  const title = m ? m.title : '此里程碑';
+  if (!confirm(`確定移除「${title}」？\n此動作不可復原。`)) return;
+  p.milestones.splice(mi, 1);
+  renderBoard();
+  saveData();
+}
+
+function getProject(pid) { return data._kanban.projects.find(p => p.id === pid); }
+
+function updateProjectName(pid, name) {
+  const trimmed = name.trim();
+  if (trimmed) getProject(pid).name = trimmed;
+}
+
+// ── BOARD EVENT DELEGATION ───────────────────────
+// Handles card click, add-card, del-project — avoids Sortable swallowing onclick
+document.getElementById('board').addEventListener('click', function(e) {
+  if (isDragging) return; // ignore click right after drag
+  const card = e.target.closest('.card');
+  if (card) {
+    const pid = card.dataset.pid;
+    const mi  = parseInt(card.dataset.mi);
+    openCard(pid, mi);
+    return;
+  }
+  // Add card button
+  const addBtn = e.target.closest('[data-action="add-card"]');
+  if (addBtn) { openNewCard(addBtn.dataset.pid); return; }
+  // Delete project button
+  const delBtn = e.target.closest('[data-action="del-project"]');
+  if (delBtn) { removeProject(delBtn.dataset.pid); return; }
+  // Add project button
+  if (e.target.closest('.add-col-btn')) { addProject(); }
+});
+
+// ── MODAL ─────────────────────────────────────────
+function openCard(pid, mi) {
+  const p = getProject(pid);
+  const m = p.milestones[mi];
+  editingPid = pid; editingMi = mi;
+
+  document.getElementById('modalDot').style.background = p.color;
+  document.getElementById('modalTitle').textContent = p.name;
+  document.getElementById('mTitle').value = m.title;
+  document.getElementById('mDue').value = toInputDate(m.due || '');
+  document.getElementById('mDescription').value = m.description || '';
+  document.getElementById('deleteBtn').style.display = 'inline-flex';
+  document.getElementById('modalOverlay').style.display = 'flex';
+  setTimeout(() => document.getElementById('mTitle').focus(), 50);
+}
+
+function openNewCard(pid) {
+  const p = getProject(pid);
+  editingPid = pid; editingMi = null;
+
+  document.getElementById('modalDot').style.background = p.color;
+  document.getElementById('modalTitle').textContent = p.name + ' — 新里程碑';
+  ['mTitle','mDescription'].forEach(id => document.getElementById(id).value = '');
+  document.getElementById('mDue').value = '';
+  document.getElementById('deleteBtn').style.display = 'none';
+  document.getElementById('modalOverlay').style.display = 'flex';
+  setTimeout(() => document.getElementById('mTitle').focus(), 50);
+}
+
+function closeModal() {
+  document.getElementById('modalOverlay').style.display = 'none';
+}
+function closeModalOverlay(e) {
+  if (e.target === document.getElementById('modalOverlay')) closeModal();
+}
+
+function renderBlockerList() {
+  document.getElementById('blockerList').innerHTML = tempBlockers.map((b,i) => `
+    <div class="blocker-row">
+      <span class="blocker-row-type">${BLOCKER_ICONS[b.type]||'⚠️'} ${b.type}</span>
+      <span class="blocker-row-desc">${escHtml(b.description)}</span>
+      <button class="blocker-row-del" onclick="removeBlockerRow(${i})">✕</button>
+    </div>`).join('');
+}
+
+function addBlockerRow() {
+  const type = document.getElementById('newBlockerType').value;
+  const desc = document.getElementById('newBlockerDesc').value.trim();
+  if (!desc) { document.getElementById('newBlockerDesc').focus(); return; }
+  tempBlockers.push({type, description: desc, since: new Date().toLocaleDateString('zh-TW')});
+  document.getElementById('newBlockerDesc').value = '';
+  renderBlockerList();
+}
+
+function removeBlockerRow(i) { tempBlockers.splice(i,1); renderBlockerList(); }
+
+function saveCard() {
+  const project = getProject(editingPid);
+  const rawDue = document.getElementById('mDue').value;
+  const existingM = editingMi !== null ? project.milestones[editingMi] : null;
+  const card = {
+    id: existingM ? existingM.id : `${editingPid}-M${Date.now()}`,
+    title: document.getElementById('mTitle').value.trim() || '未命名',
+    due: fromInputDate(rawDue),
+    description: document.getElementById('mDescription').value.trim(),
+    reminder_sent: existingM ? (existingM.reminder_sent ?? {day_before: false, due_day: false}) : {day_before: false, due_day: false},
+    execute_status: existingM ? (existingM.execute_status || '') : '',
+    delegated_to_sam: existingM ? (existingM.delegated_to_sam ?? false) : false,
+  };
+  if (editingMi !== null) {
+    project.milestones[editingMi] = card;
+  } else {
+    project.milestones.push(card);
+  }
+  closeModal();
+  renderBoard();
+}
+
+function deleteCard() {
+  const m = getProject(editingPid).milestones[editingMi];
+  const title = m ? m.title : '此里程碑';
+  if (!confirm(`確定移除「${title}」？\n此動作不可復原。`)) return;
+  getProject(editingPid).milestones.splice(editingMi, 1);
+  closeModal();
+  renderBoard();
+  saveData();
+}
+
+function addProject() {
+  const name = prompt('新專案名稱：');
+  if (!name || !name.trim()) return;
+  data._kanban.projects.push({
+    id: 'P_' + Date.now(),
+    name: name.trim(),
+    color: PROJECT_COLORS[data._kanban.projects.length % PROJECT_COLORS.length],
+    milestones: []
+  });
+  renderBoard();
+}
+
+function removeProject(pid) {
+  const p = getProject(pid);
+  if (!p) return;
+  if (!confirm(`確定刪除專案「${p.name}」及其所有里程碑？`)) return;
+  data._kanban.projects = data._kanban.projects.filter(x => x.id !== pid);
+  renderBoard();
+}
+
+// ── UTILS ─────────────────────────────────────────
+function showToast(msg, type) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = `toast toast-${type} show`;
+  setTimeout(() => t.className = 'toast', 3000);
+}
+
+function escHtml(str) {
+  return String(str || '')
+    .replace(/&/g,'&amp;').replace(/</g,'&lt;')
+    .replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+// Keyboard shortcut: Ctrl+S to save
+document.addEventListener('keydown', e => {
+  if ((e.ctrlKey || e.metaKey) && e.key === 's') {
+    e.preventDefault();
+    saveData();
+  }
+});
+
+// ── PORTFOLIO ─────────────────────────────────────
+let editingBizId = null;
+let editingBizMonthlyRecords = {};
+let portfolioSelectedYM = '';
+
+const ROLE_MAP = {shareholder:'純股東',shareholder_advisor:'股東+顧問',co_operator:'合夥',self_operated:'自營'};
+const FREQ_MAP = {monthly:'月',quarterly:'季',yearly:'年',irregular:'不定期'};
+
+function getCurrentYM() {
+  const n = new Date();
+  return `${n.getFullYear()}-${String(n.getMonth()+1).padStart(2,'0')}`;
+}
+
+function getExpectedForMonth(ft, year, month) {
+  const freq = ft.income_frequency;
+  if (freq === 'monthly' && ft.settlement_day) return ft.monthly_amount || 0;
+  if (freq === 'quarterly' && [3,6,9,12].includes(month) && ft.settlement_day) return ft.quarterly_amount || 0;
+  if (freq === 'yearly' && month === ft.settlement_month && ft.settlement_day) return ft.yearly_amount || 0;
+  return 0;
+}
+
+function getRecordKey(ft, year, month) {
+  const freq = ft.income_frequency;
+  if (freq === 'monthly') return `${year}-${String(month).padStart(2,'0')}`;
+  if (freq === 'quarterly') return `${year}Q${Math.ceil(month/3)}`;
+  if (freq === 'yearly') return `${year}`;
+  return null;
+}
+
+function calcCashflow(ym, businesses) {
+  const [selYear, selMonth] = ym.split('-').map(Number);
+  const pd = new Date(selYear, selMonth - 2, 1);
+  const [py, pm] = [pd.getFullYear(), pd.getMonth()+1];
+  let expectedThis=0, actualThis=0, expectedPrev=0, actualPrev=0, ytdActual=0, fullYearExpected=0;
+  for (const biz of businesses) {
+    if (biz.status !== 'active') continue;
+    const ft = biz.financial_terms || {};
+    const records = (biz.income_tracking || {}).monthly_records || {};
+    expectedThis += getExpectedForMonth(ft, selYear, selMonth);
+    expectedPrev += getExpectedForMonth(ft, py, pm);
+    fullYearExpected += ft.expected_annual_total || 0;
+    const tk = getRecordKey(ft, selYear, selMonth);
+    if (tk && records[tk] != null) actualThis += Number(records[tk])||0;
+    const pk = getRecordKey(ft, py, pm);
+    if (pk && records[pk] != null) actualPrev += Number(records[pk])||0;
+    for (const [k, v] of Object.entries(records)) {
+      if (k.startsWith(String(selYear)+'-') || k.startsWith(String(selYear)+'Q') || k === String(selYear))
+        ytdActual += Number(v)||0;
+    }
+  }
+  return { expectedThis, actualThis, pending: Math.max(0, expectedThis-actualThis),
+    overdue: Math.max(0, expectedPrev-actualPrev), ytdActual, fullYearExpected };
+}
+
+function getBizStatusIcon(biz, ym) {
+  if (biz.status !== 'active') return '⚪';
+  const [selYear, selMonth] = ym.split('-').map(Number);
+  const ft = biz.financial_terms || {};
+  const records = (biz.income_tracking || {}).monthly_records || {};
+  const expected = getExpectedForMonth(ft, selYear, selMonth);
+  if (expected === 0) return '⚪';
+  const key = getRecordKey(ft, selYear, selMonth);
+  if (key && records[key] != null) return '🟢';
+  const today = new Date();
+  const sd = ft.settlement_day || 1;
+  const settleDate = new Date(selYear, selMonth-1, sd);
+  if (today < settleDate) return '🟡';
+  const delayDays = Math.floor((today - settleDate) / 86400000);
+  return delayDays > ((biz.monitoring||{}).warning_rule_delay_days || 14) ? '🔴' : '🟡';
+}
+
+function renderPortfolioTab() {
+  const wrap = document.querySelector('#tab-portfolio .portfolio-wrap');
+  if (!data) {
+    wrap.innerHTML = '<div class="portfolio-header-row"><div class="section-title" style="margin:0">💼 投資組合</div><button class="btn btn-green btn-sm" style="margin-left:auto" onclick="openNewBiz()">＋ 新增副業</button></div><div class="biz-empty">⚠️ 資料未載入，請按右上「↺ 重新整理」</div><div id="bizList" style="display:none"></div>';
+    return;
+  }
+  if (!data.business_ops) data.business_ops = { businesses: [], last_updated: '' };
+  const businesses = data.business_ops.businesses || [];
+  if (!portfolioSelectedYM) portfolioSelectedYM = getCurrentYM();
+
+  const headerRow = `<div class="portfolio-header-row">
+    <div class="section-title" style="margin:0">💼 投資組合</div>
+    <button class="btn btn-green btn-sm" style="margin-left:auto" onclick="openNewBiz()">＋ 新增副業</button>
+  </div>`;
+
+  if (!businesses.length) {
+    wrap.innerHTML = headerRow + '<div class="biz-empty">尚未新增副業，點右上「＋ 新增副業」開始</div><div id="bizList" style="display:none"></div>';
+    return;
+  }
+
+  const now = new Date();
+  let monthOptions = '';
+  for (let i = 0; i < 12; i++) {
+    const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+    const ym = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;
+    monthOptions += `<option value="${ym}" ${ym===portfolioSelectedYM?'selected':''}>${d.getFullYear()} 年 ${d.getMonth()+1} 月</option>`;
+  }
+
+  const cf = calcCashflow(portfolioSelectedYM, businesses);
+
+  const cashflowHtml = `<div class="cashflow-card">
+    <div class="cashflow-month-row">
+      <span style="font-weight:700;font-size:14px">📅 現金流</span>
+      <select class="cashflow-month-sel" onchange="portfolioSelectedYM=this.value;renderPortfolioTab()">${monthOptions}</select>
+    </div>
+    <div class="cashflow-grid">
+      <div class="cashflow-item"><div class="cashflow-item-label">本月預期應收</div><div class="cashflow-item-val">${cf.expectedThis.toLocaleString()}</div></div>
+      <div class="cashflow-item"><div class="cashflow-item-label">本月實際已收</div><div class="cashflow-item-val ${cf.actualThis>=cf.expectedThis&&cf.expectedThis>0?'green':''}">${cf.actualThis.toLocaleString()}${cf.actualThis>=cf.expectedThis&&cf.expectedThis>0?' ✅':''}</div></div>
+      <div class="cashflow-item"><div class="cashflow-item-label">待收</div><div class="cashflow-item-val ${cf.pending>0?'red':''}">${cf.pending.toLocaleString()}</div></div>
+    </div>
+    <div class="cashflow-grid">
+      <div class="cashflow-item"><div class="cashflow-item-label">上月逾期</div><div class="cashflow-item-val ${cf.overdue>0?'red':'green'}">${cf.overdue>0?cf.overdue.toLocaleString():'0 ✅'}</div></div>
+      <div class="cashflow-item"><div class="cashflow-item-label">年初至今累計</div><div class="cashflow-item-val">${cf.ytdActual.toLocaleString()}</div></div>
+      <div class="cashflow-item"><div class="cashflow-item-label">全年預估總入帳</div><div class="cashflow-item-val">~${cf.fullYearExpected.toLocaleString()}</div></div>
+    </div>
+  </div>`;
+
+  // 1-B: biz table
+  const bizRows = businesses.map(biz => {
+    const ft = biz.financial_terms || {};
+    const [sy, sm] = portfolioSelectedYM.split('-').map(Number);
+    const key = getRecordKey(ft, sy, sm);
+    const records = (biz.income_tracking||{}).monthly_records || {};
+    const thisAmt = key && records[key]!=null ? Number(records[key]) : null;
+    const autoTotal = Object.values(records).reduce((s,v)=>s+(Number(v)||0),0);
+    const cumTotal = (biz.income_tracking||{}).manual_override_total != null ? (biz.income_tracking||{}).manual_override_total : autoTotal;
+    return `<tr>
+      <td><strong>${escHtml(biz.display_name||'—')}</strong></td>
+      <td>${ROLE_MAP[(biz.my_role||{}).role]||(biz.my_role||{}).role||'—'}</td>
+      <td>${FREQ_MAP[ft.income_frequency]||'—'}</td>
+      <td>${thisAmt!=null?'+'+Number(thisAmt).toLocaleString():'—'}</td>
+      <td>${cumTotal?cumTotal.toLocaleString():'—'}</td>
+      <td>${getBizStatusIcon(biz, portfolioSelectedYM)}</td>
+      <td><button class="btn btn-outline btn-sm" onclick="openEditBiz('${biz.id}')">編輯</button></td>
+    </tr>`;
+  }).join('');
+  const bizTableHtml = `<div class="biz-table-wrap">
+    <table class="biz-table">
+      <thead><tr><th>副業</th><th>角色</th><th>節奏</th><th>本月</th><th>累計</th><th>狀態</th><th>操作</th></tr></thead>
+      <tbody>${bizRows}</tbody>
+    </table>
+  </div>`;
+
+  // 1-C: timeline
+  const now2 = new Date();
+  const months12 = Array.from({length:12},(_,i)=>{const d=new Date(now2.getFullYear(),now2.getMonth()+i,1);return{year:d.getFullYear(),month:d.getMonth()+1};});
+  const activeBizs = businesses.filter(b=>b.status==='active');
+  const maxExp = Math.max(1,...months12.map(({year,month})=>activeBizs.reduce((s,biz)=>s+getExpectedForMonth(biz.financial_terms||{},year,month),0)));
+  const timelineRows = months12.map(({year,month})=>{
+    let exp=0,act=0,hasAct=false;
+    for(const biz of activeBizs){
+      const ft=biz.financial_terms||{};
+      exp+=getExpectedForMonth(ft,year,month);
+      const k=getRecordKey(ft,year,month);
+      const r=(biz.income_tracking||{}).monthly_records||{};
+      if(k&&r[k]!=null){act+=Number(r[k])||0;hasAct=true;}
+    }
+    const barPct=Math.round(exp/maxExp*100);
+    const label=year!==now2.getFullYear()?`${year}/${String(month).padStart(2,'0')}`:month+'月';
+    const amtLabel=exp>0?`${exp.toLocaleString()}${hasAct?` (已收 ${act.toLocaleString()} ✅)`:' (待收)'}` :'—';
+    return `<div class="timeline-row">
+      <div class="timeline-month">${label}</div>
+      <div class="timeline-bar-wrap"><div class="timeline-bar ${hasAct?'has-actual':''}" style="width:${barPct}%"></div></div>
+      <div class="timeline-amount">${amtLabel}</div>
+    </div>`;
+  }).join('');
+  const timelineHtml = `<div class="timeline-wrap"><div class="timeline-title">📊 入帳時間軸（未來 12 個月）</div>${timelineRows}</div>`;
+
+  // 1-D: health
+  let industryMap={},totalAnnual=0,monthlyAnnual=0;
+  const regions=new Set();
+  for(const biz of activeBizs){
+    const ind=(biz.basic||{}).industry||'未知';
+    const annual=(biz.financial_terms||{}).expected_annual_total||0;
+    industryMap[ind]=(industryMap[ind]||0)+annual;
+    totalAnnual+=annual;
+    if((biz.financial_terms||{}).income_frequency==='monthly') monthlyAnnual+=annual;
+    if((biz.basic||{}).region) regions.add((biz.basic||{}).region);
+  }
+  let maxInd='—',maxPct=0;
+  for(const[ind,val] of Object.entries(industryMap)){const p=totalAnnual>0?Math.round(val/totalAnnual*100):0;if(p>maxPct){maxInd=ind;maxPct=p;}}
+  const riskIcon=maxPct<=60?'🟢':maxPct<=80?'🟡':'🔴';
+  const regIcon=regions.size>=3?'🟢':regions.size===2?'🟡':'🔴';
+  const mPct=totalAnnual>0?Math.round(monthlyAnnual/totalAnnual*100):0;
+  const stableIcon=mPct<=80?'🟢':'🟡';
+  const healthHtml = activeBizs.length ? `<div class="health-wrap">
+    <div class="health-title">💊 組合健康度</div>
+    <div class="health-row"><div class="health-label">風險集中</div><div class="health-val">${riskIcon} ${maxPct}% 集中在「${escHtml(maxInd)}」產業</div></div>
+    <div class="health-row"><div class="health-label">地區分布</div><div class="health-val">${regIcon} ${regions.size} 個地區：${escHtml([...regions].join('、')||'—')}</div></div>
+    <div class="health-row"><div class="health-label">入帳穩定度</div><div class="health-val">${stableIcon} ${mPct}% 集中月度入帳</div></div>
+    <div class="health-row"><div class="health-label">入帳準時度</div><div class="health-val">🟢 平均拖款 0 天（v1 暫寫死）</div></div>
+  </div>` : '';
+
+  // 1-E: alerts
+  const [sy2, sm2] = portfolioSelectedYM.split('-').map(Number);
+  const today2 = new Date();
+  const alertItems = [];
+  for(const biz of businesses){
+    if(biz.status!=='active') continue;
+    const ft=biz.financial_terms||{};
+    const records=(biz.income_tracking||{}).monthly_records||{};
+    if(Object.keys(records).length===0&&(biz.basic||{}).launched_at){
+      const launched=new Date((biz.basic||{}).launched_at);
+      if(launched<today2){alertItems.push(`🟡 ${escHtml(biz.display_name)}：上線後尚未首次入帳`);continue;}
+    }
+    const exp=getExpectedForMonth(ft,sy2,sm2);
+    if(exp>0){
+      const key=getRecordKey(ft,sy2,sm2);
+      if(!(key&&records[key]!=null)){
+        const sd=ft.settlement_day||1;
+        const settleDate=new Date(sy2,sm2-1,sd);
+        if(today2>=settleDate){
+          const delay=Math.floor((today2-settleDate)/86400000);
+          const wd=(biz.monitoring||{}).warning_rule_delay_days||14;
+          alertItems.push(`${delay>wd?'🔴':'🟡'} ${escHtml(biz.display_name)}：本月應收尚未勾選（超過結算日 ${delay} 天）`);
+        }
+      }
+    }
+  }
+  const alertsHtml = `<div class="alerts-wrap">
+    <div class="alerts-title">⚠️ 近期警示</div>
+    ${alertItems.length?alertItems.map(a=>`<div class="alert-row">${a}</div>`).join(''):'<div class="alert-row">✅ 所有副業正常</div>'}
+  </div>`;
+
+  wrap.innerHTML = headerRow + cashflowHtml + bizTableHtml + timelineHtml + healthHtml + alertsHtml + '<div id="bizList" style="display:none"></div>';
+}
+
+function openNewBiz() {
+  if (!data) data = { _kanban: { projects: [], last_updated: '' }, _pending_confirm: null };
+  if (!data.business_ops) data.business_ops = { businesses: [], last_updated: '' };
+  editingBizId = null;
+  document.getElementById('bizModalTitle').textContent = '新增副業';
+  document.getElementById('bizDeleteBtn').style.display = 'none';
+  // reset all fields to defaults
+  document.getElementById('bDisplayName').value = '';
+  document.getElementById('bStatus').value = 'active';
+  document.getElementById('bKanbanCol').value = '';
+  document.getElementById('bIndustry').value = '';
+  document.getElementById('bRegion').value = '';
+  document.getElementById('bLaunchedAt').value = '';
+  document.getElementById('bRole').value = 'shareholder';
+  document.getElementById('bEquity').value = '';
+  document.getElementById('bInvestAmt').value = '';
+  document.getElementById('bInvestDate').value = '';
+  document.getElementById('bAgreement').value = 'guaranteed';
+  document.getElementById('bFreq').value = 'monthly';
+  onBizFreqChange('monthly');
+  document.getElementById('bSettleDay').value = '';
+  document.getElementById('bMonthlyAmt').value = '';
+  document.getElementById('bQSettleDay').value = '';
+  document.getElementById('bQuarterlyAmt').value = '';
+  document.getElementById('bSettleMonth').value = '';
+  document.getElementById('bYSettleDay').value = '';
+  document.getElementById('bYearlyAmt').value = '';
+  document.getElementById('bExpectedAnnual').value = '';
+  document.getElementById('bOverrideTotal').value = '';
+  document.getElementById('bInvestRef').textContent = '/ 投資 —';
+  editingBizMonthlyRecords = {};
+  renderMonthlyGrid(null);
+  document.getElementById('bCustAttrs').value = '';
+  document.getElementById('bChannels').value = '';
+  document.getElementById('bSeasonality').value = 'strong';
+  document.getElementById('bKeywords').value = '';
+  document.getElementById('bizModalOverlay').style.display = 'flex';
+  setTimeout(() => document.getElementById('bDisplayName').focus(), 50);
+}
+
+function openEditBiz(id) {
+  const b = data.business_ops.businesses.find(x => x.id === id);
+  if (!b) return;
+  editingBizId = id;
+  document.getElementById('bizModalTitle').textContent = '編輯副業：' + (b.display_name || '');
+  document.getElementById('bizDeleteBtn').style.display = 'inline-flex';
+
+  document.getElementById('bDisplayName').value = b.display_name || '';
+  document.getElementById('bStatus').value = b.status || 'active';
+  document.getElementById('bKanbanCol').value = b.kanban_column_name || '';
+  document.getElementById('bIndustry').value = (b.basic || {}).industry || '';
+  document.getElementById('bRegion').value = (b.basic || {}).region || '';
+  document.getElementById('bLaunchedAt').value = ((b.basic || {}).launched_at || '').replace(/\//g, '-');
+  document.getElementById('bRole').value = (b.my_role || {}).role || 'shareholder';
+  document.getElementById('bEquity').value = (b.my_role || {}).equity_percent ?? '';
+  document.getElementById('bInvestAmt').value = (b.my_role || {}).investment_amount ?? '';
+  document.getElementById('bInvestDate').value = ((b.my_role || {}).investment_date || '').replace(/\//g, '-');
+
+  const ft = b.financial_terms || {};
+  document.getElementById('bAgreement').value = ft.agreement_type || 'guaranteed';
+  const freq = ft.income_frequency || 'monthly';
+  document.getElementById('bFreq').value = freq;
+  onBizFreqChange(freq);
+  document.getElementById('bSettleDay').value = ft.settlement_day ?? '';
+  document.getElementById('bMonthlyAmt').value = ft.monthly_amount ?? '';
+  document.getElementById('bQSettleDay').value = ft.settlement_day ?? '';
+  document.getElementById('bQuarterlyAmt').value = ft.quarterly_amount ?? '';
+  document.getElementById('bSettleMonth').value = ft.settlement_month ?? '';
+  document.getElementById('bYSettleDay').value = ft.settlement_day ?? '';
+  document.getElementById('bYearlyAmt').value = ft.yearly_amount ?? '';
+  document.getElementById('bExpectedAnnual').value = ft.expected_annual_total ?? '';
+
+  const it = b.income_tracking || {};
+  const records = it.monthly_records || {};
+  document.getElementById('bOverrideTotal').value = it.manual_override_total ?? '';
+  const investAmt = (b.my_role || {}).investment_amount;
+  document.getElementById('bInvestRef').textContent = investAmt != null ? `/ 投資 ${Number(investAmt).toLocaleString()}` : '/ 投資 —';
+  editingBizMonthlyRecords = { ...records };
+  renderMonthlyGrid(b);
+  updateMonthlyTotalDisplay();
+
+  const st = b.strategic_tags || {};
+  document.getElementById('bCustAttrs').value = (st.customer_attributes || []).join(', ');
+  document.getElementById('bChannels').value = (st.channels || []).join(', ');
+  document.getElementById('bSeasonality').value = st.seasonality || 'strong';
+  document.getElementById('bKeywords').value = (st.keywords || []).join(', ');
+
+  document.getElementById('bizModalOverlay').style.display = 'flex';
+  setTimeout(() => document.getElementById('bDisplayName').focus(), 50);
+}
+
+function closeBizModal() {
+  document.getElementById('bizModalOverlay').style.display = 'none';
+}
+
+function closeBizModalOverlay(e) {
+  if (e.target === document.getElementById('bizModalOverlay')) closeBizModal();
+}
+
+function onBizFreqChange(freq) {
+  ['monthly','quarterly','yearly','irregular'].forEach(f => {
+    document.getElementById('freq-' + f).classList.toggle('active', f === freq);
+  });
+  renderMonthlyGrid(null);
+}
+
+function splitTags(str) {
+  return str.split(',').map(s => s.trim()).filter(Boolean);
+}
+
+function saveBiz() {
+  if (!data) data = { _kanban: { projects: [], last_updated: '' }, _pending_confirm: null };
+  if (!data.business_ops) data.business_ops = { businesses: [], last_updated: '' };
+  const displayName = document.getElementById('bDisplayName').value.trim();
+  if (!displayName) { document.getElementById('bDisplayName').focus(); return; }
+
+  const freq = document.getElementById('bFreq').value;
+  let settlementDay = null, settlementMonth = null, monthlyAmt = null, quarterlyAmt = null, yearlyAmt = null;
+  if (freq === 'monthly') {
+    settlementDay = Number(document.getElementById('bSettleDay').value) || null;
+    monthlyAmt = document.getElementById('bMonthlyAmt').value !== '' ? Number(document.getElementById('bMonthlyAmt').value) : null;
+  } else if (freq === 'quarterly') {
+    settlementDay = Number(document.getElementById('bQSettleDay').value) || null;
+    quarterlyAmt = document.getElementById('bQuarterlyAmt').value !== '' ? Number(document.getElementById('bQuarterlyAmt').value) : null;
+  } else if (freq === 'yearly') {
+    settlementMonth = Number(document.getElementById('bSettleMonth').value) || null;
+    settlementDay = Number(document.getElementById('bYSettleDay').value) || null;
+    yearlyAmt = document.getElementById('bYearlyAmt').value !== '' ? Number(document.getElementById('bYearlyAmt').value) : null;
+  }
+
+  const overrideTotalRaw = document.getElementById('bOverrideTotal').value;
+  const overrideTotal = overrideTotalRaw !== '' ? Number(overrideTotalRaw) : null;
+
+  const biz = {
+    id: editingBizId || ('biz_' + Date.now()),
+    display_name: displayName,
+    kanban_column_name: document.getElementById('bKanbanCol').value.trim(),
+    status: document.getElementById('bStatus').value,
+    basic: {
+      industry: document.getElementById('bIndustry').value.trim(),
+      region: document.getElementById('bRegion').value.trim(),
+      launched_at: document.getElementById('bLaunchedAt').value,
+    },
+    my_role: {
+      role: document.getElementById('bRole').value,
+      equity_percent: document.getElementById('bEquity').value !== '' ? Number(document.getElementById('bEquity').value) : null,
+      investment_amount: document.getElementById('bInvestAmt').value !== '' ? Number(document.getElementById('bInvestAmt').value) : null,
+      investment_date: document.getElementById('bInvestDate').value,
+    },
+    financial_terms: {
+      agreement_type: document.getElementById('bAgreement').value,
+      income_frequency: freq,
+      monthly_amount: monthlyAmt,
+      quarterly_amount: quarterlyAmt,
+      yearly_amount: yearlyAmt,
+      settlement_day: settlementDay,
+      settlement_month: settlementMonth,
+      expected_annual_total: document.getElementById('bExpectedAnnual').value !== '' ? Number(document.getElementById('bExpectedAnnual').value) : null,
+    },
+    monitoring: { warning_rule_delay_days: 14 },
+    strategic_tags: {
+      customer_attributes: splitTags(document.getElementById('bCustAttrs').value),
+      channels: splitTags(document.getElementById('bChannels').value),
+      seasonality: document.getElementById('bSeasonality').value,
+      keywords: splitTags(document.getElementById('bKeywords').value),
+    },
+    income_tracking: {
+      monthly_records: { ...editingBizMonthlyRecords },
+      manual_override_total: overrideTotal,
+    },
+  };
+
+  if (editingBizId) {
+    const idx = data.business_ops.businesses.findIndex(x => x.id === editingBizId);
+    if (idx >= 0) data.business_ops.businesses[idx] = biz;
+    else data.business_ops.businesses.push(biz);
+  } else {
+    data.business_ops.businesses.push(biz);
+  }
+
+  closeBizModal();
+  renderPortfolioTab();
+}
+
+function deleteBiz() {
+  if (!data || !data.business_ops) return;
+  const b = data.business_ops.businesses.find(x => x.id === editingBizId);
+  if (!b) return;
+  if (!confirm(`確定刪除副業「${b.display_name}」？\n此動作不可復原。`)) return;
+  data.business_ops.businesses = data.business_ops.businesses.filter(x => x.id !== editingBizId);
+  closeBizModal();
+  renderPortfolioTab();
+}
+
+// ── MONTHLY GRID (modal) ──────────────────────────
+
+function renderMonthlyGrid(biz) {
+  const container = document.getElementById('bMonthlyGrid');
+  if (!container) return;
+  const freqEl = document.getElementById('bFreq');
+  const freq = freqEl ? freqEl.value : 'monthly';
+  if (freq === 'irregular') {
+    container.innerHTML = '<div style="font-size:12px;color:var(--text-muted);padding:4px 0">不規則入帳，使用上方手動覆蓋累計欄位。</div>';
+    updateMonthlyTotalDisplay();
+    return;
+  }
+  const today = new Date();
+  const currentYear = today.getFullYear();
+  const years = [currentYear, currentYear-1, currentYear-2].filter(y => y >= 2020);
+  container.innerHTML = years.map((year, yi) => buildYearGridHtml(year, freq, yi > 0)).join('');
+  updateMonthlyTotalDisplay();
+}
+
+function buildYearGridHtml(year, freq, collapsed) {
+  const today = new Date();
+  let cells = [];
+  if (freq === 'monthly') {
+    for (let m = 1; m <= 12; m++) {
+      const key = `${year}-${String(m).padStart(2,'0')}`;
+      cells.push({ key, label: String(m).padStart(2,'0'), checked: editingBizMonthlyRecords[key]!=null, future: new Date(year,m-1,28) > today });
+    }
+  } else if (freq === 'quarterly') {
+    for (let q = 1; q <= 4; q++) {
+      const key = `${year}Q${q}`;
+      cells.push({ key, label: `Q${q}`, checked: editingBizMonthlyRecords[key]!=null, future: new Date(year,q*3-1,28) > today });
+    }
+  } else {
+    const key = `${year}`;
+    cells.push({ key, label: `${year}`, checked: editingBizMonthlyRecords[key]!=null, future: year > today.getFullYear() });
+  }
+  const cols = freq === 'quarterly' ? 4 : freq === 'yearly' ? 1 : 12;
+  const cellsHtml = cells.map(c =>
+    `<div class="month-cell${c.checked?' checked':''}${c.future?' future':''}" onclick="${c.future?'':'toggleMonthCell(\''+c.key+'\')'}">${c.label}</div>`
+  ).join('');
+  const defaultAmt = getDefaultGridAmount(freq);
+  return `<div class="month-grid-year">
+    <div class="month-grid-year-label">
+      <span>${year}</span>
+      <span class="toggle-year-btn" id="ytoggle_${year}" onclick="toggleYearSection(${year})">${collapsed?'▶ 展開':'▼ 摺疊'}</span>
+    </div>
+    <div id="mgCells_${year}" style="${collapsed?'display:none':''}">
+      <div class="month-grid-cells" style="grid-template-columns:repeat(${cols},1fr)">${cellsHtml}</div>
+      <div class="month-grid-amount">每期金額：<input type="number" id="mgAmt_${year}" value="${defaultAmt}" placeholder="金額" onchange="updateGridAmount(${year})" style="width:100px;padding:4px 8px;border:1px solid var(--border);border-radius:4px;font-size:12px"></div>
+    </div>
+  </div>`;
+}
+
+function getDefaultGridAmount(freq) {
+  if (!freq) { const el = document.getElementById('bFreq'); freq = el ? el.value : 'monthly'; }
+  const map = { monthly:'bMonthlyAmt', quarterly:'bQuarterlyAmt', yearly:'bYearlyAmt' };
+  const fieldId = map[freq];
+  if (fieldId) { const el = document.getElementById(fieldId); if (el && el.value) return el.value; }
+  return '';
+}
+
+function toggleYearSection(year) {
+  const cells = document.getElementById('mgCells_' + year);
+  const toggle = document.getElementById('ytoggle_' + year);
+  if (!cells || !toggle) return;
+  const hidden = cells.style.display === 'none';
+  cells.style.display = hidden ? '' : 'none';
+  toggle.textContent = hidden ? '▼ 摺疊' : '▶ 展開';
+}
+
+function toggleMonthCell(key) {
+  if (editingBizMonthlyRecords[key] != null) {
+    delete editingBizMonthlyRecords[key];
+  } else {
+    const year = key.includes('Q') ? parseInt(key) : key.includes('-') ? parseInt(key.split('-')[0]) : parseInt(key);
+    const amtEl = document.getElementById('mgAmt_' + year);
+    editingBizMonthlyRecords[key] = amtEl ? (Number(amtEl.value) || 0) : 0;
+  }
+  // Refresh cell visual state
+  document.querySelectorAll('.month-cell').forEach(cell => {
+    const onclick = cell.getAttribute('onclick') || '';
+    const m = onclick.match(/toggleMonthCell\('([^']+)'\)/);
+    if (m) cell.classList.toggle('checked', editingBizMonthlyRecords[m[1]] != null);
+  });
+  updateMonthlyTotalDisplay();
+}
+
+function updateGridAmount(year) {
+  const amtEl = document.getElementById('mgAmt_' + year);
+  const newAmt = amtEl ? (Number(amtEl.value) || 0) : 0;
+  for (const key of Object.keys(editingBizMonthlyRecords)) {
+    const ky = key.includes('Q') ? parseInt(key) : key.includes('-') ? parseInt(key.split('-')[0]) : parseInt(key);
+    if (ky === year) editingBizMonthlyRecords[key] = newAmt;
+  }
+  updateMonthlyTotalDisplay();
+}
+
+function updateMonthlyTotalDisplay() {
+  const autoTotal = Object.values(editingBizMonthlyRecords).reduce((s, v) => s + (Number(v)||0), 0);
+  const overEl = document.getElementById('bOverrideTotal');
+  const invEl = document.getElementById('bInvestAmt');
+  const investAmt = invEl ? (Number(invEl.value) || 0) : 0;
+  const displayTotal = overEl && overEl.value !== '' ? Number(overEl.value) : autoTotal;
+  const pct = investAmt > 0 ? (displayTotal / investAmt * 100).toFixed(1) : null;
+  const el = document.getElementById('bTotalDisplay');
+  if (el) el.textContent = displayTotal.toLocaleString() + (investAmt > 0 ? ` / ${investAmt.toLocaleString()} (${pct}%)` : '');
+}
+
+// ── STRATEGY TAB (Phase 5.8-C) ───────────────────
+// income_yearly_target fallback: key not present in personal_data.json as of 2026-05-24
+const STRATEGY_INCOME_TARGET_FALLBACK = 1200000;
+let strategyIncomeTarget = null; // loaded async from /api/personal-data
+
+async function loadStrategyIncomeTarget() {
+  if (strategyIncomeTarget !== null) return strategyIncomeTarget;
+  try {
+    const res = await fetch(API + '/api/personal-data', { headers: GET_HEADERS });
+    if (!res.ok) throw new Error('non-200');
+    const pd = await res.json();
+    const val = (pd.goals || {}).income_yearly_target;
+    strategyIncomeTarget = (val != null && !isNaN(Number(val))) ? Number(val) : STRATEGY_INCOME_TARGET_FALLBACK;
+  } catch(e) {
+    strategyIncomeTarget = STRATEGY_INCOME_TARGET_FALLBACK;
+  }
+  return strategyIncomeTarget;
+}
+
+async function renderStrategyTab() {
+  console.log('renderStrategyTab called, data=' + (data ? 'exists' : 'null'));
+  if (!data) {
+    ['strategy-alignment','strategy-contribution','strategy-chart','strategy-health','strategy-suggestion'].forEach(id => {
+      document.getElementById(id).innerHTML = '<div class="strategy-card"><span style="color:var(--text-muted)">⚠️ 資料未載入，請按右上「↺ 重新整理」</span></div>';
+    });
+    return;
+  }
+  const businesses = ((data.business_ops || {}).businesses || []);
+  if (!businesses.length) {
+    document.getElementById('strategy-alignment').innerHTML = '<div class="strategy-card"><span style="color:var(--text-muted)">尚未新增副業</span></div>';
+    ['strategy-contribution','strategy-chart','strategy-health'].forEach(id => { document.getElementById(id).innerHTML = ''; });
+    renderStrategySuggestion();
+    return;
+  }
+  const target = await loadStrategyIncomeTarget();
+  const activeBizs = businesses.filter(b => b.status === 'active');
+  console.log('rendering strategy-alignment');
+  try { renderStrategyAlignment(activeBizs, target); } catch(e) {
+    document.getElementById('strategy-alignment').innerHTML = '<div class="strategy-card"><p>⚠️ 載入失敗</p></div>';
+    console.error('strategy-alignment failed', e);
+  }
+  console.log('rendering strategy-contribution');
+  try { renderStrategyContribution(activeBizs, target); } catch(e) {
+    document.getElementById('strategy-contribution').innerHTML = '<div class="strategy-card"><p>⚠️ 載入失敗</p></div>';
+    console.error('strategy-contribution failed', e);
+  }
+  console.log('rendering strategy-chart');
+  try { renderStrategyChart(activeBizs); } catch(e) {
+    document.getElementById('strategy-chart').innerHTML = '<div class="strategy-card"><p>⚠️ 載入失敗</p></div>';
+    console.error('strategy-chart failed', e);
+  }
+  console.log('rendering strategy-health');
+  try { renderStrategyHealth(activeBizs); } catch(e) {
+    document.getElementById('strategy-health').innerHTML = '<div class="strategy-card"><p>⚠️ 載入失敗</p></div>';
+    console.error('strategy-health failed', e);
+  }
+  console.log('rendering strategy-suggestion');
+  try { renderStrategySuggestion(); } catch(e) {
+    document.getElementById('strategy-suggestion').innerHTML = '<div class="strategy-card"><p>⚠️ 載入失敗</p></div>';
+    console.error('strategy-suggestion failed', e);
+  }
+}
+
+function renderStrategyAlignment(activeBizs, target) {
+  const nowYear = new Date().getFullYear();
+  const nowYearStr = String(nowYear);
+  let ytdActual = 0;
+  for (const biz of activeBizs) {
+    const records = ((biz.income_tracking || {}).monthly_records) || {};
+    for (const [k, v] of Object.entries(records)) {
+      if (k.startsWith(nowYearStr)) ytdActual += Number(v) || 0;
+    }
+  }
+  const annualized = activeBizs.reduce((s, b) => s + (((b.financial_terms || {}).expected_annual_total) || 0), 0);
+  const ytdPct = target > 0 ? (ytdActual / target * 100).toFixed(1) : 0;
+  const gap = target - annualized;
+  const gapIcon = annualized >= target ? '✅' : '❌';
+  const targetNote = strategyIncomeTarget === STRATEGY_INCOME_TARGET_FALLBACK ? ' <span style="color:var(--text-muted);font-size:11px">(demo 預設值，personal_data 無 income_yearly_target)</span>' : '';
+  document.getElementById('strategy-alignment').innerHTML = `
+    <div class="strategy-card">
+      <div class="strategy-title">🎯 總目標對齊</div>
+      <div class="strategy-row"><div class="strategy-label">年被動收入目標</div><div class="strategy-val">${target.toLocaleString()}${targetNote}</div></div>
+      <div class="strategy-row"><div class="strategy-label">今年累計入帳</div><div class="strategy-val">${ytdActual.toLocaleString()} (${ytdPct}%)</div></div>
+      <div class="strategy-row"><div class="strategy-label">依年化推估</div><div class="strategy-val">${gapIcon} ~${annualized.toLocaleString()}${gap > 0 ? ' 差距 ' + gap.toLocaleString() : ' 已達標'}</div></div>
+    </div>`;
+}
+
+function renderStrategyContribution(activeBizs, target) {
+  const totalAnnual = activeBizs.reduce((s, b) => s + ((b.financial_terms || {}).expected_annual_total || 0), 0);
+  const gap = Math.max(0, target - totalAnnual);
+  const rows = activeBizs.map(biz => {
+    const annual = (biz.financial_terms || {}).expected_annual_total || 0;
+    const pct = target > 0 ? (annual / target * 100).toFixed(1) : '0.0';
+    return `<tr><td>${escHtml(biz.display_name)}</td><td>${annual.toLocaleString()}</td><td>${pct}%</td></tr>`;
+  }).join('');
+  const totalPct = target > 0 ? (totalAnnual / target * 100).toFixed(1) : '0.0';
+  const gapPct = target > 0 ? (gap / target * 100).toFixed(1) : '0.0';
+  document.getElementById('strategy-contribution').innerHTML = `
+    <div class="strategy-card">
+      <div class="strategy-title">📊 副業貢獻</div>
+      <table class="contrib-table">
+        <thead><tr><th>副業</th><th>年化</th><th>占比</th></tr></thead>
+        <tbody>${rows}</tbody>
+        <tfoot>
+          <tr><td>總年化</td><td>${totalAnnual.toLocaleString()}</td><td>${totalPct}%</td></tr>
+          <tr><td>缺口</td><td>${gap.toLocaleString()}</td><td>${gapPct}%</td></tr>
+        </tfoot>
+      </table>
+    </div>`;
+}
+
+let strategyChartInstance = null;
+function renderStrategyChart(activeBizs) {
+  const nowYear = new Date().getFullYear();
+  const estimated = [], actual = [];
+  for (let m = 1; m <= 12; m++) {
+    let exp = 0, act = 0;
+    for (const biz of activeBizs) {
+      const ft = biz.financial_terms || {};
+      const records = (biz.income_tracking || {}).monthly_records || {};
+      exp += getExpectedForMonth(ft, nowYear, m);
+      const key = getRecordKey(ft, nowYear, m);
+      if (key && records[key] != null) act += Number(records[key]) || 0;
+    }
+    estimated.push(exp);
+    actual.push(act);
+  }
+  const totalEst = estimated.reduce((s, v) => s + v, 0);
+  const totalAct = actual.reduce((s, v) => s + v, 0);
+  const achPct = totalEst > 0 ? (totalAct / totalEst * 100).toFixed(1) : '0.0';
+  document.getElementById('strategy-chart').innerHTML = `
+    <div class="strategy-card">
+      <div class="strategy-title">📈 ${nowYear} 月度入帳 預估 vs 實際</div>
+      <div class="strategy-chart-wrap"><canvas id="strategyBarCanvas"></canvas></div>
+      <div class="strategy-chart-summary">年度合計：預估 ${totalEst.toLocaleString()} / 實際 ${totalAct.toLocaleString()} / 達成 ${achPct}%</div>
+    </div>`;
+  if (strategyChartInstance) { strategyChartInstance.destroy(); strategyChartInstance = null; }
+  const ctx = document.getElementById('strategyBarCanvas').getContext('2d');
+  strategyChartInstance = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels: ['1月','2月','3月','4月','5月','6月','7月','8月','9月','10月','11月','12月'],
+      datasets: [
+        { label: '預估', data: estimated, backgroundColor: 'rgba(34,197,94,0.3)' },
+        { label: '實際', data: actual, backgroundColor: 'rgba(34,197,94,0.9)' }
+      ]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: { legend: { position: 'top' } }
+    }
+  });
+}
+
+function renderStrategyHealth(activeBizs) {
+  let industryMap = {}, totalAnnual = 0, monthlyAnnual = 0;
+  const regions = new Set();
+  for (const biz of activeBizs) {
+    const ind = (biz.basic || {}).industry || '未知';
+    const annual = (biz.financial_terms || {}).expected_annual_total || 0;
+    industryMap[ind] = (industryMap[ind] || 0) + annual;
+    totalAnnual += annual;
+    if ((biz.financial_terms || {}).income_frequency === 'monthly') monthlyAnnual += annual;
+    if ((biz.basic || {}).region) regions.add((biz.basic || {}).region);
+  }
+  let maxInd = '—', maxPct = 0;
+  for (const [ind, val] of Object.entries(industryMap)) {
+    const p = totalAnnual > 0 ? Math.round(val / totalAnnual * 100) : 0;
+    if (p > maxPct) { maxInd = ind; maxPct = p; }
+  }
+  const riskIcon = maxPct <= 60 ? '🟢' : maxPct <= 80 ? '🟡' : '🔴';
+  const regIcon = regions.size >= 3 ? '🟢' : regions.size === 2 ? '🟡' : '🔴';
+  const mPct = totalAnnual > 0 ? Math.round(monthlyAnnual / totalAnnual * 100) : 0;
+  const stableIcon = mPct <= 80 ? '🟢' : '🟡';
+  document.getElementById('strategy-health').innerHTML = activeBizs.length ? `
+    <div class="strategy-card">
+      <div class="strategy-title">💊 組合健康度</div>
+      <div class="strategy-row"><div class="strategy-label">風險集中</div><div class="strategy-val">${riskIcon} ${maxPct}% 集中在「${escHtml(maxInd)}」產業</div></div>
+      <div class="strategy-row"><div class="strategy-label">地區分布</div><div class="strategy-val">${regIcon} ${regions.size} 個地區：${escHtml([...regions].join('、') || '—')}</div></div>
+      <div class="strategy-row"><div class="strategy-label">入帳穩定度</div><div class="strategy-val">${stableIcon} ${mPct}% 集中月度入帳</div></div>
+      <div class="strategy-row"><div class="strategy-label">入帳準時度</div><div class="strategy-val">🟢 平均拖款 0 天（v1 暫寫死）</div></div>
+    </div>` : '';
+}
+
+function renderStrategySuggestion() {
+  document.getElementById('strategy-suggestion').innerHTML = `
+    <div class="strategy-card">
+      <div class="strategy-title">💡 配置建議</div>
+      <div class="strategy-suggestion-text">
+        此區塊規劃留給 HY 跟 Opus 在 Cowork「Sam-事業作戰中心」做戰略對話。<br><br>
+        v1 不自動計算建議，避免低品質建議干擾思考。
+      </div>
+    </div>`;
+}
+
+// ── INIT ─────────────────────────────────────────
+loadData();
+
+// URL 參數支援：?tab=weekly&week=2026-W19
+(function() {
+  const params = new URLSearchParams(window.location.search);
+  const tab = params.get('tab');
+  if (tab && ['progress','weekly','portfolio','strategy'].includes(tab)) {
+    switchTab(tab);
+    const week = params.get('week');
+    if (tab === 'weekly' && week) {
+      // 等 init 完成後再載入指定週
+      setTimeout(() => loadWeeklyPackage(week), 500);
+    }
+  }
+})();
+</script>
+</body>
+</html>

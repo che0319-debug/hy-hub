@@ -43,6 +43,7 @@ jobs:
           sed -i "s/__READ_SECRET__/${{ secrets.VITE_READ_SECRET }}/g" dist/personal-dashboard.html
           sed -i "s/__READ_SECRET__/${{ secrets.VITE_READ_SECRET }}/g" dist/950157-dashboard.html
           sed -i "s/__READ_SECRET__/${{ secrets.VITE_READ_SECRET }}/g" dist/family-dashboard.html
+          sed -i "s/__READ_SECRET__/${{ secrets.VITE_READ_SECRET }}/g" dist/sam-dashboard.html
 
       - name: Encrypt gate (StatiCrypt)
         env:
