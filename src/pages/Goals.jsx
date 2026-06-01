@@ -242,7 +242,24 @@ export default function Goals() {
 
   return (
     <div className="p-6 space-y-6 max-w-5xl">
-      <h1 className="text-xl font-bold text-slate-800">人生目標對齊</h1>
+      <div className="flex items-center justify-between">
+        <h1 className="text-xl font-bold text-slate-800">人生目標對齊</h1>
+        <div className="flex items-center gap-3">
+          {saveMsg && (
+            <span className="text-sm text-slate-500 italic">{saveMsg}</span>
+          )}
+          {!dataLoaded && !loadError && (
+            <span className="text-sm text-slate-400">載入中…</span>
+          )}
+          <button
+            onClick={handleSave}
+            disabled={!dataLoaded || saving}
+            className="px-4 py-2 text-sm rounded-lg bg-blue-600 text-white hover:bg-blue-700 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+          >
+            {saving ? '儲存中…' : '儲存總體目標'}
+          </button>
+        </div>
+      </div>
 
       {/* 載入失敗提示 */}
       {loadError && (
@@ -498,22 +515,6 @@ export default function Goals() {
         </div>
       </section>
 
-      {/* 儲存 */}
-      <div className="flex items-center gap-4 pb-4">
-        <button
-          onClick={handleSave}
-          disabled={!dataLoaded || saving}
-          className="px-4 py-2 text-sm rounded-lg bg-blue-600 text-white hover:bg-blue-700 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
-        >
-          {saving ? '儲存中…' : '儲存總體目標'}
-        </button>
-        {!dataLoaded && !loadError && (
-          <span className="text-sm text-slate-400">載入中…</span>
-        )}
-        {saveMsg && (
-          <span className="text-sm text-slate-500 italic">{saveMsg}</span>
-        )}
-      </div>
     </div>
   )
 }
