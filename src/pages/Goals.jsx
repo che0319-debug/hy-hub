@@ -1,6 +1,7 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { goalsData, computeScore } from '../mock/data'
+import { computeScore } from '../mock/data'
+import { fetchLifeGoals, saveLifeGoals } from '../api'
 
 const BOT_DISPLAY = {
   hy:       { name: 'HY',     color: 'bg-blue-100 text-blue-700' },
@@ -9,7 +10,6 @@ const BOT_DISPLAY = {
   sam:      { name: 'Sam',    color: 'bg-green-100 text-green-700' },
 }
 
-// 協作下拉：value=bot id（空字串=無）
 const COLLAB_OPTIONS = [
   { value: '',        label: '無' },
   { value: 'xiaoyin', label: '小因' },
@@ -17,7 +17,6 @@ const COLLAB_OPTIONS = [
   { value: 'sam',     label: 'Sam' },
 ]
 
-// 三層常數表：label/emoji/desc/進度條色/badge 色
 const LAYER_CONFIG = {
   engine:  { label: '引擎層', emoji: '⚙️',  desc: '推進自由',    barColor: 'bg-blue-500',  badgeColor: 'bg-blue-100 text-blue-600' },
   base:    { label: '地基層', emoji: '🛡️', desc: '守住才跑得動', barColor: 'bg-amber-400', badgeColor: 'bg-amber-100 text-amber-700' },
@@ -25,23 +24,21 @@ const LAYER_CONFIG = {
 }
 const LAYER_ORDER = ['engine', 'base', 'sustain']
 
-// 分數變色：<50 紅 / 50-79 黃 / ≥80 綠
 function scoreColor(score) {
   if (score >= 80) return { border: 'border-green-400', text: 'text-green-600' }
   if (score >= 50) return { border: 'border-yellow-400', text: 'text-yellow-600' }
   return { border: 'border-red-400', text: 'text-red-500' }
 }
 
-function AgentChip({ id }) {
+function AgentChip({ id, small }) {
   const cfg = BOT_DISPLAY[id] ?? { name: id, color: 'bg-slate-100 text-slate-600' }
   return (
-    <span className={`inline-block px-2 py-0.5 rounded-full text-xs font-medium ${cfg.color}`}>
+    <span className={`inline-block rounded-full font-medium ${cfg.color} ${small ? 'px-1.5 py-px text-[10px]' : 'px-2 py-0.5 text-xs'}`}>
       {cfg.name}
     </span>
   )
 }
 
-// 維度層 agent chip：取第一個有 collaborator 的目標；全無 → HY
 function dimAgent(dim) {
   return dim.goals.find(g => g.collaborator)?.collaborator ?? 'hy'
 }
@@ -85,19 +82,54 @@ function AddGoalForm({ onAdd, onCancel }) {
             <option key={o.value} value={o.value}>{o.label}</option>
           ))}
         </select>
-        <button
-          type="submit"
-          className="px-3 py-1.5 text-sm rounded-lg bg-blue-600 text-white hover:bg-blue-700 transition-colors"
-        >
-          確認
-        </button>
-        <button
-          type="button"
-          onClick={onCancel}
-          className="px-3 py-1.5 text-sm rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-50 transition-colors"
-        >
-          取消
-        </button>
+        <button type="submit" className="px-3 py-1.5 text-sm rounded-lg bg-blue-600 text-white hover:bg-blue-700 transition-colors">確認</button>
+        <button type="button" onClick={onCancel} className="px-3 py-1.5 text-sm rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-50 transition-colors">取消</button>
+      </div>
+    </form>
+  )
+}
+
+function DimEditForm({ dim, onSave, onDelete, onCancel }) {
+  const [name, setName] = useState(dim.name)
+  const [weight, setWeight] = useState(dim.weight ?? 0)
+  const [progress, setProgress] = useState(dim.progress ?? 0)
+  const [totalGoal, setTotalGoal] = useState(dim.totalGoal ?? '')
+  const [layer, setLayer] = useState(dim.layer ?? 'engine')
+
+  function submit(e) {
+    e.preventDefault()
+    onSave({ name, weight: Number(weight), progress: Number(progress), totalGoal, layer })
+  }
+
+  return (
+    <form onSubmit={submit} className="mt-2 p-2 bg-slate-50 rounded-lg border border-slate-200 flex flex-col gap-2 text-xs">
+      <div className="flex gap-1.5">
+        <input value={name} onChange={e => setName(e.target.value)} placeholder="維度名稱"
+          className="flex-1 min-w-0 border border-slate-200 rounded px-2 py-1 outline-none focus:border-blue-400 bg-white text-xs" />
+        <select value={layer} onChange={e => setLayer(e.target.value)}
+          className="border border-slate-200 rounded px-1.5 py-1 outline-none bg-white text-xs">
+          <option value="engine">引擎</option>
+          <option value="base">地基</option>
+          <option value="sustain">續航</option>
+        </select>
+      </div>
+      <div className="flex gap-1.5 items-center">
+        <label className="text-slate-500 flex-shrink-0">權重</label>
+        <input type="number" min="0" max="100" value={weight} onChange={e => setWeight(e.target.value)}
+          className="w-16 border border-slate-200 rounded px-2 py-1 outline-none focus:border-blue-400 bg-white text-xs" />
+        <span className="text-slate-400">%</span>
+        <label className="text-slate-500 flex-shrink-0 ml-2">進度</label>
+        <input type="number" min="0" max="100" value={progress} onChange={e => setProgress(e.target.value)}
+          className="w-16 border border-slate-200 rounded px-2 py-1 outline-none focus:border-blue-400 bg-white text-xs" />
+        <span className="text-slate-400">%</span>
+      </div>
+      <input value={totalGoal} onChange={e => setTotalGoal(e.target.value)} placeholder="總目標（選填）"
+        className="border border-slate-200 rounded px-2 py-1 outline-none focus:border-blue-400 bg-white text-xs" />
+      <div className="flex gap-1.5 items-center">
+        <button type="submit" className="px-2.5 py-1 rounded bg-blue-600 text-white hover:bg-blue-700 transition-colors">確認</button>
+        <button type="button" onClick={onCancel} className="px-2.5 py-1 rounded border border-slate-200 text-slate-600 hover:bg-slate-50 transition-colors">取消</button>
+        <button type="button" onClick={() => { if (window.confirm(`刪除維度「${dim.name}」？`)) onDelete() }}
+          className="ml-auto px-2.5 py-1 rounded text-red-400 hover:text-red-600 hover:bg-red-50 transition-colors">刪除</button>
       </div>
     </form>
   )
@@ -105,26 +137,49 @@ function AddGoalForm({ onAdd, onCancel }) {
 
 export default function Goals() {
   const navigate = useNavigate()
-  // 深拷貝 mock，不污染原物件；重整即還原
-  const [dimensions, setDimensions] = useState(() => structuredClone(goalsData.dimensions))
+  const [dimensions, setDimensions] = useState([])
+  const [freedomIndex, setFreedomIndex] = useState({ note: '', formula: '' })
+  const [dataLoaded, setDataLoaded] = useState(false)
+  const [loadError, setLoadError] = useState(null)
   const [addGoalDimId, setAddGoalDimId] = useState(null)
   const [showAddDim, setShowAddDim] = useState(false)
   const [newDimName, setNewDimName] = useState('')
+  const [newDimLayer, setNewDimLayer] = useState('engine')
   const [saveMsg, setSaveMsg] = useState('')
+  const [saving, setSaving] = useState(false)
+  const [editingDimId, setEditingDimId] = useState(null)
 
-  const { freedomIndex } = goalsData
+  useEffect(() => {
+    fetchLifeGoals()
+      .then(data => {
+        setDimensions(structuredClone(data.dimensions || []))
+        setFreedomIndex(data.freedomIndex || { note: '', formula: '' })
+        setDataLoaded(true)
+      })
+      .catch(err => {
+        setLoadError(err.message)
+        setDataLoaded(false)
+      })
+  }, [])
+
   const score = computeScore(dimensions)
+  const weightSum = dimensions.reduce((s, d) => s + (d.weight || 0), 0)
+  const colors = scoreColor(score)
 
-  // required 欄位保留待未來「關卡/解鎖條件」系統復用（H13 暫不顯示）
-
-  // --- 維度操作 ---
   function addDimension() {
     if (!newDimName.trim()) return
-    setDimensions(prev => [
-      ...prev,
-      { id: `dim-${Date.now()}`, name: newDimName.trim(), goals: [] },
-    ])
+    setDimensions(prev => [...prev, {
+      id: `dim-${Date.now()}`,
+      name: newDimName.trim(),
+      layer: newDimLayer,
+      weight: 0,
+      progress: 0,
+      totalGoal: '',
+      current: '',
+      goals: [],
+    }])
     setNewDimName('')
+    setNewDimLayer('engine')
     setShowAddDim(false)
   }
 
@@ -132,15 +187,16 @@ export default function Goals() {
     setDimensions(prev => prev.filter(d => d.id !== dimId))
   }
 
-  // --- 目標操作 ---
+  function updateDimFields(dimId, fields) {
+    setDimensions(prev => prev.map(d => d.id !== dimId ? d : { ...d, ...fields }))
+    setEditingDimId(null)
+  }
+
   function addGoal(dimId, { title, current, required, collaborator }) {
     setDimensions(prev => prev.map(d =>
       d.id !== dimId ? d : {
         ...d,
-        goals: [
-          ...d.goals,
-          { id: `g-${Date.now()}`, title, current, required, achieved: false, owner: 'HY', collaborator },
-        ],
+        goals: [...d.goals, { id: `g-${Date.now()}`, title, current, required, achieved: false, owner: 'HY', collaborator }],
       }
     ))
     setAddGoalDimId(null)
@@ -156,9 +212,7 @@ export default function Goals() {
     setDimensions(prev => prev.map(d =>
       d.id !== dimId ? d : {
         ...d,
-        goals: d.goals.map(g =>
-          g.id !== goalId ? g : { ...g, [field]: !g[field] }
-        ),
+        goals: d.goals.map(g => g.id !== goalId ? g : { ...g, [field]: !g[field] }),
       }
     ))
   }
@@ -167,95 +221,121 @@ export default function Goals() {
     setDimensions(prev => prev.map(d =>
       d.id !== dimId ? d : {
         ...d,
-        goals: d.goals.map(g =>
-          g.id !== goalId ? g : { ...g, collaborator: value || null }
-        ),
+        goals: d.goals.map(g => g.id !== goalId ? g : { ...g, collaborator: value || null }),
       }
     ))
   }
 
-  function handleSave() {
-    setSaveMsg('已暫存（mock·重整還原；持久化待接後端）')
-    setTimeout(() => setSaveMsg(''), 3000)
+  async function handleSave() {
+    if (!dataLoaded) return
+    setSaving(true)
+    try {
+      await saveLifeGoals({ freedomIndex, dimensions })
+      setSaveMsg('✅ 已儲存')
+    } catch (err) {
+      setSaveMsg(`⚠️ 儲存失敗：${err.message}`)
+    } finally {
+      setSaving(false)
+      setTimeout(() => setSaveMsg(''), 4000)
+    }
   }
 
-  const colors = scoreColor(score)
-
   return (
-    <div className="p-6 space-y-6 max-w-4xl">
+    <div className="p-6 space-y-6 max-w-5xl">
       <h1 className="text-xl font-bold text-slate-800">人生目標對齊</h1>
+
+      {/* 載入失敗提示 */}
+      {loadError && (
+        <div className="text-sm text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-4 py-2.5">
+          ⚠ 離線模式（禁止儲存）：{loadError}
+        </div>
+      )}
 
       {/* 北極星大卡：人生自由指數 */}
       <section>
         <div className={`bg-white rounded-xl p-6 border-2 ${colors.border} shadow-sm transition-colors`}>
           <div className="flex items-center justify-between mb-1">
             <h2 className="text-sm font-semibold text-slate-500">🧭 人生自由指數</h2>
-            <span className="text-xs px-2 py-0.5 rounded-full bg-slate-100 text-slate-400">mock · 公式待校準</span>
+            <span className="text-xs px-2 py-0.5 rounded-full bg-slate-100 text-slate-400">
+              {freedomIndex.formula || '公式待校準'}
+            </span>
           </div>
           <div className={`text-5xl font-bold mt-2 transition-colors ${colors.text}`}>
             {score}
             <span className="text-2xl font-normal text-slate-400 ml-1">/ 100</span>
           </div>
           <div className="mt-3 text-sm text-slate-500">{freedomIndex.note}</div>
+          {/* 權重總和提醒 */}
+          <div className="mt-2">
+            {weightSum !== 100 && dimensions.length > 0 && (
+              <span className={`text-xs font-medium ${weightSum > 100 ? 'text-red-500' : 'text-amber-600'}`}>
+                ⚠ 權重總和 {weightSum}%，差 {100 - weightSum}% 待分配
+              </span>
+            )}
+            {weightSum === 100 && dimensions.length > 0 && (
+              <span className="text-xs text-green-600">✓ 權重總和 100%</span>
+            )}
+          </div>
         </div>
       </section>
 
-      {/* 三層總覽 */}
+      {/* 三層總覽：三欄並排 */}
       <section>
         <h2 className="text-base font-semibold text-slate-700 mb-3">維度進度總覽</h2>
-        <div className="space-y-4">
+        <div className="grid grid-cols-3 gap-4">
           {LAYER_ORDER.map(layerKey => {
             const cfg  = LAYER_CONFIG[layerKey]
             const dims = dimensions.filter(d => d.layer === layerKey)
-            if (dims.length === 0) return null
             return (
               <div key={layerKey} className="bg-white rounded-xl border border-slate-200">
-                <div className="px-4 py-2.5 border-b border-slate-100 flex items-center gap-2">
+                <div className="px-3 py-2.5 border-b border-slate-100 flex items-center gap-1.5">
                   <span className="text-sm">{cfg.emoji}</span>
                   <span className="text-sm font-semibold text-slate-700">{cfg.label}</span>
-                  <span className="text-xs text-slate-400">— {cfg.desc}</span>
+                  <span className="text-xs text-slate-400 hidden xl:inline">— {cfg.desc}</span>
                 </div>
                 <div className="divide-y divide-slate-50">
+                  {dims.length === 0 && (
+                    <div className="px-3 py-3 text-xs text-slate-300 italic">此層無維度</div>
+                  )}
                   {dims.map(dim => {
                     const dimAchieved = dim.goals.filter(g => g.achieved).length
                     const dimTotal    = dim.goals.length
-                    const pct         = dim.progress != null ? dim.progress : (dimTotal > 0 ? Math.round((dimAchieved / dimTotal) * 100) : 0)
-                    const noData      = dim.progress == null && (dimTotal === 0 || (dimAchieved === 0 && !dim.current))
-                    const collab      = dimAgent(dim)
+                    const pct = dim.progress != null
+                      ? dim.progress
+                      : (dimTotal > 0 ? Math.round((dimAchieved / dimTotal) * 100) : 0)
+                    const isEditing = editingDimId === dim.id
                     return (
-                      <div key={dim.id} className="flex items-center gap-3 px-4 py-3">
-                        <div className="w-32 flex-shrink-0">
-                          <div className="text-sm text-slate-700 truncate">{dim.name}</div>
-                          {dim.current ? (
-                            <div className="text-xs text-slate-400 truncate mt-0.5">{dim.current}</div>
-                          ) : (
-                            <div className="text-xs text-slate-300 mt-0.5">—</div>
-                          )}
-                        </div>
-                        <div className="flex-1">
-                          <div className="text-xs text-slate-400 truncate mb-1">{dim.totalGoal ?? ''}</div>
-                          <div className="h-2 bg-slate-100 rounded-full overflow-hidden">
-                            {noData ? (
-                              <div className="h-full w-full bg-slate-100 rounded-full" />
-                            ) : (
-                              <div
-                                className={`h-full ${cfg.barColor} rounded-full transition-all`}
-                                style={{ width: `${pct}%` }}
-                              />
-                            )}
+                      <div key={dim.id} className="px-3 py-2.5">
+                        <div
+                          className="flex items-baseline justify-between cursor-pointer group"
+                          onClick={() => setEditingDimId(isEditing ? null : dim.id)}
+                        >
+                          <span className="text-sm font-medium text-slate-700 truncate">{dim.name}</span>
+                          <div className="flex items-center gap-1 flex-shrink-0 ml-1">
+                            <span className="text-xs text-slate-400">{pct}%</span>
+                            <span className="text-[10px] text-slate-300 group-hover:text-blue-400 transition-colors">✎</span>
                           </div>
                         </div>
-                        <div className="text-xs text-slate-400 w-16 text-right flex-shrink-0">
-                          {noData
-                            ? <span className="text-slate-300">待設定</span>
-                            : dim.progress != null
-                              ? <>{pct}%</>
-                              : <>{dimAchieved}/{dimTotal}（{pct}%）</>
-                          }
+                        <div className="text-[11px] text-slate-400 truncate mt-0.5">
+                          {dim.totalGoal || '—'}
                         </div>
-                        <div className="flex-shrink-0">
-                          <AgentChip id={collab} />
+                        <div className="h-1.5 bg-slate-100 rounded-full overflow-hidden mt-1.5">
+                          <div
+                            className={`h-full ${cfg.barColor} rounded-full transition-all`}
+                            style={{ width: `${pct}%` }}
+                          />
                         </div>
+                        <div className="mt-1.5">
+                          <AgentChip id={dimAgent(dim)} small />
+                        </div>
+                        {isEditing && (
+                          <DimEditForm
+                            dim={dim}
+                            onSave={fields => updateDimFields(dim.id, fields)}
+                            onDelete={() => { deleteDimension(dim.id); setEditingDimId(null) }}
+                            onCancel={() => setEditingDimId(null)}
+                          />
+                        )}
                       </div>
                     )
                   })}
@@ -290,7 +370,6 @@ export default function Goals() {
                     刪除維度
                   </button>
                 </div>
-                {/* 總目標 + 現況 */}
                 {dim.totalGoal && (
                   <div className="px-4 pt-2.5 pb-1 text-xs text-slate-500">
                     <span className="text-slate-400">總目標：</span>{dim.totalGoal}
@@ -307,7 +386,6 @@ export default function Goals() {
                     {dim.goals.map(goal => (
                       <div key={goal.id} className="py-3 flex flex-col gap-1.5 group">
                         <div className="flex items-start gap-2">
-                          {/* 已達成 toggle */}
                           <button
                             onClick={() => toggleGoalField(dim.id, goal.id, 'achieved')}
                             className={`mt-0.5 w-4 h-4 rounded border flex-shrink-0 flex items-center justify-center transition-colors ${
@@ -327,7 +405,6 @@ export default function Goals() {
                               <span className="ml-2 text-xs text-slate-400">目前：{goal.current}</span>
                             )}
                           </div>
-                          {/* 刪除目標 */}
                           <button
                             onClick={() => deleteGoal(dim.id, goal.id)}
                             className="flex-shrink-0 text-slate-300 hover:text-red-400 transition-colors opacity-0 group-hover:opacity-100 text-xs px-1"
@@ -335,7 +412,6 @@ export default function Goals() {
                             ✕
                           </button>
                         </div>
-                        {/* 關聯 agent */}
                         <div className="flex items-center gap-2 pl-6 text-xs text-slate-500 flex-wrap">
                           <span>Owner：</span>
                           <AgentChip id="hy" />
@@ -368,7 +444,6 @@ export default function Goals() {
                       </div>
                     ))}
                   </div>
-                  {/* 新增目標 */}
                   {addGoalDimId === dim.id ? (
                     <div className="py-3 border-t border-slate-100">
                       <AddGoalForm
@@ -400,18 +475,17 @@ export default function Goals() {
                 onKeyDown={e => e.key === 'Enter' && addDimension()}
                 autoFocus
               />
-              <button
-                onClick={addDimension}
-                className="px-3 py-1.5 text-sm rounded-lg bg-blue-600 text-white hover:bg-blue-700 transition-colors"
+              <select
+                value={newDimLayer}
+                onChange={e => setNewDimLayer(e.target.value)}
+                className="text-sm border border-slate-200 rounded-lg px-2.5 py-1.5 outline-none focus:border-blue-400 bg-white"
               >
-                確認
-              </button>
-              <button
-                onClick={() => { setShowAddDim(false); setNewDimName('') }}
-                className="px-3 py-1.5 text-sm rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-50 transition-colors"
-              >
-                取消
-              </button>
+                <option value="engine">引擎層</option>
+                <option value="base">地基層</option>
+                <option value="sustain">續航層</option>
+              </select>
+              <button onClick={addDimension} className="px-3 py-1.5 text-sm rounded-lg bg-blue-600 text-white hover:bg-blue-700 transition-colors">確認</button>
+              <button onClick={() => { setShowAddDim(false); setNewDimName('') }} className="px-3 py-1.5 text-sm rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-50 transition-colors">取消</button>
             </div>
           ) : (
             <button
@@ -424,14 +498,18 @@ export default function Goals() {
         </div>
       </section>
 
-      {/* 儲存占位（不真寫入）*/}
+      {/* 儲存 */}
       <div className="flex items-center gap-4 pb-4">
         <button
           onClick={handleSave}
-          className="px-4 py-2 text-sm rounded-lg bg-blue-600 text-white hover:bg-blue-700 transition-colors"
+          disabled={!dataLoaded || saving}
+          className="px-4 py-2 text-sm rounded-lg bg-blue-600 text-white hover:bg-blue-700 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
         >
-          儲存總體目標
+          {saving ? '儲存中…' : '儲存總體目標'}
         </button>
+        {!dataLoaded && !loadError && (
+          <span className="text-sm text-slate-400">載入中…</span>
+        )}
         {saveMsg && (
           <span className="text-sm text-slate-500 italic">{saveMsg}</span>
         )}

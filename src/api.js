@@ -21,3 +21,23 @@ export async function postMilestone(payload) {
   if (!res.ok) throw new Error(`postMilestone failed: ${res.status}`);
   return res.json();
 }
+
+export async function fetchLifeGoals() {
+  const res = await fetch(`${API_BASE}/api/life-goals`, {
+    method: "GET",
+    headers: { "X-Read-Secret": READ_SECRET },
+  });
+  if (!res.ok) throw new Error(`fetchLifeGoals failed: ${res.status}`);
+  return res.json();
+}
+
+export async function saveLifeGoals(payload) {
+  const res = await fetch(`${API_BASE}/api/life-goals`, {
+    method: "POST",
+    headers: { "X-Read-Secret": READ_SECRET, "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  });
+  const result = await res.json();
+  if (!res.ok || !result.ok) throw new Error(result.error || `saveLifeGoals failed: ${res.status}`);
+  return result;
+}
