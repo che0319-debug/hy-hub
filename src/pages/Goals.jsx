@@ -1,7 +1,6 @@
 import { useState, useEffect } from 'react'
-import { useNavigate } from 'react-router-dom'
 import { computeScore } from '../mock/data'
-import { fetchLifeGoals, saveLifeGoals, fetchBotProjects } from '../api'
+import { fetchLifeGoals, saveLifeGoals } from '../api'
 
 // ─── Constants ───────────────────────────────────────────────────────────────
 
@@ -13,18 +12,36 @@ const BOT_DISPLAY = {
   sam:      { name: 'Sam',    color: 'bg-green-100 text-green-700' },
 }
 
-// Maps normalized bot key → react-router route segment
-const BOT_ROUTE = {
-  hy: 'hy', '950157': '950157', family: 'family', xiaoyin: 'xiaoyin', sam: 'sam',
-}
-
-// Bot selection options for add-linked-project UI (uses canonical keys)
-const BOT_MENU = [
+// Advisor bot dropdown options (顧問 bot 選單)
+const ADVISOR_OPTIONS = [
+  { value: '',       label: '無' },
   { value: 'hy',     label: 'HY' },
   { value: '950157', label: '950157' },
   { value: 'family', label: '小因' },
   { value: 'sam',    label: 'Sam' },
 ]
+
+// HY-designated advisor bot by dimension id (takes precedence over name lookup)
+const ADVISOR_BOT_BY_ID = {
+  'dim-biz':     'sam',
+  'dim-fin':     'sam',
+  'dim-health':  'family',
+  'dim-family':  'family',
+  'dim-job':     '950157',
+  'dim-leisure': 'hy',
+  'dim-growth':  'hy',
+}
+
+// Fallback lookup by dimension name
+const ADVISOR_BOT_BY_NAME = {
+  '事業':           'sam',
+  '財務':           'sam',
+  '健康':           'family',
+  '家庭':           'family',
+  '本業（950157）': '950157',
+  '休閒':           'hy',
+  '成長':           'hy',
+}
 
 const LAYER_CONFIG = {
   engine:  { label: '引擎層', emoji: '⚙️',  desc: '推進自由',    barColor: 'bg-blue-500',  badgeColor: 'bg-blue-100 text-blue-600' },
@@ -33,37 +50,41 @@ const LAYER_CONFIG = {
 }
 const LAYER_ORDER = ['engine', 'base', 'sustain']
 
-// ─── Module-level project cache (survives re-renders within a session) ────────
-const _projectsCache = {}
-function cachedFetchBotProjects(bot) {
-  if (!_projectsCache[bot]) _projectsCache[bot] = fetchBotProjects(bot)
-  return _projectsCache[bot]
-}
-
 // ─── Normalize ───────────────────────────────────────────────────────────────
-// Converts old schema (current + goals[]) → new schema.
-// Idempotent: dims already having currentState object are passed through.
+// Three cases handled, all idempotent:
+//   1. Old schema (current string + goals[])     → full migration
+//   2. Batch-1 shape (currentState + linkedProjects, no advisorBot) → extract advisorBot, drop linkedProjects
+//   3. Current schema (currentState + advisorBot) → passthrough (drop stray linkedProjects if any)
+
+function normalizeKey(bot) {
+  return bot === 'xiaoyin' ? 'family' : bot
+}
 
 export function normalizeLifeGoals(data) {
   const dims = (data.dimensions || []).map(dim => {
-    if (dim.currentState && typeof dim.currentState === 'object') return dim
-    const goals = dim.goals || []
-    const seen = new Set()
-    const linkedProjects = []
-    for (const g of goals) {
-      if (g.collaborator) {
-        const bot = g.collaborator === 'xiaoyin' ? 'family' : g.collaborator
-        if (!seen.has(bot)) {
-          seen.add(bot)
-          linkedProjects.push({ bot, projectId: null })
+    if (dim.currentState && typeof dim.currentState === 'object') {
+      if ('advisorBot' in dim) {
+        // Case 3: already fully migrated — clean up stray linkedProjects
+        if ('linkedProjects' in dim) {
+          const { linkedProjects: _lp, ...clean } = dim
+          return clean
         }
+        return dim
       }
+      // Case 2: batch-1 shape — extract advisorBot from linkedProjects[0]
+      const bot = dim.linkedProjects?.[0]?.bot ?? ''
+      const { linkedProjects: _lp, ...rest } = dim
+      return { ...rest, advisorBot: bot }
     }
-    const { current, goals: _goals, ...rest } = dim
+    // Case 1: old schema
+    const goals = dim.goals || []
+    const fallback = normalizeKey(goals.find(g => g.collaborator)?.collaborator ?? '')
+    const advisorBot = ADVISOR_BOT_BY_ID[dim.id] ?? ADVISOR_BOT_BY_NAME[dim.name] ?? fallback ?? ''
+    const { current, goals: _goals, linkedProjects: _lp, ...rest } = dim
     return {
       ...rest,
       currentState: { type: 'text', value: null, target: null, unit: '', note: current ?? '' },
-      linkedProjects,
+      advisorBot,
       subGoals: goals.map(g => ({ id: g.id, title: g.title, done: g.achieved ?? false })),
       progress: dim.progress ?? 0,
       progressSource: 'manual',
@@ -91,10 +112,10 @@ function AgentChip({ id, small }) {
 }
 
 function dimAgent(dim) {
-  return dim.linkedProjects?.[0]?.bot ?? 'hy'
+  return dim.advisorBot || 'hy'
 }
 
-// ─── DimEditForm (unchanged) ──────────────────────────────────────────────────
+// ─── DimEditForm ──────────────────────────────────────────────────────────────
 
 function DimEditForm({ dim, onSave, onDelete, onCancel }) {
   const [name, setName] = useState(dim.name)
@@ -236,176 +257,7 @@ function CurrentStateSection({ dimId, cs, onSave }) {
   )
 }
 
-// ─── ② LinkedProjectsSection ─────────────────────────────────────────────────
-
-// Row for a project that hasn't been bound yet (projectId === null)
-function PendingRow({ bot, onBind, onRemove }) {
-  const [open, setOpen] = useState(false)
-  const [projects, setProjects] = useState([])
-  const [loading, setLoading] = useState(false)
-  const [error, setError] = useState(null)
-  const [selected, setSelected] = useState('')
-
-  async function toggle() {
-    if (open) { setOpen(false); return }
-    setOpen(true)
-    setLoading(true)
-    setError(null)
-    try {
-      const ps = await cachedFetchBotProjects(bot)
-      setProjects(ps)
-    } catch (e) {
-      setError(e.message)
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  return (
-    <div className="flex items-center gap-1.5 text-xs flex-wrap">
-      <AgentChip id={bot} small />
-      <button onClick={toggle} className="text-slate-400 hover:text-blue-500 transition-colors">
-        待綁定 {open ? '▲' : '▾'}
-      </button>
-      {open && loading && <span className="text-slate-400">載入中…</span>}
-      {open && error && <span className="text-red-400">載入失敗</span>}
-      {open && !loading && !error && projects.length === 0 && <span className="text-slate-400">（無專案）</span>}
-      {open && !loading && !error && projects.length > 0 && (
-        <select value={selected} onChange={e => setSelected(e.target.value)}
-          className="border border-slate-200 rounded px-1.5 py-0.5 outline-none bg-white text-xs">
-          <option value="">— 選擇 —</option>
-          {projects.map(p => <option key={p.id} value={p.id}>{p.name || p.id}</option>)}
-        </select>
-      )}
-      {open && selected && (
-        <button onClick={() => { onBind(selected); setOpen(false) }}
-          className="text-blue-600 hover:text-blue-800 underline transition-colors">綁定</button>
-      )}
-      <button onClick={onRemove} className="text-slate-300 hover:text-red-400 transition-colors ml-auto px-1">✕</button>
-    </div>
-  )
-}
-
-function LinkedProjectsSection({ dimId, linkedProjects, onAdd, onRemove, onBindProject }) {
-  const navigate = useNavigate()
-  const [addMode, setAddMode] = useState(false)
-  const [addBot, setAddBot] = useState('hy')
-  const [addProjects, setAddProjects] = useState([])
-  const [addLoading, setAddLoading] = useState(false)
-  const [addError, setAddError] = useState(null)
-  const [addProjectId, setAddProjectId] = useState('')
-  const [nameCache, setNameCache] = useState({}) // bot → Project[]
-
-  // Load project names for already-bound entries
-  const boundKey = linkedProjects.filter(lp => lp.projectId).map(lp => `${lp.bot}:${lp.projectId}`).join(',')
-  useEffect(() => {
-    const bots = [...new Set(linkedProjects.filter(lp => lp.projectId).map(lp => lp.bot))]
-    for (const bot of bots) {
-      if (!nameCache[bot]) {
-        cachedFetchBotProjects(bot)
-          .then(ps => setNameCache(prev => ({ ...prev, [bot]: ps })))
-          .catch(() => {})
-      }
-    }
-  }, [boundKey]) // eslint-disable-line react-hooks/exhaustive-deps
-
-  function getProjectName(bot, projectId) {
-    const ps = nameCache[bot] || []
-    return ps.find(p => p.id === projectId)?.name ?? projectId
-  }
-
-  async function handleAddBotChange(bot) {
-    setAddBot(bot)
-    setAddProjectId('')
-    setAddProjects([])
-    setAddLoading(true)
-    setAddError(null)
-    try {
-      const ps = await cachedFetchBotProjects(bot)
-      setAddProjects(ps)
-      setNameCache(prev => ({ ...prev, [bot]: ps }))
-    } catch (e) {
-      setAddError(e.message)
-    } finally {
-      setAddLoading(false)
-    }
-  }
-
-  function openAdd() {
-    setAddMode(true)
-    setAddBot('hy')
-    setAddProjectId('')
-    handleAddBotChange('hy')
-  }
-
-  function confirmAdd() {
-    if (!addProjectId) return
-    onAdd({ bot: addBot, projectId: addProjectId })
-    setAddMode(false)
-  }
-
-  return (
-    <div className="space-y-1.5">
-      {linkedProjects.length === 0 && !addMode && (
-        <div className="text-xs text-slate-300 italic">尚無綁定專案</div>
-      )}
-      {linkedProjects.map((lp, idx) =>
-        lp.projectId ? (
-          <div key={idx} className="flex items-center gap-1.5 text-xs">
-            <AgentChip id={lp.bot} small />
-            <span className="text-slate-700">{getProjectName(lp.bot, lp.projectId)}</span>
-            <button
-              onClick={() => navigate('/line/' + (BOT_ROUTE[lp.bot] ?? lp.bot))}
-              className="text-blue-500 hover:text-blue-700 underline transition-colors"
-            >查看 milestone</button>
-            <button onClick={() => onRemove(idx)} className="text-slate-300 hover:text-red-400 transition-colors ml-auto px-1">✕</button>
-          </div>
-        ) : (
-          <PendingRow
-            key={idx}
-            bot={lp.bot}
-            onBind={projectId => onBindProject(idx, projectId)}
-            onRemove={() => onRemove(idx)}
-          />
-        )
-      )}
-
-      {addMode ? (
-        <div className="flex flex-col gap-1.5 bg-slate-50 rounded-lg p-2 border border-slate-200 text-xs">
-          <div className="flex gap-1.5 items-center flex-wrap">
-            <select value={addBot} onChange={e => handleAddBotChange(e.target.value)}
-              className="border border-slate-200 rounded px-1.5 py-1 outline-none bg-white text-xs">
-              {BOT_MENU.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
-            </select>
-            {addLoading && <span className="text-slate-400">載入中…</span>}
-            {addError && <span className="text-red-400">載入失敗</span>}
-            {!addLoading && !addError && addProjects.length === 0 && <span className="text-slate-400">（無專案）</span>}
-            {!addLoading && !addError && addProjects.length > 0 && (
-              <select value={addProjectId} onChange={e => setAddProjectId(e.target.value)}
-                className="flex-1 min-w-0 border border-slate-200 rounded px-1.5 py-1 outline-none bg-white text-xs">
-                <option value="">— 選擇專案 —</option>
-                {addProjects.map(p => <option key={p.id} value={p.id}>{p.name || p.id}</option>)}
-              </select>
-            )}
-          </div>
-          <div className="flex gap-1.5">
-            <button onClick={confirmAdd} disabled={!addProjectId}
-              className="px-2.5 py-1 rounded bg-blue-600 text-white hover:bg-blue-700 transition-colors disabled:opacity-40">確認</button>
-            <button onClick={() => setAddMode(false)}
-              className="px-2.5 py-1 rounded border border-slate-200 text-slate-600 hover:bg-slate-50 transition-colors">取消</button>
-          </div>
-        </div>
-      ) : (
-        <button onClick={openAdd}
-          className="flex items-center gap-1 text-xs text-slate-400 hover:text-blue-600 py-1 transition-colors">
-          + 綁定專案
-        </button>
-      )}
-    </div>
-  )
-}
-
-// ─── ③ SubGoalsSection ───────────────────────────────────────────────────────
+// ─── ② SubGoalsSection ───────────────────────────────────────────────────────
 
 function SubGoalsSection({ subGoals, onToggleDone, onDelete, onAdd }) {
   const [newTitle, setNewTitle] = useState('')
@@ -501,7 +353,7 @@ export default function Goals() {
       progress: 0,
       totalGoal: '',
       currentState: { type: 'text', value: null, target: null, unit: '', note: '' },
-      linkedProjects: [],
+      advisorBot: '',
       subGoals: [],
       progressSource: 'manual',
       aiNote: '',
@@ -520,33 +372,16 @@ export default function Goals() {
     setEditingDimId(null)
   }
 
+  // ── advisorBot ──────────────────────────────────────────────────────────────
+
+  function updateAdvisorBot(dimId, bot) {
+    setDimensions(prev => prev.map(d => d.id !== dimId ? d : { ...d, advisorBot: bot }))
+  }
+
   // ── currentState ────────────────────────────────────────────────────────────
 
   function updateCurrentState(dimId, cs) {
     setDimensions(prev => prev.map(d => d.id !== dimId ? d : { ...d, currentState: cs }))
-  }
-
-  // ── linkedProjects ──────────────────────────────────────────────────────────
-
-  function addLinkedProject(dimId, lp) {
-    setDimensions(prev => prev.map(d =>
-      d.id !== dimId ? d : { ...d, linkedProjects: [...(d.linkedProjects || []), lp] }
-    ))
-  }
-
-  function removeLinkedProject(dimId, idx) {
-    setDimensions(prev => prev.map(d =>
-      d.id !== dimId ? d : { ...d, linkedProjects: d.linkedProjects.filter((_, i) => i !== idx) }
-    ))
-  }
-
-  function bindLinkedProject(dimId, idx, projectId) {
-    setDimensions(prev => prev.map(d =>
-      d.id !== dimId ? d : {
-        ...d,
-        linkedProjects: d.linkedProjects.map((lp, i) => i !== idx ? lp : { ...lp, projectId }),
-      }
-    ))
   }
 
   // ── subGoals ────────────────────────────────────────────────────────────────
@@ -740,6 +575,24 @@ export default function Goals() {
                   </div>
                 )}
 
+                {/* 顧問 bot 選擇 */}
+                <div className="px-4 py-2 flex items-center gap-2 border-b border-slate-50">
+                  <span className="text-xs text-slate-400 flex-shrink-0">顧問：</span>
+                  {dim.advisorBot
+                    ? <AgentChip id={dim.advisorBot} small />
+                    : <span className="text-xs text-slate-300">無</span>
+                  }
+                  <select
+                    value={dim.advisorBot || ''}
+                    onChange={e => updateAdvisorBot(dim.id, e.target.value)}
+                    className="ml-1 text-xs border border-slate-200 rounded px-1.5 py-0.5 outline-none focus:border-blue-400 bg-white"
+                  >
+                    {ADVISOR_OPTIONS.map(o => (
+                      <option key={o.value} value={o.value}>{o.label}</option>
+                    ))}
+                  </select>
+                </div>
+
                 <div className="px-4 py-3 space-y-4">
                   {/* ① 現況 */}
                   <div>
@@ -751,19 +604,7 @@ export default function Goals() {
                     />
                   </div>
 
-                  {/* ② 綁定專案 */}
-                  <div>
-                    <div className="text-xs font-semibold text-slate-500 mb-1.5">綁定專案</div>
-                    <LinkedProjectsSection
-                      dimId={dim.id}
-                      linkedProjects={dim.linkedProjects || []}
-                      onAdd={lp => addLinkedProject(dim.id, lp)}
-                      onRemove={idx => removeLinkedProject(dim.id, idx)}
-                      onBindProject={(idx, projectId) => bindLinkedProject(dim.id, idx, projectId)}
-                    />
-                  </div>
-
-                  {/* ③ 我的子項 */}
+                  {/* ② 我的子項 */}
                   <div>
                     <div className="text-xs font-semibold text-slate-500 mb-1.5">我的子項</div>
                     <SubGoalsSection
