@@ -79,3 +79,21 @@ export async function savePersona(bot, payload) {
   if (!res.ok || !result.ok) throw new Error(result.error || `savePersona failed: ${res.status}`);
   return result;
 }
+
+const BOT_PROGRESS_ENDPOINTS = {
+  hy:       { url: "/api/personal-progress", pick: d => d.projects ?? [] },
+  "950157": { url: "/api/950157-progress",   pick: d => d.projects ?? [] },
+  family:   { url: "/api/family-progress",   pick: d => d._kanban?.projects ?? [] },
+  sam:      { url: "/api/sam-progress",       pick: d => d._kanban?.projects ?? [] },
+};
+
+export async function fetchBotProjects(bot) {
+  const cfg = BOT_PROGRESS_ENDPOINTS[bot];
+  if (!cfg) return [];
+  const res = await fetch(`${API_BASE}${cfg.url}`, {
+    headers: { "X-Read-Secret": READ_SECRET },
+  });
+  if (!res.ok) throw new Error(`fetchBotProjects(${bot}) failed: ${res.status}`);
+  const data = await res.json();
+  return cfg.pick(data);
+}
