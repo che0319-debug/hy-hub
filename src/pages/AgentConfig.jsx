@@ -1,5 +1,7 @@
+import { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { bots } from '../mock/data'
+import { fetchPersona, savePersona } from '../api'
 
 const STATUS_COLOR = {
   running: 'bg-blue-500',
@@ -13,6 +15,14 @@ const STATUS_LABEL = {
   idle:    '閒置',
   collab:  '協作中',
   error:   '出錯',
+}
+
+// Map frontend bot id → backend persona bot name
+const PERSONA_BOT_MAP = {
+  hy:       'hy',
+  xiaoyin:  'family',
+  '950157': '950157',
+  sam:      'sam',
 }
 
 function MockBadge() {
@@ -48,10 +58,98 @@ function ListOrEmpty({ items }) {
   )
 }
 
+// ─── Persona Modal ──────────────────────────────────────────────
+
+const PERSONA_FIELDS = [
+  { key: 'role',        label: '角色定義',   rows: 2 },
+  { key: 'scope',       label: '管理範疇',   rows: 2 },
+  { key: 'personality', label: '個性風格',   rows: 2 },
+  { key: 'interaction', label: '互動方式',   rows: 2 },
+  { key: 'dosDonts',    label: '規則 / 禁忌', rows: 3 },
+  { key: 'goalLink',    label: '目標連結',   rows: 2 },
+  { key: 'special',     label: '特殊指令',   rows: 2 },
+]
+
+function PersonaModal({ personaBot, onClose }) {
+  const [data, setData] = useState({})
+  const [loading, setLoading] = useState(true)
+  const [saving, setSaving] = useState(false)
+  const [error, setError] = useState(null)
+
+  useEffect(() => {
+    fetchPersona(personaBot)
+      .then(d => { setData(d); setLoading(false) })
+      .catch(e => { setError(e.message); setLoading(false) })
+  }, [personaBot])
+
+  async function handleSave() {
+    setSaving(true)
+    setError(null)
+    try {
+      await savePersona(personaBot, data)
+      onClose()
+    } catch (e) {
+      setError(e.message)
+      setSaving(false)
+    }
+  }
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/40"
+      onClick={e => { if (e.target === e.currentTarget) onClose() }}
+    >
+      <div className="bg-white rounded-2xl shadow-xl w-full max-w-lg mx-4 max-h-[90vh] flex flex-col">
+        <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100">
+          <p className="text-sm font-semibold text-slate-800">人設編輯 · {personaBot}</p>
+          <button onClick={onClose} className="text-slate-400 hover:text-slate-700 text-lg leading-none">×</button>
+        </div>
+
+        <div className="overflow-y-auto flex-1 px-6 py-4 space-y-4">
+          {loading && <p className="text-xs text-slate-400 text-center py-4">載入中…</p>}
+          {!loading && PERSONA_FIELDS.map(({ key, label, rows }) => (
+            <div key={key}>
+              <label className="block text-xs text-slate-500 mb-1">{label}</label>
+              <textarea
+                rows={rows}
+                className="w-full text-sm border border-slate-200 rounded-lg px-3 py-2 resize-none focus:outline-none focus:ring-1 focus:ring-blue-400"
+                value={data[key] ?? ''}
+                onChange={e => setData(d => ({ ...d, [key]: e.target.value }))}
+                disabled={saving}
+              />
+            </div>
+          ))}
+          {error && <p className="text-xs text-red-500">{error}</p>}
+        </div>
+
+        <div className="flex justify-end gap-2 px-6 py-4 border-t border-slate-100">
+          <button
+            onClick={onClose}
+            className="px-4 py-1.5 text-xs border border-slate-300 text-slate-600 rounded hover:bg-slate-50"
+          >
+            關閉
+          </button>
+          <button
+            onClick={handleSave}
+            disabled={loading || saving}
+            className="px-4 py-1.5 text-xs bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-50"
+          >
+            {saving ? '儲存中…' : '存檔'}
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// ─── Page ──────────────────────────────────────────────────────
+
 export default function AgentConfig() {
   const { id } = useParams()
   const navigate = useNavigate()
   const bot = bots.find(b => b.id === id)
+  const personaBot = PERSONA_BOT_MAP[id]
+  const [personaOpen, setPersonaOpen] = useState(false)
 
   if (!bot) {
     return (
@@ -94,6 +192,21 @@ export default function AgentConfig() {
       {/* 配置區塊 */}
       <div className="grid grid-cols-1 gap-4">
 
+        {personaBot && (
+          <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-5">
+            <div className="flex items-center justify-between">
+              <p className="text-xs font-semibold text-slate-500">人設</p>
+              <button
+                onClick={() => setPersonaOpen(true)}
+                className="px-3 py-1 text-xs border border-slate-300 text-slate-600 rounded hover:bg-slate-50 transition-colors"
+              >
+                編輯
+              </button>
+            </div>
+            <p className="text-xs text-slate-400 mt-2">role / scope / personality / interaction / dosDonts / goalLink / special</p>
+          </div>
+        )}
+
         <ConfigSection title="Model">
           <p className="text-sm text-slate-800 font-medium">{bot.model}</p>
         </ConfigSection>
@@ -134,6 +247,10 @@ export default function AgentConfig() {
         </ConfigSection>
 
       </div>
+
+      {personaOpen && personaBot && (
+        <PersonaModal personaBot={personaBot} onClose={() => setPersonaOpen(false)} />
+      )}
     </div>
   )
 }

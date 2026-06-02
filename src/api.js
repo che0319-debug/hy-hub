@@ -41,3 +41,41 @@ export async function saveLifeGoals(payload) {
   if (!res.ok || !result.ok) throw new Error(result.error || `saveLifeGoals failed: ${res.status}`);
   return result;
 }
+
+export async function fetchProfile() {
+  const res = await fetch(`${API_BASE}/api/profile`, {
+    headers: { "X-Read-Secret": READ_SECRET },
+  });
+  if (!res.ok) throw new Error(`fetchProfile failed: ${res.status}`);
+  return res.json();
+}
+
+export async function saveProfile(payload) {
+  const res = await fetch(`${API_BASE}/api/profile`, {
+    method: "POST",
+    headers: { "X-Read-Secret": READ_SECRET, "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  });
+  const result = await res.json();
+  if (!res.ok || !result.ok) throw new Error(result.error || `saveProfile failed: ${res.status}`);
+  return result;
+}
+
+export async function fetchPersona(bot) {
+  const res = await fetch(`${API_BASE}/api/persona?bot=${encodeURIComponent(bot)}`, {
+    headers: { "X-Read-Secret": READ_SECRET },
+  });
+  if (!res.ok) throw new Error(`fetchPersona failed: ${res.status}`);
+  return res.json();
+}
+
+export async function savePersona(bot, payload) {
+  const res = await fetch(`${API_BASE}/api/persona?bot=${encodeURIComponent(bot)}`, {
+    method: "POST",
+    headers: { "X-Read-Secret": READ_SECRET, "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  });
+  const result = await res.json();
+  if (!res.ok || !result.ok) throw new Error(result.error || `savePersona failed: ${res.status}`);
+  return result;
+}
