@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { computeScore } from '../mock/data'
-import { fetchLifeGoals, saveLifeGoals } from '../api'
+import { fetchLifeGoals, saveLifeGoals, assessFreedom } from '../api'
 
 // ─── Constants ───────────────────────────────────────────────────────────────
 
@@ -91,7 +91,16 @@ export function normalizeLifeGoals(data) {
       aiNote: '',
     }
   })
-  return { ...data, dimensions: dims }
+  const rawFI = data.freedomIndex || {}
+  const freedomIndex = {
+    note:      rawFI.note      ?? '',
+    formula:   rawFI.formula   ?? '',
+    score:     rawFI.score     ?? null,
+    summary:   rawFI.summary   ?? '',
+    source:    rawFI.source    ?? 'manual',
+    updatedAt: rawFI.updatedAt ?? null,
+  }
+  return { ...data, dimensions: dims, freedomIndex }
 }
 
 // ─── Utilities ───────────────────────────────────────────────────────────────
@@ -313,7 +322,10 @@ function SubGoalsSection({ subGoals, onToggleDone, onDelete, onAdd }) {
 
 export default function Goals() {
   const [dimensions, setDimensions] = useState([])
-  const [freedomIndex, setFreedomIndex] = useState({ note: '', formula: '' })
+  const [freedomIndex, setFreedomIndex] = useState({ note: '', formula: '', score: null, summary: '', source: 'manual', updatedAt: null })
+  const [editingFI, setEditingFI] = useState(false)
+  const [fiDraft, setFiDraft] = useState(null)
+  const [assessing, setAssessing] = useState(false)
   const [dataLoaded, setDataLoaded] = useState(false)
   const [loadError, setLoadError] = useState(null)
   const [showAddDim, setShowAddDim] = useState(false)
@@ -338,8 +350,9 @@ export default function Goals() {
   }, [])
 
   const score = computeScore(dimensions)
+  const displayScore = freedomIndex.score != null ? freedomIndex.score : score
   const weightSum = dimensions.reduce((s, d) => s + (d.weight || 0), 0)
-  const colors = scoreColor(score)
+  const colors = scoreColor(displayScore)
 
   // ── Dimension CRUD ──────────────────────────────────────────────────────────
 
@@ -426,6 +439,41 @@ export default function Goals() {
     }
   }
 
+  // ── Freedom Index edit ──────────────────────────────────────────────────────
+
+  function startEditFI() {
+    setFiDraft({ ...freedomIndex })
+    setEditingFI(true)
+  }
+  function saveFIDraft() {
+    setFreedomIndex({ ...fiDraft, source: 'manual' })
+    setFiDraft(null)
+    setEditingFI(false)
+  }
+  function cancelFIEdit() {
+    setFiDraft(null)
+    setEditingFI(false)
+  }
+  async function handleAssess() {
+    setAssessing(true)
+    try {
+      const result = await assessFreedom()
+      setFreedomIndex(prev => ({
+        ...prev,
+        score: result.score,
+        summary: result.summary,
+        source: 'ai',
+        updatedAt: new Date().toISOString(),
+      }))
+      setSaveMsg('AI 評估完成')
+    } catch (err) {
+      setSaveMsg(`評估失敗：${err.message}`)
+    } finally {
+      setAssessing(false)
+      setTimeout(() => setSaveMsg(''), 4000)
+    }
+  }
+
   // ── Render ──────────────────────────────────────────────────────────────────
 
   return (
@@ -457,16 +505,62 @@ export default function Goals() {
         <div className={`bg-white rounded-xl p-6 border-2 ${colors.border} shadow-sm transition-colors`}>
           <div className="flex items-center justify-between mb-1">
             <h2 className="text-sm font-semibold text-slate-500">🧭 人生自由指數</h2>
-            <span className="text-xs px-2 py-0.5 rounded-full bg-slate-100 text-slate-400">
-              {freedomIndex.formula || '公式待校準'}
-            </span>
+            <div className="flex items-center gap-2">
+              {freedomIndex.source && (
+                <span className="text-xs px-2 py-0.5 rounded-full bg-slate-100 text-slate-400">
+                  {freedomIndex.source === 'ai' ? 'AI 評估' : freedomIndex.source === 'weekly' ? '週報' : '手動'}
+                </span>
+              )}
+              <span className="text-xs px-2 py-0.5 rounded-full bg-slate-100 text-slate-400">
+                {freedomIndex.formula || '公式待校準'}
+              </span>
+              {!editingFI && (
+                <button onClick={startEditFI} className="text-xs text-slate-300 hover:text-blue-500 transition-colors px-1">編輯</button>
+              )}
+            </div>
           </div>
-          <div className={`text-5xl font-bold mt-2 transition-colors ${colors.text}`}>
-            {score}
-            <span className="text-2xl font-normal text-slate-400 ml-1">/ 100</span>
-          </div>
-          <div className="mt-3 text-sm text-slate-500">{freedomIndex.note}</div>
-          <div className="mt-2">
+
+          {editingFI && fiDraft ? (
+            <div className="mt-3 space-y-2">
+              <div className="flex gap-2 items-center flex-wrap">
+                <label className="text-xs text-slate-500 flex-shrink-0">分數</label>
+                <input type="number" min="0" max="100"
+                  value={fiDraft.score ?? ''}
+                  onChange={e => setFiDraft(p => ({ ...p, score: e.target.value === '' ? null : Number(e.target.value) }))}
+                  className="w-16 border border-slate-200 rounded px-2 py-1 text-sm outline-none focus:border-blue-400" />
+                <span className="text-xs text-slate-400">/ 100</span>
+                <label className="text-xs text-slate-500 flex-shrink-0 ml-3">來源</label>
+                <select value={fiDraft.source ?? 'manual'}
+                  onChange={e => setFiDraft(p => ({ ...p, source: e.target.value }))}
+                  className="text-xs border border-slate-200 rounded px-1.5 py-1 outline-none bg-white">
+                  <option value="manual">手動</option>
+                  <option value="ai">AI</option>
+                  <option value="weekly">週報</option>
+                </select>
+              </div>
+              <textarea rows={2} placeholder="方向判斷 / 卡點（一句話）"
+                value={fiDraft.summary ?? ''}
+                onChange={e => setFiDraft(p => ({ ...p, summary: e.target.value }))}
+                className="w-full border border-slate-200 rounded px-2 py-1.5 text-sm outline-none focus:border-blue-400 resize-none" />
+              <div className="flex gap-2">
+                <button onClick={saveFIDraft} className="px-3 py-1 text-xs rounded bg-blue-600 text-white hover:bg-blue-700 transition-colors">確認</button>
+                <button onClick={cancelFIEdit} className="px-3 py-1 text-xs rounded border border-slate-200 text-slate-600 hover:bg-slate-50 transition-colors">取消</button>
+              </div>
+            </div>
+          ) : (
+            <>
+              <div className={`text-5xl font-bold mt-2 transition-colors ${colors.text}`}>
+                {displayScore}
+                <span className="text-2xl font-normal text-slate-400 ml-1">/ 100</span>
+              </div>
+              {freedomIndex.summary && (
+                <div className="mt-2 text-sm font-medium text-slate-700">{freedomIndex.summary}</div>
+              )}
+              <div className="mt-1 text-sm text-slate-500">{freedomIndex.note}</div>
+            </>
+          )}
+
+          <div className="mt-2 flex items-center gap-3 flex-wrap">
             {weightSum !== 100 && dimensions.length > 0 && (
               <span className={`text-xs font-medium ${weightSum > 100 ? 'text-red-500' : 'text-amber-600'}`}>
                 ⚠ 權重總和 {weightSum}%，差 {100 - weightSum}% 待分配
@@ -475,6 +569,10 @@ export default function Goals() {
             {weightSum === 100 && dimensions.length > 0 && (
               <span className="text-xs text-green-600">✓ 權重總和 100%</span>
             )}
+            <button onClick={handleAssess} disabled={assessing || !dataLoaded || editingFI}
+              className="ml-auto text-xs px-2.5 py-1 rounded border border-slate-200 text-slate-500 hover:text-blue-600 hover:border-blue-300 transition-colors disabled:opacity-40 disabled:cursor-not-allowed">
+              {assessing ? '評估中…' : '重新評估'}
+            </button>
           </div>
         </div>
       </section>

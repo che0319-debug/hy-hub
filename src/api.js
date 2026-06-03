@@ -31,6 +31,16 @@ export async function fetchLifeGoals() {
   return res.json();
 }
 
+export async function assessFreedom() {
+  const res = await fetch(`${API_BASE}/api/assess-freedom`, {
+    method: "POST",
+    headers: { "X-Read-Secret": READ_SECRET },
+  });
+  const result = await res.json();
+  if (!res.ok || !result.ok) throw new Error(result.error || `assessFreedom failed: ${res.status}`);
+  return result;
+}
+
 export async function saveLifeGoals(payload) {
   const res = await fetch(`${API_BASE}/api/life-goals`, {
     method: "POST",
