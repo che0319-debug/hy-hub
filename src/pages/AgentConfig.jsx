@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { bots } from '../mock/data'
-import { fetchPersona, savePersona } from '../api'
+import { fetchPersona, savePersona, fetchAgentTools, fetchAgentModels } from '../api'
 
 const STATUS_COLOR = {
   running: 'bg-blue-500',
@@ -23,14 +23,6 @@ const PERSONA_BOT_MAP = {
   xiaoyin:  'family',
   '950157': '950157',
   sam:      'sam',
-}
-
-function MockBadge() {
-  return (
-    <span className="inline-block px-2 py-0.5 rounded-full text-xs font-medium bg-slate-100 text-slate-500">
-      mock · 待接 API 核對
-    </span>
-  )
 }
 
 function ConfigSection({ title, children }) {
@@ -66,7 +58,6 @@ const PERSONA_FIELDS = [
   { key: 'personality', label: '個性風格',   rows: 2 },
   { key: 'interaction', label: '互動方式',   rows: 2 },
   { key: 'dosDonts',    label: '規則 / 禁忌', rows: 3 },
-  { key: 'goalLink',    label: '目標連結',   rows: 2 },
   { key: 'special',     label: '特殊指令',   rows: 2 },
 ]
 
@@ -151,6 +142,23 @@ export default function AgentConfig() {
   const personaBot = PERSONA_BOT_MAP[id]
   const [personaOpen, setPersonaOpen] = useState(false)
 
+  const [tools, setTools] = useState(null)
+  const [toolsError, setToolsError] = useState(false)
+  const [models, setModels] = useState(null)
+
+  useEffect(() => {
+    if (!personaBot) return
+    fetchAgentTools(personaBot)
+      .then(d => setTools(d.tools))
+      .catch(() => setToolsError(true))
+  }, [personaBot])
+
+  useEffect(() => {
+    fetchAgentModels()
+      .then(d => setModels(d.models))
+      .catch(() => {})
+  }, [])
+
   if (!bot) {
     return (
       <div className="bg-white rounded-xl p-8 border border-slate-200 shadow-sm text-center">
@@ -186,7 +194,6 @@ export default function AgentConfig() {
             <p className="text-sm text-slate-500">{bot.role}</p>
           </div>
         </div>
-        <MockBadge />
       </div>
 
       {/* 配置區塊 */}
@@ -203,29 +210,38 @@ export default function AgentConfig() {
                 編輯
               </button>
             </div>
-            <p className="text-xs text-slate-400 mt-2">role / scope / personality / interaction / dosDonts / goalLink / special</p>
+            <p className="text-xs text-slate-400 mt-2">role / scope / personality / interaction / dosDonts / special</p>
           </div>
         )}
 
         <ConfigSection title="Model">
-          <p className="text-sm text-slate-800 font-medium">{bot.model}</p>
+          {models === null ? (
+            <p className="text-xs text-slate-400">載入中…</p>
+          ) : (
+            <ul className="space-y-1">
+              {models.map(({ provider, model }) => (
+                <li key={provider} className="text-xs text-slate-700 flex items-start gap-1.5">
+                  <span className="text-slate-400 font-medium w-14 flex-shrink-0">{provider}</span>
+                  <span className="text-slate-500">{model}</span>
+                </li>
+              ))}
+            </ul>
+          )}
         </ConfigSection>
 
-        <ConfigSection title="System Prompt">
-          <p className="text-sm text-slate-700 leading-relaxed">{bot.systemPrompt}</p>
-        </ConfigSection>
-
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <ConfigSection title="Tools">
-            <ListOrEmpty items={bot.tools} />
-          </ConfigSection>
-
-          <ConfigSection title="MCP Servers">
-            <ListOrEmpty items={bot.mcpServers} />
+            {toolsError ? (
+              <p className="text-xs text-slate-400">（讀取失敗）</p>
+            ) : tools === null ? (
+              <p className="text-xs text-slate-400">載入中…</p>
+            ) : (
+              <ListOrEmpty items={tools} />
+            )}
           </ConfigSection>
 
           <ConfigSection title="Skills">
-            <ListOrEmpty items={bot.skills} />
+            <ListOrEmpty items={[]} />
           </ConfigSection>
         </div>
 
@@ -240,10 +256,6 @@ export default function AgentConfig() {
               <p className="text-xs text-slate-700">{bot.memory.store}</p>
             </div>
           </div>
-        </ConfigSection>
-
-        <ConfigSection title="Triggers / 排程">
-          <ListOrEmpty items={bot.triggers} />
         </ConfigSection>
 
       </div>

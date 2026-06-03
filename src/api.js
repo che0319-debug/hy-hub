@@ -89,3 +89,19 @@ export async function savePersona(bot, payload) {
   if (!res.ok || !result.ok) throw new Error(result.error || `savePersona failed: ${res.status}`);
   return result;
 }
+
+export async function fetchAgentTools(bot) {
+  const res = await fetch(`${API_BASE}/api/agent-tools?bot=${encodeURIComponent(bot)}`, {
+    headers: { "X-Read-Secret": READ_SECRET },
+  });
+  if (!res.ok) throw new Error(`fetchAgentTools failed: ${res.status}`);
+  return res.json();
+}
+
+export async function fetchAgentModels() {
+  const res = await fetch(`${API_BASE}/api/agent-models`, {
+    headers: { "X-Read-Secret": READ_SECRET },
+  });
+  if (!res.ok) throw new Error(`fetchAgentModels failed: ${res.status}`);
+  return res.json();
+}
