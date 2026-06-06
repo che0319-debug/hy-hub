@@ -928,6 +928,7 @@ const DAYS = [{v:'monday',l:'週一'},{v:'tuesday',l:'週二'},{v:'wednesday',l:
 let data = null;
 let editingPid = null;
 let editingMi = null;
+let editingCardId = null;
 let tempBlockers = [];
 let sortables = []; // track Sortable instances
 let isDragging = false; // prevent click-after-drag
@@ -1205,7 +1206,9 @@ function renderBoard() {
         const toPid   = evt.to.closest('[data-pid]').dataset.pid;
         const fromP   = data._kanban.projects.find(x => x.id === fromPid);
         const toP     = data._kanban.projects.find(x => x.id === toPid);
+        if (!fromP || !toP) { console.warn('onEnd: project not found', fromPid, toPid); return; }
         const [moved] = fromP.milestones.splice(evt.oldIndex, 1);
+        if (!moved) { console.warn('onEnd: card not found at index', evt.oldIndex); return; }
         toP.milestones.splice(evt.newIndex, 0, moved);
         updateColCount(fromPid);
         updateColCount(toPid);
@@ -1290,10 +1293,10 @@ function renderCardHTML(p, m, mi) {
   const es = m.execute_status || '';
   const delegated = m.delegated_to_sam || false;
   const isFinished = ['done','cancelled','failed'].includes(es);
-  return `<div class="card${getCardBorderClass(es)}" data-pid="${p.id}" data-mi="${mi}">
+  return `<div class="card${getCardBorderClass(es)}" data-pid="${p.id}" data-card-id="${m.id}">
     <div class="card-top">
       <div class="card-title">${escHtml(m.title)}</div>
-      <button class="card-del-btn" title="移除此 milestone（完成或取消都用這個）" onclick="event.stopPropagation();deleteCardDirect('${p.id}',${mi})">✗</button>
+      <button class="card-del-btn" title="移除此 milestone（完成或取消都用這個）" onclick="event.stopPropagation();deleteCardDirect('${p.id}','${m.id}')">✗</button>
     </div>
     ${descHtml}
     <div class="card-footer">
@@ -1302,17 +1305,20 @@ function renderCardHTML(p, m, mi) {
       <div class="execute-row" style="margin-left:auto" onclick="event.stopPropagation()">
         <input type="checkbox" class="execute-checkbox"
           ${delegated?'checked':''} ${isFinished?'disabled':''}
-          data-pid="${p.id}" data-mi="${mi}"
+          data-pid="${p.id}" data-card-id="${m.id}"
           title="${isFinished?'已結束':'勾選後助理自動執行'}"
-          onchange="toggleExecute(event,'${p.id}',${mi},this.checked)">
+          onchange="toggleExecute(event,'${p.id}','${m.id}',this.checked)">
         <span class="execute-label" style="${isFinished?'color:var(--text-dim)':''}">交給助理</span>
       </div>
     </div>
   </div>`;
 }
 
-function toggleExecute(event, pid, mi, checked) {
-  const m = getProject(pid).milestones[mi];
+function toggleExecute(event, pid, cardId, checked) {
+  const p = getProject(pid);
+  const mi = p ? p.milestones.findIndex(x => x.id === cardId) : -1;
+  if (mi < 0) { console.warn('toggleExecute: card not found', cardId); return; }
+  const m = p.milestones[mi];
   m.delegated_to_sam = checked;
   if (!checked) m.execute_status = '';
   // Auto-save to GitHub so Bot can pick it up
@@ -1320,10 +1326,11 @@ function toggleExecute(event, pid, mi, checked) {
   renderBoard();
 }
 
-function deleteCardDirect(pid, mi) {
+function deleteCardDirect(pid, cardId) {
   const p = getProject(pid);
-  const m = p.milestones[mi];
-  const title = m ? m.title : '此里程碑';
+  const mi = p ? p.milestones.findIndex(x => x.id === cardId) : -1;
+  if (mi < 0) { console.warn('deleteCardDirect: card not found', cardId); return; }
+  const title = p.milestones[mi].title;
   if (!confirm(`確定移除「${title}」？\n此動作不可復原。`)) return;
   p.milestones.splice(mi, 1);
   renderBoard();
@@ -1343,9 +1350,9 @@ document.getElementById('board').addEventListener('click', function(e) {
   if (isDragging) return; // ignore click right after drag
   const card = e.target.closest('.card');
   if (card) {
-    const pid = card.dataset.pid;
-    const mi  = parseInt(card.dataset.mi);
-    openCard(pid, mi);
+    const pid    = card.dataset.pid;
+    const cardId = card.dataset.cardId;
+    openCard(pid, cardId);
     return;
   }
   // Add card button
@@ -1359,10 +1366,12 @@ document.getElementById('board').addEventListener('click', function(e) {
 });
 
 // ── MODAL ─────────────────────────────────────────
-function openCard(pid, mi) {
+function openCard(pid, cardId) {
   const p = getProject(pid);
+  const mi = p ? p.milestones.findIndex(x => x.id === cardId) : -1;
+  if (mi < 0) { console.warn('openCard: card not found', cardId); return; }
   const m = p.milestones[mi];
-  editingPid = pid; editingMi = mi;
+  editingPid = pid; editingMi = mi; editingCardId = cardId;
 
   document.getElementById('modalDot').style.background = p.color;
   document.getElementById('modalTitle').textContent = p.name;
@@ -1376,7 +1385,7 @@ function openCard(pid, mi) {
 
 function openNewCard(pid) {
   const p = getProject(pid);
-  editingPid = pid; editingMi = null;
+  editingPid = pid; editingMi = null; editingCardId = null;
 
   document.getElementById('modalDot').style.background = p.color;
   document.getElementById('modalTitle').textContent = p.name + ' — 新里程碑';
@@ -1417,7 +1426,8 @@ function removeBlockerRow(i) { tempBlockers.splice(i,1); renderBlockerList(); }
 function saveCard() {
   const project = getProject(editingPid);
   const rawDue = document.getElementById('mDue').value;
-  const existingM = editingMi !== null ? project.milestones[editingMi] : null;
+  const existingMiIdx = editingCardId !== null ? project.milestones.findIndex(x => x.id === editingCardId) : -1;
+  const existingM = existingMiIdx >= 0 ? project.milestones[existingMiIdx] : null;
   const card = {
     id: existingM ? existingM.id : `${editingPid}-M${Date.now()}`,
     title: document.getElementById('mTitle').value.trim() || '未命名',
@@ -1427,8 +1437,8 @@ function saveCard() {
     execute_status: existingM ? (existingM.execute_status || '') : '',
     delegated_to_sam: existingM ? (existingM.delegated_to_sam ?? false) : false,
   };
-  if (editingMi !== null) {
-    project.milestones[editingMi] = card;
+  if (existingMiIdx >= 0) {
+    project.milestones[existingMiIdx] = card;
   } else {
     project.milestones.push(card);
   }
@@ -1437,10 +1447,12 @@ function saveCard() {
 }
 
 function deleteCard() {
-  const m = getProject(editingPid).milestones[editingMi];
-  const title = m ? m.title : '此里程碑';
+  const p = getProject(editingPid);
+  const mi = editingCardId !== null ? p.milestones.findIndex(x => x.id === editingCardId) : -1;
+  if (mi < 0) { console.warn('deleteCard: card not found', editingCardId); return; }
+  const title = p.milestones[mi].title;
   if (!confirm(`確定移除「${title}」？\n此動作不可復原。`)) return;
-  getProject(editingPid).milestones.splice(editingMi, 1);
+  p.milestones.splice(mi, 1);
   closeModal();
   renderBoard();
   saveData();

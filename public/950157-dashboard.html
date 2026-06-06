@@ -455,24 +455,26 @@ function getCardBorderStyle(m) {
   return '';
 }
 
-function toggleExecute(pid, mi, event) {
+function toggleExecute(pid, cardId, event) {
   if (event) { event.stopPropagation(); }
   var p = progressData.find(function(x){ return x.id === pid; });
   if (!p) return;
+  var mi = p.milestones.findIndex(function(x){ return x.id === cardId; });
+  if (mi < 0) { console.warn('toggleExecute: card not found', cardId); return; }
   var m = p.milestones[mi];
-  if (!m) return;
   var cur = EXECUTE_STATUS_CYCLE.indexOf(m.execute_status || '');
   m.execute_status = EXECUTE_STATUS_CYCLE[(cur + 1) % EXECUTE_STATUS_CYCLE.length];
   renderProgress();
   saveProgress(null);
 }
 
-function toggleDelegated(pid, mi, event) {
+function toggleDelegated(pid, cardId, event) {
   if (event) { event.stopPropagation(); }
   var p = progressData.find(function(x){ return x.id === pid; });
   if (!p) return;
+  var mi = p.milestones.findIndex(function(x){ return x.id === cardId; });
+  if (mi < 0) { console.warn('toggleDelegated: card not found', cardId); return; }
   var m = p.milestones[mi];
-  if (!m) return;
   m.delegated_to_950157 = !m.delegated_to_950157;
   renderProgress();
   saveProgress(null);
@@ -503,17 +505,17 @@ function renderCardHTML(p, m, mi){
   var delegated = m.delegated_to_950157 ? true : false;
 
   var executeRow = '<div class="execute-row">'
-    + '<label class="execute-checkbox" onclick="toggleDelegated(\''+p.id+'\','+mi+',event)">'
+    + '<label class="execute-checkbox" onclick="toggleDelegated(\''+p.id+'\',\''+m.id+'\',event)">'
     + '<input type="checkbox" class="execute-checkbox-input"'+(delegated?' checked':'')+'> 指派950157'
     + '</label>'
     + (execBadge ? execBadge : '<span style="font-size:11px;color:var(--text-dim);">未執行</span>')
-    + '<button style="margin-left:auto;font-size:10px;padding:1px 7px;border-radius:3px;border:1px solid var(--border);background:#fff;cursor:pointer;color:var(--text-muted);" onclick="toggleExecute(\''+p.id+'\','+mi+',event)">切換狀態</button>'
+    + '<button style="margin-left:auto;font-size:10px;padding:1px 7px;border-radius:3px;border:1px solid var(--border);background:#fff;cursor:pointer;color:var(--text-muted);" onclick="toggleExecute(\''+p.id+'\',\''+m.id+'\',event)">切換狀態</button>'
     + '</div>';
 
-  return '<div class="card" data-pid="'+p.id+'" data-mi="'+mi+'" style="'+borderStyle+'">'
+  return '<div class="card" data-pid="'+p.id+'" data-card-id="'+m.id+'" style="'+borderStyle+'">'
     + '<div class="card-top">'
     +   '<div class="card-title">'+escHtml(m.title)+'</div>'
-    +   '<button class="card-del-btn" title="刪除此里程碑" data-action="del-card" data-pid="'+p.id+'" data-mi="'+mi+'">✗</button>'
+    +   '<button class="card-del-btn" title="刪除此里程碑" data-action="del-card" data-pid="'+p.id+'" data-card-id="'+m.id+'">✗</button>'
     + '</div>'
     + descHtml
     + (dueHtml ? '<div class="card-footer">'+dueHtml+'</div>' : '')
@@ -578,7 +580,9 @@ function renderProgress(){
         var toPid   = evt.to.closest('[data-pid]').dataset.pid;
         var fromP   = progressData.find(function(x){ return x.id === fromPid; });
         var toP     = progressData.find(function(x){ return x.id === toPid; });
+        if (!fromP || !toP) { console.warn('onEnd: project not found', fromPid, toPid); return; }
         var moved   = fromP.milestones.splice(evt.oldIndex, 1)[0];
+        if (!moved) { console.warn('onEnd: card not found at index', evt.oldIndex); return; }
         toP.milestones.splice(evt.newIndex, 0, moved);
         updateColCount(fromPid);
         updateColCount(toPid);
@@ -638,11 +642,12 @@ function removeProject(pid){
   saveProgress(null);
 }
 
-function deleteCardDirect(pid, mi){
+function deleteCardDirect(pid, cardId){
   var p = progressData.find(function(x){ return x.id === pid; });
   if (!p) return;
-  var m = p.milestones[mi];
-  var title = m ? m.title : '此里程碑';
+  var mi = p.milestones.findIndex(function(x){ return x.id === cardId; });
+  if (mi < 0) { console.warn('deleteCardDirect: card not found', cardId); return; }
+  var title = p.milestones[mi].title;
   if (!confirm('確定移除「'+title+'」？')) return;
   p.milestones.splice(mi, 1);
   renderProgress();
@@ -654,14 +659,14 @@ document.getElementById('board').addEventListener('click', function(e){
   var delCardBtn = e.target.closest('[data-action="del-card"]');
   if (delCardBtn){
     e.stopPropagation();
-    deleteCardDirect(delCardBtn.dataset.pid, parseInt(delCardBtn.dataset.mi));
+    deleteCardDirect(delCardBtn.dataset.pid, delCardBtn.dataset.cardId);
     return;
   }
   var card = e.target.closest('.card');
   if (card && !e.target.closest('.execute-row')){
     var pi = progressData.findIndex(function(x){ return x.id === card.dataset.pid; });
-    var mi = parseInt(card.dataset.mi);
-    if (pi >= 0) openMsModal(pi, mi, false);
+    var mi = pi >= 0 ? progressData[pi].milestones.findIndex(function(x){ return x.id === card.dataset.cardId; }) : -1;
+    if (pi >= 0 && mi >= 0) openMsModal(pi, mi, false);
     return;
   }
   var addBtn = e.target.closest('[data-action="add-card"]');
