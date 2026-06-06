@@ -534,8 +534,8 @@ function renderProgress(){
         var moved   = fromP.milestones.splice(evt.oldIndex, 1)[0];
         if (!moved) { console.warn('onEnd: card not found at index', evt.oldIndex); return; }
         toP.milestones.splice(evt.newIndex, 0, moved);
+        renderProgress();
         saveProgress(null);
-        setTimeout(renderProgress, 0);
       }
     });
     sortables.push(s);
