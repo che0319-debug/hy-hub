@@ -555,7 +555,7 @@ function renderColumnHTML(p){
 
 function renderProgress(){
   progressData.forEach(function(p, i){
-    if (!p.id) p.id = 'P_legacy_'+i+'_'+Math.random().toString(36).slice(2,6);
+    if (!p.id) p.id = 'P_legacy_'+i;
     if (!p.milestones) p.milestones = [];
     p.milestones.forEach(function(m, mi){
       if (!m.id) m.id = p.id + '_M' + mi;
