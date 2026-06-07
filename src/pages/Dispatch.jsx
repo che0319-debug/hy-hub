@@ -1,6 +1,7 @@
-import { useState, Fragment } from 'react'
+import { useState, useEffect, Fragment } from 'react'
 import { ChevronDown, ChevronUp } from 'lucide-react'
 import { useSessionContext } from '../App'
+import { fetchDispatchSessions } from '../api'
 
 // 狀態 badge 設定：label + Tailwind class
 const STATUS_CONFIG = {
@@ -90,7 +91,33 @@ function ExpandedRow({ session }) {
 }
 
 export default function Dispatch() {
-  const { sessions } = useSessionContext()
+  const { sessions: ctxSessions } = useSessionContext()
+  const [sessions, setSessions] = useState(ctxSessions)
+
+  // 接住 App.jsx mount-time GET 的非同步結果（ctxSessions 從 [] 變成實際資料時同步一次）
+  useEffect(() => {
+    setSessions(ctxSessions)
+  }, [ctxSessions])
+
+  // mount 時 GET（每次路由切到此頁都 mount，是 iframe→派工清單的主要刷新機制）
+  useEffect(() => {
+    fetchDispatchSessions()
+      .then(data => setSessions(data))
+      .catch(err => console.warn('[Dispatch] refresh failed:', err))
+  }, [])
+
+  // 額外保險：跨分頁切回時也刷新
+  useEffect(() => {
+    function onVisible() {
+      if (document.visibilityState === 'visible') {
+        fetchDispatchSessions()
+          .then(data => setSessions(data))
+          .catch(err => console.warn('[Dispatch] refresh failed:', err))
+      }
+    }
+    document.addEventListener('visibilitychange', onVisible)
+    return () => document.removeEventListener('visibilitychange', onVisible)
+  }, [])
 
   // filterStatus: 'active'（預設，進行中三種）| 'all' | 單一 status 值
   const [filterStatus, setFilterStatus] = useState('active')
