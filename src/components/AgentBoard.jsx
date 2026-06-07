@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { Calendar, CheckSquare, Square, Plus, X, Pencil, Check } from 'lucide-react'
 import { useSessionContext } from '../App'
-import { postMilestone } from '../api'
+import { postMilestone, postDispatchSession, deleteDispatchSession } from '../api'
 
 function initBoard(boardData) {
   return {
@@ -17,7 +17,7 @@ function MilestoneCard({ item, colId, colName, onToggle, sessions, botConfig, on
   const [editingDue, setEditingDue] = useState(false)
   const [dueValue, setDueValue] = useState(item.due || "")
   const [busy, setBusy] = useState(false)
-  const assigned = sessions.some(s => s._milestoneId === item.id)
+  const assigned = sessions.some(s => s.milestoneId === item.id)
   const realId = item.id.replace(/^hy-/, "")
 
   async function handleDelete() {
@@ -211,18 +211,29 @@ export default function AgentBoard({ boardData, botConfig, onMutate }) {
   const [board] = useState(() => initBoard(boardData))
   const { sessions, addSession, removeSession } = useSessionContext()
 
-  function toggleAssign(colId, itemId, colName, itemTitle) {
-    const alreadyAssigned = sessions.some(s => s._milestoneId === itemId)
+  async function toggleAssign(colId, itemId, colName, itemTitle) {
+    const alreadyAssigned = sessions.some(s => s.milestoneId === itemId)
     if (!alreadyAssigned) {
-      addSession({
-        title: itemTitle,
-        sourceMilestone: colName,
-        assignee: botConfig.name,
-        status: "pending",
-        _milestoneId: itemId
-      })
+      try {
+        const session = await postDispatchSession({
+          title: itemTitle,
+          sourceMilestone: colName,
+          assignee: botConfig.name,
+          milestoneId: itemId,
+        })
+        addSession(session)
+      } catch (e) {
+        console.error('[AgentBoard] postDispatchSession failed:', e)
+        alert(`派工失敗：${e.message}`)
+      }
     } else {
-      removeSession(itemId)
+      try {
+        await deleteDispatchSession(itemId)
+        removeSession(itemId)
+      } catch (e) {
+        console.error('[AgentBoard] deleteDispatchSession failed:', e)
+        alert(`取消派工失敗：${e.message}`)
+      }
     }
   }
 

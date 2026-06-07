@@ -1,8 +1,8 @@
-import { useState, useRef, createContext, useContext } from 'react'
+import { useState, useEffect, createContext, useContext } from 'react'
 import { Outlet } from 'react-router-dom'
 import TopBar from './layout/TopBar'
 import Sidebar from './layout/Sidebar'
-import { sessions as initialSessions } from './mock/data'
+import { fetchDispatchSessions } from './api'
 
 export const SessionContext = createContext(null)
 
@@ -11,17 +11,21 @@ export function useSessionContext() {
 }
 
 export default function App() {
-  const [sessions, setSessions] = useState([...initialSessions])
-  const nextIdRef = useRef(Math.max(...initialSessions.map(s => s.id)) + 1)
+  const [sessions, setSessions] = useState([])
 
-  function addSession(sessionData) {
-    const newSession = { id: nextIdRef.current++, ...sessionData }
-    setSessions(prev => [...prev, newSession])
-    console.log('[App] session added:', newSession)
+  useEffect(() => {
+    fetchDispatchSessions()
+      .then(data => setSessions(data))
+      .catch(err => console.warn('[App] fetchDispatchSessions failed:', err))
+  }, [])
+
+  function addSession(session) {
+    setSessions(prev => [...prev, session])
+    console.log('[App] session added:', session)
   }
 
   function removeSession(milestoneId) {
-    setSessions(prev => prev.filter(s => s._milestoneId !== milestoneId))
+    setSessions(prev => prev.filter(s => s.milestoneId !== milestoneId))
     console.log('[App] session removed for milestone:', milestoneId)
   }
 

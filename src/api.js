@@ -105,3 +105,30 @@ export async function fetchAgentModels() {
   if (!res.ok) throw new Error(`fetchAgentModels failed: ${res.status}`);
   return res.json();
 }
+
+export async function fetchDispatchSessions() {
+  const res = await fetch(`${API_BASE}/api/dispatch-sessions`, {
+    headers: { "X-Read-Secret": READ_SECRET },
+  });
+  if (!res.ok) throw new Error(`fetchDispatchSessions failed: ${res.status}`);
+  return res.json();
+}
+
+export async function postDispatchSession(payload) {
+  const res = await fetch(`${API_BASE}/api/dispatch-session`, {
+    method: "POST",
+    headers: { "X-Read-Secret": READ_SECRET, "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  });
+  if (!res.ok) throw new Error(`postDispatchSession failed: ${res.status}`);
+  return res.json();
+}
+
+export async function deleteDispatchSession(milestoneId) {
+  const res = await fetch(`${API_BASE}/api/dispatch-session/${encodeURIComponent(milestoneId)}`, {
+    method: "DELETE",
+    headers: { "X-Read-Secret": READ_SECRET },
+  });
+  if (!res.ok) throw new Error(`deleteDispatchSession failed: ${res.status}`);
+  return res.json();
+}
