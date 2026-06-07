@@ -1,7 +1,7 @@
 import { useState, useEffect, Fragment } from 'react'
 import { ChevronDown, ChevronUp } from 'lucide-react'
 import { useSessionContext } from '../App'
-import { fetchDispatchSessions, fireDispatch } from '../api'
+import { fetchDispatchSessions, fireDispatch, saveBriefText } from '../api'
 
 // 狀態 badge 設定：label + Tailwind class
 const STATUS_CONFIG = {
@@ -15,15 +15,20 @@ const STATUS_CONFIG = {
 // 預設顯示的進行中狀態（可改）
 const ACTIVE_STATUSES = ['pending', 'running', 'await']
 
-// 展開區 mock 占位資料（全部 session 共用同一份假資料）
-const MOCK_EXPAND_DATA = {
-  dialogues: [
-    { role: 'HY',     text: '請整理本週北海岸拜訪的重點摘要。' },
-    { role: '950157', text: '好的，已讀取行事曆與備忘錄，正在彙整中...' },
-    { role: '950157', text: '摘要草稿已完成，請確認後我再送出。' },
-  ],
-  files: ['週報摘要_20260528.md'],
-}
+const BRIEF_TEMPLATE = `【任務目標】
+（一句話講清楚要 routine 產出什麼）
+
+【背景脈絡】
+（這張卡的來龍去脈、為什麼派、要注意的前提）
+
+【參考資料】
+（要 routine 去 hy-data 看哪些檔／路徑，例如 progress_data.json 的哪個 project、xxx_daily.json。routine 唯讀，只讀不寫）
+
+【輸出格式】
+（條列摘要 / 表格 / 草稿全文 等）
+
+【交付形式】
+（Telegram 摘要回報 / 產出 .md 草稿）`
 
 function StatusBadge({ status }) {
   const cfg = STATUS_CONFIG[status] ?? { label: status, cls: 'bg-slate-100 text-slate-500' }
@@ -34,61 +39,6 @@ function StatusBadge({ status }) {
   )
 }
 
-function ExpandedRow({ session }) {
-  return (
-    <tr>
-      <td colSpan={5} className="bg-slate-50 px-6 py-4 border-b border-slate-200">
-        <div className="space-y-3">
-          <div>
-            <p className="text-xs font-semibold text-slate-500 mb-1.5">對話紀錄</p>
-            <div className="space-y-1.5">
-              {MOCK_EXPAND_DATA.dialogues.map((d, i) => (
-                <div key={i} className="flex gap-2 text-xs">
-                  <span className={`font-medium w-14 flex-shrink-0 ${d.role === 'HY' ? 'text-blue-600' : 'text-slate-500'}`}>
-                    {d.role}
-                  </span>
-                  <span className="text-slate-700">{d.text}</span>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          <div>
-            <p className="text-xs font-semibold text-slate-500 mb-1.5">產出檔案</p>
-            <div className="flex gap-2">
-              {MOCK_EXPAND_DATA.files.map((f, i) => (
-                <span key={i} className="bg-white border border-slate-200 rounded px-2 py-1 text-xs text-slate-600">
-                  {f}
-                </span>
-              ))}
-            </div>
-          </div>
-
-          <div className="flex gap-2 pt-1">
-            <button
-              onClick={() => console.log('[Dispatch] 繼續對話 session:', session.id)}
-              className="px-3 py-1 text-xs bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors"
-            >
-              繼續對話
-            </button>
-            <button
-              onClick={() => console.log('[Dispatch] 結案 session:', session.id)}
-              className="px-3 py-1 text-xs border border-slate-300 text-slate-600 rounded hover:bg-slate-100 transition-colors"
-            >
-              結案
-            </button>
-            <button
-              onClick={() => console.log('[Dispatch] 匯出 session:', session.id)}
-              className="px-3 py-1 text-xs border border-slate-300 text-slate-600 rounded hover:bg-slate-100 transition-colors"
-            >
-              匯出
-            </button>
-          </div>
-        </div>
-      </td>
-    </tr>
-  )
-}
 
 export default function Dispatch() {
   const { sessions: ctxSessions } = useSessionContext()
@@ -124,10 +74,39 @@ export default function Dispatch() {
   // 派發錯誤訊息：{ [milestoneId]: string }
   const [fireErrors, setFireErrors] = useState({})
 
+  // 委派單草稿：{ [milestoneId]: string }（undefined = 未編輯）
+  const [briefDrafts, setBriefDrafts] = useState({})
+  // 委派單儲存中：{ [milestoneId]: true }
+  const [savingIds, setSavingIds] = useState({})
+  // 委派單儲存錯誤：{ [milestoneId]: string }
+  const [saveErrors, setSaveErrors] = useState({})
+
+  async function handleSaveBrief(milestoneId, text) {
+    setSavingIds(prev => ({ ...prev, [milestoneId]: true }))
+    setSaveErrors(prev => { const n = { ...prev }; delete n[milestoneId]; return n })
+    try {
+      await saveBriefText(milestoneId, text)
+      setSessions(prev => prev.map(s =>
+        s.milestoneId === milestoneId ? { ...s, briefText: text } : s
+      ))
+    } catch (err) {
+      setSaveErrors(prev => ({ ...prev, [milestoneId]: err.message }))
+    } finally {
+      setSavingIds(prev => { const n = { ...prev }; delete n[milestoneId]; return n })
+    }
+  }
+
   async function handleFire(milestoneId) {
     setFiringIds(prev => ({ ...prev, [milestoneId]: true }))
     setFireErrors(prev => { const n = { ...prev }; delete n[milestoneId]; return n })
     try {
+      // 有未存草稿 → 先存再 fire
+      if (briefDrafts[milestoneId] !== undefined) {
+        await saveBriefText(milestoneId, briefDrafts[milestoneId])
+        setSessions(prev => prev.map(s =>
+          s.milestoneId === milestoneId ? { ...s, briefText: briefDrafts[milestoneId] } : s
+        ))
+      }
       await fireDispatch(milestoneId)
       setSessions(prev => prev.map(s =>
         s.milestoneId === milestoneId ? { ...s, status: 'running' } : s
@@ -139,8 +118,8 @@ export default function Dispatch() {
     }
   }
 
-  // filterStatus: 'active'（預設，進行中三種）| 'all' | 單一 status 值
-  const [filterStatus, setFilterStatus] = useState('active')
+  // filterStatus: 'all'（預設）| 'active' | 單一 status 值
+  const [filterStatus, setFilterStatus] = useState('all')
   const [filterAssignee, setFilterAssignee] = useState('all')
   const [expandedIds, setExpandedIds] = useState(new Set())
 
@@ -178,7 +157,7 @@ export default function Dispatch() {
           onChange={e => setFilterStatus(e.target.value)}
           className="text-sm border border-slate-200 rounded-lg px-3 py-1.5 bg-white text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
         >
-          <option value="active">進行中（預設）</option>
+          <option value="active">進行中</option>
           <option value="all">全部狀態</option>
           {Object.entries(STATUS_CONFIG).map(([val, cfg]) => (
             <option key={val} value={val}>{cfg.label}</option>
@@ -270,7 +249,47 @@ export default function Dispatch() {
                         </div>
                       </td>
                     </tr>
-                    {expanded && <ExpandedRow session={session} />}
+                    {expanded && (() => {
+                      const isPending = session.status === 'pending'
+                      const currentText = briefDrafts[session.milestoneId] !== undefined
+                        ? briefDrafts[session.milestoneId]
+                        : (session.briefText || (isPending ? BRIEF_TEMPLATE : ''))
+                      return (
+                        <tr>
+                          <td colSpan={5} className="bg-slate-50 px-6 py-4 border-b border-slate-200">
+                            <div className="space-y-2">
+                              <p className="text-xs font-semibold text-slate-500">委派單</p>
+                              {isPending ? (
+                                <>
+                                  <textarea
+                                    value={currentText}
+                                    onChange={e => setBriefDrafts(prev => ({ ...prev, [session.milestoneId]: e.target.value }))}
+                                    rows={12}
+                                    className="w-full text-xs font-mono border border-slate-200 rounded p-2 bg-white resize-y focus:outline-none focus:ring-2 focus:ring-blue-400"
+                                  />
+                                  <div className="flex items-center gap-2">
+                                    <button
+                                      onClick={() => handleSaveBrief(session.milestoneId, currentText)}
+                                      disabled={savingIds[session.milestoneId]}
+                                      className="px-3 py-1 text-xs bg-slate-700 text-white rounded hover:bg-slate-800 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                                    >
+                                      {savingIds[session.milestoneId] ? '儲存中…' : '儲存委派單'}
+                                    </button>
+                                    {saveErrors[session.milestoneId] && (
+                                      <span className="text-xs text-red-500">{saveErrors[session.milestoneId]}</span>
+                                    )}
+                                  </div>
+                                </>
+                              ) : (
+                                <pre className="text-xs text-slate-700 whitespace-pre-wrap font-mono bg-white border border-slate-200 rounded p-2">
+                                  {session.briefText || '（尚未填寫委派單）'}
+                                </pre>
+                              )}
+                            </div>
+                          </td>
+                        </tr>
+                      )
+                    })()}
                   </Fragment>
                 )
               })
@@ -280,7 +299,7 @@ export default function Dispatch() {
       </div>
 
       <p className="mt-3 text-xs text-slate-400">
-        顯示 {filtered.length} / {sessions.length} 筆　·　完成與失敗記錄請切換「全部狀態」查看
+        顯示 {filtered.length} / {sessions.length} 筆
       </p>
     </div>
   )

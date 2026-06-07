@@ -133,6 +133,16 @@ export async function deleteDispatchSession(milestoneId) {
   return res.json();
 }
 
+export async function saveBriefText(milestoneId, briefText) {
+  const res = await fetch(`${API_BASE}/api/dispatch-session`, {
+    method: "POST",
+    headers: { "X-Read-Secret": READ_SECRET, "Content-Type": "application/json" },
+    body: JSON.stringify({ milestoneId, briefText }),
+  });
+  if (!res.ok) throw new Error(`saveBriefText failed: ${res.status}`);
+  return res.json();
+}
+
 export async function fireDispatch(milestoneId) {
   const res = await fetch(`${API_BASE}/api/dispatch-fire`, {
     method: "POST",
