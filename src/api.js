@@ -132,3 +132,14 @@ export async function deleteDispatchSession(milestoneId) {
   if (!res.ok) throw new Error(`deleteDispatchSession failed: ${res.status}`);
   return res.json();
 }
+
+export async function fireDispatch(milestoneId) {
+  const res = await fetch(`${API_BASE}/api/dispatch-fire`, {
+    method: "POST",
+    headers: { "X-Read-Secret": READ_SECRET, "Content-Type": "application/json" },
+    body: JSON.stringify({ milestoneId }),
+  });
+  const result = await res.json();
+  if (!res.ok || !result.ok) throw new Error(result.error || `fireDispatch failed: ${res.status}`);
+  return result;
+}

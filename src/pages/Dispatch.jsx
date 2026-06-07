@@ -1,7 +1,7 @@
 import { useState, useEffect, Fragment } from 'react'
 import { ChevronDown, ChevronUp } from 'lucide-react'
 import { useSessionContext } from '../App'
-import { fetchDispatchSessions } from '../api'
+import { fetchDispatchSessions, fireDispatch } from '../api'
 
 // 狀態 badge 設定：label + Tailwind class
 const STATUS_CONFIG = {
@@ -119,6 +119,26 @@ export default function Dispatch() {
     return () => document.removeEventListener('visibilitychange', onVisible)
   }, [])
 
+  // 派發 loading 狀態：{ [milestoneId]: true }
+  const [firingIds, setFiringIds] = useState({})
+  // 派發錯誤訊息：{ [milestoneId]: string }
+  const [fireErrors, setFireErrors] = useState({})
+
+  async function handleFire(milestoneId) {
+    setFiringIds(prev => ({ ...prev, [milestoneId]: true }))
+    setFireErrors(prev => { const n = { ...prev }; delete n[milestoneId]; return n })
+    try {
+      await fireDispatch(milestoneId)
+      setSessions(prev => prev.map(s =>
+        s.milestoneId === milestoneId ? { ...s, status: 'running' } : s
+      ))
+    } catch (err) {
+      setFireErrors(prev => ({ ...prev, [milestoneId]: err.message }))
+    } finally {
+      setFiringIds(prev => { const n = { ...prev }; delete n[milestoneId]; return n })
+    }
+  }
+
   // filterStatus: 'active'（預設，進行中三種）| 'all' | 單一 status 值
   const [filterStatus, setFilterStatus] = useState('active')
   const [filterAssignee, setFilterAssignee] = useState('all')
@@ -223,15 +243,31 @@ export default function Dispatch() {
                         {session.assignee}
                       </td>
                       <td className="px-4 py-3">
-                        <button
-                          onClick={() => toggleExpand(session.id)}
-                          className="flex items-center gap-1 text-xs text-slate-500 hover:text-slate-800 transition-colors"
-                        >
-                          {expanded
-                            ? <><ChevronUp size={13} />收合</>
-                            : <><ChevronDown size={13} />展開</>
-                          }
-                        </button>
+                        <div className="flex flex-col gap-1.5">
+                          <button
+                            onClick={() => toggleExpand(session.id)}
+                            className="flex items-center gap-1 text-xs text-slate-500 hover:text-slate-800 transition-colors"
+                          >
+                            {expanded
+                              ? <><ChevronUp size={13} />收合</>
+                              : <><ChevronDown size={13} />展開</>
+                            }
+                          </button>
+                          {session.status === 'pending' && (
+                            <button
+                              onClick={() => handleFire(session.milestoneId)}
+                              disabled={firingIds[session.milestoneId]}
+                              className="text-xs px-2 py-0.5 bg-violet-600 text-white rounded hover:bg-violet-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                            >
+                              {firingIds[session.milestoneId] ? '派發中…' : '派發'}
+                            </button>
+                          )}
+                          {fireErrors[session.milestoneId] && (
+                            <span className="text-xs text-red-500 max-w-[120px] break-words">
+                              {fireErrors[session.milestoneId]}
+                            </span>
+                          )}
+                        </div>
                       </td>
                     </tr>
                     {expanded && <ExpandedRow session={session} />}
