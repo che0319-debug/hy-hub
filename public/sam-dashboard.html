@@ -1324,6 +1324,17 @@ function toggleExecute(event, pid, cardId, checked) {
   // Auto-save to GitHub so Bot can pick it up
   saveData();
   renderBoard();
+  // dispatch session（獨立，失敗不影響 saveData）
+  if (checked) {
+    fetch(API + '/api/dispatch-session', {
+      method: 'POST', headers: HEADERS,
+      body: JSON.stringify({ title: m.title, sourceMilestone: p.name, assignee: 'Sam', milestoneId: cardId })
+    }).catch(function(e){ console.warn('[dispatch] POST failed:', e); });
+  } else {
+    fetch(API + '/api/dispatch-session/' + encodeURIComponent(cardId), {
+      method: 'DELETE', headers: GET_HEADERS
+    }).catch(function(e){ console.warn('[dispatch] DELETE failed:', e); });
+  }
 }
 
 function deleteCardDirect(pid, cardId) {

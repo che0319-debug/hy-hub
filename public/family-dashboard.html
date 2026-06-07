@@ -407,6 +407,18 @@ function toggleExecute(mid){
   m.delegated_to_family = !m.delegated_to_family;
   if (!m.delegated_to_family) m.execute_status = '';
   renderBoard(); familyData._kanban=kanban; saveData(null);
+  // dispatch session（獨立，失敗不影響 saveData）
+  var _proj = kanban.projects.find(function(p){ return p.milestones.some(function(x){ return x.id===mid; }); });
+  if (m.delegated_to_family) {
+    fetch(API + '/api/dispatch-session', {
+      method: 'POST', headers: HEADERS,
+      body: JSON.stringify({ title: m.title, sourceMilestone: _proj ? _proj.name : null, assignee: '小因', milestoneId: mid })
+    }).catch(function(e){ console.warn('[dispatch] POST failed:', e); });
+  } else {
+    fetch(API + '/api/dispatch-session/' + encodeURIComponent(mid), {
+      method: 'DELETE', headers: GET_HEADERS
+    }).catch(function(e){ console.warn('[dispatch] DELETE failed:', e); });
+  }
 }
 
 function addColumn(){
