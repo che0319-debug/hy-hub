@@ -251,16 +251,17 @@ export default function Dispatch() {
                     </tr>
                     {expanded && (() => {
                       const isPending = session.status === 'pending'
+                      const isRunning = session.status === 'running'
                       const currentText = briefDrafts[session.milestoneId] !== undefined
                         ? briefDrafts[session.milestoneId]
                         : (session.briefText || (isPending ? BRIEF_TEMPLATE : ''))
                       return (
                         <tr>
                           <td colSpan={5} className="bg-slate-50 px-6 py-4 border-b border-slate-200">
-                            <div className="space-y-2">
-                              <p className="text-xs font-semibold text-slate-500">委派單</p>
+                            <div className="space-y-3">
                               {isPending ? (
-                                <>
+                                <div className="space-y-2">
+                                  <p className="text-xs font-semibold text-slate-500">委派單</p>
                                   <textarea
                                     value={currentText}
                                     onChange={e => setBriefDrafts(prev => ({ ...prev, [session.milestoneId]: e.target.value }))}
@@ -279,11 +280,38 @@ export default function Dispatch() {
                                       <span className="text-xs text-red-500">{saveErrors[session.milestoneId]}</span>
                                     )}
                                   </div>
-                                </>
+                                </div>
+                              ) : isRunning ? (
+                                <p className="text-xs text-slate-400 italic">執行中，產出尚未回報</p>
                               ) : (
-                                <pre className="text-xs text-slate-700 whitespace-pre-wrap font-mono bg-white border border-slate-200 rounded p-2">
-                                  {session.briefText || '（尚未填寫委派單）'}
-                                </pre>
+                                <>
+                                  {session.resultText ? (
+                                    <div className="space-y-2">
+                                      <div className="flex items-center justify-between">
+                                        <p className="text-xs font-semibold text-slate-500">產出全文</p>
+                                        <button
+                                          onClick={() => navigator.clipboard.writeText(session.resultText)}
+                                          className="px-2 py-0.5 text-xs border border-slate-300 text-slate-600 rounded hover:bg-slate-100 transition-colors"
+                                        >
+                                          複製全文
+                                        </button>
+                                      </div>
+                                      <pre className="text-xs text-slate-700 whitespace-pre-wrap font-mono bg-white border border-slate-200 rounded p-3 max-h-96 overflow-y-auto">
+                                        {session.resultText}
+                                      </pre>
+                                    </div>
+                                  ) : (
+                                    <p className="text-xs text-slate-400">（無產出全文）</p>
+                                  )}
+                                  {session.briefText && (
+                                    <div className="space-y-1">
+                                      <p className="text-xs font-semibold text-slate-400">委派單（唯讀）</p>
+                                      <pre className="text-xs text-slate-500 whitespace-pre-wrap font-mono bg-white border border-slate-100 rounded p-2">
+                                        {session.briefText}
+                                      </pre>
+                                    </div>
+                                  )}
+                                </>
                               )}
                             </div>
                           </td>
