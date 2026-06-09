@@ -84,7 +84,7 @@ header { background:var(--header-bg); padding:0 24px; display:flex; align-items:
 .kcard-title { font-size:13px; font-weight:600; color:var(--text); line-height:1.4; margin-bottom:8px; }
 .kcard-meta { display:flex; flex-wrap:wrap; gap:5px; margin-bottom:6px; align-items:center; }
 .due-chip { font-size:11px; padding:2px 7px; border-radius:10px; background:#f4f5f7; color:var(--text-muted); font-weight:500; }
-.due-chip.overdue { background:#ffebe6; color:var(--red); font-weight:700; }
+.due-chip.overdue { color: var(--red); background: #fff0ee; }
 .kcard-desc { font-size:12px; color:var(--text-muted); line-height:1.45; margin-bottom:6px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
 
 .kcard-execute { display:flex; align-items:center; justify-content:space-between; padding-top:8px; border-top:1px solid var(--border); margin-top:2px; }
@@ -254,7 +254,7 @@ var GET_HEADERS = { 'X-Read-Secret':SECRET, 'Cache-Control':'no-store' };
 var familyData  = {};
 var kanban      = { projects:[] };
 var dataLoaded  = false;
-var today       = new Date().toISOString().slice(0,10);
+var today       = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Taipei' });
 
 var DEFAULT_PROJECTS = [
   { id:'P_規劃',    name:'規劃',    color:'#5243aa', milestones:[] },

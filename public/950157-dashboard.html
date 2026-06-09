@@ -404,7 +404,7 @@ var GET_HEADERS = { 'X-Read-Secret':SECRET, 'Cache-Control':'no-store' };
 
 var progressData = [];
 var dataLoaded   = false;
-var today        = new Date().toISOString().slice(0,10);
+var today        = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Taipei' });
 
 var msProjIdx = null, msMsIdx = null, msIsNew = false;
 var sortables = [];

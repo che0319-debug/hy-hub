@@ -1112,7 +1112,7 @@ function formatDisplayDate(s) {
 }
 function isOverdue(due) {
   if (!due) return false;
-  const today = new Date().toISOString().split('T')[0].replace(/-/g, '/');
+  const today = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Taipei' }).replace(/-/g, '/');
   return due < today;
 }
 

@@ -412,7 +412,7 @@ var GET_HEADERS = { 'X-Read-Secret':SECRET, 'Cache-Control':'no-store' };
 var personalData = {};
 var progressData = [];
 var dataLoaded   = false;   // loadData 成功才 true；失敗保持 false，禁止寫入
-var today        = new Date().toISOString().slice(0,10);
+var today        = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Taipei' });
 
 var msProjIdx = null, msMsIdx = null, msIsNew = false;
 var sortables = [];
