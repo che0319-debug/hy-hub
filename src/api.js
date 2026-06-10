@@ -153,3 +153,39 @@ export async function fireDispatch(milestoneId) {
   if (!res.ok || !result.ok) throw new Error(result.error || `fireDispatch failed: ${res.status}`);
   return result;
 }
+
+export async function fetchTodaySchedule() {
+  const res = await fetch(`${API_BASE}/api/today-schedule`, {
+    headers: { "X-Read-Secret": READ_SECRET },
+  });
+  if (!res.ok) throw new Error(`fetchTodaySchedule failed: ${res.status}`);
+  return res.json();
+}
+
+// 聚合四隻 bot 的所有 milestone，回 [{title, due, _source, _project}]
+export async function fetchAllMilestones() {
+  const headers = { "X-Read-Secret": READ_SECRET };
+  const [hy, itri, family, sam] = await Promise.allSettled([
+    fetch(`${API_BASE}/api/personal-progress`, { headers }).then(r => r.json()),
+    fetch(`${API_BASE}/api/950157-progress`,   { headers }).then(r => r.json()),
+    fetch(`${API_BASE}/api/family-progress`,   { headers }).then(r => r.json()),
+    fetch(`${API_BASE}/api/sam-progress`,      { headers }).then(r => r.json()),
+  ]);
+
+  const out = [];
+  const extract = (result, getProjects, source) => {
+    if (result.status !== "fulfilled") return;
+    for (const p of getProjects(result.value) || []) {
+      for (const m of p.milestones || []) {
+        out.push({ title: m.title, due: m.due || "", _source: source, _project: p.name });
+      }
+    }
+  };
+
+  extract(hy,     v => v.projects,              "HY");
+  extract(itri,   v => v.projects,              "950157");
+  extract(family, v => v._kanban?.projects,     "家庭");
+  extract(sam,    v => v._kanban?.projects,     "Sam");
+
+  return out;
+}
