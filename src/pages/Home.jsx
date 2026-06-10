@@ -60,15 +60,22 @@ function TodoSection() {
   const upcoming = (milestones || [])
     .filter(m => {
       const d = normalizeDue(m.due)
-      return d && d >= today && d <= limit
+      return d && d <= limit
     })
     .sort((a, b) => normalizeDue(a.due).localeCompare(normalizeDue(b.due)))
+
+  function dueDateColor(due) {
+    const d = normalizeDue(due)
+    if (d < today) return 'text-red-500'
+    if (d === today) return 'text-blue-500'
+    return 'text-slate-500'
+  }
 
   return (
     <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-5 flex flex-col gap-3">
       <p className="text-sm font-semibold text-slate-700">
         待辦清單
-        <span className="ml-2 text-xs font-normal text-slate-400">近 3 天</span>
+        <span className="ml-2 text-xs font-normal text-slate-400">逾期 + 近 3 天</span>
       </p>
 
       {milestones === null ? (
@@ -81,9 +88,9 @@ function TodoSection() {
             <li key={i} className="flex items-start justify-between gap-2 px-1">
               <div className="flex-1 min-w-0">
                 <p className="text-xs font-medium text-slate-800 truncate">{m.title}</p>
-                <p className="text-xs text-slate-400 mt-0.5">{m._source} · {m._project}</p>
+                <p className="text-xs text-slate-400 mt-0.5">{m._source}</p>
               </div>
-              <span className="text-xs font-mono text-slate-500 flex-shrink-0 pt-0.5">
+              <span className={`text-xs font-mono flex-shrink-0 pt-0.5 ${dueDateColor(m.due)}`}>
                 {normalizeDue(m.due).slice(5)}
               </span>
             </li>
