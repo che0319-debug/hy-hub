@@ -166,7 +166,7 @@ export default function Home() {
       <div className="flex items-center justify-between mb-6">
         <div>
           <h1 className="text-xl font-bold text-slate-800">{homeSummary.greeting}</h1>
-          <p className="text-slate-500 text-sm">{homeSummary.date}</p>
+          <p className="text-slate-500 text-sm">{todayTaipei()}</p>
         </div>
         <div className="flex rounded-md overflow-hidden border border-slate-200">
           <button
