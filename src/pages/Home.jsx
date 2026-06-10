@@ -71,6 +71,14 @@ function TodoSection() {
     return 'text-slate-500'
   }
 
+  function formatDue(due) {
+    const d = normalizeDue(due)
+    if (!d) return ''
+    const [y, mo, dd] = d.split('-').map(Number)
+    const weekday = ['日','一','二','三','四','五','六'][new Date(y, mo - 1, dd).getDay()]
+    return `${d.slice(5)} (${weekday})`
+  }
+
   return (
     <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-5 flex flex-col gap-3">
       <p className="text-sm font-semibold text-slate-700">
@@ -84,17 +92,17 @@ function TodoSection() {
         <p className="text-xs text-slate-400">近 3 天沒有待辦</p>
       ) : (
         <ul className="space-y-2">
-          {upcoming.map((m, i) => (
-            <li key={i} className="flex items-start justify-between gap-2 px-1">
-              <div className="flex-1 min-w-0">
-                <p className="text-xs font-medium text-slate-800 truncate">{m.title}</p>
-                <p className="text-xs text-slate-400 mt-0.5">{m._source}</p>
-              </div>
-              <span className={`text-xs font-mono flex-shrink-0 pt-0.5 ${dueDateColor(m.due)}`}>
-                {normalizeDue(m.due).slice(5)}
-              </span>
-            </li>
-          ))}
+          {upcoming.map((m, i) => {
+            const color = dueDateColor(m.due)
+            return (
+              <li key={i} className="flex items-center justify-between gap-2 px-1">
+                <p className={`text-xs font-medium flex-1 min-w-0 truncate ${color}`}>{m.title}</p>
+                <span className={`text-xs font-mono flex-shrink-0 ${color}`}>
+                  {formatDue(m.due)}
+                </span>
+              </li>
+            )
+          })}
         </ul>
       )}
     </div>
