@@ -206,7 +206,8 @@ export default function Home() {
             <MetricCard
               icon={Coins}
               label="花費"
-              value={`$${homeSummary.todayCost.toFixed(2)}`}
+              value="查看 Console →"
+              onClick={() => window.open('https://console.anthropic.com', '_blank')}
             />
           </div>
 
