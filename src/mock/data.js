@@ -1,7 +1,6 @@
 // 頂部狀態列
 export const topbar = {
   pendingCount: 2,       // 待我處理數
-  todayCost: 0.42,       // 今日花費 (USD)
   systemStatus: "ok"     // "ok" | "partial" | "down"
 };
 

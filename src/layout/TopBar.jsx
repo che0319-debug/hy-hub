@@ -1,4 +1,4 @@
-import { Bell, Coins } from 'lucide-react'
+import { Bell } from 'lucide-react'
 import { topbar } from '../mock/data'
 
 const statusConfig = {
@@ -20,11 +20,6 @@ export default function TopBar() {
           <span className={topbar.pendingCount > 0 ? 'text-red-500 font-semibold' : ''}>
             {topbar.pendingCount}
           </span>
-        </div>
-        {/* 今日花費 */}
-        <div className="flex items-center gap-1.5 text-slate-300">
-          <Coins size={16} />
-          <span>${topbar.todayCost.toFixed(2)}</span>
         </div>
         {/* 系統狀態 */}
         <div className="flex items-center gap-1.5 text-slate-300">
