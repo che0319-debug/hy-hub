@@ -7,11 +7,7 @@ export const topbar = {
 
 // 首頁摘要
 export const homeSummary = {
-  date: "2026-05-28",
   greeting: "早安 HY",
-  pendingCount: 2,
-  todayDone: 3,
-  todayCost: 0.42
 };
 
 // Bot 團隊

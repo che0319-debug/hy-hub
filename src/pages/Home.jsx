@@ -200,8 +200,8 @@ export default function Home() {
             />
             <MetricCard
               icon={CheckCircle}
-              label="今日做了"
-              value={homeSummary.todayDone}
+              label="進行中派工"
+              value={`${sessions.filter(s => s.status === 'running').length} 件`}
             />
             <MetricCard
               icon={Coins}

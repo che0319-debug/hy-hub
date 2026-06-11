@@ -154,6 +154,14 @@ export async function fireDispatch(milestoneId) {
   return result;
 }
 
+export async function fetchMemoryHealth() {
+  const res = await fetch(`${API_BASE}/api/memory-health`, {
+    headers: { "X-Read-Secret": READ_SECRET },
+  });
+  if (!res.ok) throw new Error(`fetchMemoryHealth failed: ${res.status}`);
+  return res.json();
+}
+
 export async function fetchTodaySchedule() {
   const res = await fetch(`${API_BASE}/api/today-schedule`, {
     headers: { "X-Read-Secret": READ_SECRET },
