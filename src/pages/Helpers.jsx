@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { Link } from 'react-router-dom'
 import { fetchMemoryHealth } from '../api'
 
 const BOT_META = {
@@ -8,6 +9,7 @@ const BOT_META = {
   sam:     { name: 'Sam',    role: '副業統籌' },
 }
 const BOT_ORDER = ['hy', '950157', 'family', 'sam']
+const AGENT_ROUTE_ID = { hy: 'hy', '950157': '950157', family: 'xiaoyin', sam: 'sam' }
 const TZ = 'Asia/Taipei'
 
 function taipeiDateStr(ts) {
@@ -62,11 +64,20 @@ function BotCard({ botId, health }) {
   const meta    = BOT_META[botId]
   const daily   = dailyHealth(health?.daily_last)
   const reviews = reviewsHealth(health?.reviews_last)
+  const agentId = AGENT_ROUTE_ID[botId]
   return (
     <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-5 flex flex-col gap-3">
-      <div>
-        <p className="text-base font-bold text-slate-800">{meta.name}</p>
-        <p className="text-xs text-slate-500 mt-0.5">{meta.role}</p>
+      <div className="flex items-start justify-between gap-2">
+        <div>
+          <p className="text-base font-bold text-slate-800">{meta.name}</p>
+          <p className="text-xs text-slate-500 mt-0.5">{meta.role}</p>
+        </div>
+        <Link
+          to={`/agent/${agentId}`}
+          className="text-xs text-slate-400 hover:text-blue-600 flex-shrink-0 mt-0.5"
+        >
+          ⚙ 人設
+        </Link>
       </div>
       <div className="flex flex-col gap-1.5">
         <HealthRow rowLabel="記憶更新" h={daily} />
