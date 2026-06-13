@@ -6,7 +6,6 @@ import App from './App'
 import Home from './pages/Home'
 import Helpers from './pages/Helpers'
 import Dispatch from './pages/Dispatch'
-import CrossDomain from './pages/CrossDomain'
 import LineHY from './pages/LineHY'
 import LineXiaoyin from './pages/LineXiaoyin'
 import Line950157 from './pages/Line950157'
@@ -24,7 +23,6 @@ createRoot(document.getElementById('root')).render(
           <Route index element={<Home />} />
           <Route path="helpers" element={<Helpers />} />
           <Route path="dispatch" element={<Dispatch />} />
-          <Route path="cross" element={<CrossDomain />} />
           <Route path="line/hy" element={<LineHY />} />
           <Route path="line/xiaoyin" element={<LineXiaoyin />} />
           <Route path="line/950157" element={<Line950157 />} />

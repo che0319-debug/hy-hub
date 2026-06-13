@@ -184,42 +184,6 @@ export const boardSam = {
   ]
 };
 
-// 財務全景：mock·數字全假·結構對齊 HY Excel（待接記帳/副業系統）
-export const financeData = {
-  currentYear: 2026,
-  // 年度歷史（2018-2025 固定假值；2026 由當年收支推導，不寫死）
-  yearlyHistory: [
-    { year: 2018, passiveIncome: 30000,  totalExpense: 140000 },
-    { year: 2019, passiveIncome: 50000,  totalExpense: 150000 },
-    { year: 2020, passiveIncome: 70000,  totalExpense: 180000 },
-    { year: 2021, passiveIncome: 120000, totalExpense: 200000 },
-    { year: 2022, passiveIncome: 160000, totalExpense: 230000 },
-    { year: 2023, passiveIncome: 240000, totalExpense: 280000 },
-    { year: 2024, passiveIncome: 380000, totalExpense: 320000 },
-    { year: 2025, passiveIncome: 150000, totalExpense: 290000 },
-  ],
-  // 收入源（可加減）category: 本業 / 副業 / 投資 / 被動其他
-  incomeSources: [
-    { id: 'inc-1', name: '本業薪資',   amount: 80000, category: '本業',   linkable: false },
-    { id: 'inc-2', name: '副業-餐飲',  amount: 18000, category: '副業',   linkable: true  },
-    { id: 'inc-3', name: '副業-電商',  amount: 22000, category: '副業',   linkable: true  },
-    { id: 'inc-4', name: '股票股利',   amount: 8000,  category: '投資',   linkable: false },
-    { id: 'inc-5', name: '基金配息',   amount: 12000, category: '投資',   linkable: false },
-    { id: 'inc-6', name: '租金收入',   amount: 15000, category: '被動其他', linkable: false },
-  ],
-  // 支出（可加減）layer: 固定 / 家庭 / 個人
-  expenses: [
-    { id: 'exp-1', name: '勞健保',   amount: 10000, layer: '固定' },
-    { id: 'exp-2', name: '保險',     amount: 5000,  layer: '固定' },
-    { id: 'exp-3', name: '房貸',     amount: 60000, layer: '固定' },
-    { id: 'exp-4', name: '所得稅',   amount: 8000,  layer: '固定' },
-    { id: 'exp-5', name: '教育',     amount: 20000, layer: '家庭' },
-    { id: 'exp-6', name: '醫療',     amount: 12000, layer: '家庭' },
-    { id: 'exp-7', name: '家庭生活', amount: 30000, layer: '家庭' },
-    { id: 'exp-8', name: '個人娛樂', amount: 15000, layer: '個人' },
-  ],
-};
-
 // 人生目標：mock·七維度三層·人生自由指數（HY 5/30 拍板第一版·接後端前先用此 mock）
 // score = Σ(維度進度 × 權重 / 100)，四捨五入
 export function computeScore(dimensions) {

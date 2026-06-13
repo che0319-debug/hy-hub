@@ -174,6 +174,11 @@ function DimEditForm({ dim, onSave, onDelete, onCancel }) {
 
 // ─── ① CurrentStateSection ───────────────────────────────────────────────────
 
+const MULTI_METRICS_TEMPLATE = [
+  { key: 'netWorth', label: '總資產', value: null, target: null, unit: '萬' },
+  { key: 'cashflow', label: '現金流', value: null, target: null, unit: '萬/月' },
+]
+
 function CurrentStateSection({ dimId, cs, onSave }) {
   const [editing, setEditing] = useState(false)
   const [type, setType] = useState('text')
@@ -181,24 +186,43 @@ function CurrentStateSection({ dimId, cs, onSave }) {
   const [target, setTarget] = useState('')
   const [unit, setUnit] = useState('')
   const [note, setNote] = useState('')
+  const [metrics, setMetrics] = useState(MULTI_METRICS_TEMPLATE.map(m => ({ ...m })))
 
   function startEdit() {
-    setType(cs?.type ?? 'text')
+    const t = cs?.type ?? 'text'
+    setType(t)
     setValue(cs?.value != null ? String(cs.value) : '')
     setTarget(cs?.target != null ? String(cs.target) : '')
     setUnit(cs?.unit ?? '')
     setNote(cs?.note ?? '')
+    if (t === 'multi') {
+      const saved = cs?.metrics || []
+      setMetrics(MULTI_METRICS_TEMPLATE.map(tmpl => {
+        const found = saved.find(m => m.key === tmpl.key)
+        return found ? { ...tmpl, value: found.value ?? null, target: found.target ?? null } : { ...tmpl }
+      }))
+    }
     setEditing(true)
   }
 
+  function updateMetric(idx, field, raw) {
+    setMetrics(prev => prev.map((m, i) =>
+      i !== idx ? m : { ...m, [field]: raw === '' ? null : Number(raw) }
+    ))
+  }
+
   function confirm() {
-    onSave({
-      type,
-      value: type === 'quant' ? (value !== '' ? Number(value) : null) : null,
-      target: type === 'quant' ? (target !== '' ? Number(target) : null) : null,
-      unit: type === 'quant' ? unit : '',
-      note,
-    })
+    if (type === 'multi') {
+      onSave({ type: 'multi', metrics: metrics.map(m => ({ ...m })) })
+    } else {
+      onSave({
+        type,
+        value: type === 'quant' ? (value !== '' ? Number(value) : null) : null,
+        target: type === 'quant' ? (target !== '' ? Number(target) : null) : null,
+        unit: type === 'quant' ? unit : '',
+        note,
+      })
+    }
     setEditing(false)
   }
 
@@ -206,7 +230,31 @@ function CurrentStateSection({ dimId, cs, onSave }) {
     return (
       <div className="flex items-start gap-2">
         <div className="flex-1 min-w-0">
-          {cs?.type === 'quant' && cs.value != null && cs.target != null ? (
+          {cs?.type === 'multi' ? (
+            <div className="space-y-1">
+              {(cs.metrics || []).map(m => {
+                const hasData = m.value != null && m.target != null
+                const diff = hasData ? m.target - m.value : null
+                const achieved = hasData && m.value >= m.target
+                return (
+                  <div key={m.key} className="text-xs">
+                    <span className="text-slate-500">{m.label}：</span>
+                    {hasData ? (
+                      <>
+                        <span className="font-medium text-slate-700">{m.value.toLocaleString()} / {m.target.toLocaleString()} {m.unit}</span>
+                        {achieved
+                          ? <span className="ml-1.5 text-green-600 font-medium">已達標</span>
+                          : <span className="ml-1.5 text-red-500">▼ 差 {diff.toLocaleString()} {m.unit}</span>
+                        }
+                      </>
+                    ) : (
+                      <span className="text-slate-300 italic">未記錄</span>
+                    )}
+                  </div>
+                )
+              })}
+            </div>
+          ) : cs?.type === 'quant' && cs.value != null && cs.target != null ? (
             <div>
               <div className="flex items-center gap-2 text-xs text-slate-600">
                 <span className="font-medium">{cs.value} / {cs.target}{cs.unit ? ` ${cs.unit}` : ''}</span>
@@ -240,8 +288,28 @@ function CurrentStateSection({ dimId, cs, onSave }) {
           <input type="radio" name={`cs-type-${dimId}`} checked={type === 'quant'} onChange={() => setType('quant')} />
           <span>量化</span>
         </label>
+        <label className="flex items-center gap-1 cursor-pointer">
+          <input type="radio" name={`cs-type-${dimId}`} checked={type === 'multi'} onChange={() => setType('multi')} />
+          <span>雙指標</span>
+        </label>
       </div>
-      {type === 'quant' ? (
+      {type === 'multi' ? (
+        <div className="flex flex-col gap-2">
+          {metrics.map((m, i) => (
+            <div key={m.key} className="flex gap-1.5 items-center flex-wrap">
+              <span className="text-slate-500 w-20 flex-shrink-0">{m.label}（{m.unit}）</span>
+              <span className="text-slate-400">目標</span>
+              <input type="number" value={m.target ?? ''} onChange={e => updateMetric(i, 'target', e.target.value)}
+                placeholder="目標值"
+                className="w-20 border border-slate-200 rounded px-2 py-1 outline-none focus:border-blue-400 bg-white" />
+              <span className="text-slate-400">現況</span>
+              <input type="number" value={m.value ?? ''} onChange={e => updateMetric(i, 'value', e.target.value)}
+                placeholder="現況"
+                className="w-20 border border-slate-200 rounded px-2 py-1 outline-none focus:border-blue-400 bg-white" />
+            </div>
+          ))}
+        </div>
+      ) : type === 'quant' ? (
         <div className="flex gap-1.5 items-center flex-wrap">
           <input type="number" value={value} onChange={e => setValue(e.target.value)} placeholder="目前值"
             className="w-20 border border-slate-200 rounded px-2 py-1 outline-none focus:border-blue-400 bg-white" />
