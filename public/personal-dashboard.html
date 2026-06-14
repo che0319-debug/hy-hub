@@ -497,7 +497,7 @@ function toggleDelegatedHY(event, pid, cardId, checked) {
   if (checked) {
     fetch(API + '/api/dispatch-session', {
       method: 'POST', headers: HEADERS,
-      body: JSON.stringify({ title: m.title, sourceMilestone: p.name, assignee: 'HY', milestoneId: cardId })
+      body: JSON.stringify({ title: m.title, sourceMilestone: p.name, assignee: 'HY', milestoneId: cardId, desc: m.description || '' })
     }).catch(function(e){ console.warn('[dispatch] POST failed:', e); });
   } else {
     fetch(API + '/api/dispatch-session/' + encodeURIComponent(cardId), {

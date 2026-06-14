@@ -19,16 +19,36 @@ const BRIEF_TEMPLATE = `【任務目標】
 （一句話講清楚要 routine 產出什麼）
 
 【背景脈絡】
-（這張卡的來龍去脈、為什麼派、要注意的前提）
+（此處自動填入該卡片的 desc）
 
 【參考資料】
-（要 routine 去 hy-data 看哪些檔／路徑，例如 progress_data.json 的哪個 project、xxx_daily.json。routine 唯讀，只讀不寫）
+（要 routine 去 hy-data 看哪些檔／路徑。routine 唯讀，只讀不寫）
 
 【輸出格式】
 （條列摘要 / 表格 / 草稿全文 等）
 
 【交付形式】
 （Telegram 摘要回報 / 產出 .md 草稿）`
+
+function buildDraftText(desc) {
+  const descPart = (desc || '').trim()
+  return [
+    '【任務目標】',
+    '（一句話講清楚要 routine 產出什麼）',
+    '',
+    '【背景脈絡】',
+    descPart || '（此處自動填入該卡片的 desc）',
+    '',
+    '【參考資料】',
+    '（要 routine 去 hy-data 看哪些檔／路徑。routine 唯讀，只讀不寫）',
+    '',
+    '【輸出格式】',
+    '（條列摘要 / 表格 / 草稿全文 等）',
+    '',
+    '【交付形式】',
+    '（Telegram 摘要回報 / 產出 .md 草稿）',
+  ].join('\n')
+}
 
 function StatusBadge({ status }) {
   const cfg = STATUS_CONFIG[status] ?? { label: status, cls: 'bg-slate-100 text-slate-500' }
@@ -81,6 +101,9 @@ export default function Dispatch() {
   // 委派單儲存錯誤：{ [milestoneId]: string }
   const [saveErrors, setSaveErrors] = useState({})
 
+  // 派發確認 modal
+  const [fireModal, setFireModal] = useState({ open: false, session: null, text: '' })
+
   async function handleSaveBrief(milestoneId, text) {
     setSavingIds(prev => ({ ...prev, [milestoneId]: true }))
     setSaveErrors(prev => { const n = { ...prev }; delete n[milestoneId]; return n })
@@ -116,6 +139,21 @@ export default function Dispatch() {
     } finally {
       setFiringIds(prev => { const n = { ...prev }; delete n[milestoneId]; return n })
     }
+  }
+
+  function openFireModal(session) {
+    const text =
+      briefDrafts[session.milestoneId] !== undefined ? briefDrafts[session.milestoneId] :
+      session.briefText                              ? session.briefText :
+      buildDraftText(session.desc || '')
+    setFireModal({ open: true, session, text })
+  }
+
+  async function confirmFire() {
+    const { session, text } = fireModal
+    setFireModal(prev => ({ ...prev, open: false }))
+    setBriefDrafts(prev => ({ ...prev, [session.milestoneId]: text }))
+    await handleFire(session.milestoneId)
   }
 
   // filterStatus: 'all'（預設）| 'active' | 單一 status 值
@@ -234,7 +272,7 @@ export default function Dispatch() {
                           </button>
                           {session.status === 'pending' && (
                             <button
-                              onClick={() => handleFire(session.milestoneId)}
+                              onClick={() => openFireModal(session)}
                               disabled={firingIds[session.milestoneId]}
                               className="text-xs px-2 py-0.5 bg-violet-600 text-white rounded hover:bg-violet-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                             >
@@ -329,6 +367,45 @@ export default function Dispatch() {
       <p className="mt-3 text-xs text-slate-400">
         顯示 {filtered.length} / {sessions.length} 筆
       </p>
+
+      {/* 派發確認 modal */}
+      {fireModal.open && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/40"
+          onClick={e => { if (e.target === e.currentTarget) setFireModal(prev => ({ ...prev, open: false })) }}
+        >
+          <div className="bg-white rounded-xl shadow-xl w-full max-w-xl mx-4 p-6 flex flex-col gap-4">
+            <div>
+              <h2 className="text-base font-bold text-slate-800 mb-1">委派單草稿</h2>
+              <p className="text-xs text-slate-400">
+                {fireModal.session?.title}
+                {fireModal.session?.sourceMilestone ? ` ／ ${fireModal.session.sourceMilestone}` : ''}
+              </p>
+            </div>
+            <textarea
+              value={fireModal.text}
+              onChange={e => setFireModal(prev => ({ ...prev, text: e.target.value }))}
+              rows={16}
+              className="w-full text-xs font-mono border border-slate-200 rounded p-2 bg-slate-50 resize-y focus:outline-none focus:ring-2 focus:ring-violet-400"
+            />
+            <div className="flex justify-end gap-2">
+              <button
+                onClick={() => setFireModal(prev => ({ ...prev, open: false }))}
+                className="px-4 py-1.5 text-sm border border-slate-300 text-slate-600 rounded-lg hover:bg-slate-50 transition-colors"
+              >
+                取消
+              </button>
+              <button
+                onClick={confirmFire}
+                disabled={firingIds[fireModal.session?.milestoneId]}
+                className="px-4 py-1.5 text-sm bg-violet-600 text-white rounded-lg hover:bg-violet-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {firingIds[fireModal.session?.milestoneId] ? '派發中…' : '確認派發'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

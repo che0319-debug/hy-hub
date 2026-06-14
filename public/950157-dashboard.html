@@ -482,7 +482,7 @@ function toggleDelegated(pid, cardId, event) {
   if (m.delegated_to_950157) {
     fetch(API + '/api/dispatch-session', {
       method: 'POST', headers: HEADERS,
-      body: JSON.stringify({ title: m.title, sourceMilestone: p.name, assignee: '950157', milestoneId: cardId })
+      body: JSON.stringify({ title: m.title, sourceMilestone: p.name, assignee: '950157', milestoneId: cardId, desc: m.description || '' })
     }).catch(function(e){ console.warn('[dispatch] POST failed:', e); });
   } else {
     fetch(API + '/api/dispatch-session/' + encodeURIComponent(cardId), {

@@ -412,7 +412,7 @@ function toggleExecute(mid){
   if (m.delegated_to_family) {
     fetch(API + '/api/dispatch-session', {
       method: 'POST', headers: HEADERS,
-      body: JSON.stringify({ title: m.title, sourceMilestone: _proj ? _proj.name : null, assignee: '小因', milestoneId: mid })
+      body: JSON.stringify({ title: m.title, sourceMilestone: _proj ? _proj.name : null, assignee: '小因', milestoneId: mid, desc: m.description || '' })
     }).catch(function(e){ console.warn('[dispatch] POST failed:', e); });
   } else {
     fetch(API + '/api/dispatch-session/' + encodeURIComponent(mid), {
