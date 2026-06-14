@@ -64,11 +64,6 @@ export default function Dispatch() {
   const { sessions: ctxSessions } = useSessionContext()
   const [sessions, setSessions] = useState(ctxSessions)
 
-  // 接住 App.jsx mount-time GET 的非同步結果（ctxSessions 從 [] 變成實際資料時同步一次）
-  useEffect(() => {
-    setSessions(ctxSessions)
-  }, [ctxSessions])
-
   // mount 時 GET（每次路由切到此頁都 mount，是 iframe→派工清單的主要刷新機制）
   useEffect(() => {
     fetchDispatchSessions()

@@ -5,6 +5,7 @@ export async function fetchPersonalData() {
   const res = await fetch(`${API_BASE}/api/personal-data`, {
     method: "GET",
     headers: { "X-Read-Secret": READ_SECRET },
+    cache: 'no-store',
   });
   if (!res.ok) {
     throw new Error(`fetchPersonalData failed: ${res.status}`);
@@ -26,6 +27,7 @@ export async function fetchLifeGoals() {
   const res = await fetch(`${API_BASE}/api/life-goals`, {
     method: "GET",
     headers: { "X-Read-Secret": READ_SECRET },
+    cache: 'no-store',
   });
   if (!res.ok) throw new Error(`fetchLifeGoals failed: ${res.status}`);
   return res.json();
@@ -55,6 +57,7 @@ export async function saveLifeGoals(payload) {
 export async function fetchProfile() {
   const res = await fetch(`${API_BASE}/api/profile`, {
     headers: { "X-Read-Secret": READ_SECRET },
+    cache: 'no-store',
   });
   if (!res.ok) throw new Error(`fetchProfile failed: ${res.status}`);
   return res.json();
@@ -74,6 +77,7 @@ export async function saveProfile(payload) {
 export async function fetchPersona(bot) {
   const res = await fetch(`${API_BASE}/api/persona?bot=${encodeURIComponent(bot)}`, {
     headers: { "X-Read-Secret": READ_SECRET },
+    cache: 'no-store',
   });
   if (!res.ok) throw new Error(`fetchPersona failed: ${res.status}`);
   return res.json();
@@ -93,6 +97,7 @@ export async function savePersona(bot, payload) {
 export async function fetchAgentTools(bot) {
   const res = await fetch(`${API_BASE}/api/agent-tools?bot=${encodeURIComponent(bot)}`, {
     headers: { "X-Read-Secret": READ_SECRET },
+    cache: 'no-store',
   });
   if (!res.ok) throw new Error(`fetchAgentTools failed: ${res.status}`);
   return res.json();
@@ -101,6 +106,7 @@ export async function fetchAgentTools(bot) {
 export async function fetchAgentModels() {
   const res = await fetch(`${API_BASE}/api/agent-models`, {
     headers: { "X-Read-Secret": READ_SECRET },
+    cache: 'no-store',
   });
   if (!res.ok) throw new Error(`fetchAgentModels failed: ${res.status}`);
   return res.json();
@@ -109,6 +115,7 @@ export async function fetchAgentModels() {
 export async function fetchDispatchSessions() {
   const res = await fetch(`${API_BASE}/api/dispatch-sessions`, {
     headers: { "X-Read-Secret": READ_SECRET },
+    cache: 'no-store',
   });
   if (!res.ok) throw new Error(`fetchDispatchSessions failed: ${res.status}`);
   return res.json();
@@ -157,6 +164,7 @@ export async function fireDispatch(milestoneId) {
 export async function fetchMemoryHealth() {
   const res = await fetch(`${API_BASE}/api/memory-health`, {
     headers: { "X-Read-Secret": READ_SECRET },
+    cache: 'no-store',
   });
   if (!res.ok) throw new Error(`fetchMemoryHealth failed: ${res.status}`);
   return res.json();
@@ -165,6 +173,7 @@ export async function fetchMemoryHealth() {
 export async function fetchTodaySchedule() {
   const res = await fetch(`${API_BASE}/api/today-schedule`, {
     headers: { "X-Read-Secret": READ_SECRET },
+    cache: 'no-store',
   });
   if (!res.ok) throw new Error(`fetchTodaySchedule failed: ${res.status}`);
   return res.json();
