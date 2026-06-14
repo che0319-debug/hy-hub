@@ -179,6 +179,10 @@ header { background:var(--header-bg); padding:0 24px; display:flex; align-items:
 }
 .due-chip.overdue { color: var(--red); background: #fff0ee; }
 
+.execute-row { display: flex; align-items: center; gap: 6px; margin-top: 5px; }
+.execute-checkbox { width: 15px; height: 15px; cursor: pointer; accent-color: var(--blue); flex-shrink: 0; }
+.execute-label { font-size: 11px; color: var(--text-muted); font-weight: 600; user-select: none; }
+
 .add-card-btn {
   margin: 5px 8px 8px;
   background: none;
@@ -463,14 +467,43 @@ function renderCardHTML(p, m, mi){
   var descHtml = m.description
     ? '<div class="card-desc">📋 '+escHtml(m.description)+'</div>'
     : '';
+  var delegated = m.delegated_to_hy ? true : false;
+  var executeRow = '<div class="execute-row" style="margin-left:auto" onclick="event.stopPropagation()">'
+    + '<input type="checkbox" class="execute-checkbox"'+(delegated?' checked':'')
+    + ' data-pid="'+p.id+'" data-card-id="'+m.id+'"'
+    + ' title="勾選後由助理執行"'
+    + ' onchange="toggleDelegatedHY(event,\''+p.id+'\',\''+m.id+'\',this.checked)">'
+    + '<span class="execute-label">交給助理</span>'
+    + '</div>';
   return '<div class="card" data-pid="'+p.id+'" data-card-id="'+m.id+'">'
     + '<div class="card-top">'
     +   '<div class="card-title">'+escHtml(m.title)+'</div>'
     +   '<button class="card-del-btn" title="刪除此里程碑" data-action="del-card" data-pid="'+p.id+'" data-card-id="'+m.id+'">✗</button>'
     + '</div>'
     + descHtml
-    + (dueHtml ? '<div class="card-footer">'+dueHtml+'</div>' : '')
+    + '<div class="card-footer">'+(dueHtml||'')+executeRow+'</div>'
     + '</div>';
+}
+
+function toggleDelegatedHY(event, pid, cardId, checked) {
+  var p = progressData.find(function(x){ return x.id === pid; });
+  var mi = -1;
+  if (p) { for (var i = 0; i < p.milestones.length; i++) { if (p.milestones[i].id === cardId) { mi = i; break; } } }
+  if (mi < 0) { console.warn('toggleDelegatedHY: card not found', cardId); return; }
+  var m = p.milestones[mi];
+  m.delegated_to_hy = checked;
+  saveProgress(null);
+  renderProgress();
+  if (checked) {
+    fetch(API + '/api/dispatch-session', {
+      method: 'POST', headers: HEADERS,
+      body: JSON.stringify({ title: m.title, sourceMilestone: p.name, assignee: 'HY', milestoneId: cardId })
+    }).catch(function(e){ console.warn('[dispatch] POST failed:', e); });
+  } else {
+    fetch(API + '/api/dispatch-session/' + encodeURIComponent(cardId), {
+      method: 'DELETE', headers: GET_HEADERS
+    }).catch(function(e){ console.warn('[dispatch] DELETE failed:', e); });
+  }
 }
 
 function renderColumnHTML(p){
