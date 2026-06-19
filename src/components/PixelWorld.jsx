@@ -1,7 +1,7 @@
 import { useRef, useEffect } from 'react'
 
 const WORLD_W = 640
-const WORLD_H = 480
+const WORLD_H = 360
 const DRAW_SCALE = 2
 const SCALE_MIN = 0.5
 const SCALE_MAX = 3.0
@@ -12,8 +12,8 @@ const DONE_RECENT_H = 24
 const SLIDE_MS = 2500
 
 const HY_W = 192
-const ROOMS_H = 221
-const CORR_H = 43
+const ROOMS_H = 168
+const CORR_H = 26
 const ROOM_W = Math.floor((WORLD_W - HY_W) / 3)
 const ROOM_W3 = WORLD_W - HY_W - ROOM_W * 2
 const OPEN_Y = ROOMS_H + CORR_H
@@ -46,20 +46,20 @@ const ZONES = [
 ]
 
 const ZONE_ITEMS = {
-  hy_work:    [['rug_rect', 20, 100], ['desk_long', 12, 70], ['chair', 120, 90], ['plant', 6, 40]],
-  hy_meeting: [['desk_long', 40, 100]],
-  '950157':   [['rug_oval_grey', 34, 80], ['desk_long', 14, 60], ['chair', 100, 80], ['plant', 6, 20]],
-  '小因':     [['bed_blue', 8, 18], ['plant', 108, 18], ['rug_oval_tan', 34, 110], ['desk_long', 14, 150]],
-  Sam:        [['rug_green', 16, 100], ['desk_long', 16, 46], ['chair', 108, 66], ['sofa', 10, 140]],
+  hy_work:    [['rug_rect', 20, 76], ['desk_long', 12, 50], ['chair', 120, 66], ['plant', 6, 20]],
+  hy_meeting: [['desk_long', 40, 60]],
+  '950157':   [['rug_oval_grey', 34, 60], ['desk_long', 14, 40], ['chair', 100, 60], ['plant', 6, 14]],
+  '小因':     [['bed_blue', 8, 12], ['plant', 108, 12], ['rug_oval_tan', 34, 90]],
+  Sam:        [['rug_green', 16, 72], ['desk_long', 16, 30], ['chair', 108, 50], ['plant', 112, 12]],
   corridor:   [],
-  open:       [['rug_oval_tan', 30, 70], ['sofa', 310, 50], ['plant', 350, 30], ['plant', 400, 120]],
+  open:       [['rug_oval_tan', 30, 16], ['sofa', 288, 10], ['plant', 350, 8], ['plant', 398, 50]],
 }
 
 const HOME_POS = {
-  HY:      { x: 130,                        y: 160 },
-  '950157':{ x: HY_W + 80,                  y: 150 },
-  '小因':  { x: HY_W + ROOM_W + 80,         y: 150 },
-  Sam:     { x: HY_W + ROOM_W * 2 + 70,     y: 150 },
+  HY:      { x: 130,                        y: 110 },
+  '950157':{ x: HY_W + 80,                  y: 100 },
+  '小因':  { x: HY_W + ROOM_W + 80,         y: 100 },
+  Sam:     { x: HY_W + ROOM_W * 2 + 70,     y: 100 },
 }
 
 const OPEN_POS = {
