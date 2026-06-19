@@ -47,12 +47,12 @@ const ZONES = [
 
 const ZONE_ITEMS = {
   hy_work:    [['rug_rect', 20, 100], ['desk_long', 12, 70], ['chair', 120, 90], ['plant', 6, 40]],
-  hy_meeting: [['sofa', 24, 80]],
-  '950157':   [['rug_oval_grey', 34, 80], ['desk_long', 14, 80], ['stool', 100, 66]],
-  '小因':     [['bed_blue', 10, 18], ['rug_oval_tan', 38, 128], ['plant', 108, 18]],
-  Sam:        [['rug_green', 16, 100], ['desk_long', 16, 46], ['chair', 108, 66], ['chair', 20, 116]],
+  hy_meeting: [['desk_long', 40, 100]],
+  '950157':   [['rug_oval_grey', 34, 80], ['desk_long', 14, 60], ['chair', 112, 80], ['plant', 6, 20]],
+  '小因':     [['bed_blue', 8, 18], ['plant', 108, 18], ['rug_oval_tan', 34, 110], ['desk_long', 14, 150]],
+  Sam:        [['rug_green', 16, 100], ['desk_long', 16, 46], ['chair', 108, 66], ['sofa', 2, 140]],
   corridor:   [],
-  open:       [['rug_oval_tan', 100, 60], ['sofa', 40, 110], ['plant', 360, 50], ['plant', 390, 120]],
+  open:       [['sofa', 10, 30], ['rug_oval_tan', 60, 80], ['plant', 330, 30], ['plant', 380, 80]],
 }
 
 const HOME_POS = {
@@ -252,8 +252,8 @@ export default function PixelWorld({ healthData, sessions = [], onBotClick, onDo
       const cssH = parent.clientHeight
       canvas.width = cssW * dpr; canvas.height = cssH * dpr
       canvas.style.width = cssW + 'px'; canvas.style.height = cssH + 'px'
-      const scale = cssW / WORLD_W
-      trRef.current = { scale, ox: 0, oy: (cssH - WORLD_H * scale) / 2 }
+      const scale = Math.min(cssW / WORLD_W, cssH / WORLD_H)
+      trRef.current = { scale, ox: (cssW - WORLD_W * scale) / 2, oy: (cssH - WORLD_H * scale) / 2 }
       render()
     }
 

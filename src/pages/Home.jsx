@@ -242,16 +242,14 @@ export default function Home() {
           </div>
           <div
             className="bg-white rounded-xl overflow-hidden border border-slate-200 shadow-sm"
-            style={{ position: 'relative', paddingTop: '75%' }}
+            style={{ height: 'min(62vh, 480px)' }}
           >
-            <div style={{ position: 'absolute', inset: 0 }}>
-              <PixelWorld
-                healthData={healthData}
-                sessions={sessions}
-                onBotClick={handleBotClick}
-                onDocClick={() => navigate('/dispatch')}
-              />
-            </div>
+            <PixelWorld
+              healthData={healthData}
+              sessions={sessions}
+              onBotClick={handleBotClick}
+              onDocClick={() => navigate('/dispatch')}
+            />
           </div>
         </div>
       )}
