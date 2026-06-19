@@ -1,15 +1,21 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Bell, CheckCircle, Coins } from 'lucide-react'
+import { Bell, CheckCircle, Coins, RefreshCw } from 'lucide-react'
 import { homeSummary } from '../mock/data'
 import { useSessionContext } from '../App'
 import PixelWorld from '../components/PixelWorld'
-import { fetchTodaySchedule, fetchAllMilestones } from '../api'
+import { fetchTodaySchedule, fetchAllMilestones, fetchMemoryHealth } from '../api'
 
-// 待確認派工定義：需要我介入的 session（等我確認 + 失敗待處理）
 const PENDING_STATUSES = ['await', 'failed']
+const REFRESH_INTERVAL_MS = 60000
 
-// today 與 due 比較用 YYYY-MM-DD（Asia/Taipei，固定 UTC+8）
+const BOT_ROUTE = {
+  HY:      '/line/hy',
+  '950157':'/line/950157',
+  '小因':  '/line/xiaoyin',
+  Sam:     '/line/sam',
+}
+
 function todayTaipei() {
   return new Date(Date.now() + 8 * 3600 * 1000).toISOString().slice(0, 10)
 }
@@ -21,8 +27,7 @@ function addDays(ymd, n) {
 }
 
 function normalizeDue(due) {
-  if (!due) return ''
-  return due.replace(/\//g, '-')
+  return due ? due.replace(/\//g, '-') : ''
 }
 
 function MetricCard({ icon: Icon, label, value, highlight, onClick }) {
@@ -48,20 +53,13 @@ function TodoSection() {
   useEffect(() => {
     fetchAllMilestones()
       .then(data => setMilestones(data))
-      .catch(err => {
-        console.warn('[Home] fetchAllMilestones failed:', err)
-        setMilestones([])
-      })
+      .catch(err => { console.warn('[Home] fetchAllMilestones failed:', err); setMilestones([]) })
   }, [])
 
   const today = todayTaipei()
   const limit = addDays(today, 3)
-
   const upcoming = (milestones || [])
-    .filter(m => {
-      const d = normalizeDue(m.due)
-      return d && d <= limit
-    })
+    .filter(m => { const d = normalizeDue(m.due); return d && d <= limit })
     .sort((a, b) => normalizeDue(a.due).localeCompare(normalizeDue(b.due)))
 
   function dueDateColor(due) {
@@ -85,7 +83,6 @@ function TodoSection() {
         待辦清單
         <span className="ml-2 text-xs font-normal text-slate-400">逾期 + 近 3 天</span>
       </p>
-
       {milestones === null ? (
         <p className="text-xs text-slate-400">載入中…</p>
       ) : upcoming.length === 0 ? (
@@ -97,9 +94,7 @@ function TodoSection() {
             return (
               <li key={i} className="flex items-center justify-between gap-2 px-1">
                 <p className={`text-xs font-medium flex-1 min-w-0 truncate ${color}`}>{m.title}</p>
-                <span className={`text-xs font-mono flex-shrink-0 ${color}`}>
-                  {formatDue(m.due)}
-                </span>
+                <span className={`text-xs font-mono flex-shrink-0 ${color}`}>{formatDue(m.due)}</span>
               </li>
             )
           })}
@@ -111,18 +106,12 @@ function TodoSection() {
 
 function ScheduleSection() {
   const [events, setEvents] = useState(null)
-  const [error, setError] = useState(null)
+  const [error, setError]   = useState(null)
 
   useEffect(() => {
     fetchTodaySchedule()
-      .then(data => {
-        if (data.error) setError(data.error)
-        else setEvents(data.events || [])
-      })
-      .catch(err => {
-        console.warn('[Home] fetchTodaySchedule failed:', err)
-        setError(err.message)
-      })
+      .then(data => { if (data.error) setError(data.error); else setEvents(data.events || []) })
+      .catch(err => { console.warn('[Home] fetchTodaySchedule failed:', err); setError(err.message) })
   }, [])
 
   const sorted = (events || []).sort((a, b) => (a.start || '').localeCompare(b.start || ''))
@@ -130,7 +119,6 @@ function ScheduleSection() {
   return (
     <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-5 flex flex-col gap-3">
       <p className="text-sm font-semibold text-slate-700">今日行程</p>
-
       {events === null && !error ? (
         <p className="text-xs text-slate-400">載入中…</p>
       ) : error ? (
@@ -141,9 +129,7 @@ function ScheduleSection() {
         <ul className="space-y-2">
           {sorted.map((item, i) => (
             <li key={i} className="flex items-start gap-3 px-1">
-              <span className="text-xs font-mono text-slate-400 w-10 flex-shrink-0 pt-0.5">
-                {item.start || '全天'}
-              </span>
+              <span className="text-xs font-mono text-slate-400 w-10 flex-shrink-0 pt-0.5">{item.start || '全天'}</span>
               <p className="text-xs text-slate-800">{item.title}</p>
             </li>
           ))}
@@ -154,12 +140,41 @@ function ScheduleSection() {
 }
 
 export default function Home() {
-  const [view, setView] = useState('data')
-  const { sessions } = useSessionContext()
-  const navigate = useNavigate()
+  const [view, setView]           = useState('data')
+  const [healthData, setHealthData] = useState(null)
+  const [refreshing, setRefreshing] = useState(false)
+  const { sessions, refreshSessions } = useSessionContext()
+  const navigate  = useNavigate()
+  const timerRef  = useRef(null)
 
-  // 與 PENDING_STATUSES 同源，metric 卡永遠與計數一致
+  async function loadHealth() {
+    try {
+      const data = await fetchMemoryHealth()
+      setHealthData(data)
+    } catch (err) {
+      console.warn('[Home] fetchMemoryHealth failed:', err)
+    }
+  }
+
+  async function handleRefresh() {
+    setRefreshing(true)
+    await Promise.allSettled([loadHealth(), refreshSessions()])
+    setRefreshing(false)
+  }
+
+  useEffect(() => {
+    loadHealth()
+    timerRef.current = setInterval(handleRefresh, REFRESH_INTERVAL_MS)
+    return () => clearInterval(timerRef.current)
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
+
   const pendingCount = sessions.filter(s => PENDING_STATUSES.includes(s.status)).length
+
+  function handleBotClick(botName) {
+    const route = BOT_ROUTE[botName]
+    if (route) navigate(route)
+    else navigate('/line/hy')
+  }
 
   return (
     <div>
@@ -168,23 +183,21 @@ export default function Home() {
           <h1 className="text-xl font-bold text-slate-800">{homeSummary.greeting}</h1>
           <p className="text-slate-500 text-sm">{todayTaipei()}</p>
         </div>
-        <div className="flex rounded-md overflow-hidden border border-slate-200">
-          <button
-            onClick={() => setView('data')}
-            className={`px-4 py-1.5 text-sm transition-colors ${
-              view === 'data' ? 'bg-blue-600 text-white' : 'bg-white text-slate-500 hover:bg-slate-100'
-            }`}
-          >
-            資料
-          </button>
-          <button
-            onClick={() => setView('pixel')}
-            className={`px-4 py-1.5 text-sm transition-colors ${
-              view === 'pixel' ? 'bg-blue-600 text-white' : 'bg-white text-slate-500 hover:bg-slate-100'
-            }`}
-          >
-            像素
-          </button>
+        <div className="flex items-center gap-3">
+          <div className="flex rounded-md overflow-hidden border border-slate-200">
+            <button
+              onClick={() => setView('data')}
+              className={`px-4 py-1.5 text-sm transition-colors ${view === 'data' ? 'bg-blue-600 text-white' : 'bg-white text-slate-500 hover:bg-slate-100'}`}
+            >
+              資料
+            </button>
+            <button
+              onClick={() => setView('pixel')}
+              className={`px-4 py-1.5 text-sm transition-colors ${view === 'pixel' ? 'bg-blue-600 text-white' : 'bg-white text-slate-500 hover:bg-slate-100'}`}
+            >
+              像素
+            </button>
+          </div>
         </div>
       </div>
 
@@ -210,15 +223,36 @@ export default function Home() {
               onClick={() => window.open('https://console.anthropic.com', '_blank')}
             />
           </div>
-
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <TodoSection />
             <ScheduleSection />
           </div>
         </div>
       ) : (
-        <div className="bg-white rounded-xl overflow-hidden border border-slate-200 shadow-sm" style={{ height: '500px' }}>
-          <PixelWorld />
+        <div>
+          <div className="flex justify-end mb-2">
+            <button
+              onClick={handleRefresh}
+              disabled={refreshing}
+              className="flex items-center gap-1.5 px-3 py-1.5 text-xs text-slate-500 bg-white border border-slate-200 rounded-lg hover:bg-slate-50 disabled:opacity-50 transition-colors"
+            >
+              <RefreshCw size={12} className={refreshing ? 'animate-spin' : ''} />
+              刷新
+            </button>
+          </div>
+          <div
+            className="bg-white rounded-xl overflow-hidden border border-slate-200 shadow-sm"
+            style={{ position: 'relative', paddingTop: '75%' }}
+          >
+            <div style={{ position: 'absolute', inset: 0 }}>
+              <PixelWorld
+                healthData={healthData}
+                sessions={sessions}
+                onBotClick={handleBotClick}
+                onDocClick={() => navigate('/dispatch')}
+              />
+            </div>
+          </div>
         </div>
       )}
     </div>

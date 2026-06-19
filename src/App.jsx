@@ -29,8 +29,17 @@ export default function App() {
     console.log('[App] session removed for milestone:', milestoneId)
   }
 
+  async function refreshSessions() {
+    try {
+      const data = await fetchDispatchSessions()
+      setSessions(data)
+    } catch (err) {
+      console.warn('[App] refreshSessions failed:', err)
+    }
+  }
+
   return (
-    <SessionContext.Provider value={{ sessions, addSession, removeSession }}>
+    <SessionContext.Provider value={{ sessions, addSession, removeSession, refreshSessions }}>
       <div className="min-h-screen bg-slate-50 text-slate-800">
         <TopBar />
         <Sidebar />
