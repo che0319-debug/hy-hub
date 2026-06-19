@@ -48,11 +48,11 @@ const ZONES = [
 const ZONE_ITEMS = {
   hy_work:    [['rug_rect', 20, 100], ['desk_long', 12, 70], ['chair', 120, 90], ['plant', 6, 40]],
   hy_meeting: [['desk_long', 40, 100]],
-  '950157':   [['rug_oval_grey', 34, 80], ['desk_long', 14, 60], ['chair', 112, 80], ['plant', 6, 20]],
+  '950157':   [['rug_oval_grey', 34, 80], ['desk_long', 14, 60], ['chair', 100, 80], ['plant', 6, 20]],
   '小因':     [['bed_blue', 8, 18], ['plant', 108, 18], ['rug_oval_tan', 34, 110], ['desk_long', 14, 150]],
-  Sam:        [['rug_green', 16, 100], ['desk_long', 16, 46], ['chair', 108, 66], ['sofa', 2, 140]],
+  Sam:        [['rug_green', 16, 100], ['desk_long', 16, 46], ['chair', 108, 66], ['sofa', 10, 140]],
   corridor:   [],
-  open:       [['sofa', 10, 30], ['rug_oval_tan', 60, 80], ['plant', 330, 30], ['plant', 380, 80]],
+  open:       [['rug_oval_tan', 30, 70], ['sofa', 310, 50], ['plant', 350, 30], ['plant', 400, 120]],
 }
 
 const HOME_POS = {
@@ -159,6 +159,21 @@ function drawDocs(ctx, docX, docY, count, fresh) {
   ctx.restore()
 }
 
+function drawNameTag(ctx, name, cx, cy) {
+  ctx.save()
+  ctx.font = 'bold 10px monospace'
+  const tw = ctx.measureText(name).width
+  const PAD = 3, H = 13
+  const tx = cx + CHAR_W / 2 - tw / 2 - PAD
+  const ty = cy - 30
+  ctx.fillStyle = 'rgba(20,20,40,0.78)'
+  ctx.fillRect(tx, ty, tw + PAD * 2, H)
+  ctx.fillStyle = '#f0f0ff'
+  ctx.textAlign = 'left'; ctx.textBaseline = 'top'
+  ctx.fillText(name, tx + PAD, ty + 2)
+  ctx.restore()
+}
+
 export default function PixelWorld({ healthData, sessions = [], onBotClick, onDocClick }) {
   const canvasRef    = useRef(null)
   const imgRef       = useRef(null)
@@ -203,16 +218,23 @@ export default function PixelWorld({ healthData, sessions = [], onBotClick, onDo
       ctx.fillText('協作時啟用', mtg.x + mtg.w / 2, mtg.y + mtg.h / 2 + 40)
       ctx.restore()
 
+      const W = 10, WH = 5, DW = 28
+      const WC = '#2d2d3d'
       ctx.save()
-      ctx.strokeStyle = '#9a8462'; ctx.lineWidth = 2; ctx.setLineDash([6, 4])
-      for (const [x1, y1, x2, y2] of [
-        [HY_W, 0, HY_W, WORLD_H],
-        [0, WORLD_H / 2, HY_W, WORLD_H / 2],
-        [HY_W + ROOM_W, 0, HY_W + ROOM_W, ROOMS_H],
-        [HY_W + ROOM_W * 2, 0, HY_W + ROOM_W * 2, ROOMS_H],
-        [HY_W, OPEN_Y, WORLD_W, OPEN_Y],
-      ]) { ctx.beginPath(); ctx.moveTo(x1, y1); ctx.lineTo(x2, y2); ctx.stroke() }
-      ctx.setLineDash([]); ctx.restore()
+      ctx.fillStyle = WC
+      ctx.fillRect(HY_W - WH, 0, W, WORLD_H)
+      ctx.fillRect(0, WORLD_H / 2 - WH, HY_W - WH, W)
+      ctx.fillRect(HY_W + ROOM_W - WH, 0, W, ROOMS_H + W)
+      ctx.fillRect(HY_W + ROOM_W * 2 - WH, 0, W, ROOMS_H + W)
+      ctx.fillRect(HY_W + WH, ROOMS_H - W, WORLD_W - HY_W - WH, W)
+      const corrTint = ZONES.find(z => z.id === 'corridor').tint
+      ctx.fillStyle = corrTint
+      ctx.fillRect(HY_W + Math.floor(ROOM_W / 2) - DW / 2, ROOMS_H - W, DW, W)
+      ctx.fillRect(HY_W + ROOM_W + Math.floor(ROOM_W / 2) - DW / 2, ROOMS_H - W, DW, W)
+      ctx.fillRect(HY_W + ROOM_W * 2 + Math.floor(ROOM_W3 / 2) - DW / 2, ROOMS_H - W, DW, W)
+      ctx.fillStyle = '#9a8462'
+      ctx.fillRect(HY_W + WH, OPEN_Y - 2, WORLD_W - HY_W - WH, 3)
+      ctx.restore()
 
       const states = botStatesRef.current
       for (const b of BOTS) {
@@ -221,6 +243,7 @@ export default function PixelWorld({ healthData, sessions = [], onBotClick, onDo
         const hp = HOME_POS[b]
         drawDocs(ctx, hp.x - 10, hp.y - 24, s.pendingCount || 0, s.doneFresh || false)
         drawChar(ctx, img, c.x, c.y, s.health || 'grey', s.failed || false)
+        drawNameTag(ctx, b, c.x, c.y)
       }
     }
 
@@ -252,8 +275,9 @@ export default function PixelWorld({ healthData, sessions = [], onBotClick, onDo
       const cssH = parent.clientHeight
       canvas.width = cssW * dpr; canvas.height = cssH * dpr
       canvas.style.width = cssW + 'px'; canvas.style.height = cssH + 'px'
-      const scale = Math.min(cssW / WORLD_W, cssH / WORLD_H)
-      trRef.current = { scale, ox: (cssW - WORLD_W * scale) / 2, oy: (cssH - WORLD_H * scale) / 2 }
+      const scale = cssW / WORLD_W
+      const scaledH = WORLD_H * scale
+      trRef.current = { scale, ox: 0, oy: scaledH <= cssH ? (cssH - scaledH) / 2 : 0 }
       render()
     }
 

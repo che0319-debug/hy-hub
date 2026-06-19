@@ -242,7 +242,7 @@ export default function Home() {
           </div>
           <div
             className="bg-white rounded-xl overflow-hidden border border-slate-200 shadow-sm"
-            style={{ height: 'min(62vh, 480px)' }}
+            style={{ height: 'min(80vh, 720px)' }}
           >
             <PixelWorld
               healthData={healthData}
