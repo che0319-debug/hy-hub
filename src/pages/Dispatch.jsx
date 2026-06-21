@@ -386,75 +386,8 @@ export default function Dispatch() {
                                 </div>
                               ) : (
                                 <>
-                                  {/* 對話串 / legacy 單框 / 空狀態 三選一 */}
-                                  {hasTurns ? (
-                                    <div className="space-y-2">
-                                      <div className="flex items-center justify-between">
-                                        <p className="text-xs font-semibold text-slate-500">對話串（{turns.length} 輪）</p>
-                                        <div className="flex gap-2">
-                                          <button
-                                            onClick={handleRefresh}
-                                            className="px-2 py-0.5 text-xs border border-slate-300 text-slate-600 rounded hover:bg-slate-100 transition-colors"
-                                          >
-                                            刷新
-                                          </button>
-                                          <button
-                                            onClick={() => navigator.clipboard.writeText(copyText)}
-                                            className="px-2 py-0.5 text-xs border border-slate-300 text-slate-600 rounded hover:bg-slate-100 transition-colors"
-                                          >
-                                            複製全文
-                                          </button>
-                                        </div>
-                                      </div>
-                                      {turns.map(t => (
-                                        <div key={t.n} className="bg-white border border-slate-200 rounded p-3 space-y-2">
-                                          <p className="text-xs font-semibold text-slate-500">輪 {t.n}</p>
-                                          <div className="space-y-1">
-                                            <p className="text-xs text-slate-400">你問：</p>
-                                            <pre className="text-xs whitespace-pre-wrap font-mono text-slate-700 max-h-40 overflow-y-auto">{t.ask}</pre>
-                                          </div>
-                                          <div className="space-y-1">
-                                            <p className="text-xs text-slate-400">結果：</p>
-                                            {t.result ? (
-                                              <pre className="text-xs whitespace-pre-wrap font-mono text-slate-700 max-h-72 overflow-y-auto">{t.result}</pre>
-                                            ) : (
-                                              <p className="text-xs text-slate-400 italic">執行中…（routine 跑完後按上方刷新查看）</p>
-                                            )}
-                                          </div>
-                                        </div>
-                                      ))}
-                                    </div>
-                                  ) : session.resultText ? (
-                                    <div className="space-y-2">
-                                      <div className="flex items-center justify-between">
-                                        <p className="text-xs font-semibold text-slate-500">產出全文（legacy 單輪）</p>
-                                        <div className="flex gap-2">
-                                          <button
-                                            onClick={handleRefresh}
-                                            className="px-2 py-0.5 text-xs border border-slate-300 text-slate-600 rounded hover:bg-slate-100 transition-colors"
-                                          >
-                                            刷新
-                                          </button>
-                                          <button
-                                            onClick={() => navigator.clipboard.writeText(session.resultText)}
-                                            className="px-2 py-0.5 text-xs border border-slate-300 text-slate-600 rounded hover:bg-slate-100 transition-colors"
-                                          >
-                                            複製全文
-                                          </button>
-                                        </div>
-                                      </div>
-                                      <pre className="text-xs text-slate-700 whitespace-pre-wrap font-mono bg-white border border-slate-200 rounded p-3 max-h-96 overflow-y-auto">
-                                        {session.resultText}
-                                      </pre>
-                                    </div>
-                                  ) : isRunning ? (
-                                    <p className="text-xs text-slate-400 italic">執行中，產出尚未回報（按下方刷新查看）</p>
-                                  ) : (
-                                    <p className="text-xs text-slate-400">（無產出全文）</p>
-                                  )}
-
-                                  {/* 繼續對話輸入框 — done/failed/running 都顯示，running/滿輪時 disable */}
-                                  <div className="space-y-2 pt-2 border-t border-slate-200">
+                                  {/* 繼續對話輸入框（頂部）— done/failed/running 都顯示，running/滿輪時 disable */}
+                                  <div className="space-y-2">
                                     <p className="text-xs font-semibold text-slate-500">繼續對話</p>
                                     <textarea
                                       value={continueDraft}
@@ -483,6 +416,73 @@ export default function Dispatch() {
                                       )}
                                     </div>
                                   </div>
+
+                                  {/* 對話串 / legacy 單框 / 空狀態 三選一（倒序：新→舊） */}
+                                  {hasTurns ? (
+                                    <div className="space-y-2 pt-2 border-t border-slate-200">
+                                      <div className="flex items-center justify-between">
+                                        <p className="text-xs font-semibold text-slate-500">對話串（{turns.length} 輪｜新→舊）</p>
+                                        <div className="flex gap-2">
+                                          <button
+                                            onClick={handleRefresh}
+                                            className="px-2 py-0.5 text-xs border border-slate-300 text-slate-600 rounded hover:bg-slate-100 transition-colors"
+                                          >
+                                            刷新
+                                          </button>
+                                          <button
+                                            onClick={() => navigator.clipboard.writeText(copyText)}
+                                            className="px-2 py-0.5 text-xs border border-slate-300 text-slate-600 rounded hover:bg-slate-100 transition-colors"
+                                          >
+                                            複製全文
+                                          </button>
+                                        </div>
+                                      </div>
+                                      {turns.slice().reverse().map(t => (
+                                        <div key={t.n} className="bg-white border border-slate-200 rounded p-3 space-y-2">
+                                          <p className="text-xs font-semibold text-slate-500">輪 {t.n}</p>
+                                          <div className="space-y-1">
+                                            <p className="text-xs text-slate-400">你問：</p>
+                                            <pre className="text-xs whitespace-pre-wrap font-mono text-slate-700 max-h-40 overflow-y-auto">{t.ask}</pre>
+                                          </div>
+                                          <div className="space-y-1">
+                                            <p className="text-xs text-slate-400">結果：</p>
+                                            {t.result ? (
+                                              <pre className="text-xs whitespace-pre-wrap font-mono text-slate-700 max-h-72 overflow-y-auto">{t.result}</pre>
+                                            ) : (
+                                              <p className="text-xs text-slate-400 italic">執行中…（routine 跑完後按上方刷新查看）</p>
+                                            )}
+                                          </div>
+                                        </div>
+                                      ))}
+                                    </div>
+                                  ) : session.resultText ? (
+                                    <div className="space-y-2 pt-2 border-t border-slate-200">
+                                      <div className="flex items-center justify-between">
+                                        <p className="text-xs font-semibold text-slate-500">產出全文（legacy 單輪）</p>
+                                        <div className="flex gap-2">
+                                          <button
+                                            onClick={handleRefresh}
+                                            className="px-2 py-0.5 text-xs border border-slate-300 text-slate-600 rounded hover:bg-slate-100 transition-colors"
+                                          >
+                                            刷新
+                                          </button>
+                                          <button
+                                            onClick={() => navigator.clipboard.writeText(session.resultText)}
+                                            className="px-2 py-0.5 text-xs border border-slate-300 text-slate-600 rounded hover:bg-slate-100 transition-colors"
+                                          >
+                                            複製全文
+                                          </button>
+                                        </div>
+                                      </div>
+                                      <pre className="text-xs text-slate-700 whitespace-pre-wrap font-mono bg-white border border-slate-200 rounded p-3 max-h-96 overflow-y-auto">
+                                        {session.resultText}
+                                      </pre>
+                                    </div>
+                                  ) : isRunning ? (
+                                    <p className="text-xs text-slate-400 italic pt-2 border-t border-slate-200">執行中，產出尚未回報（按上方刷新查看）</p>
+                                  ) : (
+                                    <p className="text-xs text-slate-400 pt-2 border-t border-slate-200">（無產出全文）</p>
+                                  )}
 
                                   {session.briefText && (
                                     <div className="space-y-1">
