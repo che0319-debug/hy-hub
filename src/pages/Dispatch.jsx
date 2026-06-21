@@ -1,7 +1,11 @@
 import { useState, useEffect, Fragment } from 'react'
 import { ChevronDown, ChevronUp } from 'lucide-react'
 import { useSessionContext } from '../App'
-import { fetchDispatchSessions, fireDispatch, saveBriefText } from '../api'
+import { fetchDispatchSessions, fireDispatch, saveBriefText, dispatchContinue } from '../api'
+
+// 與後端 main.py `_MAX_TURNS_PER_CARD` 對齊（後端階段 1 deec8c6）。
+// 改一邊要改兩邊。
+const MAX_TURNS_PER_CARD = 5
 
 // 狀態 badge 設定：label + Tailwind class
 const STATUS_CONFIG = {
@@ -96,6 +100,13 @@ export default function Dispatch() {
   // 委派單儲存錯誤：{ [milestoneId]: string }
   const [saveErrors, setSaveErrors] = useState({})
 
+  // 繼續對話：{ [milestoneId]: string }（追問草稿）
+  const [continueDrafts, setContinueDrafts] = useState({})
+  // 繼續對話送出中：{ [milestoneId]: true }
+  const [continuingIds, setContinuingIds] = useState({})
+  // 繼續對話錯誤訊息：{ [milestoneId]: string }
+  const [continueErrors, setContinueErrors] = useState({})
+
   // 派發確認 modal
   const [fireModal, setFireModal] = useState({ open: false, session: null, text: '' })
 
@@ -149,6 +160,49 @@ export default function Dispatch() {
     setFireModal(prev => ({ ...prev, open: false }))
     setBriefDrafts(prev => ({ ...prev, [session.milestoneId]: text }))
     await handleFire(session.milestoneId)
+  }
+
+  async function handleContinue(milestoneId) {
+    const ask = (continueDrafts[milestoneId] || '').trim()
+    if (!ask) return
+    setContinuingIds(prev => ({ ...prev, [milestoneId]: true }))
+    setContinueErrors(prev => { const n = { ...prev }; delete n[milestoneId]; return n })
+    try {
+      await dispatchContinue(milestoneId, ask)
+      // 樂觀更新：append pending turn + status=running，清 textarea
+      setSessions(prev => prev.map(s => {
+        if (s.milestoneId !== milestoneId) return s
+        const turns = s.turns || []
+        const newTurn = {
+          n: turns.length + 1,
+          ask,
+          result: null,
+          status: 'running',
+          ts_fire: new Date().toISOString(),
+          ts_done: null,
+        }
+        return { ...s, status: 'running', turns: [...turns, newTurn] }
+      }))
+      setContinueDrafts(prev => { const n = { ...prev }; delete n[milestoneId]; return n })
+    } catch (err) {
+      const msg =
+        err.status === 409 ? '上一輪還在執行中，完成後可繼續' :
+        err.status === 429 ? `已達多輪上限（${MAX_TURNS_PER_CARD} 輪）` :
+        err.status === 401 ? '認證失敗（X-Read-Secret）' :
+        err.message
+      setContinueErrors(prev => ({ ...prev, [milestoneId]: msg }))
+    } finally {
+      setContinuingIds(prev => { const n = { ...prev }; delete n[milestoneId]; return n })
+    }
+  }
+
+  async function handleRefresh() {
+    try {
+      const data = await fetchDispatchSessions()
+      setSessions(data)
+    } catch (err) {
+      console.warn('[Dispatch] manual refresh failed:', err)
+    }
   }
 
   // filterStatus: 'all'（預設）| 'active' | 單一 status 值
@@ -288,6 +342,22 @@ export default function Dispatch() {
                       const currentText = briefDrafts[session.milestoneId] !== undefined
                         ? briefDrafts[session.milestoneId]
                         : (session.briefText || (isPending ? BRIEF_TEMPLATE : ''))
+                      const turns = session.turns || []
+                      const hasTurns = turns.length > 0
+                      // 有 turns 用實際長度；無 turns + 有 resultText（legacy 單輪）視為 1
+                      const effectiveTurnsCount = hasTurns
+                        ? turns.length
+                        : (session.resultText ? 1 : 0)
+                      const turnsAtMax = effectiveTurnsCount >= MAX_TURNS_PER_CARD
+                      const continueDraft = continueDrafts[session.milestoneId] ?? ''
+                      const continueDisabled =
+                        continuingIds[session.milestoneId] ||
+                        isRunning ||
+                        turnsAtMax ||
+                        !continueDraft.trim()
+                      const copyText = hasTurns
+                        ? turns.map(t => `輪${t.n}\n你問：${t.ask}\n結果：${t.result || '（執行中）'}`).join('\n\n---\n\n')
+                        : (session.resultText || '')
                       return (
                         <tr>
                           <td colSpan={5} className="bg-slate-50 px-6 py-4 border-b border-slate-200">
@@ -314,32 +384,110 @@ export default function Dispatch() {
                                     )}
                                   </div>
                                 </div>
-                              ) : isRunning ? (
-                                <p className="text-xs text-slate-400 italic">執行中，產出尚未回報</p>
                               ) : (
                                 <>
-                                  {session.resultText ? (
+                                  {/* 對話串 / legacy 單框 / 空狀態 三選一 */}
+                                  {hasTurns ? (
                                     <div className="space-y-2">
                                       <div className="flex items-center justify-between">
-                                        <p className="text-xs font-semibold text-slate-500">產出全文</p>
-                                        <button
-                                          onClick={() => navigator.clipboard.writeText(session.resultText)}
-                                          className="px-2 py-0.5 text-xs border border-slate-300 text-slate-600 rounded hover:bg-slate-100 transition-colors"
-                                        >
-                                          複製全文
-                                        </button>
+                                        <p className="text-xs font-semibold text-slate-500">對話串（{turns.length} 輪）</p>
+                                        <div className="flex gap-2">
+                                          <button
+                                            onClick={handleRefresh}
+                                            className="px-2 py-0.5 text-xs border border-slate-300 text-slate-600 rounded hover:bg-slate-100 transition-colors"
+                                          >
+                                            刷新
+                                          </button>
+                                          <button
+                                            onClick={() => navigator.clipboard.writeText(copyText)}
+                                            className="px-2 py-0.5 text-xs border border-slate-300 text-slate-600 rounded hover:bg-slate-100 transition-colors"
+                                          >
+                                            複製全文
+                                          </button>
+                                        </div>
+                                      </div>
+                                      {turns.map(t => (
+                                        <div key={t.n} className="bg-white border border-slate-200 rounded p-3 space-y-2">
+                                          <p className="text-xs font-semibold text-slate-500">輪 {t.n}</p>
+                                          <div className="space-y-1">
+                                            <p className="text-xs text-slate-400">你問：</p>
+                                            <pre className="text-xs whitespace-pre-wrap font-mono text-slate-700 max-h-40 overflow-y-auto">{t.ask}</pre>
+                                          </div>
+                                          <div className="space-y-1">
+                                            <p className="text-xs text-slate-400">結果：</p>
+                                            {t.result ? (
+                                              <pre className="text-xs whitespace-pre-wrap font-mono text-slate-700 max-h-72 overflow-y-auto">{t.result}</pre>
+                                            ) : (
+                                              <p className="text-xs text-slate-400 italic">執行中…（routine 跑完後按上方刷新查看）</p>
+                                            )}
+                                          </div>
+                                        </div>
+                                      ))}
+                                    </div>
+                                  ) : session.resultText ? (
+                                    <div className="space-y-2">
+                                      <div className="flex items-center justify-between">
+                                        <p className="text-xs font-semibold text-slate-500">產出全文（legacy 單輪）</p>
+                                        <div className="flex gap-2">
+                                          <button
+                                            onClick={handleRefresh}
+                                            className="px-2 py-0.5 text-xs border border-slate-300 text-slate-600 rounded hover:bg-slate-100 transition-colors"
+                                          >
+                                            刷新
+                                          </button>
+                                          <button
+                                            onClick={() => navigator.clipboard.writeText(session.resultText)}
+                                            className="px-2 py-0.5 text-xs border border-slate-300 text-slate-600 rounded hover:bg-slate-100 transition-colors"
+                                          >
+                                            複製全文
+                                          </button>
+                                        </div>
                                       </div>
                                       <pre className="text-xs text-slate-700 whitespace-pre-wrap font-mono bg-white border border-slate-200 rounded p-3 max-h-96 overflow-y-auto">
                                         {session.resultText}
                                       </pre>
                                     </div>
+                                  ) : isRunning ? (
+                                    <p className="text-xs text-slate-400 italic">執行中，產出尚未回報（按下方刷新查看）</p>
                                   ) : (
                                     <p className="text-xs text-slate-400">（無產出全文）</p>
                                   )}
+
+                                  {/* 繼續對話輸入框 — done/failed/running 都顯示，running/滿輪時 disable */}
+                                  <div className="space-y-2 pt-2 border-t border-slate-200">
+                                    <p className="text-xs font-semibold text-slate-500">繼續對話</p>
+                                    <textarea
+                                      value={continueDraft}
+                                      onChange={e => setContinueDrafts(prev => ({ ...prev, [session.milestoneId]: e.target.value }))}
+                                      placeholder={turnsAtMax ? '已達多輪上限' : isRunning ? '上一輪執行中，完成後可繼續' : '輸入追問…'}
+                                      rows={3}
+                                      disabled={isRunning || turnsAtMax || continuingIds[session.milestoneId]}
+                                      className="w-full text-xs font-mono border border-slate-200 rounded p-2 bg-white resize-y focus:outline-none focus:ring-2 focus:ring-blue-400 disabled:bg-slate-100 disabled:text-slate-400 disabled:cursor-not-allowed"
+                                    />
+                                    <div className="flex items-center gap-2 flex-wrap">
+                                      <button
+                                        onClick={() => handleContinue(session.milestoneId)}
+                                        disabled={continueDisabled}
+                                        className="px-3 py-1 text-xs bg-violet-600 text-white rounded hover:bg-violet-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                                      >
+                                        {continuingIds[session.milestoneId] ? '送出中…' : '繼續對話'}
+                                      </button>
+                                      {isRunning && (
+                                        <span className="text-xs text-slate-500">上一輪執行中，完成後可繼續</span>
+                                      )}
+                                      {!isRunning && turnsAtMax && (
+                                        <span className="text-xs text-slate-500">已達多輪上限（{MAX_TURNS_PER_CARD} 輪）</span>
+                                      )}
+                                      {continueErrors[session.milestoneId] && (
+                                        <span className="text-xs text-red-500 break-words max-w-full">{continueErrors[session.milestoneId]}</span>
+                                      )}
+                                    </div>
+                                  </div>
+
                                   {session.briefText && (
                                     <div className="space-y-1">
                                       <p className="text-xs font-semibold text-slate-400">委派單（唯讀）</p>
-                                      <pre className="text-xs text-slate-500 whitespace-pre-wrap font-mono bg-white border border-slate-100 rounded p-2">
+                                      <pre className="text-xs text-slate-500 whitespace-pre-wrap font-mono bg-white border border-slate-100 rounded p-2 max-h-40 overflow-y-auto">
                                         {session.briefText}
                                       </pre>
                                     </div>

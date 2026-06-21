@@ -161,6 +161,30 @@ export async function fireDispatch(milestoneId) {
   return result;
 }
 
+// 多輪 continue：後端階段 1 deec8c6
+//   409 = 上一輪 running；429 = turns >= 5（與後端 _MAX_TURNS_PER_CARD 對齊）
+//   401 body 為空（FastAPI Response(status_code=401)）→ 提前 throw 免 res.json() 爆
+export async function dispatchContinue(milestoneId, ask) {
+  const res = await fetch(`${API_BASE}/api/dispatch-continue`, {
+    method: "POST",
+    headers: { "X-Read-Secret": READ_SECRET, "Content-Type": "application/json" },
+    body: JSON.stringify({ milestoneId, ask }),
+    cache: 'no-store',
+  });
+  if (res.status === 401) {
+    const e = new Error('認證失敗（X-Read-Secret）');
+    e.status = 401;
+    throw e;
+  }
+  const result = await res.json();
+  if (!res.ok || !result.ok) {
+    const e = new Error(result.error || `dispatchContinue failed: ${res.status}`);
+    e.status = res.status;
+    throw e;
+  }
+  return result;
+}
+
 export async function fetchMemoryHealth() {
   const res = await fetch(`${API_BASE}/api/memory-health`, {
     headers: { "X-Read-Secret": READ_SECRET },
