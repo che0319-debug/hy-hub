@@ -583,6 +583,7 @@ input[type="date"] { color-scheme: light; }
 
 <div class="tabs">
   <div class="tab active" onclick="switchTab('progress')">📊 進度追蹤</div>
+  <div class="tab" onclick="switchTab('futures')">📈 期貨</div>
   <div class="tab" onclick="switchTab('weekly')">📅 週覆盤</div>
   <div class="tab" onclick="switchTab('portfolio')">💼 投資組合</div>
   <div class="tab" onclick="switchTab('strategy')">🎯 戰略視角</div>
@@ -593,6 +594,47 @@ input[type="date"] { color-scheme: light; }
   <div class="board-wrap">
     <div class="board" id="board">
       <div class="loading-state">⏳ 載入中...</div>
+    </div>
+  </div>
+</div>
+
+<!-- TAB 1.5: FUTURES (台指期日報) -->
+<div class="tab-content" id="tab-futures">
+  <div class="weekly-wrap">
+    <div class="weekly-header-row">
+      <div class="section-title" style="margin:0">📈 台指期日報</div>
+      <div class="weekly-controls">
+        <span id="futuresDataDate" style="color:var(--text-muted);font-size:13px"></span>
+        <button class="btn btn-outline" onclick="loadFuturesTab(true)">↺ 重新載入</button>
+      </div>
+    </div>
+    <div id="futuresLoading" style="text-align:center;padding:48px;color:var(--text-muted)">⏳ 載入中...</div>
+    <div id="futuresError" style="display:none;padding:24px;color:#c9372c"></div>
+    <div id="futuresContent" style="display:none">
+      <div class="weekly-summary-grid" id="futuresIndicators"></div>
+      <div class="weekly-card">
+        <div class="weekly-card-title">🌙 隔夜行情</div>
+        <div id="futuresOvernight"></div>
+      </div>
+      <div class="weekly-card">
+        <div class="weekly-card-title">📐 明日參考價位（規則型公式，非買賣訊號）</div>
+        <div id="futuresPivots"></div>
+      </div>
+      <div class="weekly-card">
+        <div class="weekly-card-title">💡 今日判讀</div>
+        <div id="futuresAnalysis" style="white-space:pre-wrap;line-height:1.7"></div>
+      </div>
+      <div class="weekly-card">
+        <div class="weekly-card-title" id="futuresLessonTitle">🎓 今日一課</div>
+        <div id="futuresLesson" style="white-space:pre-wrap;line-height:1.7"></div>
+      </div>
+      <div class="weekly-card weekly-risk-card">
+        <div class="weekly-card-title">🧯 你的資金框架</div>
+        <div id="futuresFramework"></div>
+      </div>
+      <div style="text-align:center;color:var(--text-muted);font-size:12px;margin-top:8px">
+        數據參考，非投資建議。
+      </div>
     </div>
   </div>
 </div>
@@ -935,15 +977,157 @@ let isDragging = false; // prevent click-after-drag
 
 // ── TABS ──────────────────────────────────────────
 function switchTab(tab) {
-  const names = ['progress','weekly','portfolio','strategy'];
+  const names = ['progress','futures','weekly','portfolio','strategy'];
   document.querySelectorAll('.tab').forEach((t,i) => {
     t.classList.toggle('active', names[i] === tab);
   });
   document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
   document.getElementById('tab-' + tab).classList.add('active');
+  if (tab === 'futures') initFuturesTab();
   if (tab === 'weekly') initWeeklyTab();
   if (tab === 'portfolio') renderPortfolioTab();
   if (tab === 'strategy') { console.log('switching to strategy'); renderStrategyTab(); }
+}
+
+// ── FUTURES DAILY ─────────────────────────────────
+let futuresInited = false;
+let futuresPayload = null;
+
+function initFuturesTab() {
+  if (futuresInited) return;
+  loadFuturesTab(false);
+}
+
+async function loadFuturesTab(force) {
+  const loading = document.getElementById('futuresLoading');
+  const errBox  = document.getElementById('futuresError');
+  const content = document.getElementById('futuresContent');
+  loading.style.display = 'block';
+  errBox.style.display = 'none';
+  content.style.display = 'none';
+  try {
+    const url = API + '/api/futures-daily' + (force ? ('?t=' + Date.now()) : '');
+    const resp = await fetch(url, { headers: GET_HEADERS });
+    if (!resp.ok) throw new Error('HTTP ' + resp.status);
+    const p = await resp.json();
+    if (!p.ok) throw new Error(p.error || 'unknown');
+    futuresPayload = p;
+    futuresInited = true;
+    renderFuturesTab(p);
+    loading.style.display = 'none';
+    content.style.display = 'block';
+  } catch (e) {
+    loading.style.display = 'none';
+    errBox.style.display = 'block';
+    errBox.textContent = '❌ 載入失敗：' + e.message;
+  }
+}
+
+function _fmtN(x, digits, plus) {
+  if (x === null || x === undefined || x === 'null') return '取得失敗';
+  const n = Number(x);
+  if (!Number.isFinite(n)) return '取得失敗';
+  const sign = plus && n >= 0 ? '+' : '';
+  return sign + n.toLocaleString('en-US', {
+    minimumFractionDigits: digits || 0, maximumFractionDigits: digits || 0
+  });
+}
+function _fmtPct(x) {
+  if (x === null || x === undefined) return '取得失敗';
+  const n = Number(x);
+  if (!Number.isFinite(n)) return '取得失敗';
+  return (n >= 0 ? '+' : '') + n.toFixed(2) + '%';
+}
+function _pctColor(x) {
+  const n = Number(x);
+  if (!Number.isFinite(n)) return 'var(--text-muted)';
+  if (n > 0) return '#0f7a1f';
+  if (n < 0) return '#c9372c';
+  return 'var(--text)';
+}
+
+function renderFuturesTab(p) {
+  const ind = (p.raw && p.raw.indicators) || {};
+  const ov  = (p.raw && p.raw.overnight)  || {};
+  const dateLabel = p.is_stale
+    ? ('資料日期：' + (p.data_date || '—') + '（盤後）')
+    : ('資料日期：' + (p.data_date || '—'));
+  document.getElementById('futuresDataDate').textContent = dateLabel;
+
+  // 指標卡（複用 weekly-summary-grid）
+  const cards = [
+    { label: '加權指數收盤', main: _fmtN(ind.taiex_close, 2),
+      sub: _fmtPct(ind.taiex_change_pct), color: _pctColor(ind.taiex_change_pct) },
+    { label: '台指期近月', main: _fmtN(ind.tx_close, 0),
+      sub: _fmtPct(ind.tx_change_pct), color: _pctColor(ind.tx_change_pct) },
+    { label: '期現價差', main: _fmtN(ind.basis, 0, true),
+      sub: '(期 − 現)', color: _pctColor(ind.basis) },
+    { label: '外資期貨淨部位', main: _fmtN(ind.foreign_oi_net, 0, true) + ' 口',
+      sub: '未平倉多空淨額', color: _pctColor(ind.foreign_oi_net) },
+    { label: 'PC OI 比', main: _fmtN(ind.pc_oi_ratio, 2),
+      sub: '>100 偏多｜<80 偏空', color: 'var(--text)' },
+    { label: '日振幅', main: (ind.amp_pct != null ? Number(ind.amp_pct).toFixed(2) + '%' : '取得失敗'),
+      sub: '(H − L) / 前收', color: 'var(--text)' },
+  ];
+  document.getElementById('futuresIndicators').innerHTML = cards.map(c => `
+    <div class="weekly-stat-card">
+      <div class="weekly-stat-num" style="color:${c.color};font-size:20px">${c.main}</div>
+      <div class="weekly-stat-label">${c.label}</div>
+      <div style="font-size:11px;color:var(--text-muted);margin-top:4px">${c.sub}</div>
+    </div>
+  `).join('');
+
+  // 隔夜行情
+  function _ovRow(name, key, closeDigits) {
+    const r = ov[key] || {};
+    if (r.error) return `<div>${name}：<span style="color:#c9372c">取得失敗</span></div>`;
+    const closeFmt = r.close != null ? _fmtN(r.close, closeDigits) : '—';
+    return `<div>${name}：${closeFmt} <span style="color:${_pctColor(r.pct)}">${_fmtPct(r.pct)}</span></div>`;
+  }
+  const nightPct = ind.tx_night_change_pct;
+  const nightHtml = ind.tx_night_close != null
+    ? `<div>台指期夜盤：${_fmtN(ind.tx_night_close, 0)} <span style="color:${_pctColor(nightPct)}">${_fmtPct(nightPct)}</span></div>`
+    : `<div>台指期夜盤：<span style="color:var(--text-muted)">取得失敗</span></div>`;
+  document.getElementById('futuresOvernight').innerHTML = [
+    nightHtml,
+    _ovRow('S&P 500', 'sp500', 2),
+    _ovRow('Nasdaq',  'nasdaq', 2),
+    _ovRow('費半 SOX', 'sox', 2),
+    _ovRow('TSMC ADR', 'tsm', 2),
+  ].join('');
+
+  // 樞紐
+  const piv = ind.pivots;
+  if (piv) {
+    document.getElementById('futuresPivots').innerHTML = `
+      <div>壓力 R2 <b>${_fmtN(piv.r2, 0)}</b>｜R1 <b>${_fmtN(piv.r1, 0)}</b></div>
+      <div>Pivot P <b>${_fmtN(piv.p, 0)}</b></div>
+      <div>支撐 S1 <b>${_fmtN(piv.s1, 0)}</b>｜S2 <b>${_fmtN(piv.s2, 0)}</b></div>
+      <div style="color:var(--text-muted);font-size:12px;margin-top:8px">
+        站上 R1 → 多方優勢延續；跌破 S1 → 轉弱觀察。價位是機械公式非預測，跳空時失效。
+      </div>`;
+  } else {
+    document.getElementById('futuresPivots').innerHTML =
+      '<div style="color:var(--text-muted)">高低收資料不足，無法計算</div>';
+  }
+
+  // 判讀 / 教學
+  const raw = p.raw || {};
+  document.getElementById('futuresAnalysis').textContent = raw.analysis || '（無）';
+  document.getElementById('futuresLessonTitle').textContent =
+    '🎓 今日一課（' + (raw.lesson_topic || '—') + '）';
+  document.getElementById('futuresLesson').textContent = raw.lesson || '（無）';
+
+  // 框架卡
+  const stopLoss = (raw.stop_loss_pts != null) ? raw.stop_loss_pts : 200;
+  const marginSrc = ind.tmf_margin_source === 'api'
+    ? '(來源：期交所 API)'
+    : '(fallback: ' + (ind.tmf_margin_note || '寫死值') + ')';
+  document.getElementById('futuresFramework').innerHTML = `
+    <div>資金：<b>NT$ 100,000</b>｜唯一可交易標的：<b>微型台指 (TMF)</b></div>
+    <div>微台原始保證金：<b>${_fmtN(ind.tmf_init_margin, 0)}</b> ${marginSrc}</div>
+    <div>口數上限：<b>${ind.lot_cap || 0} 口</b>（保證金 × 3 緩衝）</div>
+    <div>單筆停損上限：<b>${stopLoss} 點</b>（≤ 2% 資金 = NT$ ${(stopLoss*10).toLocaleString()}）</div>`;
 }
 
 // ── WEEKLY PACKAGE ────────────────────────────────
