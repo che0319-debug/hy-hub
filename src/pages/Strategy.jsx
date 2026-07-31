@@ -1,9 +1,19 @@
 import { useEffect, useState, useCallback } from 'react'
 import { fetchStrategyProjects, saveStrategyProject, deleteStrategyProject } from '../api'
 
+// 舊 schema {wants/fears/drivenBy} 與新 schema {note} 統一顯示
+function resolveNote(pe) {
+  if (pe.note != null) return pe.note
+  const parts = []
+  if (pe.wants)    parts.push(`要${pe.wants}`)
+  if (pe.fears)    parts.push(`怕${pe.fears}`)
+  if (pe.drivenBy) parts.push(`驅動${pe.drivenBy}`)
+  return parts.join('／')
+}
+
 function buildSummary(p) {
   const people = (p.people || []).map(pe =>
-    `- ${pe.name}：要${pe.wants}／怕${pe.fears}／驅動${pe.drivenBy}`
+    `- ${pe.name}：${resolveNote(pe)}`
   ).join('\n')
   const setup = (p.setup || []).filter(Boolean).map(s => `- ${s}`).join('\n')
   return [
@@ -23,7 +33,7 @@ function newProject() {
     id: `strat_${Math.random().toString(36).slice(2, 8)}`,
     name: '',
     goal: { success: '', opportunityCost: '' },
-    people: [{ name: '', wants: '', fears: '', drivenBy: '' }],
+    people: [{ name: '', note: '' }],
     setup: [''],
     execution: { nextStep: '' },
     updatedAt: '',
@@ -54,7 +64,7 @@ function EditView({ draft, setDraft, onSave, onCancel, onDelete, saving, saveErr
   function addPerson() {
     setDraft(prev => ({
       ...prev,
-      people: [...(prev.people || []), { name: '', wants: '', fears: '', drivenBy: '' }],
+      people: [...(prev.people || []), { name: '', note: '' }],
     }))
   }
 
@@ -136,18 +146,13 @@ function EditView({ draft, setDraft, onSave, onCancel, onDelete, saving, saveErr
                     <button onClick={() => removePerson(i)} className="text-slate-300 hover:text-red-400 text-xs">✕</button>
                   )}
                 </div>
-                <div className="grid grid-cols-3 gap-2">
-                  {[['wants', '要'], ['fears', '怕'], ['drivenBy', '驅動']].map(([field, label]) => (
-                    <div key={field}>
-                      <label className="text-xs text-slate-400 block mb-0.5">{label}</label>
-                      <input
-                        className="w-full border border-slate-300 rounded px-2 py-1 text-xs focus:outline-none focus:border-blue-400"
-                        value={pe[field] || ''}
-                        onChange={e => setPerson(i, field, e.target.value)}
-                      />
-                    </div>
-                  ))}
-                </div>
+                <textarea
+                  className="w-full border border-slate-300 rounded px-2 py-1.5 text-xs resize-none focus:outline-none focus:border-blue-400"
+                  rows={3}
+                  value={pe.note ?? resolveNote(pe)}
+                  onChange={e => setPerson(i, 'note', e.target.value)}
+                  placeholder="要什麼／怕什麼／被什麼驅動"
+                />
               </div>
             ))}
           </div>
@@ -244,11 +249,7 @@ function DetailView({ project: p, onBack, onEdit }) {
             {(p.people || []).map((pe, i) => (
               <div key={i} className="border-l-2 border-slate-200 pl-3">
                 <div className="text-sm font-medium text-slate-700 mb-1">{pe.name}</div>
-                <div className="text-xs text-slate-500 space-y-0.5">
-                  <div><span className="font-medium text-slate-600">要：</span>{pe.wants}</div>
-                  <div><span className="font-medium text-slate-600">怕：</span>{pe.fears}</div>
-                  <div><span className="font-medium text-slate-600">驅動：</span>{pe.drivenBy}</div>
-                </div>
+                <p className="text-xs text-slate-500 whitespace-pre-wrap">{resolveNote(pe)}</p>
               </div>
             ))}
           </div>
