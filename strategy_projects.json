@@ -1,9 +1,7 @@
 {
   "_note": {
     "用途": "戰略盤（作戰室）資料正本。每個 project = 一個要謀劃的『局』。dashboard 唯讀顯示，填寫走 GitHub UI 或貼給 claude.ai 討論後回存。",
-    "四象限": "goal(目標) / people(人性) / setup(設局) / execution(執行)。結構固定、內容自由。people 為結構化（每人固定 wants/fears/drivenBy），才餵得進 bot。",
-    "status 值": "active=進行中 | onhold=擱置 | won=已成 | dropped=放棄",
-    "domains 值": "hy | 950157 | family | sam（一個局可跨多個）",
+    "四象限": "goal(目標) / people(人性) / setup(設局) / execution(執行)。結構固定、內容自由。people 為結構化（每人固定 wants/fears/drivenBy），才餵得進 bot。execution 只有 nextStep（下一步）。",
     "新增一個局": "複製 _template 物件，改 id 後放進 projects 陣列。id 建議 strat_<英數短名>，全域唯一。",
     "紅線提醒": "people 象限含真人隱私，此檔只可存於 private repo，勿 render 進公開 bundle。首筆寫入由 HY 親手驗。",
     "代號規範": "people[].name 一律用代號，不寫本名（例：總監D、窗口A、客戶B）。前端讀 secret 鎖不住 bundle，用代號讓資料洩漏也對不上真人。name 以外欄位（要/怕/驅動/設局）避免夾帶可辨識本名的線索。"
@@ -12,10 +10,6 @@
   "_template": {
     "id": "strat_",
     "name": "",
-    "status": "active",
-    "keyDate": null,
-    "keyDateLabel": "",
-    "domains": [],
     "goal": {
       "success": "",
       "opportunityCost": ""
@@ -32,9 +26,7 @@
       ""
     ],
     "execution": {
-      "nextStep": "",
-      "linkedDispatchId": null,
-      "linkedLabel": ""
+      "nextStep": ""
     },
     "updatedAt": ""
   },
@@ -43,10 +35,6 @@
     {
       "id": "strat_diana_marketing",
       "name": "Diana 行銷規劃案",
-      "status": "active",
-      "keyDate": "2026-08-20",
-      "keyDateLabel": "提案",
-      "domains": ["sam"],
       "goal": {
         "success": "（範例，請替換）拿下 Diana 全年行銷代理約，年約 ≥ X 萬，且拿到品牌授權自由度。",
         "opportunityCost": "（範例，請替換）投入約 6 週，同期排擠 B 案。值得的理由：此案能開通路 X，B 案不行。"
@@ -70,9 +58,7 @@
         "（範例）讓窗口的流程變輕（多備一份現成素材）→ 對方在總監面前替你說話。"
       ],
       "execution": {
-        "nextStep": "（範例）8/12 前備好『老闆版數字框架』一頁式，寄給總監探口風。",
-        "linkedDispatchId": null,
-        "linkedLabel": "#48 一頁式數字框架"
+        "nextStep": "（範例）8/12 前備好『老闆版數字框架』一頁式，寄給總監探口風。"
       },
       "updatedAt": "2026-07-31"
     }
