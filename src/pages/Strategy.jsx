@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from 'react'
+import { useEffect, useRef, useState, useCallback } from 'react'
 import { fetchStrategyProjects, saveStrategyProject, deleteStrategyProject } from '../api'
 
 // 舊 schema {wants/fears/drivenBy} 與新 schema {note} 統一顯示
@@ -38,6 +38,27 @@ function newProject() {
     execution: { nextStep: '' },
     updatedAt: '',
   }
+}
+
+// 自動長高 textarea：隨內容增高，不出現內捲軸
+function AutoTextarea({ minHeight = '4rem', className = '', ...props }) {
+  const ref = useRef(null)
+  function grow() {
+    const el = ref.current
+    if (!el) return
+    el.style.height = 'auto'
+    el.style.height = `${el.scrollHeight}px`
+  }
+  useEffect(() => { grow() }, [props.value])
+  return (
+    <textarea
+      ref={ref}
+      className={className}
+      style={{ minHeight, overflow: 'hidden', resize: 'none' }}
+      onInput={grow}
+      {...props}
+    />
+  )
 }
 
 // ── EditView ──────────────────────────────────────────────────────────────────
@@ -99,18 +120,18 @@ function EditView({ draft, setDraft, onSave, onCancel, onDelete, saving, saveErr
           <h3 className="text-sm font-semibold text-slate-700 mb-3">🎯 目標</h3>
           <div className="mb-3">
             <label className="text-xs text-slate-400 block mb-1">成了的定義</label>
-            <textarea
-              className="w-full border border-slate-300 rounded px-2 py-1.5 text-sm resize-none focus:outline-none focus:border-blue-400"
-              rows={4}
+            <AutoTextarea
+              minHeight="6rem"
+              className="w-full border border-slate-300 rounded px-2 py-1.5 text-sm focus:outline-none focus:border-blue-400"
               value={draft.goal?.success || ''}
               onChange={e => set('goal.success', e.target.value)}
             />
           </div>
           <div>
             <label className="text-xs text-slate-400 block mb-1">機會成本</label>
-            <textarea
-              className="w-full border border-slate-300 rounded px-2 py-1.5 text-sm resize-none focus:outline-none focus:border-blue-400"
-              rows={3}
+            <AutoTextarea
+              minHeight="4.5rem"
+              className="w-full border border-slate-300 rounded px-2 py-1.5 text-sm focus:outline-none focus:border-blue-400"
               value={draft.goal?.opportunityCost || ''}
               onChange={e => set('goal.opportunityCost', e.target.value)}
             />
@@ -121,7 +142,8 @@ function EditView({ draft, setDraft, onSave, onCancel, onDelete, saving, saveErr
         <div className="bg-white border border-slate-200 rounded-lg p-4">
           <h3 className="text-sm font-semibold text-slate-700 mb-3">⚡ 執行</h3>
           <label className="text-xs text-slate-400 block mb-1">下一步</label>
-          <input
+          <AutoTextarea
+            minHeight="3rem"
             className="w-full border border-slate-300 rounded px-2 py-1.5 text-sm focus:outline-none focus:border-blue-400"
             value={draft.execution?.nextStep || ''}
             onChange={e => set('execution.nextStep', e.target.value)}
@@ -146,9 +168,9 @@ function EditView({ draft, setDraft, onSave, onCancel, onDelete, saving, saveErr
                     <button onClick={() => removePerson(i)} className="text-slate-300 hover:text-red-400 text-xs">✕</button>
                   )}
                 </div>
-                <textarea
-                  className="w-full border border-slate-300 rounded px-2 py-1.5 text-xs resize-none focus:outline-none focus:border-blue-400"
-                  rows={3}
+                <AutoTextarea
+                  minHeight="4.5rem"
+                  className="w-full border border-slate-300 rounded px-2 py-1.5 text-xs focus:outline-none focus:border-blue-400"
                   value={pe.note ?? resolveNote(pe)}
                   onChange={e => setPerson(i, 'note', e.target.value)}
                   placeholder="要什麼／怕什麼／被什麼驅動"
@@ -165,9 +187,9 @@ function EditView({ draft, setDraft, onSave, onCancel, onDelete, saving, saveErr
         <div className="bg-white border border-slate-200 rounded-lg p-4">
           <h3 className="text-sm font-semibold text-slate-700 mb-1">🎭 設局</h3>
           <div className="text-xs text-slate-400 mb-2">陽謀優先 · 一行一點</div>
-          <textarea
-            className="w-full border border-slate-300 rounded px-2 py-1.5 text-sm resize-none focus:outline-none focus:border-blue-400 font-mono"
-            rows={8}
+          <AutoTextarea
+            minHeight="8rem"
+            className="w-full border border-slate-300 rounded px-2 py-1.5 text-sm focus:outline-none focus:border-blue-400 font-mono"
             value={setupText}
             onChange={e => setDraft(prev => ({ ...prev, setup: e.target.value.split('\n') }))}
             placeholder="每行一個設局點"
