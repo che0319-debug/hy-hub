@@ -43,6 +43,28 @@ export async function fetchStrategyProjects() {
   return res.json();
 }
 
+export async function saveStrategyProject(project) {
+  const res = await fetch(`${API_BASE}/api/strategy-projects`, {
+    method: "POST",
+    headers: { "X-Read-Secret": READ_SECRET, "Content-Type": "application/json" },
+    body: JSON.stringify({ action: "upsert", project }),
+  });
+  const result = await res.json();
+  if (!res.ok || !result.ok) throw new Error(result.error || `saveStrategyProject failed: ${res.status}`);
+  return result;
+}
+
+export async function deleteStrategyProject(id) {
+  const res = await fetch(`${API_BASE}/api/strategy-projects`, {
+    method: "POST",
+    headers: { "X-Read-Secret": READ_SECRET, "Content-Type": "application/json" },
+    body: JSON.stringify({ action: "delete", id }),
+  });
+  const result = await res.json();
+  if (!res.ok || !result.ok) throw new Error(result.error || `deleteStrategyProject failed: ${res.status}`);
+  return result;
+}
+
 export async function assessFreedom() {
   const res = await fetch(`${API_BASE}/api/assess-freedom`, {
     method: "POST",
