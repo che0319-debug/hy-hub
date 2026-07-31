@@ -14,6 +14,7 @@ import LineSam from './pages/LineSam'
 import Settings from './pages/Settings'
 import AgentConfig from './pages/AgentConfig'
 import Goals from './pages/Goals'
+import Strategy from './pages/Strategy'
 
 createRoot(document.getElementById('root')).render(
   <StrictMode>
@@ -30,6 +31,7 @@ createRoot(document.getElementById('root')).render(
           <Route path="line/sam" element={<LineSam />} />
           <Route path="agent/:id" element={<AgentConfig />} />
           <Route path="goals" element={<Goals />} />
+          <Route path="strategy" element={<Strategy />} />
           <Route path="settings" element={<Settings />} />
         </Route>
       </Routes>

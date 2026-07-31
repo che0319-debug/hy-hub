@@ -33,6 +33,16 @@ export async function fetchLifeGoals() {
   return res.json();
 }
 
+export async function fetchStrategyProjects() {
+  const res = await fetch(`${API_BASE}/api/strategy-projects`, {
+    method: "GET",
+    headers: { "X-Read-Secret": READ_SECRET },
+    cache: 'no-store',
+  });
+  if (!res.ok) throw new Error(`fetchStrategyProjects failed: ${res.status}`);
+  return res.json();
+}
+
 export async function assessFreedom() {
   const res = await fetch(`${API_BASE}/api/assess-freedom`, {
     method: "POST",
