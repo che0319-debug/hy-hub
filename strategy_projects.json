@@ -1,7 +1,7 @@
 {
   "_note": {
     "用途": "戰略盤（作戰室）資料正本。每個 project = 一個要謀劃的『局』。dashboard 唯讀顯示，填寫走 GitHub UI 或貼給 claude.ai 討論後回存。",
-    "四象限": "goal(目標) / people(人性) / setup(設局) / execution(執行)。結構固定、內容自由。people 為結構化（每人固定 wants/fears/drivenBy），才餵得進 bot。execution 只有 nextStep（下一步）。",
+    "四象限": "goal(目標) / people(人性) / setup(設局) / execution(執行)。結構固定、內容自由。people 每人 name + note（note 一段話寫清楚：要什麼／怕什麼／被什麼驅動，供 bot 讀取）。execution 只有 nextStep（下一步）。",
     "新增一個局": "複製 _template 物件，改 id 後放進 projects 陣列。id 建議 strat_<英數短名>，全域唯一。",
     "紅線提醒": "people 象限含真人隱私，此檔只可存於 private repo，勿 render 進公開 bundle。首筆寫入由 HY 親手驗。",
     "代號規範": "people[].name 一律用代號，不寫本名（例：總監D、窗口A、客戶B）。前端讀 secret 鎖不住 bundle，用代號讓資料洩漏也對不上真人。name 以外欄位（要/怕/驅動/設局）避免夾帶可辨識本名的線索。"
@@ -17,9 +17,7 @@
     "people": [
       {
         "name": "",
-        "wants": "",
-        "fears": "",
-        "drivenBy": ""
+        "note": ""
       }
     ],
     "setup": [
@@ -42,15 +40,11 @@
       "people": [
         {
           "name": "總監D",
-          "wants": "（範例）數字成長、老闆面前有績效",
-          "fears": "（範例）背鍋、被說錢花錯",
-          "drivenBy": "（範例）升遷、同儕比較"
+          "note": "（範例）要數字成長、老闆面前有績效；怕背鍋、被說錢花錯；被升遷與同儕比較驅動。"
         },
         {
           "name": "窗口A",
-          "wants": "（範例）少加班、流程順",
-          "fears": "（範例）被夾在你跟總監中間",
-          "drivenBy": "（範例）被總監認可"
+          "note": "（範例）要少加班、流程順；怕被夾在你跟總監中間；被總監認可驅動。"
         }
       ],
       "setup": [
