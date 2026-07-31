@@ -61,6 +61,21 @@ function AutoTextarea({ minHeight = '4rem', className = '', ...props }) {
   )
 }
 
+const PREFIX_OPTIMIZE = `以下是我正在推的一個「局」。先幫我把四象限內容本身打磨清楚——不是分析對錯，是把我寫得含糊、太簡、或漏掉的地方補實：
+- 目標：「成了」的定義夠不夠具體可判斷？機會成本有沒有寫出來？含糊就逼問我到具體。
+- 人性：每個關鍵人的要/怕/驅動有沒有寫全？有沒有漏掉的關鍵人？空泛的形容換成具體。
+- 設局：每個設計是否講清楚「對方為什麼會照做」？沒講清因果的幫我補。
+- 執行：下一步是否具體到「明天就能動手」？太模糊就收斂。
+把優化後的四象限完整重寫一份給我確認。要追問的地方一次問完，別自己腦補填空。
+
+—— 以下為本局內容 ——`
+
+const PREFIX_ANALYZE = `以下是我正在推的一個「局」，內容已優化過。用我的框架跟我對練——不要用「成功率／勝算」當主軸，我要把局看透、把打法練利，不是被評估會不會成。
+扣四角度戳我，一次一個：目標清不清、人性準不準、設局是不是真陽謀（讓對方真得利，非我一廂情願或藏陷阱）、下一步推不推得動。
+把這當推演練習，不打分。每次至少點出一個你認為我可能有的盲點（最常見：我以為的陽謀對方其實沒那麼想要、或我把某人的「怕」想錯了）。
+
+—— 以下為本局內容 ——`
+
 // ── EditView ──────────────────────────────────────────────────────────────────
 function EditView({ draft, setDraft, onSave, onCancel, onDelete, saving, saveError, isNew }) {
   function set(path, value) {
@@ -223,12 +238,13 @@ function EditView({ draft, setDraft, onSave, onCancel, onDelete, saving, saveErr
 
 // ── DetailView ────────────────────────────────────────────────────────────────
 function DetailView({ project: p, onBack, onEdit }) {
-  const [copied, setCopied] = useState(false)
+  const [copiedA, setCopiedA] = useState(false)
+  const [copiedB, setCopiedB] = useState(false)
 
-  async function handleCopy() {
-    await navigator.clipboard.writeText(buildSummary(p))
-    setCopied(true)
-    setTimeout(() => setCopied(false), 2000)
+  async function handleCopy(prefix, setFlag) {
+    await navigator.clipboard.writeText(prefix + '\n' + buildSummary(p))
+    setFlag(true)
+    setTimeout(() => setFlag(false), 2000)
   }
 
   return (
@@ -291,9 +307,18 @@ function DetailView({ project: p, onBack, onEdit }) {
         </div>
       </div>
 
-      <div className="mt-4 flex justify-end">
-        <button onClick={handleCopy} className="px-4 py-2 bg-slate-800 text-white text-sm rounded hover:bg-slate-700 transition-colors">
-          {copied ? '已複製 ✓' : '複製注入摘要'}
+      <div className="mt-4 flex justify-end gap-2">
+        <button
+          onClick={() => handleCopy(PREFIX_OPTIMIZE, setCopiedA)}
+          className="px-4 py-2 border border-slate-300 text-slate-700 text-sm rounded hover:bg-slate-50 transition-colors"
+        >
+          {copiedA ? '已複製 ✓' : '複製優化指令'}
+        </button>
+        <button
+          onClick={() => handleCopy(PREFIX_ANALYZE, setCopiedB)}
+          className="px-4 py-2 bg-slate-800 text-white text-sm rounded hover:bg-slate-700 transition-colors"
+        >
+          {copiedB ? '已複製 ✓' : '複製分析指令'}
         </button>
       </div>
     </div>
