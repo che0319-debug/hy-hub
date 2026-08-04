@@ -36,6 +36,7 @@ function newProject() {
     people: [{ name: '', note: '' }],
     setup: [''],
     execution: { nextStep: '' },
+    actualResult: '',
     updatedAt: '',
   }
 }
@@ -75,6 +76,46 @@ const PREFIX_ANALYZE = `以下是我正在推的一個「局」，內容已優�
 把這當推演練習，不打分。每次至少點出一個你認為我可能有的盲點（最常見：我以為的陽謀對方其實沒那麼想要、或我把某人的「怕」想錯了）。
 
 —— 以下為本局內容 ——`
+
+function buildReviewPrompt(p) {
+  const people = (p.people || []).map(pe =>
+    `- ${pe.name}：${resolveNote(pe)}`
+  ).join('\n')
+  const setup = (p.setup || []).filter(Boolean).map(s => `- ${s}`).join('\n')
+  return [
+    `你是我的策略教練。以下是我對某對象的戰略盤現況，以及我這段期間的實際執行與結果。`,
+    `請根據實績複盤，指出哪裡偏離、哪裡該調整，然後給出「修改後」的四塊內容。`,
+    ``,
+    `【目標】`,
+    `成了的定義：${p.goal?.success || '（未填）'}`,
+    `機會成本：${p.goal?.opportunityCost || '（未填）'}`,
+    ``,
+    `【執行】`,
+    `下一步：${p.execution?.nextStep || '（未填）'}`,
+    ``,
+    `【人性】`,
+    people || '（未填）',
+    ``,
+    `【設局】`,
+    setup || '（未填）',
+    ``,
+    `【我實際做了什麼 + 結果】`,
+    p.actualResult || '（未填）',
+    ``,
+    `---`,
+    `請先做 3-5 點複盤分析（哪裡有效／哪裡失準／為什麼），`,
+    `然後嚴格用以下格式輸出「修改後的四塊」，讓我可以直接貼回我的戰略盤：`,
+    ``,
+    `■ 目標（修改後）`,
+    `...`,
+    `■ 執行（修改後）`,
+    `...`,
+    `■ 人性（修改後）`,
+    `...`,
+    `■ 設局（修改後）`,
+    `...`,
+  ].join('\n')
+}
 
 // ── EditView ──────────────────────────────────────────────────────────────────
 function EditView({ draft, setDraft, onSave, onCancel, onDelete, saving, saveError, isNew }) {
@@ -212,6 +253,18 @@ function EditView({ draft, setDraft, onSave, onCancel, onDelete, saving, saveErr
         </div>
       </div>
 
+      {/* 實績 */}
+      <div className="mt-4 bg-white border border-slate-200 rounded-lg p-4">
+        <h3 className="text-sm font-semibold text-slate-700 mb-2">📋 實績（實際做了什麼 + 結果）</h3>
+        <AutoTextarea
+          minHeight="4.5rem"
+          className="w-full border border-slate-300 rounded px-2 py-1.5 text-sm focus:outline-none focus:border-blue-400"
+          value={draft.actualResult ?? ''}
+          onChange={e => set('actualResult', e.target.value)}
+          placeholder="這段期間實際執行了什麼、結果如何"
+        />
+      </div>
+
       {saveError && (
         <div className="mt-4 text-sm text-red-500 bg-red-50 border border-red-200 rounded px-3 py-2">
           儲存失敗：{saveError}
@@ -240,11 +293,26 @@ function EditView({ draft, setDraft, onSave, onCancel, onDelete, saving, saveErr
 function DetailView({ project: p, onBack, onEdit }) {
   const [copiedA, setCopiedA] = useState(false)
   const [copiedB, setCopiedB] = useState(false)
+  const [copiedC, setCopiedC] = useState(false)
 
   async function handleCopy(prefix, setFlag) {
     await navigator.clipboard.writeText(prefix + '\n' + buildSummary(p))
     setFlag(true)
     setTimeout(() => setFlag(false), 2000)
+  }
+
+  const hasReviewContent = !!(
+    p.goal?.success || p.goal?.opportunityCost ||
+    p.execution?.nextStep ||
+    (p.people || []).some(pe => pe.name || resolveNote(pe)) ||
+    (p.setup || []).some(Boolean) ||
+    p.actualResult
+  )
+
+  async function handleCopyReview() {
+    await navigator.clipboard.writeText(buildReviewPrompt(p))
+    setCopiedC(true)
+    setTimeout(() => setCopiedC(false), 2000)
   }
 
   return (
@@ -320,6 +388,25 @@ function DetailView({ project: p, onBack, onEdit }) {
         >
           {copiedB ? '已複製 ✓' : '複製分析指令'}
         </button>
+      </div>
+
+      {/* 實績 + 複盤 */}
+      <div className="mt-4 bg-white border border-slate-200 rounded-lg p-4">
+        <h3 className="text-sm font-semibold text-slate-700 mb-2">📋 實績（實際做了什麼 + 結果）</h3>
+        {p.actualResult
+          ? <p className="text-sm text-slate-700 whitespace-pre-wrap">{p.actualResult}</p>
+          : <p className="text-sm text-slate-400 italic">尚未填寫</p>
+        }
+        <div className="mt-3 flex justify-end">
+          <button
+            onClick={handleCopyReview}
+            disabled={!hasReviewContent}
+            className="px-4 py-2 bg-amber-600 text-white text-sm rounded hover:bg-amber-700 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+            title={!hasReviewContent ? '先填內容再複盤' : '複製複盤指令，貼到 claude.ai'}
+          >
+            {copiedC ? '已複製，貼到 claude.ai ✓' : '複盤'}
+          </button>
+        </div>
       </div>
     </div>
   )
