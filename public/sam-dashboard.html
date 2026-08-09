@@ -565,6 +565,10 @@ input[type="date"] { color-scheme: light; }
 .contrib-table tr:hover td { background:var(--bg); }
 .contrib-table tfoot td { font-weight:700; border-top:2px solid var(--border); }
 .strategy-suggestion-text { font-size:13px; color:var(--text-muted); line-height:1.7; }
+@media (max-width:767px) {
+  .board-wrap { scroll-snap-type:x mandatory; -webkit-overflow-scrolling:touch; padding:12px; }
+  .column { scroll-snap-align:start; min-width:85vw; width:85vw; }
+}
 </style>
 </head>
 <body>

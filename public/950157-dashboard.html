@@ -321,6 +321,10 @@ header { background:var(--header-bg); padding:0 24px; display:flex; align-items:
 ::-webkit-scrollbar-track { background:transparent; }
 ::-webkit-scrollbar-thumb { background:#c1c7d0; border-radius:3px; }
 ::-webkit-scrollbar-thumb:hover { background:#97a0af; }
+@media (max-width:767px) {
+  .board-wrap { scroll-snap-type:x mandatory; -webkit-overflow-scrolling:touch; padding:12px; }
+  .column { scroll-snap-align:start; min-width:85vw; width:85vw; }
+}
 </style>
 </head>
 <body>

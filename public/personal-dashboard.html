@@ -331,6 +331,10 @@ header { background:var(--header-bg); padding:0 24px; display:flex; align-items:
 .cross-stat-item { flex:1; text-align:center; }
 .cross-stat-num { font-family:'Syne',sans-serif; font-size:20px; font-weight:800; color:var(--text); }
 .cross-stat-sub { font-size:10px; color:var(--text-muted); }
+@media (max-width:767px) {
+  .board-wrap { scroll-snap-type:x mandatory; -webkit-overflow-scrolling:touch; padding:12px; }
+  .column { scroll-snap-align:start; min-width:85vw; width:85vw; }
+}
 </style>
 </head>
 <body>

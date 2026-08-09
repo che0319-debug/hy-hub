@@ -203,7 +203,7 @@ export default function Home() {
 
       {view === 'data' ? (
         <div>
-          <div className="grid grid-cols-3 gap-4 mb-6">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
             <MetricCard
               icon={Bell}
               label="待確認派工"

@@ -173,6 +173,10 @@ header { background:var(--header-bg); padding:0 24px; display:flex; align-items:
 .wk-member-name { font-size:12px; font-weight:700; color:var(--text); margin-bottom:4px; }
 .wk-member-note { font-size:12px; color:var(--text-muted); line-height:1.5; }
 .wk-tag-pending { display:inline-block; background:#fffae6; color:#974f0c; font-size:11px; font-weight:700; padding:2px 7px; border-radius:10px; border:1px solid #ffe58f; }
+@media (max-width:767px) {
+  .board-area { scroll-snap-type:x mandatory; -webkit-overflow-scrolling:touch; padding:12px; }
+  .board-col { scroll-snap-align:start; min-width:85vw; width:85vw; }
+}
 </style>
 </head>
 <body>

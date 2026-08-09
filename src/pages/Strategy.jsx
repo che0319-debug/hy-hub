@@ -170,7 +170,7 @@ function EditView({ draft, setDraft, onSave, onCancel, onDelete, saving, saveErr
         />
       </div>
 
-      <div className="grid grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         {/* 目標 */}
         <div className="bg-white border border-slate-200 rounded-lg p-4">
           <h3 className="text-sm font-semibold text-slate-700 mb-3">🎯 目標</h3>
@@ -329,7 +329,7 @@ function DetailView({ project: p, onBack, onEdit }) {
 
       <h2 className="text-xl font-semibold mb-6">{p.name}</h2>
 
-      <div className="grid grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div className="bg-white border border-slate-200 rounded-lg p-4">
           <h3 className="text-sm font-semibold text-slate-700 mb-3">🎯 目標</h3>
           <div className="mb-3">
