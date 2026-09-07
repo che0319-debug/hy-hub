@@ -177,6 +177,70 @@ header { background:var(--header-bg); padding:0 24px; display:flex; align-items:
   .board-area { scroll-snap-type:x mandatory; -webkit-overflow-scrolling:touch; padding:12px; }
   .board-col { scroll-snap-align:start; min-width:85vw; width:85vw; }
 }
+
+/* ══════════════ FITNESS ══════════════ */
+#tab-fitness.active { overflow-y:auto; }
+.fitness-wrap { padding:20px 24px 48px; max-width:960px; display:flex; flex-direction:column; gap:16px; }
+.fit-card { background:var(--card-bg); border:1px solid var(--border); border-radius:var(--radius); padding:20px; box-shadow:var(--shadow-sm); }
+.fit-card-title { font-family:'Syne',sans-serif; font-size:14px; font-weight:700; color:var(--text); margin-bottom:16px; padding-bottom:8px; border-bottom:1px solid var(--border); display:flex; align-items:center; justify-content:space-between; gap:8px; }
+.fit-goal-grid { display:grid; grid-template-columns:1fr auto 1fr; gap:16px; align-items:start; margin-bottom:16px; }
+.fit-big-num { text-align:center; }
+.fit-big-val { font-family:'Syne',sans-serif; font-size:44px; font-weight:800; line-height:1; font-variant-numeric:tabular-nums; }
+.fit-big-label { font-size:12px; color:var(--text-muted); margin-top:4px; }
+.fit-big-sub { font-size:11px; color:var(--text-dim); margin-top:3px; }
+.fit-diff-block { background:#fff7ed; border-radius:8px; padding:12px 16px; text-align:center; }
+.fit-diff-val { font-family:'Syne',sans-serif; font-size:44px; font-weight:800; color:#ea580c; line-height:1; font-variant-numeric:tabular-nums; }
+.fit-diff-label { font-size:12px; color:#ea580c; margin-top:4px; font-weight:600; }
+.fit-diff-sub { font-size:11px; color:#9a3412; margin-top:3px; }
+.fit-progress-track { position:relative; height:28px; margin:12px 0 2px; }
+.fit-track-bar { position:absolute; left:0; right:0; top:50%; transform:translateY(-50%); height:8px; background:#e2e8f0; border-radius:4px; }
+.fit-track-fill { height:100%; border-radius:4px; background:linear-gradient(90deg,#ea580c,#fbbf24); }
+.fit-track-pin { position:absolute; top:50%; transform:translate(-50%,-50%); width:16px; height:16px; background:#ea580c; border:3px solid #fff; border-radius:50%; box-shadow:0 1px 4px rgba(0,0,0,.25); }
+.fit-track-labels { display:flex; justify-content:space-between; font-size:11px; color:var(--text-muted); }
+.fit-pace-band { border-radius:8px; padding:12px 16px; font-size:13px; line-height:1.6; margin-top:10px; }
+.fit-pace-ok    { background:#f0fdf4; color:#166534; }
+.fit-pace-tight { background:#fffbeb; color:#92400e; }
+.fit-pace-alert { background:#fef2f2; color:#991b1b; }
+.fit-seg { display:flex; border:1.5px solid var(--border); border-radius:6px; overflow:hidden; }
+.fit-seg-btn { background:#fff; border:none; padding:5px 14px; font-size:12px; font-weight:500; cursor:pointer; color:var(--text-muted); font-family:'Noto Sans TC',sans-serif; transition:all .15s; }
+.fit-seg-btn:not(:last-child) { border-right:1.5px solid var(--border); }
+.fit-seg-btn.active { background:var(--brand-color); color:#fff; font-weight:700; }
+.fit-chart-row { display:flex; flex-direction:column; gap:4px; margin-bottom:14px; }
+.fit-chart-label { font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.4px; }
+.fit-chart-svg { width:100%; display:block; overflow:visible; }
+.fit-chart-empty { font-size:13px; color:var(--text-muted); padding:20px; text-align:center; background:#f8f9fa; border-radius:6px; line-height:1.6; }
+.fit-ex-stats { font-size:11px; color:var(--text-muted); text-align:right; margin-top:4px; }
+.fit-diet-svg { width:100%; display:block; }
+.fit-diet-stats { display:grid; grid-template-columns:repeat(3,1fr); gap:10px; margin-top:12px; }
+.fit-diet-stat { background:#f8f9fa; border-radius:6px; padding:10px 12px; text-align:center; }
+.fit-diet-stat-num { font-family:'Syne',sans-serif; font-size:22px; font-weight:800; color:var(--text); font-variant-numeric:tabular-nums; }
+.fit-diet-stat-label { font-size:11px; color:var(--text-muted); margin-top:2px; }
+.fit-diet-note { font-size:11px; color:var(--text-dim); margin-top:10px; line-height:1.55; }
+.fit-date-nav { display:flex; align-items:center; gap:10px; margin-bottom:14px; flex-wrap:wrap; }
+.fit-date-nav-title { font-family:'Syne',sans-serif; font-size:16px; font-weight:700; flex:1; }
+.fit-nav-btn { background:none; border:1.5px solid var(--border); border-radius:6px; width:30px; height:30px; cursor:pointer; font-size:16px; color:var(--text-muted); display:flex; align-items:center; justify-content:center; transition:all .15s; }
+.fit-nav-btn:hover:not([disabled]) { border-color:var(--blue); color:var(--blue); }
+.fit-nav-btn:disabled { opacity:.35; cursor:not-allowed; }
+.fit-today-btn { background:none; border:1.5px solid var(--border); border-radius:6px; padding:4px 10px; font-size:12px; cursor:pointer; color:var(--text-muted); font-family:'Noto Sans TC',sans-serif; transition:all .15s; }
+.fit-today-btn:hover { border-color:var(--blue); color:var(--blue); }
+.fit-detail-section { margin-bottom:14px; }
+.fit-detail-section-title { font-size:11px; font-weight:700; color:var(--text-muted); text-transform:uppercase; letter-spacing:.4px; margin-bottom:8px; }
+.fit-detail-empty { font-size:13px; color:var(--text-dim); }
+.fit-detail-measure { font-size:14px; font-weight:600; color:var(--text); margin-bottom:3px; display:flex; align-items:baseline; gap:8px; }
+.fit-detail-measure-sub { font-size:12px; color:var(--text-muted); }
+.fit-workout-row,.fit-meal-row { display:flex; align-items:flex-start; gap:8px; padding:8px 0; border-bottom:1px solid #f1f5f9; }
+.fit-entry-main { flex:1; min-width:0; }
+.fit-entry-title { font-size:13px; font-weight:600; color:var(--text); }
+.fit-entry-sub { font-size:12px; color:var(--text-muted); margin-top:2px; display:flex; flex-wrap:wrap; gap:4px; align-items:center; }
+.fit-entry-badge { display:inline-flex; align-items:center; gap:3px; font-size:11px; padding:1px 6px; border-radius:10px; }
+.fit-badge-photo { background:#ede9fe; color:#5b21b6; }
+.fit-badge-low   { background:#fff7ed; color:#c2410c; }
+.fit-entry-del { background:none; border:none; color:var(--text-dim); cursor:pointer; font-size:13px; padding:4px; border-radius:4px; flex-shrink:0; transition:all .15s; }
+.fit-entry-del:hover { color:var(--red); background:#ffebe6; }
+.fit-meal-total { font-size:12px; color:var(--text-muted); margin-top:8px; padding-top:8px; border-top:1px solid #f1f5f9; }
+.fit-add-btns { display:flex; gap:8px; margin-top:14px; flex-wrap:wrap; }
+.fit-add-btn { background:#f8f9fa; border:1.5px solid var(--border); border-radius:6px; padding:7px 14px; font-size:12px; color:var(--text-muted); cursor:pointer; font-family:'Noto Sans TC',sans-serif; transition:all .15s; white-space:nowrap; }
+.fit-add-btn:hover { border-color:var(--blue); color:var(--blue); background:#f0f4ff; }
 </style>
 </head>
 <body>
@@ -195,12 +259,71 @@ header { background:var(--header-bg); padding:0 24px; display:flex; align-items:
 
 <div class="tabs">
   <div class="tab active" data-tab="tasks">✅ 任務清單</div>
+  <div class="tab" data-tab="fitness">🏋️ 健身</div>
   <div class="tab" data-tab="weekly">📋 週覆盤</div>
 </div>
 
 <!-- 任務清單 Kanban -->
 <div class="tab-content active" id="tab-tasks">
   <div class="board-area" id="board"></div>
+</div>
+
+<!-- 健身 -->
+<div class="tab-content" id="tab-fitness">
+  <div class="fitness-wrap">
+
+    <!-- ① 目標區 -->
+    <div class="fit-card" id="fit-goal-card">
+      <div class="fit-card-title">
+        <span>🎯 目標追蹤</span>
+        <button class="fit-add-btn" id="fitGoalEditBtn">調整目標</button>
+      </div>
+      <div id="fit-goal-content"><div class="fit-chart-empty">載入中…</div></div>
+    </div>
+
+    <!-- ② 量測趨勢 -->
+    <div class="fit-card">
+      <div class="fit-card-title">
+        <span>📈 量測趨勢</span>
+        <div class="fit-seg" id="fitMeasSeg">
+          <button class="fit-seg-btn" data-range="30">30 天</button>
+          <button class="fit-seg-btn" data-range="90">90 天</button>
+          <button class="fit-seg-btn active" data-range="target">到目標日</button>
+        </div>
+      </div>
+      <div id="fit-meas-content"><div class="fit-chart-empty">載入中…</div></div>
+    </div>
+
+    <!-- ③ 飲食趨勢 -->
+    <div class="fit-card">
+      <div class="fit-card-title">
+        <span>🥗 飲食趨勢（90 天）</span>
+        <div class="fit-seg" id="fitDietSeg">
+          <button class="fit-seg-btn active" data-mode="kcal">熱量</button>
+          <button class="fit-seg-btn" data-mode="protein">蛋白質</button>
+        </div>
+      </div>
+      <div id="fit-diet-content"><div class="fit-chart-empty">載入中…</div></div>
+    </div>
+
+    <!-- ④ 當日明細 -->
+    <div class="fit-card">
+      <div class="fit-card-title">當日明細</div>
+      <div class="fit-date-nav">
+        <button class="fit-nav-btn" id="fitPrevDay">‹</button>
+        <span class="fit-date-nav-title" id="fitDateTitle">—</span>
+        <button class="fit-nav-btn" id="fitNextDay">›</button>
+        <button class="fit-today-btn" id="fitTodayBtn">回到今天</button>
+      </div>
+      <div id="fit-detail-content"></div>
+      <div class="fit-add-btns">
+        <button class="fit-add-btn" id="fitAddMeas">＋ 量測</button>
+        <button class="fit-add-btn" id="fitAddWorkout">＋ 運動</button>
+        <button class="fit-add-btn" id="fitAddMeal">＋ 飲食</button>
+      </div>
+    </div>
+
+  </div>
 </div>
 
 <!-- 週覆盤 -->
@@ -243,6 +366,152 @@ header { background:var(--header-bg); padding:0 24px; display:flex; align-items:
       <div class="del-side"><button class="btn-del" id="m-delete">刪除</button></div>
       <button class="btn-cancel" id="m-cancel">取消</button>
       <button class="btn-save" id="m-save">儲存</button>
+    </div>
+  </div>
+</div>
+
+<!-- Fitness: 調整目標 modal -->
+<div class="modal-overlay" id="fitGoalModal">
+  <div class="modal-box">
+    <div class="modal-header">
+      <div class="modal-title">調整目標</div>
+      <button class="modal-close" id="fitGoalModalClose">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="m-row2">
+        <div class="m-field">
+          <label class="m-label">目標體脂率 (%)</label>
+          <input class="m-input" type="number" id="fitGoalTargetVal" step="0.1" min="5" max="40" placeholder="18.0">
+        </div>
+        <div class="m-field">
+          <label class="m-label">目標日期</label>
+          <input class="m-input" type="date" id="fitGoalTargetDate">
+        </div>
+      </div>
+      <div id="fitGoalPreview" style="background:#f8f9fa;border-radius:6px;padding:12px 14px;font-size:13px;line-height:1.65;color:var(--text-muted);">填寫以上兩欄後即時預覽</div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-cancel" id="fitGoalCancel">取消</button>
+      <button class="btn-save" id="fitGoalSave">儲存目標</button>
+    </div>
+  </div>
+</div>
+
+<!-- Fitness: 補登量測 modal -->
+<div class="modal-overlay" id="fitAddMeasModal">
+  <div class="modal-box">
+    <div class="modal-header">
+      <div class="modal-title">補登量測</div>
+      <button class="modal-close" onclick="document.getElementById('fitAddMeasModal').classList.remove('open')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="m-field">
+        <label class="m-label">日期</label>
+        <input class="m-input" type="date" id="fitAddMeasDate">
+      </div>
+      <div class="m-row2">
+        <div class="m-field">
+          <label class="m-label">體脂率 (%)</label>
+          <input class="m-input" type="number" id="fitAddMeasBodyFat" step="0.1" placeholder="22.7">
+        </div>
+        <div class="m-field">
+          <label class="m-label">體重 (kg)</label>
+          <input class="m-input" type="number" id="fitAddMeasWeight" step="0.1" placeholder="68.6">
+        </div>
+      </div>
+      <div class="m-field">
+        <label class="m-label">骨骼肌重 (kg)</label>
+        <input class="m-input" type="number" id="fitAddMeasMuscle" step="0.1" placeholder="29.9">
+      </div>
+      <div class="m-field">
+        <label class="m-label">備註</label>
+        <input class="m-input" id="fitAddMeasNote" placeholder="空腹、晨測…">
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-cancel" onclick="document.getElementById('fitAddMeasModal').classList.remove('open')">取消</button>
+      <button class="btn-save" id="fitAddMeasSave">儲存</button>
+    </div>
+  </div>
+</div>
+
+<!-- Fitness: 補登運動 modal -->
+<div class="modal-overlay" id="fitAddWorkoutModal">
+  <div class="modal-box">
+    <div class="modal-header">
+      <div class="modal-title">補登運動</div>
+      <button class="modal-close" onclick="document.getElementById('fitAddWorkoutModal').classList.remove('open')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="m-field">
+        <label class="m-label">日期</label>
+        <input class="m-input" type="date" id="fitAddWorkoutDate">
+      </div>
+      <div class="m-row2">
+        <div class="m-field">
+          <label class="m-label">類型</label>
+          <select class="m-select" id="fitAddWorkoutType">
+            <option value="重訓">重訓</option>
+            <option value="跑步">跑步</option>
+            <option value="游泳">游泳</option>
+            <option value="其他">其他</option>
+          </select>
+        </div>
+        <div class="m-field">
+          <label class="m-label">分鐘（選填）</label>
+          <input class="m-input" type="number" id="fitAddWorkoutMin" placeholder="45" min="1">
+        </div>
+      </div>
+      <div class="m-field">
+        <label class="m-label">備註</label>
+        <input class="m-input" id="fitAddWorkoutNote" placeholder="課表、重量…">
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-cancel" onclick="document.getElementById('fitAddWorkoutModal').classList.remove('open')">取消</button>
+      <button class="btn-save" id="fitAddWorkoutSave">儲存</button>
+    </div>
+  </div>
+</div>
+
+<!-- Fitness: 補登飲食 modal -->
+<div class="modal-overlay" id="fitAddMealModal">
+  <div class="modal-box">
+    <div class="modal-header">
+      <div class="modal-title">補登飲食</div>
+      <button class="modal-close" onclick="document.getElementById('fitAddMealModal').classList.remove('open')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="m-row2">
+        <div class="m-field">
+          <label class="m-label">日期</label>
+          <input class="m-input" type="date" id="fitAddMealDate">
+        </div>
+        <div class="m-field">
+          <label class="m-label">餐別</label>
+          <select class="m-select" id="fitAddMealSlot">
+            <option>早餐</option><option>午餐</option><option>晚餐</option><option>點心</option>
+          </select>
+        </div>
+      </div>
+      <div class="m-field">
+        <label class="m-label">內容</label>
+        <input class="m-input" id="fitAddMealItems" placeholder="雞胸肉、花椰菜…">
+      </div>
+      <div class="m-row2">
+        <div class="m-field">
+          <label class="m-label">估算熱量 (kcal)</label>
+          <input class="m-input" type="number" id="fitAddMealKcal" placeholder="500">
+        </div>
+        <div class="m-field">
+          <label class="m-label">蛋白質 (g)</label>
+          <input class="m-input" type="number" id="fitAddMealProtein" placeholder="40">
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-cancel" onclick="document.getElementById('fitAddMealModal').classList.remove('open')">取消</button>
+      <button class="btn-save" id="fitAddMealSave">儲存</button>
     </div>
   </div>
 </div>
@@ -755,6 +1024,612 @@ document.getElementById('weeklyDownloadBtn').addEventListener('click', function(
     loadWeeklyList(p.get('week') || null);
   }
 })();
+
+// ══════════════ FITNESS ══════════════
+var fitData = null;
+var fitSelectedDate = today;
+var fitMeasRange = 'target';
+var fitDietMode = 'kcal';
+
+function fitAllData() {
+  if (!fitData) return { measurements:[], workouts:[], meals:[] };
+  var ms = [], ws = [], fds = [];
+  Object.keys(fitData.months).forEach(function(ym) {
+    var m = fitData.months[ym];
+    ms = ms.concat(m.measurements || []);
+    ws = ws.concat(m.workouts || []);
+    fds = fds.concat(m.meals || []);
+  });
+  ms.sort(function(a,b){ return a.date < b.date ? -1 : a.date > b.date ? 1 : 0; });
+  ws.sort(function(a,b){ return a.date < b.date ? -1 : a.date > b.date ? 1 : 0; });
+  fds.sort(function(a,b){ return a.date < b.date ? -1 : a.date > b.date ? 1 : 0; });
+  return { measurements:ms, workouts:ws, meals:fds };
+}
+
+function loadFitnessData() {
+  fetch(API + '/api/fitness?months=4', { cache:'no-store', headers:GET_HEADERS })
+    .then(function(r){ if (!r.ok) throw new Error('HTTP '+r.status); return r.json(); })
+    .then(function(d){ fitData = d; renderFitnessAll(); })
+    .catch(function(e){
+      console.error('[fitness]', e);
+      document.getElementById('fit-goal-content').innerHTML = '<div class="fit-chart-empty">⚠ 載入失敗：'+esc(e.message)+'</div>';
+    });
+}
+
+function renderFitnessAll() {
+  var all = fitAllData();
+  renderFitGoal(fitData.profile, all.measurements);
+  renderFitMeasChart(all.measurements, all.workouts, fitMeasRange, fitData.profile);
+  renderFitDietChart(all.meals, fitDietMode);
+  renderFitDetail(fitSelectedDate, all.measurements, all.workouts, all.meals);
+}
+
+// ① Goal area
+function renderFitGoal(profile, measurements) {
+  var el = document.getElementById('fit-goal-content');
+  if (!measurements.length) {
+    el.innerHTML = '<div class="fit-chart-empty">目前還沒有量測資料。先用 Telegram 傳 InBody 照片或點「＋ 量測」補登後再來看。</div>';
+    return;
+  }
+  var latest = measurements[measurements.length - 1];
+  var goal = (profile && profile.goal) || {};
+  var baseline = (profile && profile.baseline) || {};
+  var bodyFat = latest.bodyFat;
+  var leanMass = latest.leanMass != null ? latest.leanMass : (latest.weight != null && bodyFat != null ? latest.weight * (1 - bodyFat/100) : null);
+  var fatMass  = latest.fatMass  != null ? latest.fatMass  : (latest.weight != null && bodyFat != null ? latest.weight * bodyFat/100 : null);
+  var targetValue = goal.targetValue != null ? goal.targetValue : 18.0;
+  var targetDateStr = goal.targetDate || '';
+  var baselineLeanMass = baseline.muscleMass != null ? baseline.muscleMass : null;
+  var startValue = goal.startValue != null ? goal.startValue : bodyFat;
+
+  var todayObj = new Date(today + 'T00:00:00');
+  var targetDateObj = targetDateStr ? new Date(targetDateStr + 'T00:00:00') : null;
+  var daysLeft = targetDateObj ? Math.round((targetDateObj - todayObj) / 86400000) : null;
+
+  var diffVal = bodyFat != null ? +(bodyFat - targetValue).toFixed(1) : null;
+  var targetWeight = leanMass != null ? leanMass / (1 - targetValue/100) : null;
+  var fatToLose = (fatMass != null && targetWeight != null) ? +(fatMass - (targetWeight - leanMass)).toFixed(2) : null;
+  var monthsLeft = daysLeft != null ? daysLeft / 30.44 : null;
+  var rateNeeded = (fatToLose != null && monthsLeft && monthsLeft > 0) ? +(fatToLose / monthsLeft).toFixed(2) : null;
+
+  var muscleDrop = (baselineLeanMass != null && leanMass != null) ? +(baselineLeanMass - leanMass).toFixed(2) : 0;
+  var paceState = 'ok';
+  if (muscleDrop >= 0.5) { paceState = 'alert'; }
+  else if (rateNeeded != null && rateNeeded > 1.0) { paceState = 'tight'; }
+
+  var totalDrop = startValue != null ? startValue - targetValue : 1;
+  var doneDrop  = startValue != null && bodyFat != null ? startValue - bodyFat : 0;
+  var pct = totalDrop > 0 ? Math.max(0, Math.min(100, doneDrop / totalDrop * 100)) : 0;
+
+  var html = '';
+  html += '<div class="fit-goal-grid">';
+  // Current body fat
+  html += '<div class="fit-big-num">';
+  html += '<div class="fit-big-val" style="color:#334155">'+(bodyFat != null ? bodyFat.toFixed(1)+'%' : '—')+'</div>';
+  html += '<div class="fit-big-label">目前體脂率</div>';
+  html += '<div class="fit-big-sub">量測於 '+esc(latest.date)+'</div>';
+  html += '</div>';
+  // Diff (orange block)
+  html += '<div class="fit-diff-block">';
+  html += '<div class="fit-diff-val">'+(diffVal != null ? diffVal.toFixed(1) : '—')+'</div>';
+  html += '<div class="fit-diff-label">離目標還差幾個百分點</div>';
+  html += '<div class="fit-diff-sub">約 '+(fatToLose != null ? fatToLose : '—')+' 公斤脂肪 · 目標 '+targetValue.toFixed(1)+'%</div>';
+  html += '</div>';
+  // Days left
+  html += '<div class="fit-big-num">';
+  html += '<div class="fit-big-val" style="color:#334155">'+(daysLeft != null ? daysLeft : '—')+'</div>';
+  html += '<div class="fit-big-label">剩餘天數</div>';
+  html += '<div class="fit-big-sub">'+esc(targetDateStr || '未設定目標日')+'</div>';
+  html += '</div>';
+  html += '</div>';
+
+  // Progress track
+  html += '<div class="fit-progress-track">';
+  html += '<div class="fit-track-bar"><div class="fit-track-fill" style="width:'+pct.toFixed(1)+'%"></div></div>';
+  html += '<div class="fit-track-pin" style="left:'+pct.toFixed(1)+'%"></div>';
+  html += '</div>';
+  html += '<div class="fit-track-labels">';
+  html += '<span>起始 '+(startValue != null ? startValue.toFixed(1) : '—')+'%</span>';
+  html += '<span style="color:var(--text-muted)">已完成 '+pct.toFixed(0)+'%</span>';
+  html += '<span>目標 '+targetValue.toFixed(1)+'%</span>';
+  html += '</div>';
+
+  // Pace band
+  if (paceState === 'alert') {
+    html += '<div class="fit-pace-band fit-pace-alert">⚠️ 骨骼肌重掉了 '+muscleDrop+' kg（'+(baselineLeanMass||'—')+' → '+(leanMass != null ? leanMass.toFixed(1) : '—')+'）。減掉的不只是脂肪。建議放慢速度、提高阻力訓練比重，先把肌肉守回來再談體脂率——目標日期可以往後調。</div>';
+  } else if (paceState === 'tight') {
+    html += '<div class="fit-pace-band fit-pace-tight">⏱ 達標需要每月減脂 '+rateNeeded+' kg（共 '+(fatToLose||'—')+' kg，'+(daysLeft||'—')+' 天），略高於建議上限 1.0，目標偏緊。把日期往後調會比加大強度安全。</div>';
+  } else {
+    html += '<div class="fit-pace-band fit-pace-ok">✅ 所需速率 '+(rateNeeded != null ? rateNeeded : '—')+' kg 脂肪/月，在可持續範圍內（≤ 1.0 kg/月）。</div>';
+  }
+
+  el.innerHTML = html;
+}
+
+// ② Measurement trend
+function renderFitMeasChart(measurements, workouts, range, profile) {
+  var el = document.getElementById('fit-meas-content');
+  var goal = (profile && profile.goal) || {};
+  var targetDateStr = goal.targetDate || '';
+  var todayObj = new Date(today + 'T00:00:00');
+  var rangeStart, rangeEnd;
+
+  if (range === '30') {
+    rangeStart = new Date(todayObj); rangeStart.setDate(rangeStart.getDate() - 30);
+    rangeEnd = new Date(todayObj);
+  } else if (range === '90') {
+    rangeStart = new Date(todayObj); rangeStart.setDate(rangeStart.getDate() - 90);
+    rangeEnd = new Date(todayObj);
+  } else {
+    var sd = goal.startDate || (measurements.length ? measurements[0].date : null);
+    rangeStart = sd ? new Date(sd + 'T00:00:00') : new Date(todayObj);
+    if (!sd) rangeStart.setDate(rangeStart.getDate() - 30);
+    rangeEnd = targetDateStr ? new Date(targetDateStr + 'T00:00:00') : new Date(todayObj);
+  }
+
+  var rsStr = rangeStart.toISOString().slice(0,10);
+  var reStr = rangeEnd.toISOString().slice(0,10);
+  var filteredMs = measurements.filter(function(m){ return m.date >= rsStr && m.date <= reStr; });
+  var filteredWs = workouts.filter(function(w){ return w.date >= rsStr && w.date <= reStr; });
+
+  var html = '';
+
+  if (filteredMs.length < 2) {
+    var cnt = filteredMs.length;
+    var msg;
+    if (measurements.length <= 1) {
+      msg = measurements.length === 0
+        ? '還沒有任何量測。建議固定條件量一次（早上空腹、同一台機器），第一筆進來就準備好了。'
+        : '目前只有 1 筆量測，畫不出趨勢。建議固定條件再量一次（早上空腹、同一台機器），第二筆進來就會出現三條曲線。';
+    } else {
+      msg = '這個區間只有 '+cnt+' 筆量測。切到較長的區間看看，或再量一次。';
+    }
+    html = '<div class="fit-chart-empty">'+esc(msg)+'</div>';
+    html += fitExerciseRow(filteredWs, rangeStart, rangeEnd);
+    el.innerHTML = html;
+    return;
+  }
+
+  var baseline = (profile && profile.baseline) || {};
+  var baselineLM = baseline.muscleMass != null ? baseline.muscleMass : null;
+  var tv = goal.targetValue != null ? goal.targetValue : 18.0;
+  var latestLM = measurements[measurements.length-1].leanMass;
+  var estTargetW = latestLM != null ? +(latestLM / (1 - tv/100)).toFixed(1) : null;
+
+  var tracks = [
+    { key:'bodyFat',    label:'體脂率',  color:'#ea580c', refVal:tv,          refLabel:'目標', unit:'%' },
+    { key:'weight',     label:'體重',    color:'#334155', refVal:estTargetW,   refLabel:'推估', unit:'kg' },
+    { key:'muscleMass', label:'骨骼肌重', color:'#059669', refVal:baselineLM,   refLabel:'守住', unit:'kg' },
+  ];
+
+  var SVG_W = 800, SVG_H = 80, pL = 36, pR = 48, pT = 12, pB = 20;
+  var t0 = rangeStart.getTime(), t1 = rangeEnd.getTime(), tR = t1 - t0 || 1;
+  function tx(ds){ return pL + (new Date(ds+'T00:00:00').getTime()-t0)/tR*(SVG_W-pL-pR); }
+
+  tracks.forEach(function(tr) {
+    var pts = filteredMs.filter(function(m){ return m[tr.key] != null; });
+    if (!pts.length) return;
+    var vals = pts.map(function(m){ return m[tr.key]; });
+    var mn = Math.min.apply(null, vals), mx = Math.max.apply(null, vals);
+    if (tr.refVal != null){ mn = Math.min(mn,tr.refVal); mx = Math.max(mx,tr.refVal); }
+    var pad = (mx-mn)*0.18 || 0.5; mn -= pad; mx += pad;
+    function ty(v){ return pT + (1-(v-mn)/(mx-mn))*(SVG_H-pT-pB); }
+
+    html += '<div class="fit-chart-row">';
+    html += '<div class="fit-chart-label" style="color:'+tr.color+'">'+tr.label+' ('+tr.unit+')</div>';
+    html += '<svg class="fit-chart-svg" viewBox="0 0 '+SVG_W+' '+SVG_H+'" style="height:'+SVG_H+'px">';
+    // Ref dashed line
+    if (tr.refVal != null) {
+      var ry = ty(tr.refVal).toFixed(1);
+      html += '<line x1="'+pL+'" y1="'+ry+'" x2="'+(SVG_W-pR)+'" y2="'+ry+'" stroke="'+tr.color+'" stroke-width="1" stroke-dasharray="4,3" opacity=".45"/>';
+      html += '<text x="'+(SVG_W-pR+4)+'" y="'+(parseFloat(ry)+4)+'" fill="'+tr.color+'" font-size="9" opacity=".8">'+esc(tr.refLabel)+'</text>';
+    }
+    // Path
+    html += '<path d="'+pts.map(function(m,i){ return (i?'L':'M')+tx(m.date).toFixed(1)+' '+ty(m[tr.key]).toFixed(1); }).join(' ')+'" fill="none" stroke="'+tr.color+'" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>';
+    // Points
+    pts.forEach(function(m,i) {
+      var cx = tx(m.date).toFixed(1), cy = ty(m[tr.key]).toFixed(1);
+      html += '<circle cx="'+cx+'" cy="'+cy+'" r="4" fill="#fff" stroke="'+tr.color+'" stroke-width="2" style="cursor:pointer" onclick="fitSelectDate(\''+m.date+'\')">';
+      html += '<title>'+esc(m.date+' '+m[tr.key]+tr.unit)+'</title></circle>';
+      if (i === pts.length-1) {
+        html += '<text x="'+(parseFloat(cx)+7)+'" y="'+(parseFloat(cy)+4)+'" fill="'+tr.color+'" font-size="10" font-weight="700">'+m[tr.key].toFixed(1)+'</text>';
+      }
+    });
+    // Y labels
+    html += '<text x="'+(pL-3)+'" y="'+(pT+9)+'" fill="#94a3b8" font-size="9" text-anchor="end">'+mx.toFixed(1)+'</text>';
+    html += '<text x="'+(pL-3)+'" y="'+(SVG_H-pB+3)+'" fill="#94a3b8" font-size="9" text-anchor="end">'+mn.toFixed(1)+'</text>';
+    html += '</svg></div>';
+  });
+
+  html += fitExerciseRow(filteredWs, rangeStart, rangeEnd);
+  el.innerHTML = html;
+}
+
+function fitExerciseRow(workouts, rangeStart, rangeEnd) {
+  var PRIO = { '重訓':3, '游泳':2, '跑步':1 };
+  var EMOJI = { '重訓':'🏋️', '跑步':'🏃', '游泳':'🏊' };
+  var byDate = {};
+  workouts.forEach(function(w) {
+    if (!byDate[w.date]) byDate[w.date] = [];
+    byDate[w.date].push(w);
+  });
+  var t0 = rangeStart.getTime(), t1 = rangeEnd.getTime(), tR = t1 - t0 || 1;
+  var SVG_W = 800, pL = 36, pR = 48;
+  function ex(ds){ return pL + (new Date(ds+'T00:00:00').getTime()-t0)/tR*(SVG_W-pL-pR); }
+
+  var todayObj = new Date(today+'T00:00:00');
+  var sevenAgo = new Date(todayObj); sevenAgo.setDate(sevenAgo.getDate()-7);
+  var saStr = sevenAgo.toISOString().slice(0,10);
+  var recent7 = workouts.filter(function(w){ return w.date >= saStr; });
+  var r7dates = {}, r7min = 0;
+  recent7.forEach(function(w){ r7dates[w.date]=1; r7min += (w.minutes||0); });
+  var r7count = Object.keys(r7dates).length;
+
+  var html = '<div style="position:relative;height:36px;margin-top:6px;">';
+  html += '<svg style="position:absolute;left:0;top:0;width:100%;height:36px;overflow:visible;" viewBox="0 0 '+SVG_W+' 36">';
+  Object.keys(byDate).forEach(function(ds) {
+    var ws = byDate[ds];
+    var best = ws.reduce(function(a,b){ return (PRIO[b.type]||0)>(PRIO[a.type]||0)?b:a; });
+    var emoji = EMOJI[best.type] || '🏃';
+    var x = ex(ds).toFixed(1);
+    var tip = ws.map(function(w){ return w.type+(w.minutes != null?' '+w.minutes+'分':''); }).join('、');
+    html += '<text x="'+x+'" y="22" text-anchor="middle" font-size="16" style="cursor:pointer" onclick="fitSelectDate(\''+ds+'\')">'+emoji+'<title>'+esc(ds+'：'+tip)+'</title></text>';
+  });
+  html += '</svg></div>';
+  html += '<div class="fit-ex-stats">近 7 天 '+r7count+' 次 / '+r7min+' 分</div>';
+  return html;
+}
+
+// ③ Diet chart
+function renderFitDietChart(meals, mode) {
+  var el = document.getElementById('fit-diet-content');
+  if (!meals.length) {
+    el.innerHTML = '<div class="fit-chart-empty">近 90 天還沒有飲食紀錄。拍照傳給小因，解析完就會自動落在這張圖上。</div>';
+    return;
+  }
+
+  var todayObj = new Date(today+'T00:00:00');
+  var start90 = new Date(todayObj); start90.setDate(start90.getDate()-89);
+  var s90str = start90.toISOString().slice(0,10);
+
+  var byDate = {};
+  meals.forEach(function(m) {
+    if (m.date < s90str) return;
+    if (!byDate[m.date]) byDate[m.date] = { kcal:0, protein:0 };
+    byDate[m.date].kcal += m.kcalEst || 0;
+    byDate[m.date].protein += m.proteinEst || 0;
+  });
+
+  var days = [];
+  for (var i=89; i>=0; i--) {
+    var d = new Date(todayObj); d.setDate(d.getDate()-i);
+    var ds = d.toISOString().slice(0,10);
+    var hasData = !!byDate[ds];
+    var val = hasData ? (mode==='kcal' ? byDate[ds].kcal : byDate[ds].protein) : null;
+    days.push({ date:ds, val:val, hasData:hasData });
+  }
+
+  // 7-day MA
+  var maVals = days.map(function(_, i) {
+    var win = days.slice(Math.max(0,i-6), i+1).filter(function(d){ return d.hasData && d.val; });
+    if (win.length < 4) return null;
+    return win.reduce(function(a,d){ return a+(d.val||0); },0) / win.length;
+  });
+
+  var maxVal = 0;
+  days.forEach(function(d){ if (d.val != null && d.val > maxVal) maxVal = d.val; });
+  maVals.forEach(function(v){ if (v != null && v > maxVal) maxVal = v; });
+  if (!maxVal) maxVal = mode==='kcal' ? 2000 : 100;
+
+  var SVG_W = 800, SVG_H = 130, pL=32, pR=8, pT=10, pB=20;
+  var chartW = SVG_W-pL-pR, chartH = SVG_H-pT-pB;
+  var bw = Math.max(2, chartW/90 - 1);
+  function bx(i){ return pL + (i/89)*chartW; }
+  function by(v){ return pT + (1 - v/maxVal)*chartH; }
+
+  var html = '<svg class="fit-diet-svg" viewBox="0 0 '+SVG_W+' '+SVG_H+'" style="height:'+SVG_H+'px">';
+
+  // Hit rects (transparent, all 90 days)
+  days.forEach(function(d,i) {
+    var x = (bx(i)-bw/2).toFixed(1);
+    html += '<rect x="'+x+'" y="'+pT+'" width="'+(bw+1)+'" height="'+chartH+'" fill="transparent" style="cursor:pointer" onclick="fitSelectDate(\''+d.date+'\')">';
+    html += '<title>'+esc(d.date+(d.val != null ? '：'+(mode==='kcal'?d.val+' kcal':d.val+' g') : '（無記錄）'))+'</title></rect>';
+  });
+
+  // Bars
+  days.forEach(function(d,i) {
+    if (!d.hasData || !d.val) return;
+    var x = (bx(i)-bw/2).toFixed(1);
+    var h = (d.val/maxVal)*chartH;
+    var fill = d.date === fitSelectedDate ? '#4c1d95' : '#7c3aed';
+    html += '<rect x="'+x+'" y="'+(pT+chartH-h).toFixed(1)+'" width="'+bw.toFixed(1)+'" height="'+h.toFixed(1)+'" fill="'+fill+'" rx="1"/>';
+  });
+
+  // Selected date vertical dashed line
+  var selIdx = -1;
+  days.forEach(function(d,i){ if (d.date===fitSelectedDate) selIdx=i; });
+  if (selIdx >= 0) {
+    var sx = bx(selIdx).toFixed(1);
+    html += '<line x1="'+sx+'" y1="'+pT+'" x2="'+sx+'" y2="'+(pT+chartH)+'" stroke="#334155" stroke-width="1" stroke-dasharray="3,2"/>';
+  }
+
+  // Moving average line
+  var maPath = '', inPath = false;
+  maVals.forEach(function(v,i) {
+    if (v == null) { inPath=false; return; }
+    var x = bx(i).toFixed(1), y = by(v).toFixed(1);
+    if (!inPath) { maPath += 'M'+x+' '+y; inPath=true; }
+    else { maPath += ' L'+x+' '+y; }
+  });
+  if (maPath) html += '<path d="'+maPath+'" fill="none" stroke="#0f172a" stroke-width="1.5" stroke-linejoin="round" opacity=".8"/>';
+
+  // X-axis month labels
+  var lastM = '';
+  days.forEach(function(d,i) {
+    var m = d.date.slice(5,7);
+    if (m !== lastM) { lastM=m; html += '<text x="'+bx(i).toFixed(1)+'" y="'+(SVG_H-4)+'" fill="#94a3b8" font-size="9" text-anchor="middle">'+m+'月</text>'; }
+  });
+  // Y max label
+  html += '<text x="'+(pL-3)+'" y="'+(pT+9)+'" fill="#94a3b8" font-size="9" text-anchor="end">'+Math.round(maxVal)+'</text>';
+  html += '</svg>';
+
+  // Stats
+  var d7s = new Date(todayObj); d7s.setDate(d7s.getDate()-7); var d7str = d7s.toISOString().slice(0,10);
+  var d30s = new Date(todayObj); d30s.setDate(d30s.getDate()-30); var d30str = d30s.toISOString().slice(0,10);
+  var days7  = days.filter(function(d){ return d.date > d7str  && d.hasData && d.val; });
+  var days30 = days.filter(function(d){ return d.date > d30str && d.hasData && d.val; });
+  var days90 = days.filter(function(d){ return d.hasData; });
+  var avg7  = days7.length  ? Math.round(days7.reduce(function(a,d){ return a+(d.val||0);},0)/days7.length)  : 0;
+  var avg30 = days30.length ? Math.round(days30.reduce(function(a,d){ return a+(d.val||0);},0)/days30.length) : 0;
+  var unit = mode==='kcal' ? 'kcal' : 'g';
+
+  html += '<div class="fit-diet-stats">';
+  html += '<div class="fit-diet-stat"><div class="fit-diet-stat-num">'+avg7+'</div><div class="fit-diet-stat-label">近 7 天日均 ('+unit+')</div></div>';
+  html += '<div class="fit-diet-stat"><div class="fit-diet-stat-num">'+avg30+'</div><div class="fit-diet-stat-label">近 30 天日均 ('+unit+')</div></div>';
+  html += '<div class="fit-diet-stat"><div class="fit-diet-stat-num">'+days90.length+'</div><div class="fit-diet-stat-label">90 天有記錄天數</div></div>';
+  html += '</div>';
+  html += '<div class="fit-diet-note">照片估算誤差可達三成以上，看趨勢和記錄密度就好，別逐日對數字。空白處是沒記錄的日子，不是沒吃。</div>';
+  el.innerHTML = html;
+}
+
+// ④ Daily detail
+function renderFitDetail(dateStr, measurements, workouts, meals) {
+  var WD = ['日','一','二','三','四','五','六'];
+  var dobj = new Date(dateStr+'T00:00:00');
+  document.getElementById('fitDateTitle').textContent = dateStr+'（週'+WD[dobj.getDay()]+'）';
+  document.getElementById('fitNextDay').disabled = dateStr >= today;
+
+  var meas = measurements.filter(function(m){ return m.date===dateStr; });
+  var wos  = workouts.filter(function(w){ return w.date===dateStr; });
+  var fdms = meals.filter(function(m){ return m.date===dateStr; });
+
+  var html = '';
+
+  // Measurement
+  html += '<div class="fit-detail-section"><div class="fit-detail-section-title">量測</div>';
+  if (meas.length) {
+    meas.forEach(function(m) {
+      var parts = [];
+      if (m.bodyFat != null)    parts.push('體脂率 '+m.bodyFat+'%');
+      if (m.weight != null)     parts.push('體重 '+m.weight+' kg');
+      if (m.muscleMass != null) parts.push('骨骼肌 '+m.muscleMass+' kg');
+      html += '<div class="fit-detail-measure"><span>'+esc(parts.join(' · '))+'</span>';
+      html += '<button class="fit-entry-del" onclick="fitDeleteEntry(\'measurement\',\''+m.date+'\',\''+m.id+'\')" title="刪除">✕</button></div>';
+      if (m.fatMass != null) html += '<div class="fit-detail-measure-sub">體脂肪重 '+m.fatMass+' kg（系統換算）</div>';
+    });
+  } else { html += '<div class="fit-detail-empty">這天沒有量測紀錄。</div>'; }
+  html += '</div>';
+
+  // Workout
+  html += '<div class="fit-detail-section"><div class="fit-detail-section-title">運動</div>';
+  if (wos.length) {
+    wos.forEach(function(w) {
+      html += '<div class="fit-workout-row"><div class="fit-entry-main">';
+      html += '<div class="fit-entry-title">'+esc(w.type)+(w.minutes != null ? ' · '+w.minutes+' 分' : '')+'</div>';
+      if (w.note) html += '<div class="fit-entry-sub">'+esc(w.note)+'</div>';
+      html += '</div><button class="fit-entry-del" onclick="fitDeleteEntry(\'workout\',\''+w.date+'\',\''+w.id+'\')" title="刪除">✕</button></div>';
+    });
+  } else { html += '<div class="fit-detail-empty">這天沒有運動紀錄。</div>'; }
+  html += '</div>';
+
+  // Diet
+  html += '<div class="fit-detail-section"><div class="fit-detail-section-title">飲食</div>';
+  if (fdms.length) {
+    var totKcal = 0, totProt = 0;
+    fdms.forEach(function(m) {
+      html += '<div class="fit-meal-row"><div class="fit-entry-main">';
+      html += '<div class="fit-entry-title">'+esc(m.slot)+' · '+esc(m.items)+'</div>';
+      var sub = '';
+      if (m.source==='photo') sub += '<span class="fit-entry-badge fit-badge-photo">📷 照片解析</span>';
+      if (m.confidence==='low') sub += '<span class="fit-entry-badge fit-badge-low">⚠ 信心低</span>';
+      var stats = [];
+      if (m.kcalEst != null)    { stats.push('熱量 '+m.kcalEst+' kcal'); totKcal += m.kcalEst; }
+      if (m.proteinEst != null) { stats.push('蛋白質 '+m.proteinEst+' g'); totProt += m.proteinEst; }
+      if (sub || stats.length) html += '<div class="fit-entry-sub">'+sub+(stats.length?esc(stats.join(' · ')):'')+'</div>';
+      html += '</div><button class="fit-entry-del" onclick="fitDeleteEntry(\'meal\',\''+m.date+'\',\''+m.id+'\')" title="刪除">✕</button></div>';
+    });
+    html += '<div class="fit-meal-total">當日合計約 '+totKcal+' 大卡、蛋白質 '+totProt+' g（估算，'+fdms.length+' 餐）</div>';
+  } else { html += '<div class="fit-detail-empty">這天沒有飲食紀錄。</div>'; }
+  html += '</div>';
+
+  document.getElementById('fit-detail-content').innerHTML = html;
+}
+
+function fitSelectDate(ds) {
+  if (ds > today) return;
+  fitSelectedDate = ds;
+  if (!fitData) return;
+  var all = fitAllData();
+  renderFitDetail(ds, all.measurements, all.workouts, all.meals);
+  renderFitDietChart(all.meals, fitDietMode);
+}
+
+// Date navigation
+document.getElementById('fitPrevDay').addEventListener('click', function() {
+  var d = new Date(fitSelectedDate+'T00:00:00'); d.setDate(d.getDate()-1);
+  fitSelectDate(d.toISOString().slice(0,10));
+});
+document.getElementById('fitNextDay').addEventListener('click', function() {
+  var d = new Date(fitSelectedDate+'T00:00:00'); d.setDate(d.getDate()+1);
+  var nd = d.toISOString().slice(0,10); if (nd <= today) fitSelectDate(nd);
+});
+document.getElementById('fitTodayBtn').addEventListener('click', function() { fitSelectDate(today); });
+
+document.addEventListener('keydown', function(e) {
+  if (!document.getElementById('tab-fitness').classList.contains('active')) return;
+  if (document.querySelector('.modal-overlay.open')) return;
+  if (e.key === 'ArrowLeft') { e.preventDefault(); var d = new Date(fitSelectedDate+'T00:00:00'); d.setDate(d.getDate()-1); fitSelectDate(d.toISOString().slice(0,10)); }
+  if (e.key === 'ArrowRight') { e.preventDefault(); var d2 = new Date(fitSelectedDate+'T00:00:00'); d2.setDate(d2.getDate()+1); var nd2=d2.toISOString().slice(0,10); if (nd2<=today) fitSelectDate(nd2); }
+  if (e.key === 'Escape') { ['fitGoalModal','fitAddMeasModal','fitAddWorkoutModal','fitAddMealModal'].forEach(function(id){ document.getElementById(id).classList.remove('open'); }); }
+});
+
+// Seg switchers
+document.getElementById('fitMeasSeg').addEventListener('click', function(e) {
+  var btn = e.target.closest('.fit-seg-btn'); if (!btn) return;
+  fitMeasRange = btn.dataset.range;
+  this.querySelectorAll('.fit-seg-btn').forEach(function(b){ b.classList.toggle('active', b===btn); });
+  if (fitData) { var all=fitAllData(); renderFitMeasChart(all.measurements, all.workouts, fitMeasRange, fitData.profile); }
+});
+document.getElementById('fitDietSeg').addEventListener('click', function(e) {
+  var btn = e.target.closest('.fit-seg-btn'); if (!btn) return;
+  fitDietMode = btn.dataset.mode;
+  this.querySelectorAll('.fit-seg-btn').forEach(function(b){ b.classList.toggle('active', b===btn); });
+  if (fitData) { var all=fitAllData(); renderFitDietChart(all.meals, fitDietMode); }
+});
+
+// Add buttons
+document.getElementById('fitAddMeas').addEventListener('click', function() {
+  document.getElementById('fitAddMeasDate').value = fitSelectedDate;
+  ['fitAddMeasBodyFat','fitAddMeasWeight','fitAddMeasMuscle','fitAddMeasNote'].forEach(function(id){ document.getElementById(id).value=''; });
+  document.getElementById('fitAddMeasModal').classList.add('open');
+});
+document.getElementById('fitAddWorkout').addEventListener('click', function() {
+  document.getElementById('fitAddWorkoutDate').value = fitSelectedDate;
+  document.getElementById('fitAddWorkoutType').value = '重訓';
+  document.getElementById('fitAddWorkoutMin').value = '';
+  document.getElementById('fitAddWorkoutNote').value = '';
+  document.getElementById('fitAddWorkoutModal').classList.add('open');
+});
+document.getElementById('fitAddMeal').addEventListener('click', function() {
+  document.getElementById('fitAddMealDate').value = fitSelectedDate;
+  ['fitAddMealItems','fitAddMealKcal','fitAddMealProtein'].forEach(function(id){ document.getElementById(id).value=''; });
+  document.getElementById('fitAddMealModal').classList.add('open');
+});
+
+// Save handlers
+document.getElementById('fitAddMeasSave').addEventListener('click', function() {
+  var date = document.getElementById('fitAddMeasDate').value;
+  if (!date) { showToast('請填日期','error'); return; }
+  var bf = parseFloat(document.getElementById('fitAddMeasBodyFat').value);
+  var wt = parseFloat(document.getElementById('fitAddMeasWeight').value);
+  var mm = parseFloat(document.getElementById('fitAddMeasMuscle').value);
+  var payload = { source:'ui', note: document.getElementById('fitAddMeasNote').value };
+  if (!isNaN(bf)) payload.bodyFat = bf;
+  if (!isNaN(wt)) payload.weight = wt;
+  if (!isNaN(mm)) payload.muscleMass = mm;
+  fitPostEntry('measurement', date, payload, 'fitAddMeasModal');
+});
+document.getElementById('fitAddWorkoutSave').addEventListener('click', function() {
+  var date = document.getElementById('fitAddWorkoutDate').value;
+  if (!date) { showToast('請填日期','error'); return; }
+  var payload = { type: document.getElementById('fitAddWorkoutType').value, source:'ui', note: document.getElementById('fitAddWorkoutNote').value };
+  var mv = document.getElementById('fitAddWorkoutMin').value;
+  if (mv) payload.minutes = parseInt(mv);
+  fitPostEntry('workout', date, payload, 'fitAddWorkoutModal');
+});
+document.getElementById('fitAddMealSave').addEventListener('click', function() {
+  var date = document.getElementById('fitAddMealDate').value;
+  var items = document.getElementById('fitAddMealItems').value.trim();
+  if (!date || !items) { showToast('請填日期與內容','error'); return; }
+  var payload = { slot: document.getElementById('fitAddMealSlot').value, items:items, source:'ui', confidence:'high' };
+  var kc = parseInt(document.getElementById('fitAddMealKcal').value);
+  var pr = parseInt(document.getElementById('fitAddMealProtein').value);
+  if (!isNaN(kc)) payload.kcalEst = kc;
+  if (!isNaN(pr)) payload.proteinEst = pr;
+  fitPostEntry('meal', date, payload, 'fitAddMealModal');
+});
+
+function fitPostEntry(kind, date, payload, modalId) {
+  fetch(API+'/api/fitness', { method:'POST', headers:HEADERS, body:JSON.stringify({ kind:kind, date:date, payload:payload }) })
+    .then(function(r){ if (!r.ok) throw new Error('HTTP '+r.status); return r.json(); })
+    .then(function(d){
+      document.getElementById(modalId).classList.remove('open');
+      showToast(d.duplicate ? '已有相同記錄，未重複新增' : '✓ 已儲存', 'success');
+      loadFitnessData();
+    })
+    .catch(function(e){ showToast('❌ 儲存失敗: '+e.message,'error'); });
+}
+
+function fitDeleteEntry(kind, date, id) {
+  if (!confirm('確定要刪除這筆記錄？')) return;
+  fetch(API+'/api/fitness?kind='+encodeURIComponent(kind)+'&date='+encodeURIComponent(date)+'&id='+encodeURIComponent(id), { method:'DELETE', headers:GET_HEADERS })
+    .then(function(r){ if (!r.ok) throw new Error('HTTP '+r.status); return r.json(); })
+    .then(function(){ showToast('✓ 已刪除','success'); loadFitnessData(); })
+    .catch(function(e){ showToast('❌ 刪除失敗: '+e.message,'error'); });
+}
+
+// ⑤ Goal modal
+document.getElementById('fitGoalEditBtn').addEventListener('click', function() {
+  if (!fitData) return;
+  var goal = (fitData.profile && fitData.profile.goal) || {};
+  document.getElementById('fitGoalTargetVal').value = goal.targetValue != null ? goal.targetValue : 18;
+  document.getElementById('fitGoalTargetDate').value = goal.targetDate ? goal.targetDate.slice(0,10) : '';
+  updateGoalPreview();
+  document.getElementById('fitGoalModal').classList.add('open');
+});
+
+function updateGoalPreview() {
+  var tv = parseFloat(document.getElementById('fitGoalTargetVal').value);
+  var td = document.getElementById('fitGoalTargetDate').value;
+  var el = document.getElementById('fitGoalPreview');
+  if (isNaN(tv) || !td) { el.innerHTML = '填寫以上兩欄後即時預覽'; return; }
+  if (td <= today) { el.innerHTML = '<span style="color:#dc2626">目標日期必須晚於今天</span>'; return; }
+  var all = fitData ? fitAllData() : { measurements:[] };
+  var latest = all.measurements.length ? all.measurements[all.measurements.length-1] : null;
+  if (!latest) { el.innerHTML = '無量測資料，無法預覽'; return; }
+  var lm = latest.leanMass, fm = latest.fatMass, cbf = latest.bodyFat;
+  var tw = lm != null ? lm/(1-tv/100) : null;
+  var ftl = (fm != null && tw != null) ? +(fm-(tw-lm)).toFixed(2) : null;
+  var dl = Math.round((new Date(td+'T00:00:00')-new Date(today+'T00:00:00'))/86400000);
+  var rn = (ftl != null && dl > 0) ? +(ftl/(dl/30.44)).toFixed(2) : null;
+  var html = '離目標還差 '+(cbf!=null?(cbf-tv).toFixed(1):'—')+' 個百分點，';
+  html += '需減脂肪 '+(ftl||'—')+' kg，剩 '+dl+' 天 → 每月 '+(rn||'—')+' kg。';
+  if (rn != null && rn > 1.0) html += '<br><span style="color:#92400e">⚠ 高於建議上限 1.0，偏緊</span>';
+  else if (rn != null) html += '<br><span style="color:#166534">✅ 在可持續範圍內</span>';
+  if (tw != null) html += '<br>對應目標體重約 '+tw.toFixed(1)+' kg（假設骨骼肌重守住）';
+  el.innerHTML = html;
+}
+document.getElementById('fitGoalTargetVal').addEventListener('input', updateGoalPreview);
+document.getElementById('fitGoalTargetDate').addEventListener('input', updateGoalPreview);
+
+document.getElementById('fitGoalSave').addEventListener('click', function() {
+  var tv = parseFloat(document.getElementById('fitGoalTargetVal').value);
+  var td = document.getElementById('fitGoalTargetDate').value;
+  if (isNaN(tv) || !td) { showToast('請填寫目標體脂率與目標日期','error'); return; }
+  if (td <= today) { showToast('目標日期必須晚於今天','error'); return; }
+  var newProfile = fitData && fitData.profile ? JSON.parse(JSON.stringify(fitData.profile)) : {};
+  if (!newProfile.goal) newProfile.goal = {};
+  newProfile.goal.targetValue = tv;
+  newProfile.goal.targetDate = td;
+  fetch(API+'/api/fitness-profile', { method:'POST', headers:HEADERS, body:JSON.stringify(newProfile) })
+    .then(function(r){ if (!r.ok) throw new Error('HTTP '+r.status); return r.json(); })
+    .then(function(){ document.getElementById('fitGoalModal').classList.remove('open'); showToast('✓ 目標已更新','success'); loadFitnessData(); })
+    .catch(function(e){ showToast('❌ 儲存失敗: '+e.message,'error'); });
+});
+document.getElementById('fitGoalModalClose').addEventListener('click', function(){ document.getElementById('fitGoalModal').classList.remove('open'); });
+document.getElementById('fitGoalCancel').addEventListener('click', function(){ document.getElementById('fitGoalModal').classList.remove('open'); });
+
+// Close all fitness modals on overlay click
+['fitGoalModal','fitAddMeasModal','fitAddWorkoutModal','fitAddMealModal'].forEach(function(id) {
+  document.getElementById(id).addEventListener('click', function(e){ if (e.target===this) this.classList.remove('open'); });
+});
+
+// Load fitness data when tab first activated
+document.querySelectorAll('.tab').forEach(function(tab) {
+  tab.addEventListener('click', function() {
+    if (tab.dataset.tab === 'fitness' && !fitData) loadFitnessData();
+  });
+});
 </script>
 </body>
 </html>
