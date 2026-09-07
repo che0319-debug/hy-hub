@@ -1075,11 +1075,12 @@ function renderFitGoal(profile, measurements) {
   var goal = (profile && profile.goal) || {};
   var baseline = (profile && profile.baseline) || {};
   var bodyFat = latest.bodyFat;
+  var currentMuscleMass = latest.muscleMass != null ? latest.muscleMass : null;
   var leanMass = latest.leanMass != null ? latest.leanMass : (latest.weight != null && bodyFat != null ? latest.weight * (1 - bodyFat/100) : null);
   var fatMass  = latest.fatMass  != null ? latest.fatMass  : (latest.weight != null && bodyFat != null ? latest.weight * bodyFat/100 : null);
   var targetValue = goal.targetValue != null ? goal.targetValue : 18.0;
   var targetDateStr = goal.targetDate || '';
-  var baselineLeanMass = baseline.muscleMass != null ? baseline.muscleMass : null;
+  var baselineMuscleMass = baseline.muscleMass != null ? baseline.muscleMass : null;
   var startValue = goal.startValue != null ? goal.startValue : bodyFat;
 
   var todayObj = new Date(today + 'T00:00:00');
@@ -1092,7 +1093,8 @@ function renderFitGoal(profile, measurements) {
   var monthsLeft = daysLeft != null ? daysLeft / 30.44 : null;
   var rateNeeded = (fatToLose != null && monthsLeft && monthsLeft > 0) ? +(fatToLose / monthsLeft).toFixed(2) : null;
 
-  var muscleDrop = (baselineLeanMass != null && leanMass != null) ? +(baselineLeanMass - leanMass).toFixed(2) : 0;
+  // 骨骼肌下降警示：比 baseline.muscleMass vs latest.muscleMass
+  var muscleDrop = (baselineMuscleMass != null && currentMuscleMass != null) ? +(baselineMuscleMass - currentMuscleMass).toFixed(2) : 0;
   var paceState = 'ok';
   if (muscleDrop >= 0.5) { paceState = 'alert'; }
   else if (rateNeeded != null && rateNeeded > 1.0) { paceState = 'tight'; }
@@ -1136,7 +1138,7 @@ function renderFitGoal(profile, measurements) {
 
   // Pace band
   if (paceState === 'alert') {
-    html += '<div class="fit-pace-band fit-pace-alert">⚠️ 骨骼肌重掉了 '+muscleDrop+' kg（'+(baselineLeanMass||'—')+' → '+(leanMass != null ? leanMass.toFixed(1) : '—')+'）。減掉的不只是脂肪。建議放慢速度、提高阻力訓練比重，先把肌肉守回來再談體脂率——目標日期可以往後調。</div>';
+    html += '<div class="fit-pace-band fit-pace-alert">⚠️ 骨骼肌重掉了 '+muscleDrop+' kg（'+(baselineMuscleMass||'—')+' → '+(currentMuscleMass != null ? currentMuscleMass.toFixed(1) : '—')+'）。減掉的不只是脂肪。建議放慢速度、提高阻力訓練比重，先把肌肉守回來再談體脂率——目標日期可以往後調。</div>';
   } else if (paceState === 'tight') {
     html += '<div class="fit-pace-band fit-pace-tight">⏱ 達標需要每月減脂 '+rateNeeded+' kg（共 '+(fatToLose||'—')+' kg，'+(daysLeft||'—')+' 天），略高於建議上限 1.0，目標偏緊。把日期往後調會比加大強度安全。</div>';
   } else {
