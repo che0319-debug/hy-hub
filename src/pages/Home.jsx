@@ -1,10 +1,10 @@
 import { useState, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Bell, CheckCircle, Coins, RefreshCw } from 'lucide-react'
+import { Bell, CheckCircle, Coins, RefreshCw, Pencil } from 'lucide-react'
 import { homeSummary } from '../mock/data'
 import { useSessionContext } from '../App'
 import PixelWorld from '../components/PixelWorld'
-import { fetchTodaySchedule, fetchAllMilestones, fetchMemoryHealth } from '../api'
+import { fetchTodaySchedule, fetchAllMilestones, fetchMemoryHealth, fetchWeeklyChange, postWeeklyChange } from '../api'
 
 const PENDING_STATUSES = ['await', 'failed']
 const REFRESH_INTERVAL_MS = 60000
@@ -139,6 +139,191 @@ function ScheduleSection() {
   )
 }
 
+function weeksUntilFifty(birthDate) {
+  const [by, bm, bd] = birthDate.split('-').map(Number)
+  const fifty = new Date(Date.UTC(by + 50, bm - 1, bd))
+  const todayMs = new Date(todayTaipei() + 'T00:00:00Z')
+  const diff = fifty - todayMs
+  if (diff <= 0) return null
+  return Math.floor(diff / (7 * 86400000))
+}
+
+function isoWeekOf(dateStr) {
+  const d = new Date(dateStr + 'T12:00:00Z')
+  const jan4 = new Date(Date.UTC(d.getUTCFullYear(), 0, 4))
+  const startW1 = new Date(jan4 - ((jan4.getUTCDay() + 6) % 7) * 86400000)
+  const diff = d - startW1
+  if (diff < 0) {
+    const jan4p = new Date(Date.UTC(d.getUTCFullYear() - 1, 0, 4))
+    const startW1p = new Date(jan4p - ((jan4p.getUTCDay() + 6) % 7) * 86400000)
+    return Math.floor((d - startW1p) / (7 * 86400000)) + 1
+  }
+  return Math.floor(diff / (7 * 86400000)) + 1
+}
+
+function WeeklyChangeCard() {
+  const [data, setData] = useState(null)    // null=loading, false=error, object=loaded
+  const [editing, setEditing] = useState(false)
+  const [draft, setDraft] = useState('')
+  const [draftErr, setDraftErr] = useState('')
+  const [saving, setSaving] = useState(false)
+  const [saveErr, setSaveErr] = useState('')
+  const taRef = useRef(null)
+
+  useEffect(() => {
+    fetchWeeklyChange()
+      .then(d => setData(d))
+      .catch(() => setData(false))
+  }, [])
+
+  useEffect(() => {
+    if (editing && taRef.current) {
+      const el = taRef.current
+      el.style.height = 'auto'
+      el.style.height = el.scrollHeight + 'px'
+    }
+  }, [draft, editing])
+
+  function startEdit() {
+    setDraft(data?.entries?.[0]?.text || '')
+    setDraftErr('')
+    setSaveErr('')
+    setEditing(true)
+  }
+
+  function cancelEdit() {
+    setEditing(false)
+    setDraftErr('')
+    setSaveErr('')
+  }
+
+  async function handleSave() {
+    const trimmed = draft.trim()
+    if (!trimmed) { setDraftErr('先寫點東西再存'); return }
+    setSaving(true)
+    setSaveErr('')
+    try {
+      const result = await postWeeklyChange({ text: trimmed })
+      const today = todayTaipei()
+      const newEntry = { id: result.id, text: trimmed, updatedAt: today }
+      setData(prev => ({
+        ...prev,
+        entries: [newEntry, ...(prev?.entries || []).filter(e => e.id !== result.id)]
+      }))
+      setEditing(false)
+    } catch (err) {
+      setSaveErr(err.message || '儲存失敗，請再試')
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  const CARD_STYLE = { border: '0.5px solid #e2e8f0', borderRadius: '12px', padding: '14px 16px' }
+  const entry = data && data.entries && data.entries[0]
+  const birthDate = (data && data.birthDate) || '1980-03-19'
+  const weeks = weeksUntilFifty(birthDate)  // always compute; birthDate fallback ensures non-null
+
+  const CountdownBlock = () => (
+    <div className="flex flex-col items-center justify-center sm:border-r border-b sm:border-b-0 border-slate-200 sm:pr-4 pb-3 sm:pb-0" style={{ minWidth: 80 }}>
+      <span style={{ fontSize: 11, color: '#94a3b8' }}>距 50 歲</span>
+      {weeks === null ? (
+        <span style={{ fontSize: 14, fontWeight: 500, color: '#1e293b' }}>已過 50 歲</span>
+      ) : (
+        <>
+          <span style={{ fontSize: 28, fontWeight: 500, color: '#1e293b', lineHeight: 1.1 }}>
+            {weeks}
+          </span>
+          <span style={{ fontSize: 11, color: '#94a3b8' }}>週</span>
+        </>
+      )}
+    </div>
+  )
+
+  if (data === null) {
+    return (
+      <div className="mb-4 bg-white flex flex-col sm:flex-row" style={CARD_STYLE}>
+        <CountdownBlock />
+        <div className="flex-1 px-4 pt-3 sm:pt-0 flex items-center">
+          <span className="text-xs text-slate-400">載入中…</span>
+        </div>
+      </div>
+    )
+  }
+
+  if (data === false) {
+    return (
+      <div className="mb-4 bg-white flex flex-col sm:flex-row" style={CARD_STYLE}>
+        <CountdownBlock />
+        <div className="flex-1 px-4 pt-3 sm:pt-0 flex items-center">
+          <span className="text-sm text-slate-400">讀取失敗</span>
+        </div>
+        <div className="flex items-center justify-end sm:pl-4 pt-2 sm:pt-0">
+          <button disabled className="flex items-center gap-1 px-3 py-1.5 text-sm text-slate-300 border border-slate-200 rounded-lg cursor-not-allowed">
+            <Pencil size={13} />改
+          </button>
+        </div>
+      </div>
+    )
+  }
+
+  if (editing) {
+    return (
+      <div className="mb-4 bg-white flex flex-col sm:flex-row" style={{ ...CARD_STYLE, border: '1px solid #3b82f6' }}>
+        <CountdownBlock />
+        <div className="flex-1 flex flex-col gap-1.5 px-4 pt-3 sm:pt-0">
+          <span style={{ fontSize: 11, color: '#94a3b8' }}>本週要改變的</span>
+          <textarea
+            ref={taRef}
+            value={draft}
+            onChange={e => { setDraft(e.target.value); if (draftErr) setDraftErr('') }}
+            rows={2}
+            disabled={saving}
+            className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-blue-400 resize-none"
+            style={{ lineHeight: 1.5, overflow: 'hidden' }}
+          />
+          {draftErr && <span style={{ fontSize: 13, color: '#ef4444' }}>{draftErr}</span>}
+          {saveErr && <span style={{ fontSize: 13, color: '#ef4444' }}>{saveErr}</span>}
+          <div className="flex justify-end gap-2">
+            <button onClick={cancelEdit} disabled={saving} className="px-3 py-1.5 text-sm text-slate-500 hover:text-slate-700 disabled:opacity-50">取消</button>
+            <button onClick={handleSave} disabled={saving} className="px-4 py-1.5 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50">
+              {saving ? '處理中…' : '存檔'}
+            </button>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  const mmdd = entry ? entry.updatedAt.slice(5) : ''
+  const weekN = entry ? isoWeekOf(entry.updatedAt) : null
+
+  return (
+    <div className="mb-4 bg-white flex flex-col sm:flex-row" style={CARD_STYLE}>
+      <CountdownBlock />
+      <div className="flex-1 flex flex-col justify-center gap-0.5 px-4 pt-3 sm:pt-0">
+        <span style={{ fontSize: 11, color: '#94a3b8' }}>本週要改變的</span>
+        {entry ? (
+          <>
+            <p style={{ fontSize: 15, lineHeight: 1.5, color: '#1e293b', wordBreak: 'break-word' }}>{entry.text}</p>
+            <span style={{ fontSize: 11, color: '#94a3b8' }}>更新 {mmdd}・第 {weekN} 週</span>
+          </>
+        ) : (
+          <p style={{ fontSize: 15, color: '#94a3b8' }}>本週還沒定</p>
+        )}
+      </div>
+      <div className="flex items-center justify-end sm:pl-4 pt-2 sm:pt-0">
+        <button
+          onClick={startEdit}
+          className={`flex items-center gap-1 px-3 py-1.5 text-sm border rounded-lg transition-colors ${entry ? 'text-slate-500 border-slate-200 hover:text-blue-600 hover:border-blue-300' : 'text-blue-600 border-blue-300 hover:bg-blue-50'}`}
+        >
+          <Pencil size={13} />
+          {entry ? '改' : '設定'}
+        </button>
+      </div>
+    </div>
+  )
+}
+
 export default function Home() {
   const [view, setView]           = useState('data')
   const [healthData, setHealthData] = useState(null)
@@ -203,6 +388,7 @@ export default function Home() {
 
       {view === 'data' ? (
         <div>
+          <WeeklyChangeCard />
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
             <MetricCard
               icon={Bell}

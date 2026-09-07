@@ -193,6 +193,26 @@ export async function fireDispatch(milestoneId) {
   return result;
 }
 
+export async function fetchWeeklyChange() {
+  const res = await fetch(`${API_BASE}/api/weekly-change`, {
+    headers: { "X-Read-Secret": READ_SECRET },
+    cache: 'no-store',
+  })
+  if (!res.ok) throw new Error(`fetchWeeklyChange failed: ${res.status}`)
+  return res.json()
+}
+
+export async function postWeeklyChange(payload) {
+  const res = await fetch(`${API_BASE}/api/weekly-change`, {
+    method: 'POST',
+    headers: { "X-Read-Secret": READ_SECRET, "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  })
+  const result = await res.json()
+  if (!res.ok || !result.ok) throw new Error(result.error || `postWeeklyChange failed: ${res.status}`)
+  return result
+}
+
 // 多輪 continue：後端階段 1 deec8c6
 //   409 = 上一輪 running；429 = turns >= 5（與後端 _MAX_TURNS_PER_CARD 對齊）
 //   401 body 為空（FastAPI Response(status_code=401)）→ 提前 throw 免 res.json() 爆
