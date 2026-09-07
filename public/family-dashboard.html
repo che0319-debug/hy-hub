@@ -211,8 +211,8 @@ header { background:var(--header-bg); padding:0 24px; display:flex; align-items:
 .fit-ex-stats { font-size:11px; color:var(--text-muted); text-align:right; margin-top:4px; }
 .fit-diet-svg { width:100%; display:block; }
 .fit-diet-stats { display:grid; grid-template-columns:repeat(3,1fr); gap:10px; margin-top:12px; }
-.fit-diet-stat { background:#f8f9fa; border-radius:6px; padding:10px 12px; text-align:center; }
-.fit-diet-stat-num { font-family:'Syne',sans-serif; font-size:22px; font-weight:800; color:var(--text); font-variant-numeric:tabular-nums; }
+.fit-diet-stat { background:#f8f9fa; border-radius:6px; padding:6px 10px; text-align:center; }
+.fit-diet-stat-num { font-size:18px; font-weight:700; color:var(--text); font-variant-numeric:tabular-nums; }
 .fit-diet-stat-label { font-size:11px; color:var(--text-muted); margin-top:2px; }
 .fit-diet-note { font-size:11px; color:var(--text-dim); margin-top:10px; line-height:1.55; }
 .fit-date-nav { display:flex; align-items:center; gap:10px; margin-bottom:14px; flex-wrap:wrap; }
@@ -286,8 +286,8 @@ header { background:var(--header-bg); padding:0 24px; display:flex; align-items:
         <span>📈 量測趨勢</span>
         <div class="fit-seg" id="fitMeasSeg">
           <button class="fit-seg-btn" data-range="30">30 天</button>
-          <button class="fit-seg-btn" data-range="90">90 天</button>
-          <button class="fit-seg-btn active" data-range="target">到目標日</button>
+          <button class="fit-seg-btn active" data-range="90">90 天</button>
+          <button class="fit-seg-btn" data-range="target">到目標日</button>
         </div>
       </div>
       <div id="fit-meas-content"><div class="fit-chart-empty">載入中…</div></div>
@@ -1027,7 +1027,7 @@ document.getElementById('weeklyDownloadBtn').addEventListener('click', function(
 // ══════════════ FITNESS ══════════════
 var fitData = null;
 var fitSelectedDate = today;
-var fitMeasRange = 'target';
+var fitMeasRange = '90';
 var fitDietMode = 'kcal';
 
 function fitAllData() {
@@ -1048,19 +1048,19 @@ function fitAllData() {
 function loadFitnessData() {
   fetch(API + '/api/fitness?months=4', { cache:'no-store', headers:GET_HEADERS })
     .then(function(r){ if (!r.ok) throw new Error('HTTP '+r.status); return r.json(); })
-    .then(function(d){ fitData = d; renderFitnessAll(); })
+    .then(function(d){ fitData = d; fitSelectedDate = today; renderFitnessAll(today); })
     .catch(function(e){
       console.error('[fitness]', e);
       document.getElementById('fit-goal-content').innerHTML = '<div class="fit-chart-empty">⚠ 載入失敗：'+esc(e.message)+'</div>';
     });
 }
 
-function renderFitnessAll() {
+function renderFitnessAll(anchorDate) {
   var all = fitAllData();
   renderFitGoal(fitData.profile, all.measurements);
   renderFitMeasChart(all.measurements, all.workouts, fitMeasRange, fitData.profile);
   renderFitDietChart(all.meals, fitDietMode);
-  renderFitDetail(fitSelectedDate, all.measurements, all.workouts, all.meals);
+  renderFitDetail(anchorDate || fitSelectedDate, all.measurements, all.workouts, all.meals);
 }
 
 // ① Goal area
@@ -1293,24 +1293,31 @@ function renderFitDietChart(meals, mode) {
   }
 
   var todayObj = new Date(today+'T00:00:00');
-  var start90 = new Date(todayObj); start90.setDate(start90.getDate()-89);
-  var s90str = start90.toISOString().slice(0,10);
+  var hard90 = new Date(todayObj); hard90.setDate(hard90.getDate()-89);
+  var h90str = hard90.toISOString().slice(0,10);
 
   var byDate = {};
   meals.forEach(function(m) {
-    if (m.date < s90str) return;
+    if (m.date < h90str) return;
     if (!byDate[m.date]) byDate[m.date] = { kcal:0, protein:0 };
     byDate[m.date].kcal += m.kcalEst || 0;
     byDate[m.date].protein += m.proteinEst || 0;
   });
 
+  // Fit X-axis to data range + 3-day left margin
+  var dateDates = Object.keys(byDate).sort();
+  var firstData = dateDates.length ? dateDates[0] : today;
+  var startObj = new Date(firstData+'T00:00:00'); startObj.setDate(startObj.getDate()-3);
+  if (startObj < hard90) startObj = new Date(hard90);
+
   var days = [];
-  for (var i=89; i>=0; i--) {
-    var d = new Date(todayObj); d.setDate(d.getDate()-i);
-    var ds = d.toISOString().slice(0,10);
+  var cur = new Date(startObj);
+  while (cur <= todayObj) {
+    var ds = cur.toISOString().slice(0,10);
     var hasData = !!byDate[ds];
     var val = hasData ? (mode==='kcal' ? byDate[ds].kcal : byDate[ds].protein) : null;
     days.push({ date:ds, val:val, hasData:hasData });
+    cur.setDate(cur.getDate()+1);
   }
 
   // 7-day MA
@@ -1327,8 +1334,9 @@ function renderFitDietChart(meals, mode) {
 
   var SVG_W = 800, SVG_H = 130, pL=40, pR=8, pT=10, pB=20;
   var chartW = SVG_W-pL-pR, chartH = SVG_H-pT-pB;
-  var bw = Math.max(2, chartW/90 - 1);
-  function bx(i){ return pL + (i/89)*chartW; }
+  var N = days.length;
+  var bw = Math.max(2, chartW/Math.max(N,1) - 1);
+  function bx(i){ return pL + (N>1 ? (i/(N-1))*chartW : chartW/2); }
   function by(v){ return pT + (1 - v/maxVal)*chartH; }
 
   var html = '<svg class="fit-diet-svg" viewBox="0 0 '+SVG_W+' '+SVG_H+'" style="height:'+SVG_H+'px">';
@@ -1390,7 +1398,7 @@ function renderFitDietChart(meals, mode) {
   html += '<div class="fit-diet-stats">';
   html += '<div class="fit-diet-stat"><div class="fit-diet-stat-num">'+avg7+'</div><div class="fit-diet-stat-label">近 7 天日均 ('+unit+')</div></div>';
   html += '<div class="fit-diet-stat"><div class="fit-diet-stat-num">'+avg30+'</div><div class="fit-diet-stat-label">近 30 天日均 ('+unit+')</div></div>';
-  html += '<div class="fit-diet-stat"><div class="fit-diet-stat-num">'+days90.length+'</div><div class="fit-diet-stat-label">90 天有記錄天數</div></div>';
+  html += '<div class="fit-diet-stat"><div class="fit-diet-stat-num">'+days90.length+'</div><div class="fit-diet-stat-label">90 天記錄天數</div></div>';
   html += '</div>';
   html += '<div class="fit-diet-note">照片估算誤差可達三成以上，看趨勢和記錄密度就好，別逐日對數字。空白處是沒記錄的日子，不是沒吃。</div>';
   el.innerHTML = html;
