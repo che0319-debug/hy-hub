@@ -1194,7 +1194,7 @@ function renderFitMeasChart(measurements, workouts, range, profile) {
       msg = '這個區間只有 '+cnt+' 筆量測。切到較長的區間看看，或再量一次。';
     }
     html = '<div class="fit-chart-empty">'+esc(msg)+'</div>';
-    html += fitExerciseRow(filteredWs, rangeStart, rangeEnd);
+    html += fitExerciseRow(filteredWs, rangeStart, rangeEnd, SVG_W);
     el.innerHTML = html;
     return;
   }
@@ -1211,7 +1211,8 @@ function renderFitMeasChart(measurements, workouts, range, profile) {
     { key:'muscleMass', label:'骨骼肌重', color:'#059669', refVal:baselineLM,   refLabel:'守住', unit:'kg' },
   ];
 
-  var SVG_W = 800, SVG_H = 80, pL = 40, pR = 56, pT = 12, pB = 20;
+  var SVG_W = Math.max(300, Math.round(el.getBoundingClientRect().width));
+  var SVG_H = 80, pL = 40, pR = 56, pT = 12, pB = 20;
   var t0 = rangeStart.getTime(), t1 = rangeEnd.getTime(), tR = t1 - t0 || 1;
   function tx(ds){ return pL + (new Date(ds+'T00:00:00').getTime()-t0)/tR*(SVG_W-pL-pR); }
 
@@ -1250,11 +1251,11 @@ function renderFitMeasChart(measurements, workouts, range, profile) {
     html += '</svg></div>';
   });
 
-  html += fitExerciseRow(filteredWs, rangeStart, rangeEnd);
+  html += fitExerciseRow(filteredWs, rangeStart, rangeEnd, SVG_W);
   el.innerHTML = html;
 }
 
-function fitExerciseRow(workouts, rangeStart, rangeEnd) {
+function fitExerciseRow(workouts, rangeStart, rangeEnd, svgW) {
   var PRIO = { '重訓':3, '游泳':2, '跑步':1 };
   var EMOJI = { '重訓':'🏋️', '跑步':'🏃', '游泳':'🏊' };
   var byDate = {};
@@ -1263,7 +1264,7 @@ function fitExerciseRow(workouts, rangeStart, rangeEnd) {
     byDate[w.date].push(w);
   });
   var t0 = rangeStart.getTime(), t1 = rangeEnd.getTime(), tR = t1 - t0 || 1;
-  var SVG_W = 800, pL = 36, pR = 48;
+  var SVG_W = svgW || 800, pL = 36, pR = 48;
   function ex(ds){ return pL + (new Date(ds+'T00:00:00').getTime()-t0)/tR*(SVG_W-pL-pR); }
 
   var todayObj = new Date(today+'T00:00:00');
@@ -1337,7 +1338,8 @@ function renderFitDietChart(meals, mode) {
   maVals.forEach(function(v){ if (v != null && v > maxVal) maxVal = v; });
   if (!maxVal) maxVal = mode==='kcal' ? 2000 : 100;
 
-  var SVG_W = 800, SVG_H = 130, pL=40, pR=8, pT=10, pB=20;
+  var SVG_W = Math.max(300, Math.round(el.getBoundingClientRect().width));
+  var SVG_H = 130, pL=40, pR=8, pT=10, pB=20;
   var chartW = SVG_W-pL-pR, chartH = SVG_H-pT-pB;
   var N = days.length;
   var bw = Math.max(2, chartW/Math.max(N,1) - 1);
@@ -1646,6 +1648,18 @@ document.querySelectorAll('.tab').forEach(function(tab) {
   tab.addEventListener('click', function() {
     if (tab.dataset.tab === 'fitness' && !fitData) loadFitnessData();
   });
+});
+
+// Resize: re-render charts so dynamic SVG_W picks up new container width
+var _fitResizeTimer = null;
+window.addEventListener('resize', function() {
+  clearTimeout(_fitResizeTimer);
+  _fitResizeTimer = setTimeout(function() {
+    if (!fitData || !document.getElementById('tab-fitness').classList.contains('active')) return;
+    var all = fitAllData();
+    renderFitMeasChart(all.measurements, all.workouts, fitMeasRange, fitData.profile);
+    renderFitDietChart(all.meals, fitDietMode);
+  }, 150);
 });
 </script>
 </body>
