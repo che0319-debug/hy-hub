@@ -210,8 +210,8 @@ header { background:var(--header-bg); padding:0 24px; display:flex; align-items:
 .fit-chart-empty { font-size:13px; color:var(--text-muted); padding:20px; text-align:center; background:#f8f9fa; border-radius:6px; line-height:1.6; }
 .fit-ex-stats { font-size:11px; color:var(--text-muted); text-align:right; margin-top:4px; }
 .fit-diet-svg { width:100%; display:block; }
-.fit-diet-stats { display:grid; grid-template-columns:repeat(3,1fr); gap:10px; margin-top:12px; }
-.fit-diet-stat { background:#f8f9fa; border-radius:6px; padding:6px 10px; text-align:center; }
+.fit-diet-stats { display:flex; flex-wrap:wrap; gap:8px; margin-top:12px; }
+.fit-diet-stat { background:#f8f9fa; border-radius:6px; padding:6px 12px; text-align:center; white-space:nowrap; }
 .fit-diet-stat-num { font-size:18px; font-weight:700; color:var(--text); font-variant-numeric:tabular-nums; }
 .fit-diet-stat-label { font-size:11px; color:var(--text-muted); margin-top:2px; }
 .fit-diet-note { font-size:11px; color:var(--text-dim); margin-top:10px; line-height:1.55; }
@@ -1134,7 +1134,6 @@ function renderFitGoal(profile, measurements) {
   html += '</div>';
   html += '<div class="fit-track-labels">';
   html += '<span>起始 '+(startValue != null ? startValue.toFixed(1) : '—')+'%</span>';
-  html += '<span style="color:var(--text-muted)">已完成 '+pct.toFixed(0)+'%</span>';
   html += '<span>目標 '+targetValue.toFixed(1)+'%</span>';
   html += '</div>';
 
@@ -1158,11 +1157,17 @@ function renderFitMeasChart(measurements, workouts, range, profile) {
   var todayObj = new Date(today + 'T00:00:00');
   var rangeStart, rangeEnd;
 
-  if (range === '30') {
-    rangeStart = new Date(todayObj); rangeStart.setDate(rangeStart.getDate() - 30);
-    rangeEnd = new Date(todayObj);
-  } else if (range === '90') {
-    rangeStart = new Date(todayObj); rangeStart.setDate(rangeStart.getDate() - 90);
+  if (range === '30' || range === '90') {
+    var days = parseInt(range, 10);
+    var windowStart = new Date(todayObj); windowStart.setDate(windowStart.getDate() - days);
+    // Clamp left edge to first measurement in window (+ 3-day margin)
+    var firstInWindow = measurements.filter(function(m){ return m.date >= windowStart.toISOString().slice(0,10); });
+    if (firstInWindow.length) {
+      var clampStart = new Date(firstInWindow[0].date+'T00:00:00'); clampStart.setDate(clampStart.getDate()-3);
+      rangeStart = clampStart < windowStart ? windowStart : clampStart;
+    } else {
+      rangeStart = windowStart;
+    }
     rangeEnd = new Date(todayObj);
   } else {
     var sd = goal.startDate || (measurements.length ? measurements[0].date : null);
