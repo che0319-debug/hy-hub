@@ -216,7 +216,7 @@ header { background:var(--header-bg); padding:0 24px; display:flex; align-items:
 .fit-diet-stat-label { font-size:11px; color:var(--text-muted); margin-top:2px; }
 .fit-diet-note { font-size:11px; color:var(--text-dim); margin-top:10px; line-height:1.55; }
 .fit-date-nav { display:flex; align-items:center; gap:10px; margin-bottom:14px; flex-wrap:wrap; }
-.fit-date-nav-title { font-family:'Syne',sans-serif; font-size:16px; font-weight:700; flex:1; }
+.fit-date-nav-title { font-family:'Syne',sans-serif; font-size:16px; font-weight:700; flex:1; cursor:pointer; text-decoration:underline dotted 1px; text-underline-offset:3px; }
 .fit-nav-btn { background:none; border:1.5px solid var(--border); border-radius:6px; width:30px; height:30px; cursor:pointer; font-size:16px; color:var(--text-muted); display:flex; align-items:center; justify-content:center; transition:all .15s; }
 .fit-nav-btn:hover:not([disabled]) { border-color:var(--blue); color:var(--blue); }
 .fit-nav-btn:disabled { opacity:.35; cursor:not-allowed; }
@@ -312,6 +312,7 @@ header { background:var(--header-bg); padding:0 24px; display:flex; align-items:
         <button class="fit-nav-btn" id="fitPrevDay">‹</button>
         <span class="fit-date-nav-title" id="fitDateTitle">—</span>
         <button class="fit-nav-btn" id="fitNextDay">›</button>
+        <input type="date" id="fitDatePicker" style="position:fixed;top:-9999px;left:-9999px;width:0;height:0;opacity:0">
         <button class="fit-today-btn" id="fitTodayBtn">回到今天</button>
       </div>
       <div id="fit-detail-content"></div>
@@ -1030,6 +1031,13 @@ var fitSelectedDate = today;
 var fitMeasRange = '90';
 var fitDietMode = 'kcal';
 
+function dateAddDays(ds, n) {
+  var p = ds.split('-');
+  var d = new Date(+p[0], +p[1]-1, +p[2]+n);
+  var mm = d.getMonth()+1, dd = d.getDate();
+  return d.getFullYear()+'-'+(mm<10?'0':'')+mm+'-'+(dd<10?'0':'')+dd;
+}
+
 function fitAllData() {
   if (!fitData) return { measurements:[], workouts:[], meals:[] };
   var ms = [], ws = [], fds = [];
@@ -1183,21 +1191,16 @@ function renderFitMeasChart(measurements, workouts, range, profile) {
 
   var html = '';
 
-  if (filteredMs.length < 2) {
-    var cnt = filteredMs.length;
-    var msg;
-    if (measurements.length <= 1) {
-      msg = measurements.length === 0
-        ? '還沒有任何量測。建議固定條件量一次（早上空腹、同一台機器），第一筆進來就準備好了。'
-        : '目前只有 1 筆量測，畫不出趨勢。建議固定條件再量一次（早上空腹、同一台機器），第二筆進來就會出現三條曲線。';
-    } else {
-      msg = '這個區間只有 '+cnt+' 筆量測。切到較長的區間看看，或再量一次。';
-    }
-    html = '<div class="fit-chart-empty">'+esc(msg)+'</div>';
+  if (filteredMs.length === 0) {
+    var msg0 = measurements.length === 0
+      ? '還沒有任何量測。建議固定條件量一次（早上空腹、同一台機器），第一筆進來就準備好了。'
+      : '這個區間沒有量測資料。切到較長的區間看看，或再量一次。';
+    html = '<div class="fit-chart-empty">'+esc(msg0)+'</div>';
     html += fitExerciseRow(filteredWs, rangeStart, rangeEnd, SVG_W);
     el.innerHTML = html;
     return;
   }
+  var onlyOnePoint = (measurements.length <= 1);
 
   var baseline = (profile && profile.baseline) || {};
   var baselineLM = baseline.muscleMass != null ? baseline.muscleMass : null;
@@ -1251,6 +1254,9 @@ function renderFitMeasChart(measurements, workouts, range, profile) {
     html += '</svg></div>';
   });
 
+  if (onlyOnePoint) {
+    html += '<div style="font-size:12px;color:var(--text-dim);text-align:center;margin-top:4px;">目前只有 1 筆量測，再量一次第二筆進來就會出現三條曲線。</div>';
+  }
   html += fitExerciseRow(filteredWs, rangeStart, rangeEnd, SVG_W);
   el.innerHTML = html;
 }
@@ -1313,12 +1319,20 @@ function renderFitDietChart(meals, mode) {
   // Fit X-axis to data range + 3-day left margin
   var dateDates = Object.keys(byDate).sort();
   var firstData = dateDates.length ? dateDates[0] : today;
+  var lastData  = dateDates.length ? dateDates[dateDates.length-1] : today;
   var startObj = new Date(firstData+'T00:00:00'); startObj.setDate(startObj.getDate()-3);
   if (startObj < hard90) startObj = new Date(hard90);
 
+  // When fewer than 7 data days, clamp right edge to lastData + 3 days
+  var endObj = new Date(todayObj);
+  if (dateDates.length < 7) {
+    var tentEnd = dateAddDays(lastData, 3);
+    if (tentEnd < today) endObj = new Date(tentEnd+'T00:00:00');
+  }
+
   var days = [];
   var cur = new Date(startObj);
-  while (cur <= todayObj) {
+  while (cur <= endObj) {
     var ds = cur.toISOString().slice(0,10);
     var hasData = !!byDate[ds];
     var val = hasData ? (mode==='kcal' ? byDate[ds].kcal : byDate[ds].protein) : null;
@@ -1346,7 +1360,13 @@ function renderFitDietChart(meals, mode) {
   function bx(i){ return pL + (N>1 ? (i/(N-1))*chartW : chartW/2); }
   function by(v){ return pT + (1 - v/maxVal)*chartH; }
 
+  var midVal = maxVal / 2;
   var html = '<svg class="fit-diet-svg" viewBox="0 0 '+SVG_W+' '+SVG_H+'" style="height:'+SVG_H+'px">';
+  // X-axis bottom line
+  html += '<line x1="'+pL+'" y1="'+(pT+chartH)+'" x2="'+(SVG_W-pR)+'" y2="'+(pT+chartH)+'" stroke="#eef2f7" stroke-width="1.5"/>';
+  // Horizontal grid lines
+  html += '<line x1="'+pL+'" y1="'+by(maxVal*0.75).toFixed(1)+'" x2="'+(SVG_W-pR)+'" y2="'+by(maxVal*0.75).toFixed(1)+'" stroke="#eef2f7" stroke-width="1"/>';
+  html += '<line x1="'+pL+'" y1="'+by(midVal).toFixed(1)+'" x2="'+(SVG_W-pR)+'" y2="'+by(midVal).toFixed(1)+'" stroke="#eef2f7" stroke-width="1"/>';
 
   // Hit rects (transparent, all 90 days)
   days.forEach(function(d,i) {
@@ -1388,8 +1408,9 @@ function renderFitDietChart(meals, mode) {
     var m = d.date.slice(5,7);
     if (m !== lastM) { lastM=m; html += '<text x="'+bx(i).toFixed(1)+'" y="'+(SVG_H-4)+'" fill="#94a3b8" font-size="12" text-anchor="middle">'+m+'月</text>'; }
   });
-  // Y max label
+  // Y max + mid labels
   html += '<text x="'+(pL-3)+'" y="'+(pT+10)+'" fill="#94a3b8" font-size="12" text-anchor="end">'+Math.round(maxVal)+'</text>';
+  html += '<text x="'+(pL-3)+'" y="'+(by(midVal)+4).toFixed(1)+'" fill="#94a3b8" font-size="12" text-anchor="end">'+Math.round(midVal)+'</text>';
   html += '</svg>';
 
   // Stats
@@ -1485,21 +1506,31 @@ function fitSelectDate(ds) {
 
 // Date navigation
 document.getElementById('fitPrevDay').addEventListener('click', function() {
-  var d = new Date(fitSelectedDate+'T00:00:00'); d.setDate(d.getDate()-1);
-  fitSelectDate(d.toISOString().slice(0,10));
+  fitSelectDate(dateAddDays(fitSelectedDate, -1));
 });
 document.getElementById('fitNextDay').addEventListener('click', function() {
-  var d = new Date(fitSelectedDate+'T00:00:00'); d.setDate(d.getDate()+1);
-  var nd = d.toISOString().slice(0,10); if (nd <= today) fitSelectDate(nd);
+  var nd = dateAddDays(fitSelectedDate, 1);
+  if (nd <= today) fitSelectDate(nd);
 });
 document.getElementById('fitTodayBtn').addEventListener('click', function() { fitSelectDate(today); });
 
 document.addEventListener('keydown', function(e) {
   if (!document.getElementById('tab-fitness').classList.contains('active')) return;
   if (document.querySelector('.modal-overlay.open')) return;
-  if (e.key === 'ArrowLeft') { e.preventDefault(); var d = new Date(fitSelectedDate+'T00:00:00'); d.setDate(d.getDate()-1); fitSelectDate(d.toISOString().slice(0,10)); }
-  if (e.key === 'ArrowRight') { e.preventDefault(); var d2 = new Date(fitSelectedDate+'T00:00:00'); d2.setDate(d2.getDate()+1); var nd2=d2.toISOString().slice(0,10); if (nd2<=today) fitSelectDate(nd2); }
+  if (e.key === 'ArrowLeft') { e.preventDefault(); fitSelectDate(dateAddDays(fitSelectedDate, -1)); }
+  if (e.key === 'ArrowRight') { e.preventDefault(); var nd2=dateAddDays(fitSelectedDate, 1); if (nd2<=today) fitSelectDate(nd2); }
   if (e.key === 'Escape') { ['fitGoalModal','fitAddMeasModal','fitAddWorkoutModal','fitAddMealModal'].forEach(function(id){ document.getElementById(id).classList.remove('open'); }); }
+});
+
+document.getElementById('fitDateTitle').addEventListener('click', function() {
+  var picker = document.getElementById('fitDatePicker');
+  picker.value = fitSelectedDate;
+  picker.max = today;
+  picker.min = dateAddDays(today, -30);
+  try { picker.showPicker(); } catch(e) { picker.focus(); }
+});
+document.getElementById('fitDatePicker').addEventListener('change', function() {
+  if (this.value) fitSelectDate(this.value);
 });
 
 // Seg switchers
