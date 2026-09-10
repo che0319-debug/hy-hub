@@ -199,7 +199,9 @@ function CurrentStateSection({ dimId, cs, onSave }) {
       const saved = cs?.metrics || []
       setMetrics(MULTI_METRICS_TEMPLATE.map(tmpl => {
         const found = saved.find(m => m.key === tmpl.key)
-        return found ? { ...tmpl, value: found.value ?? null, target: found.target ?? null } : { ...tmpl }
+        if (!found) return { ...tmpl }
+        const extra = found.direction != null ? { direction: found.direction } : {}
+        return { ...tmpl, value: found.value ?? null, target: found.target ?? null, ...extra }
       }))
     }
     setEditing(true)
@@ -234,18 +236,35 @@ function CurrentStateSection({ dimId, cs, onSave }) {
             <div className="space-y-1">
               {(cs.metrics || []).map(m => {
                 const hasData = m.value != null && m.target != null
-                const diff = hasData ? m.target - m.value : null
-                const achieved = hasData && m.value >= m.target
+                const dir = m.direction
+                let diff = null
+                let achieved = false
+                if (hasData) {
+                  if (dir === 'down') {
+                    diff = m.value - m.target
+                    achieved = m.value <= m.target
+                  } else if (dir === 'hold') {
+                    achieved = m.value >= m.target
+                  } else {
+                    diff = m.target - m.value
+                    achieved = m.value >= m.target
+                  }
+                }
                 return (
                   <div key={m.key} className="text-xs">
                     <span className="text-slate-500">{m.label}：</span>
                     {hasData ? (
                       <>
                         <span className="font-medium text-slate-700">{m.value.toLocaleString()} / {m.target.toLocaleString()} {m.unit}</span>
-                        {achieved
-                          ? <span className="ml-1.5 text-green-600 font-medium">已達標</span>
-                          : <span className="ml-1.5 text-red-500">▼ 差 {diff.toLocaleString()} {m.unit}</span>
-                        }
+                        {dir === 'hold' ? (
+                          <span className={`ml-1.5 font-medium ${achieved ? 'text-green-600' : 'text-red-500'}`}>守住 {m.target.toLocaleString()} {m.unit}</span>
+                        ) : achieved ? (
+                          <span className="ml-1.5 text-green-600 font-medium">已達標</span>
+                        ) : dir === 'down' ? (
+                          <span className="ml-1.5 text-red-500">還需降 {diff.toLocaleString()} {m.unit}</span>
+                        ) : (
+                          <span className="ml-1.5 text-red-500">▼ 差 {diff.toLocaleString()} {m.unit}</span>
+                        )}
                       </>
                     ) : (
                       <span className="text-slate-300 italic">未記錄</span>
