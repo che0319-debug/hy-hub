@@ -216,7 +216,7 @@ header { background:var(--header-bg); padding:0 24px; display:flex; align-items:
 .fit-diet-stat-label { font-size:11px; color:var(--text-muted); margin-top:2px; }
 .fit-diet-note { font-size:11px; color:var(--text-dim); margin-top:10px; line-height:1.55; }
 .fit-date-nav { display:flex; align-items:center; gap:10px; margin-bottom:14px; flex-wrap:wrap; }
-.fit-date-nav-title { font-family:'Syne',sans-serif; font-size:16px; font-weight:700; flex:1; cursor:pointer; text-decoration:underline dotted 1px; text-underline-offset:3px; }
+.fit-date-nav-title { font-family:'Syne',sans-serif; font-size:16px; font-weight:700; flex:1; }
 .fit-nav-btn { background:none; border:1.5px solid var(--border); border-radius:6px; width:30px; height:30px; cursor:pointer; font-size:16px; color:var(--text-muted); display:flex; align-items:center; justify-content:center; transition:all .15s; }
 .fit-nav-btn:hover:not([disabled]) { border-color:var(--blue); color:var(--blue); }
 .fit-nav-btn:disabled { opacity:.35; cursor:not-allowed; }
@@ -312,8 +312,7 @@ header { background:var(--header-bg); padding:0 24px; display:flex; align-items:
         <button class="fit-nav-btn" id="fitPrevDay">‹</button>
         <span class="fit-date-nav-title" id="fitDateTitle">—</span>
         <button class="fit-nav-btn" id="fitNextDay">›</button>
-        <input type="date" id="fitDatePicker" style="position:fixed;top:-9999px;left:-9999px;width:0;height:0;opacity:0">
-        <button class="fit-today-btn" id="fitTodayBtn">回到今天</button>
+<button class="fit-today-btn" id="fitTodayBtn">回到今天</button>
       </div>
       <div id="fit-detail-content"></div>
       <div class="fit-add-btns">
@@ -1356,7 +1355,7 @@ function renderFitDietChart(meals, mode) {
   var SVG_H = 130, pL=40, pR=8, pT=10, pB=20;
   var chartW = SVG_W-pL-pR, chartH = SVG_H-pT-pB;
   var N = days.length;
-  var bw = Math.max(2, chartW/Math.max(N,1) - 1);
+  var bw = Math.max(2, Math.min(14, chartW/Math.max(N,1) - 1));
   function bx(i){ return pL + (N>1 ? (i/(N-1))*chartW : chartW/2); }
   function by(v){ return pT + (1 - v/maxVal)*chartH; }
 
@@ -1520,17 +1519,6 @@ document.addEventListener('keydown', function(e) {
   if (e.key === 'ArrowLeft') { e.preventDefault(); fitSelectDate(dateAddDays(fitSelectedDate, -1)); }
   if (e.key === 'ArrowRight') { e.preventDefault(); var nd2=dateAddDays(fitSelectedDate, 1); if (nd2<=today) fitSelectDate(nd2); }
   if (e.key === 'Escape') { ['fitGoalModal','fitAddMeasModal','fitAddWorkoutModal','fitAddMealModal'].forEach(function(id){ document.getElementById(id).classList.remove('open'); }); }
-});
-
-document.getElementById('fitDateTitle').addEventListener('click', function() {
-  var picker = document.getElementById('fitDatePicker');
-  picker.value = fitSelectedDate;
-  picker.max = today;
-  picker.min = dateAddDays(today, -30);
-  try { picker.showPicker(); } catch(e) { picker.focus(); }
-});
-document.getElementById('fitDatePicker').addEventListener('change', function() {
-  if (this.value) fitSelectDate(this.value);
 });
 
 // Seg switchers
