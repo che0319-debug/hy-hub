@@ -15,6 +15,7 @@ import Settings from './pages/Settings'
 import AgentConfig from './pages/AgentConfig'
 import Goals from './pages/Goals'
 import Strategy from './pages/Strategy'
+import LifeOS from './pages/LifeOS'
 import AuthGate from './components/AuthGate'
 import MobileApp from './mobile/MobileApp'
 
@@ -23,6 +24,7 @@ function DesktopRoutes({ onMobileVersion }) {
     <Routes>
       <Route path="/" element={<App onMobileVersion={onMobileVersion} />}>
         <Route index element={<Home />} />
+        <Route path="life-os" element={<LifeOS />} />
         <Route path="helpers" element={<Helpers />} />
         <Route path="dispatch" element={<Dispatch />} />
         <Route path="line/hy" element={<LineHY />} />
