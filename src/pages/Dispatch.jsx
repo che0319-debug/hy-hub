@@ -188,7 +188,7 @@ export default function Dispatch() {
       const msg =
         err.status === 409 ? '上一輪還在執行中，完成後可繼續' :
         err.status === 429 ? `已達多輪上限（${MAX_TURNS_PER_CARD} 輪）` :
-        err.status === 401 ? '認證失敗（X-Read-Secret）' :
+        err.status === 401 ? '登入已失效，請重新登入' :
         err.message
       setContinueErrors(prev => ({ ...prev, [milestoneId]: msg }))
     } finally {
