@@ -6,8 +6,7 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
-    "preview": "vite preview",
-    "encrypt": "staticrypt dist/index.html -d dist/ --short"
+    "preview": "vite preview"
   },
   "dependencies": {
     "react": "^18.3.1",
@@ -19,7 +18,6 @@
     "autoprefixer": "^10.5.0",
     "lucide-react": "^0.468.0",
     "postcss": "^8.5.15",
-    "staticrypt": "^3.5.4",
     "tailwindcss": "^3.4.19",
     "vite": "^5.4.21"
   }
