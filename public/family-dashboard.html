@@ -519,9 +519,9 @@ header { background:var(--header-bg); padding:0 24px; display:flex; align-items:
 
 <script>
 var API         = 'https://hy-agent-v2.onrender.com';
-var SECRET      = '__READ_SECRET__';
-var HEADERS     = { 'Content-Type':'application/json', 'X-Read-Secret':SECRET };
-var GET_HEADERS = { 'X-Read-Secret':SECRET, 'Cache-Control':'no-store' };
+var ACCESS_TOKEN = sessionStorage.getItem('hy_world_access_token') || '';
+var HEADERS     = { 'Content-Type':'application/json', 'Authorization':'Bearer '+ACCESS_TOKEN };
+var GET_HEADERS = { 'Authorization':'Bearer '+ACCESS_TOKEN, 'Cache-Control':'no-store' };
 
 var familyData  = {};
 var kanban      = { projects:[] };
