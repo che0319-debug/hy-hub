@@ -468,8 +468,23 @@ function toggleExecute(pid, cardId, event) {
   var m = p.milestones[mi];
   var cur = EXECUTE_STATUS_CYCLE.indexOf(m.execute_status || '');
   m.execute_status = EXECUTE_STATUS_CYCLE[(cur + 1) % EXECUTE_STATUS_CYCLE.length];
+  m.completed = m.execute_status === 'done';
+  var taipeiTime = new Date().toLocaleTimeString('en-GB', { timeZone:'Asia/Taipei', hour12:false });
+  m.completed_at = m.completed ? today+'T'+taipeiTime+'+08:00' : null;
   renderProgress();
   saveProgress(null);
+}
+
+function isActiveCard(m){ return !m.completed || String(m.completed_at||'').slice(0,10) === today; }
+function toggleCardComplete(pid, cardId, checked, event){
+  if (event) event.stopPropagation();
+  var p=progressData.find(function(x){return x.id===pid;});
+  var m=p&&(p.milestones||[]).find(function(x){return x.id===cardId;});
+  if(!m)return;
+  var taipeiTime=new Date().toLocaleTimeString('en-GB',{timeZone:'Asia/Taipei',hour12:false});
+  m.completed=checked; m.completed_at=checked?today+'T'+taipeiTime+'+08:00':null;
+  if(checked)m.execute_status='done'; else if(m.execute_status==='done')m.execute_status='';
+  renderProgress(); saveProgress(checked?'completed':null);
 }
 
 function toggleDelegated(pid, cardId, event) {
@@ -527,8 +542,9 @@ function renderCardHTML(p, m, mi){
     + '<button style="margin-left:auto;font-size:10px;padding:1px 7px;border-radius:3px;border:1px solid var(--border);background:#fff;cursor:pointer;color:var(--text-muted);" onclick="toggleExecute(\''+p.id+'\',\''+m.id+'\',event)">切換狀態</button>'
     + '</div>';
 
-  return '<div class="card" data-pid="'+p.id+'" data-card-id="'+m.id+'" style="'+borderStyle+'">'
+  return '<div class="card'+(m.completed?' completed':'')+'" data-pid="'+p.id+'" data-card-id="'+m.id+'" style="'+borderStyle+'">'
     + '<div class="card-top">'
+    +   '<input type="checkbox" title="完成此任務"'+(m.completed?' checked':'')+' style="width:18px;height:18px;accent-color:#16a34a" onclick="toggleCardComplete(\''+p.id+'\',\''+m.id+'\',this.checked,event)">'
     +   '<div class="card-title">'+escHtml(m.title)+'</div>'
     +   '<button class="card-del-btn" title="刪除此里程碑" data-action="del-card" data-pid="'+p.id+'" data-card-id="'+m.id+'">✗</button>'
     + '</div>'
@@ -547,11 +563,11 @@ function renderColumnHTML(p){
     +     ' onblur="updateProjectName(\''+p.id+'\',this.textContent)"'
     +     ' onkeydown="if(event.key===\'Enter\'){event.preventDefault();this.blur();}"'
     +   '>'+escHtml(p.name)+'</div>'
-    +   '<div class="col-count">'+(p.milestones||[]).length+'</div>'
+    +   '<div class="col-count">'+(p.milestones||[]).filter(isActiveCard).length+'</div>'
     +   '<button class="col-del" title="刪除專案" data-action="del-project" data-pid="'+p.id+'">✕</button>'
     + '</div>'
     + '<div class="col-cards">'
-    +   (p.milestones||[]).map(function(m,mi){ return renderCardHTML(p,m,mi); }).join('')
+    +   (p.milestones||[]).filter(isActiveCard).map(function(m,mi){ return renderCardHTML(p,m,mi); }).join('')
     + '</div>'
     + '<button class="add-card-btn" data-action="add-card" data-pid="'+p.id+'">＋ 新增里程碑</button>'
     + '</div>';
@@ -662,7 +678,7 @@ function deleteCardDirect(pid, cardId){
   var mi = p.milestones.findIndex(function(x){ return x.id === cardId; });
   if (mi < 0) { console.warn('deleteCardDirect: card not found', cardId); return; }
   var title = p.milestones[mi].title;
-  if (!confirm('確定移除「'+title+'」？')) return;
+  if (!confirm('確定刪除「'+title+'」？此操作不會計入完成成果。')) return;
   p.milestones.splice(mi, 1);
   renderProgress();
   saveProgress(null);
