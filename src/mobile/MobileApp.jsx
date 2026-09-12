@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
-import { Bot, CalendarDays, CheckCircle2, ChevronRight, Home, ListChecks, Monitor, Pencil, RefreshCw, X } from 'lucide-react'
+import { Bot, BrainCircuit, CalendarDays, CheckCircle2, ChevronRight, Home, ListChecks, Monitor, Pencil, RefreshCw, ShieldCheck, Target, X } from 'lucide-react'
 import { fetchMobileState, fetchTodaySchedule, saveWeeklyPriorities, setMobileTaskCompleted } from '../api'
+import { decideAutonomousPlan, fetchDailyOS } from '../lifeOSApi'
 import './mobile.css'
 
 const TAB_META = {
@@ -8,6 +9,7 @@ const TAB_META = {
   today: { label: '今日', icon: ListChecks },
   calendar: { label: '行事曆', icon: CalendarDays },
   bots: { label: '分身', icon: Bot },
+  growth: { label: '進展', icon: Target },
 }
 
 const HY_PRINCIPLES = [
@@ -83,6 +85,7 @@ export default function MobileApp({ onDesktopVersion }) {
   const [tab, setTab] = useState('home')
   const [state, setState] = useState(null)
   const [events, setEvents] = useState(null)
+  const [dailyOS, setDailyOS] = useState(null)
   const [error, setError] = useState('')
   const [ruleIndex, setRuleIndex] = useState(0)
   const [principleOpen, setPrincipleOpen] = useState(false)
@@ -90,12 +93,14 @@ export default function MobileApp({ onDesktopVersion }) {
   const [weeklyDrafts, setWeeklyDrafts] = useState(['', '', ''])
   const [weeklySaving, setWeeklySaving] = useState(false)
   const [savingIds, setSavingIds] = useState(new Set())
+  const [decidingId, setDecidingId] = useState('')
 
   async function load() {
     setError('')
-    const [stateResult, scheduleResult] = await Promise.allSettled([
+    const [stateResult, scheduleResult, dailyResult] = await Promise.allSettled([
       fetchMobileState(),
       fetchTodaySchedule(),
+      fetchDailyOS(),
     ])
     if (stateResult.status === 'fulfilled') setState(stateResult.value)
     else setError('目前資料讀取失敗，請稍後重試。')
@@ -104,6 +109,7 @@ export default function MobileApp({ onDesktopVersion }) {
     } else {
       setEvents([])
     }
+    if (dailyResult.status === 'fulfilled') setDailyOS(dailyResult.value)
   }
 
   useEffect(() => { load() }, [])
@@ -119,6 +125,22 @@ export default function MobileApp({ onDesktopVersion }) {
     () => (state?.bots || []).filter(bot => bot.status === 'attention'),
     [state],
   )
+
+  const approvals = dailyOS?.today?.waitingApproval || []
+  const topGaps = dailyOS?.reality?.topGaps || []
+  const growth = dailyOS?.growth || {}
+
+  async function decidePlan(planId, decision) {
+    setDecidingId(planId)
+    try {
+      await decideAutonomousPlan(planId, decision)
+      await load()
+    } catch {
+      setError('核准狀態未能儲存，請再試一次。')
+    } finally {
+      setDecidingId('')
+    }
+  }
 
   async function toggleTask(task, completed) {
     setSavingIds(prev => new Set(prev).add(task.id))
@@ -195,6 +217,17 @@ export default function MobileApp({ onDesktopVersion }) {
 
         {tab === 'home' && state && (
           <>
+            <section className="mobile-now">
+              <div className="mobile-section-title">
+                <h2>今天只看這裡</h2>
+                <span>{dailyOS?.version ? '即時整合' : '基本模式'}</span>
+              </div>
+              <div className="mobile-dashboard-grid">
+                <div className="mobile-metric"><strong>{events?.length || 0}</strong><span>今日行程</span></div>
+                <div className="mobile-metric"><strong>{state.todayTasks.filter(item => !item.completed).length}</strong><span>待完成</span></div>
+                <div className="mobile-metric is-warning"><strong>{approvals.length}</strong><span>待核准</span></div>
+              </div>
+            </section>
             <button
               type="button"
               className="mobile-card mobile-rule"
@@ -249,6 +282,26 @@ export default function MobileApp({ onDesktopVersion }) {
                 <span>需要你決定</span>
                 <strong>{attentionBots[0].name}：{attentionBots[0].current || '有工作等待確認'}</strong>
               </div>
+            )}
+
+            {approvals.length > 0 && (
+              <section>
+                <h2>待我核准</h2>
+                <div className="mobile-list">
+                  {approvals.slice(0, 3).map(plan => (
+                    <article className="mobile-approval" key={plan.id}>
+                      <span><ShieldCheck size={16} />{plan.owner || 'AI'} 準備開始</span>
+                      <strong>{plan.title}</strong>
+                      {plan.whyNow && <small>{plan.whyNow}</small>}
+                      <div>
+                        <button disabled={decidingId === plan.id} onClick={() => decidePlan(plan.id, 'approve')}>核准</button>
+                        <button disabled={decidingId === plan.id} onClick={() => decidePlan(plan.id, 'approve_with_judgment')}>核准＋自行判斷</button>
+                        <button disabled={decidingId === plan.id} onClick={() => decidePlan(plan.id, 'reject')}>取消</button>
+                      </div>
+                    </article>
+                  ))}
+                </div>
+              </section>
             )}
           </>
         )}
@@ -319,6 +372,37 @@ export default function MobileApp({ onDesktopVersion }) {
               ))}
             </div>
           </section>
+        )}
+
+        {tab === 'growth' && state && (
+          <>
+            <section>
+              <div className="mobile-section-title"><h2>Reality Gap</h2><span>{topGaps.length} 項</span></div>
+              <div className="mobile-list">
+                {topGaps.length === 0 ? <Empty>目前沒有可顯示的差距。</Empty> : topGaps.map(gap => (
+                  <div className="mobile-gap" key={gap.id || gap.dimension}>
+                    <span><strong>{gap.dimension || gap.name || '未命名差距'}</strong><small>差距 {gap.gap}</small></span>
+                    <div><i style={{ width: `${Math.max(4, Math.min(100, Number(gap.gap) || 0))}%` }} /></div>
+                  </div>
+                ))}
+              </div>
+            </section>
+            <section>
+              <div className="mobile-section-title"><h2>AI Learning</h2><BrainCircuit size={17} /></div>
+              <div className="mobile-card mobile-learning">
+                <div><span>待改善</span><strong>{(growth.selfGaps || []).filter(item => item.status !== 'closed').length}</strong></div>
+                <div><span>下一步候選</span><strong>{(growth.nextIntents || []).filter(item => item.status === 'candidate').length}</strong></div>
+                <p>{growth.latestReview ? (growth.latestReview.summary || growth.latestReview.title || '最近一次覆盤已建立') : '完成任務並留下 Result 後，AI 會從成果持續校正。'}</p>
+              </div>
+            </section>
+            <section>
+              <h2>晚間回顧與週覆盤</h2>
+              <div className="mobile-card mobile-review-rhythm">
+                <p><b>今晚</b><span>整理今日 Results、未完成原因與明日第一步。</span></p>
+                <p><b>本週</b><span>比較 Goals、Reality Gap、Results 與未完成 Tasks。</span></p>
+              </div>
+            </section>
+          </>
         )}
       </main>
 
