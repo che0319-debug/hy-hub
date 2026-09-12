@@ -278,6 +278,17 @@ export async function setMobileTaskCompleted(source, milestoneId, completed) {
   return result
 }
 
+export async function saveWeeklyPriorities(items) {
+  const res = await fetch(`${API_BASE}/api/mobile/weekly-priorities`, {
+    method: 'POST',
+    headers: { ...authHeaders(), 'Content-Type': 'application/json' },
+    body: JSON.stringify({ items }),
+  })
+  const result = await res.json().catch(() => ({}))
+  if (!res.ok || !result.ok) throw new Error(result.error || `saveWeeklyPriorities failed: ${res.status}`)
+  return result
+}
+
 // 聚合四隻 bot 的所有 milestone，回 [{title, due, _source, _project}]
 export async function fetchAllMilestones() {
   const headers = { ...authHeaders() };
