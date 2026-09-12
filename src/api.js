@@ -265,6 +265,16 @@ export async function fetchMobileState() {
   return res.json()
 }
 
+export async function fetchLifeOSContext() {
+  const res = await fetch(`${API_BASE}/api/life-os/v1/context`, {
+    method: 'GET',
+    headers: { ...authHeaders() },
+    cache: 'no-store',
+  })
+  if (!res.ok) throw new Error(`fetchLifeOSContext failed: ${res.status}`)
+  return res.json()
+}
+
 export async function setMobileTaskCompleted(source, milestoneId, completed) {
   const res = await fetch(`${API_BASE}/api/mobile/task-complete`, {
     method: 'POST',
