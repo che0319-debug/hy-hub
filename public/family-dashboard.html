@@ -563,6 +563,8 @@ function dueDisplay(d){
   return { text: p[1]+'/'+p[2], over: cmp < today };
 }
 
+function isActiveCard(m){ return !m.completed || String(m.completed_at||'').slice(0,10) === today; }
+
 // ═══════════════ BOARD ═══════════════
 
 function renderBoard(){
@@ -589,7 +591,7 @@ function makeCol(proj){
   var hdr = document.createElement('div'); hdr.className = 'col-header';
   var dot = document.createElement('div'); dot.className = 'col-color-dot'; dot.style.background = proj.color||'#6b778c';
   var nm  = document.createElement('span'); nm.className = 'col-name-text'; nm.textContent = proj.name;
-  var cnt = document.createElement('span'); cnt.className = 'col-count'; cnt.textContent = proj.milestones.length;
+  var cnt = document.createElement('span'); cnt.className = 'col-count'; cnt.textContent = proj.milestones.filter(isActiveCard).length;
   var editBtn = document.createElement('button'); editBtn.className='col-icon-btn'; editBtn.textContent='✏'; editBtn.title='重新命名';
   editBtn.addEventListener('click', function(e){ e.stopPropagation(); renameColumn(proj.id); });
   var delBtn = document.createElement('button'); delBtn.className='col-icon-btn del'; delBtn.textContent='✕'; delBtn.title='刪除欄位';
@@ -599,7 +601,7 @@ function makeCol(proj){
 
   // card list
   var list = document.createElement('div'); list.className='card-list'; list.id='list-'+proj.id;
-  proj.milestones.forEach(function(m){ list.appendChild(makeCard(m, proj.id)); });
+  proj.milestones.filter(isActiveCard).forEach(function(m){ list.appendChild(makeCard(m, proj.id)); });
   col.appendChild(list);
 
   // add card btn
@@ -613,7 +615,14 @@ function makeCard(m, projId){
   var card = document.createElement('div');
   card.className = 'kanban-card'; card.dataset.id = m.id; card.dataset.col = projId;
 
+  if (m.completed) { card.style.opacity='.62'; card.style.borderLeft='3px solid #16a34a'; }
+  var done = document.createElement('input'); done.type='checkbox'; done.checked=!!m.completed;
+  done.title='完成此任務'; done.style.cssText='width:18px;height:18px;accent-color:#16a34a;float:left;margin:0 8px 5px 0';
+  done.addEventListener('click', function(e){ e.stopPropagation(); });
+  done.addEventListener('change', function(e){ e.stopPropagation(); toggleCardComplete(m.id, e.target.checked); });
+  card.appendChild(done);
   var titleEl = document.createElement('div'); titleEl.className='kcard-title'; titleEl.textContent = m.title;
+  if (m.completed) titleEl.style.textDecoration='line-through';
   card.appendChild(titleEl);
 
   var meta = document.createElement('div'); meta.className='kcard-meta';
@@ -662,8 +671,17 @@ function syncBoardToData(){
     list.querySelectorAll('.kanban-card').forEach(function(card){
       var m = findM(card.dataset.id); if (m) newMs.push(m);
     });
-    proj.milestones = newMs;
+    var archived = proj.milestones.filter(function(m){ return !isActiveCard(m); });
+    proj.milestones = newMs.concat(archived);
   });
+}
+
+function toggleCardComplete(mid, checked){
+  var m=findM(mid); if(!m)return;
+  var taipeiTime=new Date().toLocaleTimeString('en-GB',{timeZone:'Asia/Taipei',hour12:false});
+  m.completed=checked; m.completed_at=checked?today+'T'+taipeiTime+'+08:00':null;
+  if(checked)m.execute_status='done'; else if(m.execute_status==='done')m.execute_status='';
+  renderBoard(); familyData._kanban=kanban; saveData(checked?'completed':null);
 }
 
 function findM(mid){
@@ -750,6 +768,7 @@ function saveModal(){
 
 function deleteModal(){
   if (!mMilestone||mIsNew) return;
+  if (!confirm('確定刪除「'+mMilestone.title+'」？此操作不會計入完成成果。')) return;
   var mid=mMilestone.id;
   kanban.projects.forEach(function(p){ p.milestones=p.milestones.filter(function(m){ return m.id!==mid; }); });
   closeModal(); renderBoard(); familyData._kanban=kanban; saveData('kanban');
