@@ -1,4 +1,4 @@
-import { StrictMode } from 'react'
+import { StrictMode, useEffect, useState } from 'react'
 import { createRoot } from 'react-dom/client'
 import { HashRouter, Routes, Route } from 'react-router-dom'
 import './index.css'
@@ -16,27 +16,56 @@ import AgentConfig from './pages/AgentConfig'
 import Goals from './pages/Goals'
 import Strategy from './pages/Strategy'
 import AuthGate from './components/AuthGate'
+import MobileApp from './mobile/MobileApp'
+
+function DesktopRoutes({ onMobileVersion }) {
+  return (
+    <Routes>
+      <Route path="/" element={<App onMobileVersion={onMobileVersion} />}>
+        <Route index element={<Home />} />
+        <Route path="helpers" element={<Helpers />} />
+        <Route path="dispatch" element={<Dispatch />} />
+        <Route path="line/hy" element={<LineHY />} />
+        <Route path="line/xiaoyin" element={<LineXiaoyin />} />
+        <Route path="line/950157" element={<Line950157 />} />
+        <Route path="line/family" element={<LineFamily />} />
+        <Route path="line/sam" element={<LineSam />} />
+        <Route path="agent/:id" element={<AgentConfig />} />
+        <Route path="goals" element={<Goals />} />
+        <Route path="strategy" element={<Strategy />} />
+        <Route path="settings" element={<Settings />} />
+      </Route>
+    </Routes>
+  )
+}
+
+function Experience() {
+  const [mobileWidth, setMobileWidth] = useState(() => window.matchMedia('(max-width: 767px)').matches)
+  const [mode, setMode] = useState(() => sessionStorage.getItem('hy_world_view') || 'auto')
+
+  useEffect(() => {
+    const media = window.matchMedia('(max-width: 767px)')
+    const update = () => setMobileWidth(media.matches)
+    media.addEventListener('change', update)
+    return () => media.removeEventListener('change', update)
+  }, [])
+
+  function choose(next) {
+    setMode(next)
+    sessionStorage.setItem('hy_world_view', next)
+  }
+
+  if (mobileWidth && mode !== 'desktop') {
+    return <MobileApp onDesktopVersion={() => choose('desktop')} />
+  }
+  return <DesktopRoutes onMobileVersion={mobileWidth ? () => choose('mobile') : null} />
+}
 
 createRoot(document.getElementById('root')).render(
   <StrictMode>
     <AuthGate>
       <HashRouter>
-      <Routes>
-        <Route path="/" element={<App />}>
-          <Route index element={<Home />} />
-          <Route path="helpers" element={<Helpers />} />
-          <Route path="dispatch" element={<Dispatch />} />
-          <Route path="line/hy" element={<LineHY />} />
-          <Route path="line/xiaoyin" element={<LineXiaoyin />} />
-          <Route path="line/950157" element={<Line950157 />} />
-          <Route path="line/family" element={<LineFamily />} />
-          <Route path="line/sam" element={<LineSam />} />
-          <Route path="agent/:id" element={<AgentConfig />} />
-          <Route path="goals" element={<Goals />} />
-          <Route path="strategy" element={<Strategy />} />
-          <Route path="settings" element={<Settings />} />
-        </Route>
-      </Routes>
+        <Experience />
       </HashRouter>
     </AuthGate>
   </StrictMode>
