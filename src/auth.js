@@ -18,10 +18,7 @@ export function authHeaders() {
   const token = getAccessToken()
   if (token) return { Authorization: `Bearer ${token}` }
 
-  // Temporary migration fallback. Remove after the new login is deployed and
-  // the old READ_SECRET has been rotated.
-  const legacy = import.meta.env.VITE_READ_SECRET || ''
-  return legacy ? { 'X-Read-Secret': legacy } : {}
+  return {}
 }
 
 export async function loginWithPassword(password) {

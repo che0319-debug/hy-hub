@@ -225,7 +225,7 @@ export async function dispatchContinue(milestoneId, ask) {
     cache: 'no-store',
   });
   if (res.status === 401) {
-    const e = new Error('認證失敗（X-Read-Secret）');
+    const e = new Error('登入已失效，請重新登入');
     e.status = 401;
     throw e;
   }
