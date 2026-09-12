@@ -11,7 +11,7 @@ export function useSessionContext() {
   return useContext(SessionContext)
 }
 
-export default function App() {
+export default function App({ onMobileVersion }) {
   const [sessions, setSessions] = useState([])
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const location = useLocation()
@@ -48,7 +48,7 @@ export default function App() {
   return (
     <SessionContext.Provider value={{ sessions, addSession, removeSession, refreshSessions }}>
       <div className="min-h-screen bg-slate-50 text-slate-800">
-        <TopBar />
+        <TopBar onMobileVersion={onMobileVersion} />
         <button
           className="md:hidden fixed top-2 left-2 z-50 p-2 rounded-md bg-white shadow text-slate-700"
           onClick={() => setSidebarOpen(v => !v)}
