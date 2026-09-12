@@ -256,6 +256,28 @@ export async function fetchTodaySchedule() {
   return res.json();
 }
 
+export async function fetchMobileState() {
+  const res = await fetch(`${API_BASE}/api/mobile/state`, {
+    headers: { ...authHeaders() },
+    cache: 'no-store',
+  })
+  if (!res.ok) throw new Error(`fetchMobileState failed: ${res.status}`)
+  return res.json()
+}
+
+export async function setMobileTaskCompleted(source, milestoneId, completed) {
+  const res = await fetch(`${API_BASE}/api/mobile/task-complete`, {
+    method: 'POST',
+    headers: { ...authHeaders(), 'Content-Type': 'application/json' },
+    body: JSON.stringify({ source, milestoneId, completed }),
+  })
+  const result = await res.json().catch(() => ({}))
+  if (!res.ok || !result.ok) {
+    throw new Error(result.error || `setMobileTaskCompleted failed: ${res.status}`)
+  }
+  return result
+}
+
 // 聚合四隻 bot 的所有 milestone，回 [{title, due, _source, _project}]
 export async function fetchAllMilestones() {
   const headers = { ...authHeaders() };
