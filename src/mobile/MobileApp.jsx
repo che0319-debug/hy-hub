@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
-import { Bot, CalendarDays, CheckCircle2, ChevronRight, Home, ListChecks, Monitor, RefreshCw, X } from 'lucide-react'
-import { fetchMobileState, fetchTodaySchedule, setMobileTaskCompleted } from '../api'
+import { Bot, CalendarDays, CheckCircle2, ChevronRight, Home, ListChecks, Monitor, Pencil, RefreshCw, X } from 'lucide-react'
+import { fetchMobileState, fetchTodaySchedule, saveWeeklyPriorities, setMobileTaskCompleted } from '../api'
 import './mobile.css'
 
 const TAB_META = {
@@ -86,6 +86,9 @@ export default function MobileApp({ onDesktopVersion }) {
   const [error, setError] = useState('')
   const [ruleIndex, setRuleIndex] = useState(0)
   const [principleOpen, setPrincipleOpen] = useState(false)
+  const [weeklyOpen, setWeeklyOpen] = useState(false)
+  const [weeklyDrafts, setWeeklyDrafts] = useState(['', '', ''])
+  const [weeklySaving, setWeeklySaving] = useState(false)
   const [savingIds, setSavingIds] = useState(new Set())
 
   async function load() {
@@ -140,6 +143,30 @@ export default function MobileApp({ onDesktopVersion }) {
     }
   }
 
+  function editWeekly() {
+    const items = state.weeklyTop3 || []
+    setWeeklyDrafts([0, 1, 2].map(i => items[i]?.title || ''))
+    setWeeklyOpen(true)
+  }
+
+  async function commitWeekly() {
+    const items = weeklyDrafts.map(title => title.trim()).filter(Boolean).map((title, index) => ({
+      id: state.weeklyTop3?.[index]?.source === 'weekly' ? state.weeklyTop3[index].id : `weekly-${Date.now()}-${index + 1}`,
+      title,
+      completed: false,
+    }))
+    setWeeklySaving(true)
+    try {
+      const result = await saveWeeklyPriorities(items)
+      setState(prev => ({ ...prev, weeklyTop3: result.items }))
+      setWeeklyOpen(false)
+    } catch {
+      setError('本週重點未能儲存，請再試一次。')
+    } finally {
+      setWeeklySaving(false)
+    }
+  }
+
   return (
     <div className="mobile-life-os">
       <header className="mobile-header">
@@ -171,16 +198,21 @@ export default function MobileApp({ onDesktopVersion }) {
             </button>
 
             <section>
-              <h2>本週最重要 3 件事</h2>
+              <div className="mobile-section-title">
+                <h2>本週最重要 3 件事</h2>
+                <button type="button" onClick={editWeekly} aria-label="編輯本週三件事"><Pencil size={16} /></button>
+              </div>
               <div className="mobile-card">
                 {(state.weeklyTop3 || []).length === 0 ? (
                   <Empty>本週尚未排定有期限的重點。</Empty>
                 ) : state.weeklyTop3.map((item, index) => (
-                  <div className="mobile-priority" key={item.id}>
+                  <label className={`mobile-priority ${item.completed ? 'is-complete' : ''}`} key={item.id}>
                     <b>{index + 1}</b>
                     <span>{item.title}</span>
-                    <small>{item.sourceLabel}</small>
-                  </div>
+                    {item.source === 'weekly' ? (
+                      <input type="checkbox" checked={item.completed} onChange={event => toggleTask(item, event.target.checked)} />
+                    ) : <small>{item.sourceLabel}</small>}
+                  </label>
                 ))}
               </div>
             </section>
@@ -290,6 +322,23 @@ export default function MobileApp({ onDesktopVersion }) {
               <button type="button" onClick={() => setRuleIndex(i => (i + rules.length - 1) % rules.length)}>上一則</button>
               <button type="button" onClick={() => setRuleIndex(i => (i + 1) % rules.length)}>下一則</button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {weeklyOpen && (
+        <div className="principle-overlay" role="dialog" aria-modal="true" aria-label="編輯本週最重要三件事">
+          <div className="principle-sheet weekly-editor">
+            <div className="principle-sheet-head">
+              <div><span>首頁與 Dashboard 同步</span><h2>本週最重要 3 件事</h2></div>
+              <button type="button" onClick={() => setWeeklyOpen(false)} aria-label="關閉"><X size={21} /></button>
+            </div>
+            <div className="weekly-editor-fields">
+              {weeklyDrafts.map((value, index) => (
+                <label key={index}><b>{index + 1}</b><input value={value} maxLength={100} placeholder={`第 ${index + 1} 件重要事項`} onChange={event => setWeeklyDrafts(items => items.map((item, i) => i === index ? event.target.value : item))} /></label>
+              ))}
+            </div>
+            <button type="button" className="weekly-save" disabled={weeklySaving} onClick={commitWeekly}>{weeklySaving ? '儲存中…' : '儲存並同步'}</button>
           </div>
         </div>
       )}
