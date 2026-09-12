@@ -4,7 +4,7 @@ import { Bell, CheckCircle, Coins, RefreshCw, Pencil } from 'lucide-react'
 import { homeSummary } from '../mock/data'
 import { useSessionContext } from '../App'
 import PixelWorld from '../components/PixelWorld'
-import { fetchTodaySchedule, fetchAllMilestones, fetchMemoryHealth, fetchWeeklyChange, postWeeklyChange } from '../api'
+import { fetchTodaySchedule, fetchAllMilestones, fetchMemoryHealth, fetchMobileState, fetchWeeklyChange, postWeeklyChange } from '../api'
 
 const PENDING_STATUSES = ['await', 'failed']
 const REFRESH_INTERVAL_MS = 60000
@@ -99,6 +99,19 @@ function TodoSection() {
             )
           })}
         </ul>
+      )}
+    </div>
+  )
+}
+
+function WeeklyTop3Card() {
+  const [items, setItems] = useState(null)
+  useEffect(() => { fetchMobileState().then(data => setItems(data.weeklyTop3 || [])).catch(() => setItems([])) }, [])
+  return (
+    <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-5 mb-4">
+      <p className="text-sm font-semibold text-slate-700 mb-3">本週最重要 3 件事</p>
+      {items === null ? <p className="text-xs text-slate-400">載入中…</p> : items.length === 0 ? <p className="text-xs text-slate-400">本週尚未設定</p> : (
+        <ol className="space-y-2">{items.map((item, index) => <li key={item.id} className={`flex gap-3 text-sm ${item.completed ? 'text-slate-400 line-through' : 'text-slate-700'}`}><b className="text-blue-600">{index + 1}</b><span>{item.title}</span></li>)}</ol>
       )}
     </div>
   )
@@ -389,6 +402,7 @@ export default function Home() {
       {view === 'data' ? (
         <div>
           <WeeklyChangeCard />
+          <WeeklyTop3Card />
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
             <MetricCard
               icon={Bell}
