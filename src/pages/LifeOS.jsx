@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
-import { AlertTriangle, Bot, FolderKanban, RefreshCw, Target } from 'lucide-react'
+import { AlertTriangle, Bot, ClipboardCheck, FolderKanban, RefreshCw, Target } from 'lucide-react'
 import { fetchLifeOSContext } from '../api'
+import { decideAutonomousPlan, fetchAutonomousPlans } from '../lifeOSApi'
 
 const AGENTS = ['hy', '950157', 'family', 'sam']
 const LABELS = { hy: 'HY', '950157': '950157', family: '小因', sam: 'Sam' }
@@ -13,14 +14,14 @@ function Card({ title, icon: Icon, children }) {
   </section>
 }
 
-function Summary({ context }) {
+function Summary({ context, planCount }) {
   const activeTasks = (context.tasks || []).filter(task => ACTIVE.has(task.status)).length
   const openGaps = (context.realityGaps || []).filter(gap => Number(gap.gap) > 0).length
   const items = [
     ['目標', (context.goals || []).length],
     ['待改善差距', openGaps],
-    ['專案', (context.projects || []).length],
     ['進行中任務', activeTasks],
+    ['待核准 AI 規劃', planCount],
   ]
   return <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
     {items.map(([label, value]) => <div key={label} className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
@@ -28,6 +29,36 @@ function Summary({ context }) {
       <p className="mt-1 text-2xl font-bold text-slate-800">{value}</p>
     </div>)}
   </div>
+}
+
+function PlanInbox({ plans, busyId, onDecision }) {
+  return <Card title="950157｜工作規劃待核准" icon={ClipboardCheck}>
+    {!plans.length ? <p className="text-sm text-slate-500">目前沒有等待你核准的自主工作規劃。</p> : <div className="space-y-4">
+      {plans.map(plan => <article key={plan.id} className="rounded-xl border border-indigo-200 bg-indigo-50/40 p-4">
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div>
+            <div className="text-xs font-medium text-indigo-600">{plan.projectName || '950157'}{plan.due ? `・截止 ${plan.due}` : ''}</div>
+            <h3 className="mt-1 font-semibold text-slate-800">{plan.title}</h3>
+          </div>
+          <span className="rounded-full bg-amber-100 px-2 py-1 text-xs text-amber-700">等待核准</span>
+        </div>
+        {plan.whyNow && <p className="mt-3 text-sm text-slate-600">{plan.whyNow}</p>}
+        {!!plan.proposedSteps?.length && <div className="mt-3">
+          <p className="mb-1 text-xs font-semibold text-slate-500">950157 準備怎麼做</p>
+          <ol className="list-decimal space-y-1 pl-5 text-sm text-slate-700">{plan.proposedSteps.map((step, i) => <li key={i}>{step}</li>)}</ol>
+        </div>}
+        {!!plan.questions?.length && <div className="mt-3 rounded-lg border border-amber-200 bg-amber-50 p-3">
+          <p className="mb-1 text-xs font-semibold text-amber-800">開始前想確認</p>
+          <ul className="list-disc space-y-1 pl-5 text-sm text-amber-900">{plan.questions.map((q, i) => <li key={i}>{q}</li>)}</ul>
+        </div>}
+        <div className="mt-4 flex flex-wrap gap-2">
+          <button disabled={busyId === plan.id} onClick={() => onDecision(plan.id, 'approve')} className="rounded-lg bg-blue-600 px-3 py-2 text-sm font-medium text-white disabled:opacity-50">核准</button>
+          <button disabled={busyId === plan.id} onClick={() => onDecision(plan.id, 'approve_with_judgment')} className="rounded-lg bg-indigo-600 px-3 py-2 text-sm font-medium text-white disabled:opacity-50">核准＋自行判斷</button>
+          <button disabled={busyId === plan.id} onClick={() => onDecision(plan.id, 'reject')} className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-600 disabled:opacity-50">取消</button>
+        </div>
+      </article>)}
+    </div>}
+  </Card>
 }
 
 function GapView({ context }) {
@@ -89,23 +120,38 @@ function ProjectTaskView({ context }) {
 function DecisionView({ context }) {
   const items = (context.tasks || []).filter(t => ['blocked', 'needs_decision'].includes(t.status) || t.needsDecision)
   return <Card title="Needs HY Decision" icon={AlertTriangle}>
-    {items.length ? <ul className="space-y-2">{items.map(item => <li key={item.id} className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm"><b>{item.title}</b><span className="ml-2 text-amber-700">{LABELS[item.owner] || item.owner}</span></li>)}</ul> : <p className="text-sm text-slate-500">目前沒有等待 HY 決策的事項。</p>}
+    {items.length ? <ul className="space-y-2">{items.map(item => <li key={item.id} className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm"><b>{item.title}</b><span className="ml-2 text-amber-700">{LABELS[item.owner] || item.owner}</span></li>)}</ul> : <p className="text-sm text-slate-500">目前沒有其他等待 HY 決策的事項。</p>}
   </Card>
 }
 
 export default function LifeOS() {
   const [context, setContext] = useState(null)
+  const [plans, setPlans] = useState([])
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
-  async function load() { setLoading(true); setError(''); try { setContext(await fetchLifeOSContext()) } catch (e) { setError(e.message) } finally { setLoading(false) } }
+  const [busyId, setBusyId] = useState('')
+  async function load() {
+    setLoading(true); setError('')
+    try {
+      const [nextContext, nextPlans] = await Promise.all([fetchLifeOSContext(), fetchAutonomousPlans()])
+      setContext(nextContext); setPlans(nextPlans)
+    } catch (e) { setError(e.message) } finally { setLoading(false) }
+  }
+  async function decide(planId, decision) {
+    setBusyId(planId); setError('')
+    try { await decideAutonomousPlan(planId, decision); await load() }
+    catch (e) { setError(e.message) }
+    finally { setBusyId('') }
+  }
   useEffect(() => { load() }, [])
   const updated = useMemo(() => context?.metadata?.updatedAt?.replace('T', ' ').slice(0, 16) || '—', [context])
   if (!context && loading) return <p className="text-sm text-slate-500">載入 Life OS…</p>
   if (!context) return <div><p className="mb-3 text-sm text-red-600">Life OS 讀取失敗：{error}</p><button onClick={load} className="rounded-lg bg-blue-600 px-4 py-2 text-sm text-white">重試</button></div>
   return <div className="space-y-5">
     <header className="flex items-start justify-between gap-4"><div><h1 className="text-xl font-bold text-slate-800">HY Life OS</h1><p className="text-sm text-slate-500">Canonical Core・目標差距・四分身執行鏈・更新 {updated}</p></div><button onClick={load} disabled={loading} className="flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-600"><RefreshCw size={15} className={loading ? 'animate-spin' : ''} />刷新</button></header>
-    {error && <p className="text-sm text-red-600">更新失敗，保留上次資料：{error}</p>}
-    <Summary context={context} />
+    {error && <p className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">更新失敗：{error}</p>}
+    <Summary context={context} planCount={plans.length} />
+    <PlanInbox plans={plans} busyId={busyId} onDecision={decide} />
     <GapView context={context} />
     <ProjectTaskView context={context} />
     <DecisionView context={context} />
