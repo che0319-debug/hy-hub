@@ -1,10 +1,11 @@
+import { authHeaders } from './auth'
+
 const API_BASE = import.meta.env.VITE_API_BASE || "";
-const READ_SECRET = import.meta.env.VITE_READ_SECRET || "";
 
 export async function fetchPersonalData() {
   const res = await fetch(`${API_BASE}/api/personal-data`, {
     method: "GET",
-    headers: { "X-Read-Secret": READ_SECRET },
+    headers: { ...authHeaders() },
     cache: 'no-store',
   });
   if (!res.ok) {
@@ -16,7 +17,7 @@ export async function fetchPersonalData() {
 export async function postMilestone(payload) {
   const res = await fetch(`${API_BASE}/api/milestone`, {
     method: "POST",
-    headers: { "X-Read-Secret": READ_SECRET, "Content-Type": "application/json" },
+    headers: { ...authHeaders(), "Content-Type": "application/json" },
     body: JSON.stringify(payload),
   });
   if (!res.ok) throw new Error(`postMilestone failed: ${res.status}`);
@@ -26,7 +27,7 @@ export async function postMilestone(payload) {
 export async function fetchLifeGoals() {
   const res = await fetch(`${API_BASE}/api/life-goals`, {
     method: "GET",
-    headers: { "X-Read-Secret": READ_SECRET },
+    headers: { ...authHeaders() },
     cache: 'no-store',
   });
   if (!res.ok) throw new Error(`fetchLifeGoals failed: ${res.status}`);
@@ -36,7 +37,7 @@ export async function fetchLifeGoals() {
 export async function fetchStrategyProjects() {
   const res = await fetch(`${API_BASE}/api/strategy-projects`, {
     method: "GET",
-    headers: { "X-Read-Secret": READ_SECRET },
+    headers: { ...authHeaders() },
     cache: 'no-store',
   });
   if (!res.ok) throw new Error(`fetchStrategyProjects failed: ${res.status}`);
@@ -46,7 +47,7 @@ export async function fetchStrategyProjects() {
 export async function saveStrategyProject(project) {
   const res = await fetch(`${API_BASE}/api/strategy-projects`, {
     method: "POST",
-    headers: { "X-Read-Secret": READ_SECRET, "Content-Type": "application/json" },
+    headers: { ...authHeaders(), "Content-Type": "application/json" },
     body: JSON.stringify({ action: "upsert", project }),
   });
   const result = await res.json();
@@ -57,7 +58,7 @@ export async function saveStrategyProject(project) {
 export async function deleteStrategyProject(id) {
   const res = await fetch(`${API_BASE}/api/strategy-projects`, {
     method: "POST",
-    headers: { "X-Read-Secret": READ_SECRET, "Content-Type": "application/json" },
+    headers: { ...authHeaders(), "Content-Type": "application/json" },
     body: JSON.stringify({ action: "delete", id }),
   });
   const result = await res.json();
@@ -68,7 +69,7 @@ export async function deleteStrategyProject(id) {
 export async function assessFreedom() {
   const res = await fetch(`${API_BASE}/api/assess-freedom`, {
     method: "POST",
-    headers: { "X-Read-Secret": READ_SECRET },
+    headers: { ...authHeaders() },
   });
   const result = await res.json();
   if (!res.ok || !result.ok) throw new Error(result.error || `assessFreedom failed: ${res.status}`);
@@ -78,7 +79,7 @@ export async function assessFreedom() {
 export async function saveLifeGoals(payload) {
   const res = await fetch(`${API_BASE}/api/life-goals`, {
     method: "POST",
-    headers: { "X-Read-Secret": READ_SECRET, "Content-Type": "application/json" },
+    headers: { ...authHeaders(), "Content-Type": "application/json" },
     body: JSON.stringify(payload),
   });
   const result = await res.json();
@@ -88,7 +89,7 @@ export async function saveLifeGoals(payload) {
 
 export async function fetchProfile() {
   const res = await fetch(`${API_BASE}/api/profile`, {
-    headers: { "X-Read-Secret": READ_SECRET },
+    headers: { ...authHeaders() },
     cache: 'no-store',
   });
   if (!res.ok) throw new Error(`fetchProfile failed: ${res.status}`);
@@ -98,7 +99,7 @@ export async function fetchProfile() {
 export async function saveProfile(payload) {
   const res = await fetch(`${API_BASE}/api/profile`, {
     method: "POST",
-    headers: { "X-Read-Secret": READ_SECRET, "Content-Type": "application/json" },
+    headers: { ...authHeaders(), "Content-Type": "application/json" },
     body: JSON.stringify(payload),
   });
   const result = await res.json();
@@ -108,7 +109,7 @@ export async function saveProfile(payload) {
 
 export async function fetchPersona(bot) {
   const res = await fetch(`${API_BASE}/api/persona?bot=${encodeURIComponent(bot)}`, {
-    headers: { "X-Read-Secret": READ_SECRET },
+    headers: { ...authHeaders() },
     cache: 'no-store',
   });
   if (!res.ok) throw new Error(`fetchPersona failed: ${res.status}`);
@@ -118,7 +119,7 @@ export async function fetchPersona(bot) {
 export async function savePersona(bot, payload) {
   const res = await fetch(`${API_BASE}/api/persona?bot=${encodeURIComponent(bot)}`, {
     method: "POST",
-    headers: { "X-Read-Secret": READ_SECRET, "Content-Type": "application/json" },
+    headers: { ...authHeaders(), "Content-Type": "application/json" },
     body: JSON.stringify(payload),
   });
   const result = await res.json();
@@ -128,7 +129,7 @@ export async function savePersona(bot, payload) {
 
 export async function fetchAgentTools(bot) {
   const res = await fetch(`${API_BASE}/api/agent-tools?bot=${encodeURIComponent(bot)}`, {
-    headers: { "X-Read-Secret": READ_SECRET },
+    headers: { ...authHeaders() },
     cache: 'no-store',
   });
   if (!res.ok) throw new Error(`fetchAgentTools failed: ${res.status}`);
@@ -137,7 +138,7 @@ export async function fetchAgentTools(bot) {
 
 export async function fetchAgentModels() {
   const res = await fetch(`${API_BASE}/api/agent-models`, {
-    headers: { "X-Read-Secret": READ_SECRET },
+    headers: { ...authHeaders() },
     cache: 'no-store',
   });
   if (!res.ok) throw new Error(`fetchAgentModels failed: ${res.status}`);
@@ -146,7 +147,7 @@ export async function fetchAgentModels() {
 
 export async function fetchDispatchSessions() {
   const res = await fetch(`${API_BASE}/api/dispatch-sessions`, {
-    headers: { "X-Read-Secret": READ_SECRET },
+    headers: { ...authHeaders() },
     cache: 'no-store',
   });
   if (!res.ok) throw new Error(`fetchDispatchSessions failed: ${res.status}`);
@@ -156,7 +157,7 @@ export async function fetchDispatchSessions() {
 export async function postDispatchSession(payload) {
   const res = await fetch(`${API_BASE}/api/dispatch-session`, {
     method: "POST",
-    headers: { "X-Read-Secret": READ_SECRET, "Content-Type": "application/json" },
+    headers: { ...authHeaders(), "Content-Type": "application/json" },
     body: JSON.stringify(payload),
   });
   if (!res.ok) throw new Error(`postDispatchSession failed: ${res.status}`);
@@ -166,7 +167,7 @@ export async function postDispatchSession(payload) {
 export async function deleteDispatchSession(milestoneId) {
   const res = await fetch(`${API_BASE}/api/dispatch-session/${encodeURIComponent(milestoneId)}`, {
     method: "DELETE",
-    headers: { "X-Read-Secret": READ_SECRET },
+    headers: { ...authHeaders() },
   });
   if (!res.ok) throw new Error(`deleteDispatchSession failed: ${res.status}`);
   return res.json();
@@ -175,7 +176,7 @@ export async function deleteDispatchSession(milestoneId) {
 export async function saveBriefText(milestoneId, briefText) {
   const res = await fetch(`${API_BASE}/api/dispatch-session`, {
     method: "POST",
-    headers: { "X-Read-Secret": READ_SECRET, "Content-Type": "application/json" },
+    headers: { ...authHeaders(), "Content-Type": "application/json" },
     body: JSON.stringify({ milestoneId, briefText }),
   });
   if (!res.ok) throw new Error(`saveBriefText failed: ${res.status}`);
@@ -185,7 +186,7 @@ export async function saveBriefText(milestoneId, briefText) {
 export async function fireDispatch(milestoneId) {
   const res = await fetch(`${API_BASE}/api/dispatch-fire`, {
     method: "POST",
-    headers: { "X-Read-Secret": READ_SECRET, "Content-Type": "application/json" },
+    headers: { ...authHeaders(), "Content-Type": "application/json" },
     body: JSON.stringify({ milestoneId }),
   });
   const result = await res.json();
@@ -195,7 +196,7 @@ export async function fireDispatch(milestoneId) {
 
 export async function fetchWeeklyChange() {
   const res = await fetch(`${API_BASE}/api/weekly-change`, {
-    headers: { "X-Read-Secret": READ_SECRET },
+    headers: { ...authHeaders() },
     cache: 'no-store',
   })
   if (!res.ok) throw new Error(`fetchWeeklyChange failed: ${res.status}`)
@@ -205,7 +206,7 @@ export async function fetchWeeklyChange() {
 export async function postWeeklyChange(payload) {
   const res = await fetch(`${API_BASE}/api/weekly-change`, {
     method: 'POST',
-    headers: { "X-Read-Secret": READ_SECRET, "Content-Type": "application/json" },
+    headers: { ...authHeaders(), "Content-Type": "application/json" },
     body: JSON.stringify(payload),
   })
   const result = await res.json()
@@ -219,7 +220,7 @@ export async function postWeeklyChange(payload) {
 export async function dispatchContinue(milestoneId, ask) {
   const res = await fetch(`${API_BASE}/api/dispatch-continue`, {
     method: "POST",
-    headers: { "X-Read-Secret": READ_SECRET, "Content-Type": "application/json" },
+    headers: { ...authHeaders(), "Content-Type": "application/json" },
     body: JSON.stringify({ milestoneId, ask }),
     cache: 'no-store',
   });
@@ -239,7 +240,7 @@ export async function dispatchContinue(milestoneId, ask) {
 
 export async function fetchMemoryHealth() {
   const res = await fetch(`${API_BASE}/api/memory-health`, {
-    headers: { "X-Read-Secret": READ_SECRET },
+    headers: { ...authHeaders() },
     cache: 'no-store',
   });
   if (!res.ok) throw new Error(`fetchMemoryHealth failed: ${res.status}`);
@@ -248,7 +249,7 @@ export async function fetchMemoryHealth() {
 
 export async function fetchTodaySchedule() {
   const res = await fetch(`${API_BASE}/api/today-schedule`, {
-    headers: { "X-Read-Secret": READ_SECRET },
+    headers: { ...authHeaders() },
     cache: 'no-store',
   });
   if (!res.ok) throw new Error(`fetchTodaySchedule failed: ${res.status}`);
@@ -257,7 +258,7 @@ export async function fetchTodaySchedule() {
 
 // 聚合四隻 bot 的所有 milestone，回 [{title, due, _source, _project}]
 export async function fetchAllMilestones() {
-  const headers = { "X-Read-Secret": READ_SECRET };
+  const headers = { ...authHeaders() };
   const [hy, itri, family, sam] = await Promise.allSettled([
     fetch(`${API_BASE}/api/personal-progress`, { headers }).then(r => r.json()),
     fetch(`${API_BASE}/api/950157-progress`,   { headers }).then(r => r.json()),
