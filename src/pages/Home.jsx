@@ -117,6 +117,25 @@ function WeeklyTop3Card() {
   )
 }
 
+function TodayResultsCard() {
+  const [items, setItems] = useState(null)
+  useEffect(() => { fetchMobileState().then(data => setItems(data.todayCompleted || [])).catch(() => setItems([])) }, [])
+  return (
+    <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-5 mb-4 flex items-center gap-5">
+      <div className="min-w-20 text-center border-r border-slate-200 pr-5">
+        <div className="text-3xl font-bold text-green-600">{items?.length || 0}</div>
+        <div className="text-xs text-slate-400">今日完成</div>
+      </div>
+      <div className="min-w-0 flex-1">
+        <p className="text-sm font-semibold text-slate-700 mb-2">今日成果</p>
+        {items === null ? <p className="text-xs text-slate-400">載入中…</p> : items.length === 0 ? <p className="text-xs text-slate-400">尚無完成項目</p> : (
+          <ul className="space-y-1">{items.slice(0, 5).map(item => <li key={`${item.source}-${item.id}`} className="text-sm text-slate-600 truncate">✓ {item.title}</li>)}</ul>
+        )}
+      </div>
+    </div>
+  )
+}
+
 function ScheduleSection() {
   const [events, setEvents] = useState(null)
   const [error, setError]   = useState(null)
@@ -403,6 +422,7 @@ export default function Home() {
         <div>
           <WeeklyChangeCard />
           <WeeklyTop3Card />
+          <TodayResultsCard />
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
             <MetricCard
               icon={Bell}
