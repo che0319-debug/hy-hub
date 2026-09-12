@@ -413,9 +413,9 @@ header { background:var(--header-bg); padding:0 24px; display:flex; align-items:
 
 <script>
 var API         = 'https://hy-agent-v2.onrender.com';
-var SECRET      = '__READ_SECRET__';
-var HEADERS     = { 'Content-Type':'application/json', 'X-Read-Secret':SECRET };
-var GET_HEADERS = { 'X-Read-Secret':SECRET, 'Cache-Control':'no-store' };
+var ACCESS_TOKEN = sessionStorage.getItem('hy_world_access_token') || '';
+var HEADERS     = { 'Content-Type':'application/json', 'Authorization':'Bearer '+ACCESS_TOKEN };
+var GET_HEADERS = { 'Authorization':'Bearer '+ACCESS_TOKEN, 'Cache-Control':'no-store' };
 
 var personalData = {};
 var progressData = [];
@@ -945,7 +945,7 @@ function loadWeeklyData(weekId) {
   document.getElementById('weeklyDownloadBtn').style.display = 'none';
   document.getElementById('weeklyCoworkBtn').style.display = 'none';
   var url = WEEKLY_API + '/api/weekly-package?type=hy&week=' + encodeURIComponent(weekId);
-  fetch(url, { cache:'no-store', headers:{ 'X-Read-Secret': SECRET } })
+  fetch(url, { cache:'no-store', headers:GET_HEADERS })
     .then(function(r) { if (!r.ok) throw new Error('HTTP '+r.status); return r.json(); })
     .then(function(data) { renderWeekly(data); })
     .catch(function(e) {
@@ -955,7 +955,7 @@ function loadWeeklyData(weekId) {
 }
 
 function loadWeeklyList(targetWeek) {
-  fetch(WEEKLY_API + '/api/weekly-package/list?type=hy', { cache:'no-store', headers:{ 'X-Read-Secret': SECRET } })
+  fetch(WEEKLY_API + '/api/weekly-package/list?type=hy', { cache:'no-store', headers:GET_HEADERS })
     .then(function(r) { if (!r.ok) throw new Error('HTTP '+r.status); return r.json(); })
     .then(function(data) {
       var weeks = data.weeks || data || [];
