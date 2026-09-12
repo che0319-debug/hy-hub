@@ -125,6 +125,10 @@ export default function MobileApp({ onDesktopVersion }) {
     setState(prev => ({
       ...prev,
       todayTasks: prev.todayTasks.map(item => item.id === task.id ? { ...item, completed } : item),
+      weeklyTop3: prev.weeklyTop3.map(item => item.id === task.id ? { ...item, completed } : item),
+      todayCompleted: completed
+        ? [{ ...task, completed: true }, ...(prev.todayCompleted || []).filter(item => item.id !== task.id)]
+        : (prev.todayCompleted || []).filter(item => item.id !== task.id),
     }))
     try {
       await setMobileTaskCompleted(task.source, task.id, completed)
@@ -132,6 +136,10 @@ export default function MobileApp({ onDesktopVersion }) {
       setState(prev => ({
         ...prev,
         todayTasks: prev.todayTasks.map(item => item.id === task.id ? { ...item, completed: !completed } : item),
+        weeklyTop3: prev.weeklyTop3.map(item => item.id === task.id ? { ...item, completed: !completed } : item),
+        todayCompleted: completed
+          ? (prev.todayCompleted || []).filter(item => item.id !== task.id)
+          : [{ ...task, completed: true }, ...(prev.todayCompleted || []).filter(item => item.id !== task.id)],
       }))
       setError('代辦狀態未能儲存，請再試一次。')
     } finally {
@@ -214,6 +222,18 @@ export default function MobileApp({ onDesktopVersion }) {
                     ) : <small>{item.sourceLabel}</small>}
                   </label>
                 ))}
+              </div>
+            </section>
+
+            <section>
+              <h2>今日成果</h2>
+              <div className="mobile-card mobile-results">
+                <div className="mobile-result-count"><strong>{(state.todayCompleted || []).length}</strong><span>件完成</span></div>
+                <div>
+                  {(state.todayCompleted || []).length === 0 ? <Empty>完成一件事後，成果會出現在這裡。</Empty> : (
+                    <ul>{state.todayCompleted.slice(0, 3).map(item => <li key={`${item.source}-${item.id}`}>{item.title}</li>)}</ul>
+                  )}
+                </div>
               </div>
             </section>
 
