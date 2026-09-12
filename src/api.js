@@ -2,327 +2,61 @@ import { authHeaders } from './auth'
 
 const API_BASE = import.meta.env.VITE_API_BASE || "";
 
+async function apiJson(path, options = {}) {
+  const res = await fetch(`${API_BASE}${path}`, {
+    ...options,
+    headers: { ...authHeaders(), ...(options.headers || {}) },
+    cache: options.cache || 'no-store',
+  })
+  const result = await res.json().catch(() => ({}))
+  if (!res.ok || result.ok === false) throw new Error(result.error || `${path} failed: ${res.status}`)
+  return result
+}
+
 export async function fetchPersonalData() {
-  const res = await fetch(`${API_BASE}/api/personal-data`, {
-    method: "GET",
-    headers: { ...authHeaders() },
-    cache: 'no-store',
-  });
-  if (!res.ok) {
-    throw new Error(`fetchPersonalData failed: ${res.status}`);
-  }
+  const res = await fetch(`${API_BASE}/api/personal-data`, { method: "GET", headers: { ...authHeaders() }, cache: 'no-store' });
+  if (!res.ok) throw new Error(`fetchPersonalData failed: ${res.status}`);
   return res.json();
 }
+export async function postMilestone(payload) { return apiJson('/api/milestone', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(payload) }) }
+export async function fetchLifeGoals() { const r=await fetch(`${API_BASE}/api/life-goals`,{headers:{...authHeaders()},cache:'no-store'}); if(!r.ok) throw new Error(`fetchLifeGoals failed: ${r.status}`); return r.json() }
+export async function fetchStrategyProjects() { const r=await fetch(`${API_BASE}/api/strategy-projects`,{headers:{...authHeaders()},cache:'no-store'}); if(!r.ok) throw new Error(`fetchStrategyProjects failed: ${r.status}`); return r.json() }
+export async function saveStrategyProject(project) { return apiJson('/api/strategy-projects',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'upsert',project})}) }
+export async function deleteStrategyProject(id) { return apiJson('/api/strategy-projects',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'delete',id})}) }
+export async function assessFreedom() { return apiJson('/api/assess-freedom',{method:'POST'}) }
+export async function saveLifeGoals(payload) { return apiJson('/api/life-goals',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)}) }
+export async function fetchProfile() { const r=await fetch(`${API_BASE}/api/profile`,{headers:{...authHeaders()},cache:'no-store'}); if(!r.ok) throw new Error(`fetchProfile failed: ${r.status}`); return r.json() }
+export async function saveProfile(payload) { return apiJson('/api/profile',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)}) }
+export async function fetchPersona(bot) { const r=await fetch(`${API_BASE}/api/persona?bot=${encodeURIComponent(bot)}`,{headers:{...authHeaders()},cache:'no-store'}); if(!r.ok) throw new Error(`fetchPersona failed: ${r.status}`); return r.json() }
+export async function savePersona(bot,payload){return apiJson(`/api/persona?bot=${encodeURIComponent(bot)}`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)})}
+export async function fetchAgentTools(bot){const r=await fetch(`${API_BASE}/api/agent-tools?bot=${encodeURIComponent(bot)}`,{headers:{...authHeaders()},cache:'no-store'});if(!r.ok)throw new Error(`fetchAgentTools failed: ${r.status}`);return r.json()}
+export async function fetchAgentModels(){const r=await fetch(`${API_BASE}/api/agent-models`,{headers:{...authHeaders()},cache:'no-store'});if(!r.ok)throw new Error(`fetchAgentModels failed: ${r.status}`);return r.json()}
+export async function fetchDispatchSessions(){const r=await fetch(`${API_BASE}/api/dispatch-sessions`,{headers:{...authHeaders()},cache:'no-store'});if(!r.ok)throw new Error(`fetchDispatchSessions failed: ${r.status}`);return r.json()}
+export async function postDispatchSession(payload){return apiJson('/api/dispatch-session',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)})}
+export async function deleteDispatchSession(milestoneId){const r=await fetch(`${API_BASE}/api/dispatch-session/${encodeURIComponent(milestoneId)}`,{method:'DELETE',headers:{...authHeaders()}});if(!r.ok)throw new Error(`deleteDispatchSession failed: ${r.status}`);return r.json()}
+export async function saveBriefText(milestoneId,briefText){return apiJson('/api/dispatch-session',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({milestoneId,briefText})})}
+export async function fireDispatch(milestoneId){return apiJson('/api/dispatch-fire',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({milestoneId})})}
+export async function fetchWeeklyChange(){const r=await fetch(`${API_BASE}/api/weekly-change`,{headers:{...authHeaders()},cache:'no-store'});if(!r.ok)throw new Error(`fetchWeeklyChange failed: ${r.status}`);return r.json()}
+export async function postWeeklyChange(payload){return apiJson('/api/weekly-change',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)})}
+export async function dispatchContinue(milestoneId,ask){return apiJson('/api/dispatch-continue',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({milestoneId,ask})})}
+export async function fetchMemoryHealth(){const r=await fetch(`${API_BASE}/api/memory-health`,{headers:{...authHeaders()},cache:'no-store'});if(!r.ok)throw new Error(`fetchMemoryHealth failed: ${r.status}`);return r.json()}
+export async function fetchTodaySchedule(){const r=await fetch(`${API_BASE}/api/today-schedule`,{headers:{...authHeaders()},cache:'no-store'});if(!r.ok)throw new Error(`fetchTodaySchedule failed: ${r.status}`);return r.json()}
+export async function fetchMobileState(){const r=await fetch(`${API_BASE}/api/mobile/state`,{headers:{...authHeaders()},cache:'no-store'});if(!r.ok)throw new Error(`fetchMobileState failed: ${r.status}`);return r.json()}
+export async function fetchLifeOSContext(){const r=await fetch(`${API_BASE}/api/life-os/v1/context`,{headers:{...authHeaders()},cache:'no-store'});if(!r.ok)throw new Error(`fetchLifeOSContext failed: ${r.status}`);return r.json()}
+export async function fetchAutonomousPlans(status='waiting_approval'){return apiJson(`/api/life-os/v1/autonomous-plans?owner=950157&status=${encodeURIComponent(status)}`)}
+export async function decideAutonomousPlan(planId,decision,note=''){return apiJson(`/api/life-os/v1/autonomous-plans/${encodeURIComponent(planId)}/decision`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({decision,note})})}
+export async function setMobileTaskCompleted(source,milestoneId,completed){return apiJson('/api/mobile/task-complete',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({source,milestoneId,completed})})}
+export async function saveWeeklyPriorities(items){return apiJson('/api/mobile/weekly-priorities',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({items})})}
 
-export async function postMilestone(payload) {
-  const res = await fetch(`${API_BASE}/api/milestone`, {
-    method: "POST",
-    headers: { ...authHeaders(), "Content-Type": "application/json" },
-    body: JSON.stringify(payload),
-  });
-  if (!res.ok) throw new Error(`postMilestone failed: ${res.status}`);
-  return res.json();
-}
-
-export async function fetchLifeGoals() {
-  const res = await fetch(`${API_BASE}/api/life-goals`, {
-    method: "GET",
-    headers: { ...authHeaders() },
-    cache: 'no-store',
-  });
-  if (!res.ok) throw new Error(`fetchLifeGoals failed: ${res.status}`);
-  return res.json();
-}
-
-export async function fetchStrategyProjects() {
-  const res = await fetch(`${API_BASE}/api/strategy-projects`, {
-    method: "GET",
-    headers: { ...authHeaders() },
-    cache: 'no-store',
-  });
-  if (!res.ok) throw new Error(`fetchStrategyProjects failed: ${res.status}`);
-  return res.json();
-}
-
-export async function saveStrategyProject(project) {
-  const res = await fetch(`${API_BASE}/api/strategy-projects`, {
-    method: "POST",
-    headers: { ...authHeaders(), "Content-Type": "application/json" },
-    body: JSON.stringify({ action: "upsert", project }),
-  });
-  const result = await res.json();
-  if (!res.ok || !result.ok) throw new Error(result.error || `saveStrategyProject failed: ${res.status}`);
-  return result;
-}
-
-export async function deleteStrategyProject(id) {
-  const res = await fetch(`${API_BASE}/api/strategy-projects`, {
-    method: "POST",
-    headers: { ...authHeaders(), "Content-Type": "application/json" },
-    body: JSON.stringify({ action: "delete", id }),
-  });
-  const result = await res.json();
-  if (!res.ok || !result.ok) throw new Error(result.error || `deleteStrategyProject failed: ${res.status}`);
-  return result;
-}
-
-export async function assessFreedom() {
-  const res = await fetch(`${API_BASE}/api/assess-freedom`, {
-    method: "POST",
-    headers: { ...authHeaders() },
-  });
-  const result = await res.json();
-  if (!res.ok || !result.ok) throw new Error(result.error || `assessFreedom failed: ${res.status}`);
-  return result;
-}
-
-export async function saveLifeGoals(payload) {
-  const res = await fetch(`${API_BASE}/api/life-goals`, {
-    method: "POST",
-    headers: { ...authHeaders(), "Content-Type": "application/json" },
-    body: JSON.stringify(payload),
-  });
-  const result = await res.json();
-  if (!res.ok || !result.ok) throw new Error(result.error || `saveLifeGoals failed: ${res.status}`);
-  return result;
-}
-
-export async function fetchProfile() {
-  const res = await fetch(`${API_BASE}/api/profile`, {
-    headers: { ...authHeaders() },
-    cache: 'no-store',
-  });
-  if (!res.ok) throw new Error(`fetchProfile failed: ${res.status}`);
-  return res.json();
-}
-
-export async function saveProfile(payload) {
-  const res = await fetch(`${API_BASE}/api/profile`, {
-    method: "POST",
-    headers: { ...authHeaders(), "Content-Type": "application/json" },
-    body: JSON.stringify(payload),
-  });
-  const result = await res.json();
-  if (!res.ok || !result.ok) throw new Error(result.error || `saveProfile failed: ${res.status}`);
-  return result;
-}
-
-export async function fetchPersona(bot) {
-  const res = await fetch(`${API_BASE}/api/persona?bot=${encodeURIComponent(bot)}`, {
-    headers: { ...authHeaders() },
-    cache: 'no-store',
-  });
-  if (!res.ok) throw new Error(`fetchPersona failed: ${res.status}`);
-  return res.json();
-}
-
-export async function savePersona(bot, payload) {
-  const res = await fetch(`${API_BASE}/api/persona?bot=${encodeURIComponent(bot)}`, {
-    method: "POST",
-    headers: { ...authHeaders(), "Content-Type": "application/json" },
-    body: JSON.stringify(payload),
-  });
-  const result = await res.json();
-  if (!res.ok || !result.ok) throw new Error(result.error || `savePersona failed: ${res.status}`);
-  return result;
-}
-
-export async function fetchAgentTools(bot) {
-  const res = await fetch(`${API_BASE}/api/agent-tools?bot=${encodeURIComponent(bot)}`, {
-    headers: { ...authHeaders() },
-    cache: 'no-store',
-  });
-  if (!res.ok) throw new Error(`fetchAgentTools failed: ${res.status}`);
-  return res.json();
-}
-
-export async function fetchAgentModels() {
-  const res = await fetch(`${API_BASE}/api/agent-models`, {
-    headers: { ...authHeaders() },
-    cache: 'no-store',
-  });
-  if (!res.ok) throw new Error(`fetchAgentModels failed: ${res.status}`);
-  return res.json();
-}
-
-export async function fetchDispatchSessions() {
-  const res = await fetch(`${API_BASE}/api/dispatch-sessions`, {
-    headers: { ...authHeaders() },
-    cache: 'no-store',
-  });
-  if (!res.ok) throw new Error(`fetchDispatchSessions failed: ${res.status}`);
-  return res.json();
-}
-
-export async function postDispatchSession(payload) {
-  const res = await fetch(`${API_BASE}/api/dispatch-session`, {
-    method: "POST",
-    headers: { ...authHeaders(), "Content-Type": "application/json" },
-    body: JSON.stringify(payload),
-  });
-  if (!res.ok) throw new Error(`postDispatchSession failed: ${res.status}`);
-  return res.json();
-}
-
-export async function deleteDispatchSession(milestoneId) {
-  const res = await fetch(`${API_BASE}/api/dispatch-session/${encodeURIComponent(milestoneId)}`, {
-    method: "DELETE",
-    headers: { ...authHeaders() },
-  });
-  if (!res.ok) throw new Error(`deleteDispatchSession failed: ${res.status}`);
-  return res.json();
-}
-
-export async function saveBriefText(milestoneId, briefText) {
-  const res = await fetch(`${API_BASE}/api/dispatch-session`, {
-    method: "POST",
-    headers: { ...authHeaders(), "Content-Type": "application/json" },
-    body: JSON.stringify({ milestoneId, briefText }),
-  });
-  if (!res.ok) throw new Error(`saveBriefText failed: ${res.status}`);
-  return res.json();
-}
-
-export async function fireDispatch(milestoneId) {
-  const res = await fetch(`${API_BASE}/api/dispatch-fire`, {
-    method: "POST",
-    headers: { ...authHeaders(), "Content-Type": "application/json" },
-    body: JSON.stringify({ milestoneId }),
-  });
-  const result = await res.json();
-  if (!res.ok || !result.ok) throw new Error(result.error || `fireDispatch failed: ${res.status}`);
-  return result;
-}
-
-export async function fetchWeeklyChange() {
-  const res = await fetch(`${API_BASE}/api/weekly-change`, {
-    headers: { ...authHeaders() },
-    cache: 'no-store',
-  })
-  if (!res.ok) throw new Error(`fetchWeeklyChange failed: ${res.status}`)
-  return res.json()
-}
-
-export async function postWeeklyChange(payload) {
-  const res = await fetch(`${API_BASE}/api/weekly-change`, {
-    method: 'POST',
-    headers: { ...authHeaders(), "Content-Type": "application/json" },
-    body: JSON.stringify(payload),
-  })
-  const result = await res.json()
-  if (!res.ok || !result.ok) throw new Error(result.error || `postWeeklyChange failed: ${res.status}`)
-  return result
-}
-
-// 多輪 continue：後端階段 1 deec8c6
-//   409 = 上一輪 running；429 = turns >= 5（與後端 _MAX_TURNS_PER_CARD 對齊）
-//   401 body 為空（FastAPI Response(status_code=401)）→ 提前 throw 免 res.json() 爆
-export async function dispatchContinue(milestoneId, ask) {
-  const res = await fetch(`${API_BASE}/api/dispatch-continue`, {
-    method: "POST",
-    headers: { ...authHeaders(), "Content-Type": "application/json" },
-    body: JSON.stringify({ milestoneId, ask }),
-    cache: 'no-store',
-  });
-  if (res.status === 401) {
-    const e = new Error('登入已失效，請重新登入');
-    e.status = 401;
-    throw e;
-  }
-  const result = await res.json();
-  if (!res.ok || !result.ok) {
-    const e = new Error(result.error || `dispatchContinue failed: ${res.status}`);
-    e.status = res.status;
-    throw e;
-  }
-  return result;
-}
-
-export async function fetchMemoryHealth() {
-  const res = await fetch(`${API_BASE}/api/memory-health`, {
-    headers: { ...authHeaders() },
-    cache: 'no-store',
-  });
-  if (!res.ok) throw new Error(`fetchMemoryHealth failed: ${res.status}`);
-  return res.json();
-}
-
-export async function fetchTodaySchedule() {
-  const res = await fetch(`${API_BASE}/api/today-schedule`, {
-    headers: { ...authHeaders() },
-    cache: 'no-store',
-  });
-  if (!res.ok) throw new Error(`fetchTodaySchedule failed: ${res.status}`);
-  return res.json();
-}
-
-export async function fetchMobileState() {
-  const res = await fetch(`${API_BASE}/api/mobile/state`, {
-    headers: { ...authHeaders() },
-    cache: 'no-store',
-  })
-  if (!res.ok) throw new Error(`fetchMobileState failed: ${res.status}`)
-  return res.json()
-}
-
-export async function fetchLifeOSContext() {
-  const res = await fetch(`${API_BASE}/api/life-os/v1/context`, {
-    method: 'GET',
-    headers: { ...authHeaders() },
-    cache: 'no-store',
-  })
-  if (!res.ok) throw new Error(`fetchLifeOSContext failed: ${res.status}`)
-  return res.json()
-}
-
-export async function setMobileTaskCompleted(source, milestoneId, completed) {
-  const res = await fetch(`${API_BASE}/api/mobile/task-complete`, {
-    method: 'POST',
-    headers: { ...authHeaders(), 'Content-Type': 'application/json' },
-    body: JSON.stringify({ source, milestoneId, completed }),
-  })
-  const result = await res.json().catch(() => ({}))
-  if (!res.ok || !result.ok) {
-    throw new Error(result.error || `setMobileTaskCompleted failed: ${res.status}`)
-  }
-  return result
-}
-
-export async function saveWeeklyPriorities(items) {
-  const res = await fetch(`${API_BASE}/api/mobile/weekly-priorities`, {
-    method: 'POST',
-    headers: { ...authHeaders(), 'Content-Type': 'application/json' },
-    body: JSON.stringify({ items }),
-  })
-  const result = await res.json().catch(() => ({}))
-  if (!res.ok || !result.ok) throw new Error(result.error || `saveWeeklyPriorities failed: ${res.status}`)
-  return result
-}
-
-// 聚合四隻 bot 的所有 milestone，回 [{title, due, _source, _project}]
 export async function fetchAllMilestones() {
   const headers = { ...authHeaders() };
-  const [hy, itri, family, sam] = await Promise.allSettled([
-    fetch(`${API_BASE}/api/personal-progress`, { headers }).then(r => r.json()),
-    fetch(`${API_BASE}/api/950157-progress`,   { headers }).then(r => r.json()),
-    fetch(`${API_BASE}/api/family-progress`,   { headers }).then(r => r.json()),
-    fetch(`${API_BASE}/api/sam-progress`,      { headers }).then(r => r.json()),
+  const [hy,itri,family,sam] = await Promise.allSettled([
+    fetch(`${API_BASE}/api/personal-progress`,{headers}).then(r=>r.json()),
+    fetch(`${API_BASE}/api/950157-progress`,{headers}).then(r=>r.json()),
+    fetch(`${API_BASE}/api/family-progress`,{headers}).then(r=>r.json()),
+    fetch(`${API_BASE}/api/sam-progress`,{headers}).then(r=>r.json()),
   ]);
-
-  const out = [];
-  const extract = (result, getProjects, source) => {
-    if (result.status !== "fulfilled") return;
-    for (const p of getProjects(result.value) || []) {
-      for (const m of p.milestones || []) {
-        out.push({ title: m.title, due: m.due || "", _source: source, _project: p.name });
-      }
-    }
-  };
-
-  extract(hy,     v => v.projects,              "HY");
-  extract(itri,   v => v.projects,              "950157");
-  extract(family, v => v._kanban?.projects,     "家庭");
-  extract(sam,    v => v._kanban?.projects,     "Sam");
-
+  const out=[]; const extract=(result,getProjects,source)=>{if(result.status!=="fulfilled")return;for(const p of getProjects(result.value)||[])for(const m of p.milestones||[])out.push({title:m.title,due:m.due||"",_source:source,_project:p.name})};
+  extract(hy,v=>v.projects,"HY"); extract(itri,v=>v.projects,"950157"); extract(family,v=>v._kanban?.projects,"家庭"); extract(sam,v=>v._kanban?.projects,"Sam");
   return out;
 }
