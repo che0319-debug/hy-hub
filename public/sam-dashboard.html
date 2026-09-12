@@ -265,6 +265,8 @@ header {
 }
 .s-進行中 { background: #e6f0ff; color: #0052cc; }
 .s-完成    { background: #e3fcef; color: #006644; }
+.card.completed { opacity:.62; border-left:3px solid #16a34a; }
+.card.completed .card-title { text-decoration:line-through; }
 .s-延遲    { background: #ffebe6; color: #de350b; }
 .s-未開始  { background: #f4f5f7; color: #5e6c84; border: 1px solid #dfe1e6; }
 .s-擱置    { background: #fffae6; color: #974f0c; }
@@ -1303,6 +1305,8 @@ function isOverdue(due) {
   const today = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Taipei' }).replace(/-/g, '/');
   return due < today;
 }
+const todayTaipei = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Taipei' });
+function isActiveCard(m) { return !m.completed || String(m.completed_at || '').slice(0, 10) === todayTaipei; }
 
 // ── DATA ─────────────────────────────────────────
 async function loadData() {
@@ -1365,6 +1369,7 @@ function renderBoard() {
       if (!m.id) m.id = p.id + '_M' + mi;
       if (m.delegated_to_sam === undefined) m.delegated_to_sam = false;
     });
+    p.milestones = p.milestones.filter(isActiveCard).concat(p.milestones.filter(m => !isActiveCard(m)));
   });
 
   // destroy old Sortable instances to avoid leaks
@@ -1426,7 +1431,7 @@ function updateColCount(pid) {
   if (!p) return;
   const el = document.querySelector(`[data-pid="${pid}"] .col-count`);
   if (el) {
-    el.textContent = p.milestones.length;
+    el.textContent = p.milestones.filter(isActiveCard).length;
   }
 }
 
@@ -1438,11 +1443,11 @@ function renderColumnHTML(p) {
         onblur="updateProjectName('${p.id}',this.textContent)"
         onkeydown="if(event.key==='Enter'){event.preventDefault();this.blur();}"
       >${escHtml(p.name)}</div>
-      <div class="col-count">${p.milestones.length}</div>
+      <div class="col-count">${p.milestones.filter(isActiveCard).length}</div>
       <button class="col-del" title="刪除專案" data-action="del-project" data-pid="${p.id}">✕</button>
     </div>
     <div class="col-cards">
-      ${p.milestones.map((m,mi) => renderCardHTML(p,m,mi)).join('')}
+      ${p.milestones.filter(isActiveCard).map((m,mi) => renderCardHTML(p,m,mi)).join('')}
     </div>
     <button class="add-card-btn" data-action="add-card" data-pid="${p.id}">＋ 新增里程碑</button>
   </div>`;
@@ -1481,8 +1486,9 @@ function renderCardHTML(p, m, mi) {
   const es = m.execute_status || '';
   const delegated = m.delegated_to_sam || false;
   const isFinished = ['done','cancelled','failed'].includes(es);
-  return `<div class="card${getCardBorderClass(es)}" data-pid="${p.id}" data-card-id="${m.id}">
+  return `<div class="card${getCardBorderClass(es)}${m.completed?' completed':''}" data-pid="${p.id}" data-card-id="${m.id}">
     <div class="card-top">
+      <input type="checkbox" title="完成此任務" ${m.completed?'checked':''} style="width:18px;height:18px;accent-color:#16a34a" onclick="event.stopPropagation()" onchange="toggleCardComplete('${p.id}','${m.id}',this.checked)">
       <div class="card-title">${escHtml(m.title)}</div>
       <button class="card-del-btn" title="移除此 milestone（完成或取消都用這個）" onclick="event.stopPropagation();deleteCardDirect('${p.id}','${m.id}')">✗</button>
     </div>
@@ -1500,6 +1506,19 @@ function renderCardHTML(p, m, mi) {
       </div>
     </div>
   </div>`;
+}
+
+function toggleCardComplete(pid, cardId, checked) {
+  const p = getProject(pid);
+  const m = p && p.milestones.find(x => x.id === cardId);
+  if (!m) return;
+  const taipeiTime = new Date().toLocaleTimeString('en-GB', { timeZone:'Asia/Taipei', hour12:false });
+  m.completed = checked;
+  m.completed_at = checked ? `${todayTaipei}T${taipeiTime}+08:00` : null;
+  if (checked) m.execute_status = 'done';
+  else if (m.execute_status === 'done') m.execute_status = '';
+  saveData();
+  renderBoard();
 }
 
 function toggleExecute(event, pid, cardId, checked) {
@@ -1530,7 +1549,7 @@ function deleteCardDirect(pid, cardId) {
   const mi = p ? p.milestones.findIndex(x => x.id === cardId) : -1;
   if (mi < 0) { console.warn('deleteCardDirect: card not found', cardId); return; }
   const title = p.milestones[mi].title;
-  if (!confirm(`確定移除「${title}」？\n此動作不可復原。`)) return;
+  if (!confirm(`確定刪除「${title}」？\n此操作不會計入完成成果。`)) return;
   p.milestones.splice(mi, 1);
   renderBoard();
   saveData();
@@ -1635,6 +1654,8 @@ function saveCard() {
     reminder_sent: existingM ? (existingM.reminder_sent ?? {day_before: false, due_day: false}) : {day_before: false, due_day: false},
     execute_status: existingM ? (existingM.execute_status || '') : '',
     delegated_to_sam: existingM ? (existingM.delegated_to_sam ?? false) : false,
+    completed: existingM ? (existingM.completed ?? false) : false,
+    completed_at: existingM ? (existingM.completed_at || null) : null,
   };
   if (existingMiIdx >= 0) {
     project.milestones[existingMiIdx] = card;
@@ -1650,7 +1671,7 @@ function deleteCard() {
   const mi = editingCardId !== null ? p.milestones.findIndex(x => x.id === editingCardId) : -1;
   if (mi < 0) { console.warn('deleteCard: card not found', editingCardId); return; }
   const title = p.milestones[mi].title;
-  if (!confirm(`確定移除「${title}」？\n此動作不可復原。`)) return;
+  if (!confirm(`確定刪除「${title}」？\n此操作不會計入完成成果。`)) return;
   p.milestones.splice(mi, 1);
   closeModal();
   renderBoard();
