@@ -38,11 +38,6 @@ jobs:
         run: npm run build
 
 
-      - name: Encrypt gate (StatiCrypt)
-        env:
-          STATICRYPT_PASSWORD: ${{ secrets.PAGE_PASSWORD }}
-        run: npx staticrypt dist/index.html -d dist/ --short
-
       - name: Setup Pages
         uses: actions/configure-pages@v5
 
