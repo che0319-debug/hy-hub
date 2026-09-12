@@ -1,4 +1,40 @@
 import { authHeaders } from './auth'
-const API_BASE=import.meta.env.VITE_API_BASE||''
-export async function fetchAutonomousPlans({owner='',status='waiting_approval'}={}){const p=new URLSearchParams();if(owner)p.set('owner',owner);if(status)p.set('status',status);const r=await fetch(`${API_BASE}/api/life-os/v1/autonomous-plans?${p}`,{headers:{...authHeaders()},cache:'no-store'});const x=await r.json().catch(()=>({}));if(!r.ok||!x.ok)throw new Error(x.error||`fetchAutonomousPlans failed: ${r.status}`);return x.plans||[]}
-export async function decideAutonomousPlan(planId,decision,note=''){const r=await fetch(`${API_BASE}/api/life-os/v1/autonomous-plans/${encodeURIComponent(planId)}/decision`,{method:'POST',headers:{...authHeaders(),'Content-Type':'application/json'},body:JSON.stringify({decision,note})});const t=await r.text();let x={};try{x=t?JSON.parse(t):{}}catch{x={error:t}}if(!r.ok||!x.ok)throw new Error(x.error||`decideAutonomousPlan failed: ${r.status}`);return x}
+
+const API_BASE = import.meta.env.VITE_API_BASE || ''
+
+async function parseResponse(response, operation) {
+  const text = await response.text()
+  let result = {}
+  try { result = text ? JSON.parse(text) : {} } catch { result = { error: text } }
+  if (!response.ok || !result.ok) throw new Error(result.error || `${operation} failed: ${response.status}`)
+  return result
+}
+
+export async function fetchDailyOS() {
+  const response = await fetch(`${API_BASE}/api/life-os/v1/today`, {
+    headers: { ...authHeaders() },
+    cache: 'no-store',
+  })
+  return parseResponse(response, 'fetchDailyOS')
+}
+
+export async function fetchAutonomousPlans({ owner = '', status = 'waiting_approval' } = {}) {
+  const params = new URLSearchParams()
+  if (owner) params.set('owner', owner)
+  if (status) params.set('status', status)
+  const response = await fetch(`${API_BASE}/api/life-os/v1/autonomous-plans?${params}`, {
+    headers: { ...authHeaders() },
+    cache: 'no-store',
+  })
+  const result = await parseResponse(response, 'fetchAutonomousPlans')
+  return result.plans || []
+}
+
+export async function decideAutonomousPlan(planId, decision, note = '') {
+  const response = await fetch(`${API_BASE}/api/life-os/v1/autonomous-plans/${encodeURIComponent(planId)}/decision`, {
+    method: 'POST',
+    headers: { ...authHeaders(), 'Content-Type': 'application/json' },
+    body: JSON.stringify({ decision, note }),
+  })
+  return parseResponse(response, 'decideAutonomousPlan')
+}
