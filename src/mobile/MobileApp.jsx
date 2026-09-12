@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { Bot, CalendarDays, CheckCircle2, Home, ListChecks, Monitor, RefreshCw } from 'lucide-react'
+import { Bot, CalendarDays, CheckCircle2, ChevronRight, Home, ListChecks, Monitor, RefreshCw, X } from 'lucide-react'
 import { fetchMobileState, fetchTodaySchedule, setMobileTaskCompleted } from '../api'
 import './mobile.css'
 
@@ -10,7 +10,56 @@ const TAB_META = {
   bots: { label: '分身', icon: Bot },
 }
 
-const DEFAULT_RULE = '讓本人需要做的低價值工作越來越少。'
+const HY_PRINCIPLES = [
+  {
+    key: '狠', title: '內核強大', summary: '錨在自己，誰也判決不了我',
+    logic: ['以自己為核心，專注影響圈、不理關注圈。', '男人的本能，是用盡一切方式活下來、稱王。', '不因他人的苦難而心軟，先保住自己的強大。'],
+    actions: ['每日心靈盤點一次。', '每天 30 分鐘經營自己的領域。', '先分辨現實與情緒，只處理現實。'],
+    metric: '情緒是否仍隨特定他人起伏。',
+  },
+  {
+    key: '力', title: '身體健康', summary: '男人最原始的能力展現',
+    logic: ['體力是所有野心的載體，身體垮了，格局歸零。'],
+    actions: ['每週運動三次，固定時段；不熬夜、少高糖。', '每月自檢：髮型、鞋面、指甲、體味。', '姿態：肩開、視線平、走路放慢兩成、坐姿佔空間。', '四個缺口各配一個具體動作——減脂（腹部）、生髮方案（落髮）、保養或醫美諮詢（皮膚）、三套合身制服（服裝）。'],
+    metric: '與型男之間的差距。',
+  },
+  {
+    key: '做', title: '執行力', summary: '說了就做到，承諾即債務，才換得時間自由',
+    logic: ['對於未來 5 年沒複利效益的事，就不要做，或不要太花心思做。', '要有明確的目標（量化、時間）。'],
+    actions: ['每天先攻最重要的三件事。', '完整規劃出時間表。', 'AI 自動化省下的時間，全數回投到有格局的事。'],
+    metric: '準時上下班、行事曆執行率；2026.08.31 前，募資 150 萬。',
+  },
+  {
+    key: '財', title: '財務自由', summary: '經濟力是一切的基礎',
+    logic: ['成功＝（努力＋機率）× 槓桿；槓桿來自團隊、資本、品牌、技術。', '沒有睡覺也能賺錢的方法，就沒有財務自由。', '要思考如何用別人的錢、銀行的錢去賺錢。', '不借錢給人，要借就當拿不回。'],
+    actions: ['止血：做出不依賴呆帳回收的方案。', '開源：本業現金流＋AI 自動化。'],
+    metric: '月現金流轉正，且累積可覆蓋固定支出 12 個月。',
+  },
+  {
+    key: '權', title: '當幕後老大', summary: '拿治理權，不拿苦勞，避開風險',
+    logic: ['憑情報判局，不憑感覺下注。', '決策的成本自己扛，不向任何人討認可。', '命脈不交他人手上。'],
+    actions: ['談判：先設好停損與退出條件，再進場。', '建團隊：法律、財務、百工百業各有其人。', '拿否決權與財務透明，不拿最忙的位置。', '帳目隨時可見，掌握財務基礎。'],
+    metric: '重大事項，無我不決。',
+  },
+  {
+    key: '識', title: '識人用人', summary: '透過別人成事',
+    logic: ['每天用每件事練習研究人性，把人推向我要的方向。', '周圍五個人的水準，就是我的水準。'],
+    actions: ['不接觸第二次傷害我的人。', '不要改變他人；看懂他要什麼，把事情擺進「他做了也對他有利」的位置。對不上，換人。', '投入節奏：第一輪我先給，觀察回應；第二輪起才對等加碼。', '家人：設界線，不設停損。'],
+    metric: '有多少死忠夥伴。',
+  },
+  {
+    key: '擒', title: '兩性掌握', summary: '主動出手，收放在我',
+    logic: ['保留神秘感，以自我價值來吸引、非追求。', '只要使用權，不要擁有權。', '有自己的標準，不迎合、不繞圈；敢冒犯、敢要求、敢收線。'],
+    actions: ['主動開啟的對話不超過一半；回應延後 10 分鐘；對方未回前，絕不發第二則。', '發送前先想對方會怎麼接——這一則要推向升溫、邀約，還是收線。', '線上只約見面，重要的話當面說。', '主動擴大高值異性的認識量。', '單方付出只會貶值，讓對方也投入，關係才有重量。'],
+    metric: '從認識到約見面的轉化率。',
+  },
+  {
+    key: '謀', title: '主動設局', summary: '不進別人的局，自己當設局的人',
+    logic: ['撒資源、給機會，只撒在算得出回報的地方。', '找出「做一次，讓下一次更容易」的動作，重複它。'],
+    actions: ['刪除無效社交，每週自己開一局。', '建構可複利成長的局。'],
+    metric: '每週自主支配時數持續往上。',
+  },
+]
 
 function taipeiDate() {
   return new Intl.DateTimeFormat('zh-TW', {
@@ -36,6 +85,7 @@ export default function MobileApp({ onDesktopVersion }) {
   const [events, setEvents] = useState(null)
   const [error, setError] = useState('')
   const [ruleIndex, setRuleIndex] = useState(0)
+  const [principleOpen, setPrincipleOpen] = useState(false)
   const [savingIds, setSavingIds] = useState(new Set())
 
   async function load() {
@@ -55,7 +105,7 @@ export default function MobileApp({ onDesktopVersion }) {
 
   useEffect(() => { load() }, [])
 
-  const rules = state?.rules?.length ? state.rules : [DEFAULT_RULE]
+  const rules = HY_PRINCIPLES
   useEffect(() => {
     if (rules.length < 2) return undefined
     const timer = setInterval(() => setRuleIndex(i => (i + 1) % rules.length), 8000)
@@ -113,10 +163,11 @@ export default function MobileApp({ onDesktopVersion }) {
             <button
               type="button"
               className="mobile-card mobile-rule"
-              onClick={() => setRuleIndex(i => (i + 1) % rules.length)}
+              onClick={() => setPrincipleOpen(true)}
             >
-              <span>自我守則・{ruleIndex + 1}/{rules.length}</span>
-              <strong>{rules[ruleIndex]}</strong>
+              <span>HY 人生心法・{ruleIndex + 1}/{rules.length}</span>
+              <strong>{rules[ruleIndex].key}｜{rules[ruleIndex].summary}</strong>
+              <small>查看完整心法 <ChevronRight size={14} /></small>
             </button>
 
             <section>
@@ -218,6 +269,30 @@ export default function MobileApp({ onDesktopVersion }) {
           </section>
         )}
       </main>
+
+      {principleOpen && (
+        <div className="principle-overlay" role="dialog" aria-modal="true" aria-label="HY 人生心法">
+          <div className="principle-sheet">
+            <div className="principle-sheet-head">
+              <div>
+                <span>HY 人生心法・{ruleIndex + 1}/{rules.length}</span>
+                <h2>{rules[ruleIndex].key}｜{rules[ruleIndex].title}</h2>
+              </div>
+              <button type="button" onClick={() => setPrincipleOpen(false)} aria-label="關閉"><X size={21} /></button>
+            </div>
+            <p className="principle-summary">{rules[ruleIndex].summary}</p>
+            <h3>底層邏輯</h3>
+            <ul>{rules[ruleIndex].logic.map(item => <li key={item}>{item}</li>)}</ul>
+            <h3>行動</h3>
+            <ul>{rules[ruleIndex].actions.map(item => <li key={item}>{item}</li>)}</ul>
+            <div className="principle-metric"><span>指標</span><strong>{rules[ruleIndex].metric}</strong></div>
+            <div className="principle-pager">
+              <button type="button" onClick={() => setRuleIndex(i => (i + rules.length - 1) % rules.length)}>上一則</button>
+              <button type="button" onClick={() => setRuleIndex(i => (i + 1) % rules.length)}>下一則</button>
+            </div>
+          </div>
+        </div>
+      )}
 
       <nav className="mobile-nav" aria-label="手機版主要分頁">
         {Object.entries(TAB_META).map(([id, meta]) => {
