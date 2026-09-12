@@ -161,6 +161,7 @@ header { background:var(--header-bg); padding:0 24px; display:flex; align-items:
 .card:active { cursor: grabbing; }
 .card.completed { opacity: 0.62; border-left: 3px solid #16a34a; }
 .card.completed .card-title { text-decoration: line-through; }
+.complete-check { width:18px; height:18px; margin:1px 1px 0 0; accent-color:#16a34a; cursor:pointer; flex-shrink:0; }
 .card-top { display: flex; align-items: flex-start; gap: 8px; margin-bottom: 9px; }
 .card-title { font-size: 13px; font-weight: 600; color: var(--text); flex: 1; line-height: 1.45; }
 .card-desc { font-size: 12px; color: var(--text-muted); margin-bottom: 7px; line-height: 1.5; white-space: pre-wrap; }
@@ -459,7 +460,11 @@ function updateColCount(pid){
   var p = progressData.find(function(x){ return x.id === pid; });
   if (!p) return;
   var el = document.querySelector('[data-pid="'+pid+'"] .col-count');
-  if (el) el.textContent = (p.milestones||[]).length;
+  if (el) el.textContent = (p.milestones||[]).filter(isActiveCard).length;
+}
+
+function isActiveCard(m){
+  return !m.completed || String(m.completed_at||'').slice(0,10) === today;
 }
 
 function renderCardHTML(p, m, mi){
@@ -483,6 +488,7 @@ function renderCardHTML(p, m, mi){
     + '</div>';
   return '<div class="card'+(m.completed?' completed':'')+'" data-pid="'+p.id+'" data-card-id="'+m.id+'">'
     + '<div class="card-top">'
+    +   '<input type="checkbox" class="complete-check" title="完成此任務"'+(m.completed?' checked':'')+' data-action="complete-card" data-pid="'+p.id+'" data-card-id="'+m.id+'">'
     +   '<div class="card-title">'+escHtml(m.title)+'</div>'
     +   '<button class="card-del-btn" title="刪除此里程碑" data-action="del-card" data-pid="'+p.id+'" data-card-id="'+m.id+'">✗</button>'
     + '</div>'
@@ -521,11 +527,11 @@ function renderColumnHTML(p){
     +     ' onblur="updateProjectName(\''+p.id+'\',this.textContent)"'
     +     ' onkeydown="if(event.key===\'Enter\'){event.preventDefault();this.blur();}"'
     +   '>'+escHtml(p.name)+'</div>'
-    +   '<div class="col-count">'+(p.milestones||[]).length+'</div>'
+    +   '<div class="col-count">'+(p.milestones||[]).filter(isActiveCard).length+'</div>'
     +   '<button class="col-del" title="刪除專案" data-action="del-project" data-pid="'+p.id+'">✕</button>'
     + '</div>'
     + '<div class="col-cards">'
-    +   (p.milestones||[]).map(function(m,mi){ return renderCardHTML(p,m,mi); }).join('')
+    +   (p.milestones||[]).filter(isActiveCard).map(function(m,mi){ return renderCardHTML(p,m,mi); }).join('')
     + '</div>'
     + '<button class="add-card-btn" data-action="add-card" data-pid="'+p.id+'">＋ 新增里程碑</button>'
     + '</div>';
@@ -636,14 +642,32 @@ function deleteCardDirect(pid, cardId){
   var mi = p.milestones.findIndex(function(x){ return x.id === cardId; });
   if (mi < 0) { console.warn('deleteCardDirect: card not found', cardId); return; }
   var title = p.milestones[mi].title;
-  if (!confirm('確定移除「'+title+'」？')) return;
+  if (!confirm('確定刪除「'+title+'」？此操作不會計入完成成果。')) return;
   p.milestones.splice(mi, 1);
   renderProgress();
   saveProgress(null);
 }
 
+function toggleCardComplete(pid, cardId, completed){
+  var p = progressData.find(function(x){ return x.id === pid; });
+  if (!p) return;
+  var m = (p.milestones||[]).find(function(x){ return x.id === cardId; });
+  if (!m) return;
+  m.completed = completed;
+  var taipeiTime = new Date().toLocaleTimeString('en-GB', { timeZone:'Asia/Taipei', hour12:false });
+  m.completed_at = completed ? today+'T'+taipeiTime+'+08:00' : null;
+  renderProgress();
+  saveProgress(completed ? 'completed' : null);
+}
+
 document.getElementById('board').addEventListener('click', function(e){
   if (isDragging) return;
+  var completeBox = e.target.closest('[data-action="complete-card"]');
+  if (completeBox){
+    e.stopPropagation();
+    toggleCardComplete(completeBox.dataset.pid, completeBox.dataset.cardId, completeBox.checked);
+    return;
+  }
   var delCardBtn = e.target.closest('[data-action="del-card"]');
   if (delCardBtn){
     e.stopPropagation();
@@ -701,6 +725,9 @@ function saveMsModal(){
   } else {
     var old=progressData[msProjIdx].milestones[msMsIdx];
     m.id=old.id;
+    m.completed=old.completed||false;
+    m.completed_at=old.completed_at||null;
+    m.delegated_to_hy=old.delegated_to_hy||false;
     progressData[msProjIdx].milestones[msMsIdx]=m;
   }
   closeMsModal(); renderProgress(); saveProgress('milestone');
