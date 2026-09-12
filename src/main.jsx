@@ -15,10 +15,12 @@ import Settings from './pages/Settings'
 import AgentConfig from './pages/AgentConfig'
 import Goals from './pages/Goals'
 import Strategy from './pages/Strategy'
+import AuthGate from './components/AuthGate'
 
 createRoot(document.getElementById('root')).render(
   <StrictMode>
-    <HashRouter>
+    <AuthGate>
+      <HashRouter>
       <Routes>
         <Route path="/" element={<App />}>
           <Route index element={<Home />} />
@@ -35,6 +37,7 @@ createRoot(document.getElementById('root')).render(
           <Route path="settings" element={<Settings />} />
         </Route>
       </Routes>
-    </HashRouter>
+      </HashRouter>
+    </AuthGate>
   </StrictMode>
 )
