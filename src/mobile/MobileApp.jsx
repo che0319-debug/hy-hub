@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useState } from 'react'
-import { BellRing, Bot, BrainCircuit, CalendarDays, CheckCircle2, ChevronRight, Home, ListChecks, Monitor, Pencil, RefreshCw, ShieldCheck, Target, X } from 'lucide-react'
+import { BellRing, Bot, BrainCircuit, CalendarDays, CheckCircle2, ChevronRight, Home, ListChecks, Map, Monitor, Pencil, RefreshCw, ShieldCheck, Target, X } from 'lucide-react'
 import { fetchMobileState, fetchTodaySchedule, saveWeeklyPriorities, setMobileTaskCompleted } from '../api'
 import { decideAutonomousPlan, fetchDailyOS, retryNotification, retryWorkItem, reviewLearning, runProactiveScan, submitOperatingReview } from '../lifeOSApi'
+import PixelCity from './PixelCity'
 import './mobile.css'
 
 const TAB_META = {
@@ -10,6 +11,7 @@ const TAB_META = {
   calendar: { label: '行事曆', icon: CalendarDays },
   bots: { label: '分身', icon: Bot },
   growth: { label: '進展', icon: Target },
+  world: { label: '世界', icon: Map },
 }
 
 const HY_PRINCIPLES = [
@@ -603,6 +605,8 @@ export default function MobileApp({ onDesktopVersion }) {
             </section>
           </>
         )}
+
+        {tab === 'world' && state && <PixelCity dailyOS={dailyOS} state={state} />}
       </main>
 
       {principleOpen && (
