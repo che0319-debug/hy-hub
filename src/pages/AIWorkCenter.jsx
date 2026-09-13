@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
-import { Bot, CheckCircle2, Clock3, ExternalLink, FileText, RefreshCw, ShieldCheck } from 'lucide-react'
+import { Bot, CheckCircle2, Clock3, ExternalLink, FileText, RefreshCw, ShieldCheck, Trash2 } from 'lucide-react'
 import { authHeaders } from '../auth'
-import { answerWorkClarification, decideAutonomousPlan, submitWorkFeedback } from '../lifeOSApi'
+import { answerWorkClarification, decideAutonomousPlan, dismissWorkItem, submitWorkFeedback } from '../lifeOSApi'
 
 const API_BASE = import.meta.env.VITE_API_BASE || ''
 const ACTIVE = new Set(['queued', 'running', 'claimed', 'in_progress', 'waiting_approval', 'needs_clarification'])
@@ -94,6 +94,21 @@ export default function AIWorkCenter() {
     }
   }
 
+
+  async function removeItem(item) {
+    if (!window.confirm(`從 AI Work 清單移除「${title(item)}」？成果與學習紀錄會保留。`)) return
+    setBusy(item.id)
+    try {
+      await dismissWorkItem(item.id)
+      setExpanded('')
+      await load()
+    } catch (err) {
+      setError(err.message || '移除工作失敗')
+    } finally {
+      setBusy('')
+    }
+  }
+
   function Card({ item, doneCard = false }) {
     const result = results.find(x => x.workItemId === item.id || x.id === item.resultId)
     const artifacts = result?.artifacts || item.artifacts || []
@@ -129,6 +144,9 @@ export default function AIWorkCenter() {
             <div className="flex gap-2">
               <button type="button" onClick={() => setExpanded(isOpen ? '' : item.id)} className="rounded-lg bg-blue-600 px-3 py-2 text-sm font-medium text-white">
                 {isOpen ? '收合成果' : '查看成果'}
+              </button>
+              <button type="button" disabled={busy === item.id} onClick={() => removeItem(item)} className="flex items-center gap-1 rounded-lg bg-slate-100 px-3 py-2 text-sm text-slate-600 disabled:opacity-50">
+                <Trash2 size={15} />移除
               </button>
             </div>
             {isOpen && (
@@ -196,9 +214,14 @@ export default function AIWorkCenter() {
                   placeholder="直接回答 AI；送出後會自動續跑。"
                   className="mt-3 min-h-20 w-full rounded-lg border border-slate-300 p-3 text-sm"
                 />
-                <button disabled={busy === item.id || !(drafts[item.id] || '').trim()} onClick={() => answer(item)} className="mt-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white disabled:opacity-50">
-                  回覆並繼續執行
-                </button>
+                <div className="mt-2 flex gap-2">
+                  <button disabled={busy === item.id || !(drafts[item.id] || '').trim()} onClick={() => answer(item)} className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white disabled:opacity-50">
+                    回覆並繼續執行
+                  </button>
+                  <button disabled={busy === item.id} onClick={() => removeItem(item)} className="flex items-center gap-1 rounded-lg bg-slate-100 px-3 py-2 text-sm text-slate-600 disabled:opacity-50">
+                    <Trash2 size={15} />移除
+                  </button>
+                </div>
               </article>
             ))}
           </div>
