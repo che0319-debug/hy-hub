@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Bot, CheckCircle2, Clock3, ExternalLink, FileText, RefreshCw, ShieldCheck } from 'lucide-react'
 import { authHeaders } from '../auth'
-import { decideAutonomousPlan } from '../lifeOSApi'
+import { answerWorkClarification, decideAutonomousPlan, submitWorkFeedback } from '../lifeOSApi'
 
 const API_BASE = import.meta.env.VITE_API_BASE || ''
 const ACTIVE = new Set(['queued', 'running', 'claimed', 'in_progress', 'waiting_approval', 'needs_clarification'])
@@ -22,6 +22,7 @@ export default function AIWorkCenter() {
   const [busy, setBusy] = useState('')
   const [error, setError] = useState('')
   const [expanded, setExpanded] = useState('')
+  const [drafts, setDrafts] = useState({})
 
   async function load() {
     setError('')
@@ -46,6 +47,10 @@ export default function AIWorkCenter() {
   const active = work.filter(item => ACTIVE.has(item.status) && item.status !== 'needs_clarification')
   const done = work.filter(item => DONE.has(item.status)).slice().reverse().slice(0, 12)
 
+  function setDraft(id, value) {
+    setDrafts(current => ({ ...current, [id]: value }))
+  }
+
   async function decide(plan, decision) {
     setBusy(plan.id)
     try {
@@ -53,6 +58,37 @@ export default function AIWorkCenter() {
       await load()
     } catch (err) {
       setError(err.message || '決策寫入失敗')
+    } finally {
+      setBusy('')
+    }
+  }
+
+  async function answer(item) {
+    const value = (drafts[item.id] || '').trim()
+    if (!value) return
+    setBusy(item.id)
+    try {
+      await answerWorkClarification(item.id, value)
+      setDraft(item.id, '')
+      await load()
+    } catch (err) {
+      setError(err.message || '補充資料送出失敗')
+    } finally {
+      setBusy('')
+    }
+  }
+
+  async function sendFeedback(item) {
+    const value = (drafts[`feedback:${item.id}`] || '').trim()
+    if (!value) return
+    setBusy(item.id)
+    try {
+      await submitWorkFeedback(item.id, value, `hy-work-feedback-${item.id}-${Date.now()}`)
+      setDraft(`feedback:${item.id}`, '')
+      setExpanded('')
+      await load()
+    } catch (err) {
+      setError(err.message || '修改建議送出失敗')
     } finally {
       setBusy('')
     }
@@ -74,7 +110,7 @@ export default function AIWorkCenter() {
           {doneCard ? <CheckCircle2 className="text-emerald-500" size={20} /> : <Bot className="text-blue-500" size={20} />}
         </div>
 
-        <p className={`mt-3 text-sm leading-6 text-slate-600 ${!isOpen ? 'line-clamp-3' : ''}`}>{summary}</p>
+        <p className={`mt-3 whitespace-pre-wrap text-sm leading-6 text-slate-600 ${!isOpen ? 'line-clamp-3' : ''}`}>{summary}</p>
 
         {artifacts.length > 0 && (
           <div className="mt-3 grid gap-2">
@@ -89,11 +125,26 @@ export default function AIWorkCenter() {
         )}
 
         {doneCard && (
-          <div className="mt-4 flex gap-2">
-            <button type="button" onClick={() => setExpanded(isOpen ? '' : item.id)} className="rounded-lg bg-blue-600 px-3 py-2 text-sm font-medium text-white">
-              {isOpen ? '收合成果' : '查看成果'}
-            </button>
-            <span className="self-center text-xs text-slate-400">修改意見／再次執行會在下一階段接上</span>
+          <div className="mt-4">
+            <div className="flex gap-2">
+              <button type="button" onClick={() => setExpanded(isOpen ? '' : item.id)} className="rounded-lg bg-blue-600 px-3 py-2 text-sm font-medium text-white">
+                {isOpen ? '收合成果' : '查看成果'}
+              </button>
+            </div>
+            {isOpen && (
+              <div className="mt-3 rounded-lg bg-slate-50 p-3">
+                <label className="text-sm font-medium text-slate-700">給修改建議，HY 會建立修訂工作並繼續執行</label>
+                <textarea
+                  value={drafts[`feedback:${item.id}`] || ''}
+                  onChange={event => setDraft(`feedback:${item.id}`, event.target.value)}
+                  placeholder="例如：主管版再精簡一點，保留三個重點；簡報多一張比較表。"
+                  className="mt-2 min-h-24 w-full rounded-lg border border-slate-300 bg-white p-3 text-sm"
+                />
+                <button disabled={busy === item.id || !(drafts[`feedback:${item.id}`] || '').trim()} onClick={() => sendFeedback(item)} className="mt-2 rounded-lg bg-emerald-600 px-4 py-2 text-sm font-medium text-white disabled:opacity-50">
+                  送出建議並讓 AI 繼續做
+                </button>
+              </div>
+            )}
           </div>
         )}
       </article>
@@ -139,7 +190,15 @@ export default function AIWorkCenter() {
                 <div className="flex items-center gap-2 text-sm text-amber-600"><Clock3 size={16} />{label(item.owner)} 需要補充</div>
                 <h3 className="mt-2 font-semibold">{title(item)}</h3>
                 <p className="mt-2 text-sm text-slate-600">{item.clarificationQuestion || item.error || '需要你的方向才能繼續。'}</p>
-                <p className="mt-3 text-xs text-slate-400">目前先由 Telegram / HY 補充；下一階段會直接在這張卡片回答並自動續跑。</p>
+                <textarea
+                  value={drafts[item.id] || ''}
+                  onChange={event => setDraft(item.id, event.target.value)}
+                  placeholder="直接回答 AI；送出後會自動續跑。"
+                  className="mt-3 min-h-20 w-full rounded-lg border border-slate-300 p-3 text-sm"
+                />
+                <button disabled={busy === item.id || !(drafts[item.id] || '').trim()} onClick={() => answer(item)} className="mt-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white disabled:opacity-50">
+                  回覆並繼續執行
+                </button>
               </article>
             ))}
           </div>
