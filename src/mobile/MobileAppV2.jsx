@@ -5,6 +5,7 @@ import { answerWorkClarification, decideAutonomousPlan, fetchDailyOS, submitWork
 import { authHeaders } from '../auth'
 import PixelCity from './PixelCity'
 import './mobile.css'
+import './mobile-v2.css'
 
 const API_BASE = import.meta.env.VITE_API_BASE || ''
 const TABS = {
