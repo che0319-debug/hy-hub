@@ -38,3 +38,16 @@ export async function decideAutonomousPlan(planId, decision, note = '') {
   })
   return parseResponse(response, 'decideAutonomousPlan')
 }
+
+export async function submitOperatingReview(payload, idempotencyKey) {
+  const response = await fetch(`${API_BASE}/api/life-os/v1/reviews`, {
+    method: 'POST',
+    headers: {
+      ...authHeaders(),
+      'Content-Type': 'application/json',
+      'Idempotency-Key': idempotencyKey,
+    },
+    body: JSON.stringify(payload),
+  })
+  return parseResponse(response, 'submitOperatingReview')
+}
