@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { BellRing, Bot, BrainCircuit, CalendarDays, CheckCircle2, ChevronRight, Home, ListChecks, Monitor, Pencil, RefreshCw, ShieldCheck, Target, X } from 'lucide-react'
 import { fetchMobileState, fetchTodaySchedule, saveWeeklyPriorities, setMobileTaskCompleted } from '../api'
-import { decideAutonomousPlan, fetchDailyOS, retryNotification, retryWorkItem, reviewLearning, submitOperatingReview } from '../lifeOSApi'
+import { decideAutonomousPlan, fetchDailyOS, retryNotification, retryWorkItem, reviewLearning, runProactiveScan, submitOperatingReview } from '../lifeOSApi'
 import './mobile.css'
 
 const TAB_META = {
@@ -112,6 +112,7 @@ export default function MobileApp({ onDesktopVersion }) {
   const [retryingId, setRetryingId] = useState('')
   const [retryingNoticeId, setRetryingNoticeId] = useState('')
   const [reviewingLearningId, setReviewingLearningId] = useState('')
+  const [scanRunning, setScanRunning] = useState(false)
 
   async function load() {
     setError('')
@@ -290,6 +291,19 @@ export default function MobileApp({ onDesktopVersion }) {
       setError(err?.message || '學習決定未能儲存，請稍後再試。')
     } finally {
       setReviewingLearningId('')
+    }
+  }
+
+  async function scanNow() {
+    setScanRunning(true)
+    setError('')
+    try {
+      await runProactiveScan()
+      await load()
+    } catch (err) {
+      setError(err?.message || '主動巡查未能完成，請稍後再試。')
+    } finally {
+      setScanRunning(false)
     }
   }
 
@@ -480,6 +494,20 @@ export default function MobileApp({ onDesktopVersion }) {
                 )
               })}
             </div>
+            {dailyOS?.proactiveScan && (
+              <section className="mobile-scan-section">
+                <div className="mobile-section-title"><h2>主動巡查</h2><span>{dailyOS.proactiveScan.schedule}</span></div>
+                <div className={`mobile-card mobile-scan-health is-${dailyOS.proactiveScan.health}`}>
+                  <div><span>巡查狀態</span><strong>{dailyOS.proactiveScan.health === 'healthy' ? '正常' : dailyOS.proactiveScan.health === 'degraded' ? '需注意' : '尚待執行'}</strong></div>
+                  <div><span>上次發現</span><strong>{dailyOS.proactiveScan.lastRun?.findings ?? '—'} 項</strong></div>
+                  <div><span>新增提醒</span><strong>{dailyOS.proactiveScan.lastRun?.created ?? '—'} 項</strong></div>
+                </div>
+                {dailyOS.proactiveScan.lastRun && (
+                  <p className="mobile-scan-last">上次：{dailyOS.proactiveScan.lastRun.source === 'hy-world-manual' ? '手動巡查' : '排程巡查'}・{dailyOS.proactiveScan.lastRun.status === 'degraded' ? `異常：${dailyOS.proactiveScan.lastRun.lastError || '部分通知失敗'}` : '完成且無錯誤'}</p>
+                )}
+                <button className="mobile-scan-button" type="button" disabled={scanRunning} onClick={scanNow}><RefreshCw size={15} />{scanRunning ? '巡查中…' : '立即巡查一次'}</button>
+              </section>
+            )}
             {dailyOS?.worker && (
               <section className="mobile-worker-section">
                 <div className="mobile-section-title"><h2>AI Worker</h2><span>安全文字工作</span></div>

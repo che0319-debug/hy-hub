@@ -161,6 +161,17 @@
 .mobile-domain-tags small { padding: 3px 6px; border-radius: 99px; background: #e2e8f0; color: #475569; font-size: 9px; }
 .mobile-bot-card footer { margin-top: 10px; padding-top: 8px; border-top: 1px solid #f1f5f9; color: #6366f1; font-size: 10px; font-weight: 700; }
 .mobile-worker-section { margin-top: 18px; }
+.mobile-scan-section { margin-top: 18px; }
+.mobile-scan-section .mobile-section-title span { max-width: 58%; text-align: right; font-size: 9px; }
+.mobile-scan-health { display: grid; grid-template-columns: repeat(3, 1fr); gap: 7px; border-color: #bbf7d0; }
+.mobile-scan-health.is-degraded, .mobile-scan-health.is-stale { border-color: #fed7aa; }
+.mobile-scan-health div { padding: 8px 5px; border-radius: 9px; background: #f8fafc; text-align: center; }
+.mobile-scan-health span, .mobile-scan-health strong { display: block; }
+.mobile-scan-health span { color: #64748b; font-size: 9px; }
+.mobile-scan-health strong { margin-top: 3px; color: #0f172a; font-size: 13px; }
+.mobile-scan-last { margin: 8px 2px; color: #64748b; font-size: 10px; line-height: 1.45; }
+.mobile-scan-button { display: flex; align-items: center; justify-content: center; gap: 6px; width: 100%; min-height: 42px; border: 1px solid #c7d2fe; border-radius: 10px; background: #eef2ff; color: #4338ca; font-size: 12px; font-weight: 700; }
+.mobile-scan-button:disabled { opacity: .55; }
 .mobile-worker-metrics { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; }
 .mobile-worker-metrics span { padding: 8px 3px; border-radius: 8px; background: #f8fafc; color: #64748b; text-align: center; font-size: 10px; }
 .mobile-worker-metrics b { display: block; color: #0f172a; font-size: 18px; }
