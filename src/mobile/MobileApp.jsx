@@ -408,22 +408,35 @@ export default function MobileApp({ onDesktopVersion }) {
         {tab === 'bots' && state && (
           <section>
             <div className="mobile-section-title">
-              <h2>Bot 狀況</h2>
+              <h2>四個數位分身</h2>
               <button type="button" onClick={load} aria-label="重新整理">
                 <RefreshCw size={17} />
               </button>
             </div>
+            <div className="mobile-governance"><ShieldCheck size={16} /><span>跨領域與重大決策一律由 HY 核准</span></div>
             <div className="mobile-list">
-              {state.bots.map(bot => (
-                <div className={`mobile-bot mobile-bot-${bot.status}`} key={bot.id}>
-                  <i />
-                  <span>
-                    <strong>{bot.name}・{bot.statusLabel}</strong>
-                    <small>{bot.current || '目前沒有執行中的工作'}</small>
-                  </span>
-                  {bot.status === 'idle' && <CheckCircle2 size={17} />}
-                </div>
-              ))}
+              {state.bots.map(bot => {
+                const self = dailyOS?.agents?.[bot.id] || {}
+                const counts = self.proposals?.counts || {}
+                return (
+                  <article className={`mobile-bot-card mobile-bot-${bot.status}`} key={bot.id}>
+                    <div className="mobile-bot-head">
+                      <i />
+                      <span><strong>{bot.name}・{bot.statusLabel}</strong><small>{bot.current || '目前沒有執行中的工作'}</small></span>
+                      {bot.status === 'idle' && <CheckCircle2 size={17} />}
+                    </div>
+                    {self.mission && <p>{self.mission}</p>}
+                    <div className="mobile-proposal-counts">
+                      <span><b>{counts.work || 0}</b>工作</span>
+                      <span><b>{counts.results || 0}</b>成果</span>
+                      <span><b>{counts.risks || 0}</b>風險</span>
+                      <span><b>{counts.recommendations || 0}</b>建議</span>
+                    </div>
+                    {(self.domains || []).length > 0 && <div className="mobile-domain-tags">{self.domains.map(domain => <small key={domain}>{domain}</small>)}</div>}
+                    <footer>{self.decisionAuthority === 'final' ? '最終決策者' : '領域內執行・重大事項升級 HY'}</footer>
+                  </article>
+                )
+              })}
             </div>
           </section>
         )}
