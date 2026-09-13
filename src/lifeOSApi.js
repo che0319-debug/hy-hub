@@ -51,3 +51,11 @@ export async function submitOperatingReview(payload, idempotencyKey) {
   })
   return parseResponse(response, 'submitOperatingReview')
 }
+
+export async function retryWorkItem(workId) {
+  const response = await fetch(`${API_BASE}/api/life-os/v1/work-items/${encodeURIComponent(workId)}/retry`, {
+    method: 'POST',
+    headers: { ...authHeaders() },
+  })
+  return parseResponse(response, 'retryWorkItem')
+}
