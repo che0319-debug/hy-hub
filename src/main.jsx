@@ -5,7 +5,7 @@ import './index.css'
 import App from './App'
 import Home from './pages/Home'
 import Helpers from './pages/Helpers'
-import Dispatch from './pages/Dispatch'
+import AIWorkCenter from './pages/AIWorkCenter'
 import LineHY from './pages/LineHY'
 import LineXiaoyin from './pages/LineXiaoyin'
 import Line950157 from './pages/Line950157'
@@ -17,7 +17,7 @@ import Goals from './pages/Goals'
 import Strategy from './pages/Strategy'
 import LifeOS from './pages/LifeOS'
 import AuthGate from './components/AuthGate'
-import MobileApp from './mobile/MobileApp'
+import MobileAppV2 from './mobile/MobileAppV2'
 
 function DesktopRoutes({ onMobileVersion }) {
   return (
@@ -26,7 +26,7 @@ function DesktopRoutes({ onMobileVersion }) {
         <Route index element={<Home />} />
         <Route path="life-os" element={<LifeOS />} />
         <Route path="helpers" element={<Helpers />} />
-        <Route path="dispatch" element={<Dispatch />} />
+        <Route path="dispatch" element={<AIWorkCenter />} />
         <Route path="line/hy" element={<LineHY />} />
         <Route path="line/xiaoyin" element={<LineXiaoyin />} />
         <Route path="line/950157" element={<Line950157 />} />
@@ -58,7 +58,7 @@ function Experience() {
   }
 
   if (mobileWidth && mode !== 'desktop') {
-    return <MobileApp onDesktopVersion={() => choose('desktop')} />
+    return <MobileAppV2 onDesktopVersion={() => choose('desktop')} />
   }
   return <DesktopRoutes onMobileVersion={mobileWidth ? () => choose('mobile') : null} />
 }
