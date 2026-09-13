@@ -355,7 +355,7 @@
 .world-v2-hud p small { margin-top: 4px; color: #bae6fd; font: 700 10px/1 ui-monospace, monospace; letter-spacing: .1em; }
 .world-v2-news { display: flex; align-items: center; gap: 7px; min-height: 38px; padding: 0 14px; border-block: 1px solid #415371; background: #0d1a30; color: #dbeafe; font-size: 11px; }
 .world-v2-news svg { flex: 0 0 auto; color: #facc15; }
-.world-v2-map { position: relative; width: 100%; aspect-ratio: 1024 / 980; overflow: hidden; background: url('/hy-hub/world/hy-world-map.webp') center top / 100% 100% no-repeat; image-rendering: auto; }
+.world-v2-map { position: relative; width: 100%; aspect-ratio: 1024 / 980; overflow: hidden; background: url('/hy-hub/world/hy-world-map-clean.webp') center top / 100% 100% no-repeat; image-rendering: auto; }
 .world-v2-map::after { content: ''; position: absolute; inset: 0; pointer-events: none; box-shadow: inset 0 -45px 35px #07101f; }
 .world-v2-hotspot { position: absolute; z-index: 3; width: 50px; height: 50px; padding: 0; transform: translate(-50%, -50%); border-radius: 50%; color: white; transition: filter .2s ease; }
 .world-v2-hotspot i { position: absolute; inset: 7px; border: 2px solid var(--district); border-radius: 50%; background: transparent; box-shadow: 0 0 0 3px rgb(7 16 31 / .2), 0 0 13px var(--district); animation: world-pulse 2.1s ease-out infinite; }
