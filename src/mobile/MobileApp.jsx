@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
-import { Bot, BrainCircuit, CalendarDays, CheckCircle2, ChevronRight, Home, ListChecks, Monitor, Pencil, RefreshCw, ShieldCheck, Target, X } from 'lucide-react'
+import { BellRing, Bot, BrainCircuit, CalendarDays, CheckCircle2, ChevronRight, Home, ListChecks, Monitor, Pencil, RefreshCw, ShieldCheck, Target, X } from 'lucide-react'
 import { fetchMobileState, fetchTodaySchedule, saveWeeklyPriorities, setMobileTaskCompleted } from '../api'
-import { decideAutonomousPlan, fetchDailyOS, retryWorkItem, submitOperatingReview } from '../lifeOSApi'
+import { decideAutonomousPlan, fetchDailyOS, retryNotification, retryWorkItem, submitOperatingReview } from '../lifeOSApi'
 import './mobile.css'
 
 const TAB_META = {
@@ -110,6 +110,7 @@ export default function MobileApp({ onDesktopVersion }) {
   const [reviewSaving, setReviewSaving] = useState(false)
   const [reviewSaved, setReviewSaved] = useState('')
   const [retryingId, setRetryingId] = useState('')
+  const [retryingNoticeId, setRetryingNoticeId] = useState('')
 
   async function load() {
     setError('')
@@ -262,6 +263,19 @@ export default function MobileApp({ onDesktopVersion }) {
       setError(err?.message || '工作未能重新排隊，請再試一次。')
     } finally {
       setRetryingId('')
+    }
+  }
+
+  async function retryTelegramNotice(notificationId) {
+    setRetryingNoticeId(notificationId)
+    setError('')
+    try {
+      await retryNotification(notificationId)
+      await load()
+    } catch (err) {
+      setError(err?.message || 'Telegram 通知重送失敗，請稍後再試。')
+    } finally {
+      setRetryingNoticeId('')
     }
   }
 
@@ -468,6 +482,24 @@ export default function MobileApp({ onDesktopVersion }) {
                   </article>
                 ))}
                 {dailyOS.worker.exhausted > 0 && <p className="mobile-worker-exhausted">{dailyOS.worker.exhausted} 件已達重試上限，需要 HY 檢查原因。</p>}
+              </section>
+            )}
+            {dailyOS?.notifications && (
+              <section className="mobile-notification-section">
+                <div className="mobile-section-title"><h2>主動通知</h2><span><BellRing size={14} /> Telegram</span></div>
+                <div className={`mobile-card mobile-notification-health is-${dailyOS.notifications.health}`}>
+                  <span><b>{dailyOS.notifications.counts?.pending || 0}</b>待送</span>
+                  <span><b>{dailyOS.notifications.counts?.failed || 0}</b>失敗</span>
+                  <span><b>{dailyOS.notifications.counts?.delivered || 0}</b>已送達</span>
+                  <span><b>{dailyOS.notifications.dedupeProtected || 0}</b>防重送</span>
+                </div>
+                {(dailyOS.notifications.retryable || []).map(item => (
+                  <article className="mobile-notification-failure" key={item.id}>
+                    <span><strong>{item.title}</strong><small>{item.type || '通知'}・已嘗試 {item.attempts} 次</small></span>
+                    <button type="button" disabled={retryingNoticeId === item.id} onClick={() => retryTelegramNotice(item.id)}>{retryingNoticeId === item.id ? '重送中' : '重送'}</button>
+                  </article>
+                ))}
+                {dailyOS.notifications.health === 'healthy' && <p className="mobile-notification-ok"><CheckCircle2 size={15} />通知通道正常，已送達項目不會重複發送。</p>}
               </section>
             )}
           </section>
