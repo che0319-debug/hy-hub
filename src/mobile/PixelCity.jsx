@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react'
-import { Hammer, LockKeyhole, Sparkles } from 'lucide-react'
+import { ArrowRight, BriefcaseBusiness, Hammer, LockKeyhole, Sparkles } from 'lucide-react'
 
 const DISTRICTS = [
   { id: 'hy', label: 'HY 初始基地', subtitle: '中央・治理・未來', color: '#a78bfa', position: [50, 35] },
@@ -33,7 +33,7 @@ function districtState(dailyOS, state) {
   })
 }
 
-export default function PixelCity({ dailyOS, state }) {
+export default function PixelCity({ dailyOS, state, variant = 'mobile', onOpenDistrict, onOpenWork }) {
   const [selectedId, setSelectedId] = useState('hy')
   const districts = useMemo(() => districtState(dailyOS, state), [dailyOS, state])
   const selected = districts.find(item => item.id === selectedId) || districts[0]
@@ -46,7 +46,7 @@ export default function PixelCity({ dailyOS, state }) {
   const needsHY = selected.bot.status === 'attention' || selected.risks > 0
 
   return (
-    <div className="world-v2">
+    <div className={`world-v2 ${variant === 'desktop' ? 'world-v2-desktop' : ''}`}>
       <header className="world-v2-hud">
         <div><span>🌎</span><p><b>HY WORLD</b><small>WORLD LV.{worldLevel}</small></p></div>
         <p>距離 LV.{worldLevel + 1}<br />還差 {nextLevelResults} 個成果</p>
@@ -66,6 +66,10 @@ export default function PixelCity({ dailyOS, state }) {
         <div className="world-v2-status"><span><Hammer size={14} />{active ? '施工中' : needsHY ? '等待核准' : worldLevel === 1 ? '剛開始' : '正常運作'}</span><strong>Reality Progress <em>{selected.progress}%</em></strong></div>
         <div className="world-v2-progress"><i style={{ width: `${selected.progress}%` }} /></div>
         <p><span>👷</span>{firstGoal ? '下一步：建立第一個 Goal，解鎖新土地' : needsHY ? '下一步：由 HY 核准成果影響後永久升級' : active ? '下一步：完成 Result 並交由 HY 驗收' : '下一步：建立可驗證的現實成果'}</p>
+        {(onOpenDistrict || onOpenWork) && <div className="world-v2-actions">
+          {onOpenDistrict && <button type="button" onClick={() => onOpenDistrict(selected.id)}>進入{selected.id === 'hy' ? ' HY' : ` ${selected.id === 'family' ? '小因' : selected.id}`}基地<ArrowRight size={15} /></button>}
+          {onOpenWork && <button type="button" onClick={onOpenWork}><BriefcaseBusiness size={15} />查看 AI 工作</button>}
+        </div>}
       </section>
     </div>
   )
