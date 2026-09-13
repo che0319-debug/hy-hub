@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Bot, BrainCircuit, CalendarDays, CheckCircle2, ChevronRight, Home, ListChecks, Monitor, Pencil, RefreshCw, ShieldCheck, Target, X } from 'lucide-react'
 import { fetchMobileState, fetchTodaySchedule, saveWeeklyPriorities, setMobileTaskCompleted } from '../api'
-import { decideAutonomousPlan, fetchDailyOS, submitOperatingReview } from '../lifeOSApi'
+import { decideAutonomousPlan, fetchDailyOS, retryWorkItem, submitOperatingReview } from '../lifeOSApi'
 import './mobile.css'
 
 const TAB_META = {
@@ -109,6 +109,7 @@ export default function MobileApp({ onDesktopVersion }) {
   const [reviewDraft, setReviewDraft] = useState(EMPTY_REVIEW)
   const [reviewSaving, setReviewSaving] = useState(false)
   const [reviewSaved, setReviewSaved] = useState('')
+  const [retryingId, setRetryingId] = useState('')
 
   async function load() {
     setError('')
@@ -248,6 +249,19 @@ export default function MobileApp({ onDesktopVersion }) {
       setError(err?.message || '覆盤未能儲存，請再試一次。')
     } finally {
       setReviewSaving(false)
+    }
+  }
+
+  async function retryWorkerItem(workId) {
+    setRetryingId(workId)
+    setError('')
+    try {
+      await retryWorkItem(workId)
+      await load()
+    } catch (err) {
+      setError(err?.message || '工作未能重新排隊，請再試一次。')
+    } finally {
+      setRetryingId('')
     }
   }
 
@@ -438,6 +452,24 @@ export default function MobileApp({ onDesktopVersion }) {
                 )
               })}
             </div>
+            {dailyOS?.worker && (
+              <section className="mobile-worker-section">
+                <div className="mobile-section-title"><h2>AI Worker</h2><span>安全文字工作</span></div>
+                <div className="mobile-card mobile-worker-metrics">
+                  <span><b>{dailyOS.worker.counts?.queued || 0}</b>排隊</span>
+                  <span><b>{dailyOS.worker.counts?.running || 0}</b>執行中</span>
+                  <span><b>{dailyOS.worker.counts?.needs_clarification || 0}</b>待補充</span>
+                  <span><b>{dailyOS.worker.counts?.failed || 0}</b>失敗</span>
+                </div>
+                {(dailyOS.worker.retryable || []).map(item => (
+                  <article className="mobile-worker-failure" key={item.id}>
+                    <span><strong>{item.title || '未命名工作'}</strong><small>{item.owner}・嘗試 {item.attempt}/{item.maxAttempts}</small></span>
+                    <button type="button" disabled={retryingId === item.id} onClick={() => retryWorkerItem(item.id)}>{retryingId === item.id ? '排隊中' : '重試'}</button>
+                  </article>
+                ))}
+                {dailyOS.worker.exhausted > 0 && <p className="mobile-worker-exhausted">{dailyOS.worker.exhausted} 件已達重試上限，需要 HY 檢查原因。</p>}
+              </section>
+            )}
           </section>
         )}
 

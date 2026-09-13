@@ -160,6 +160,17 @@
 .mobile-domain-tags { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 10px; }
 .mobile-domain-tags small { padding: 3px 6px; border-radius: 99px; background: #e2e8f0; color: #475569; font-size: 9px; }
 .mobile-bot-card footer { margin-top: 10px; padding-top: 8px; border-top: 1px solid #f1f5f9; color: #6366f1; font-size: 10px; font-weight: 700; }
+.mobile-worker-section { margin-top: 18px; }
+.mobile-worker-metrics { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; }
+.mobile-worker-metrics span { padding: 8px 3px; border-radius: 8px; background: #f8fafc; color: #64748b; text-align: center; font-size: 10px; }
+.mobile-worker-metrics b { display: block; color: #0f172a; font-size: 18px; }
+.mobile-worker-failure { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-top: 8px; padding: 11px 12px; border: 1px solid #fecaca; border-radius: 12px; background: #fef2f2; }
+.mobile-worker-failure strong, .mobile-worker-failure small { display: block; }
+.mobile-worker-failure strong { font-size: 12px; }
+.mobile-worker-failure small { margin-top: 3px; color: #64748b; font-size: 10px; }
+.mobile-worker-failure button { min-width: 58px; min-height: 38px; border-radius: 9px; background: #dc2626; color: white; font-size: 12px; font-weight: 700; }
+.mobile-worker-failure button:disabled { opacity: .55; }
+.mobile-worker-exhausted { margin: 9px 2px 0; color: #991b1b; font-size: 11px; }
 
 .mobile-approval, .mobile-gap { padding: 13px; border: 1px solid #fde68a; border-radius: 14px; background: #fffbeb; }
 .mobile-approval > span { display: flex; align-items: center; gap: 5px; color: #a16207; font-size: 11px; }
