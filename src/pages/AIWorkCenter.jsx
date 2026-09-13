@@ -96,7 +96,7 @@ export default function AIWorkCenter() {
 
 
   async function removeItem(item) {
-    if (!window.confirm(`從 AI Work 清單移除「${title(item)}」？成果與學習紀錄會保留。`)) return
+    if (!window.confirm(`確認已驗收「${title(item)}」？將從 AI Work 清單移除，成果與學習紀錄會保留。`)) return
     setBusy(item.id)
     try {
       await dismissWorkItem(item.id)
@@ -146,7 +146,7 @@ export default function AIWorkCenter() {
                 {isOpen ? '收合成果' : '查看成果'}
               </button>
               <button type="button" disabled={busy === item.id} onClick={() => removeItem(item)} className="flex items-center gap-1 rounded-lg bg-slate-100 px-3 py-2 text-sm text-slate-600 disabled:opacity-50">
-                <Trash2 size={15} />移除
+                <CheckCircle2 size={15} />驗收完成
               </button>
             </div>
             {isOpen && (
@@ -219,7 +219,7 @@ export default function AIWorkCenter() {
                     回覆並繼續執行
                   </button>
                   <button disabled={busy === item.id} onClick={() => removeItem(item)} className="flex items-center gap-1 rounded-lg bg-slate-100 px-3 py-2 text-sm text-slate-600 disabled:opacity-50">
-                    <Trash2 size={15} />移除
+                    <Trash2 size={15} />刪除
                   </button>
                 </div>
               </article>
