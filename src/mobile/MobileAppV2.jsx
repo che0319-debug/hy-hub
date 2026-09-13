@@ -1,7 +1,7 @@
-import { useEffect, useMemo, useState } from 'react'
-import { Bot, CalendarDays, CheckCircle2, Clock3, FileText, Globe2, Home, ListChecks, Monitor, RefreshCw, ShieldCheck } from 'lucide-react'
+import { useEffect, useState } from 'react'
+import { Bot, CalendarDays, CheckCircle2, Clock3, FileText, Globe2, Home, Monitor, RefreshCw, ShieldCheck } from 'lucide-react'
 import { fetchMobileState, fetchTodaySchedule, setMobileTaskCompleted } from '../api'
-import { decideAutonomousPlan, fetchDailyOS } from '../lifeOSApi'
+import { answerWorkClarification, decideAutonomousPlan, fetchDailyOS, submitWorkFeedback } from '../lifeOSApi'
 import { authHeaders } from '../auth'
 import PixelCity from './PixelCity'
 import './mobile.css'
@@ -24,6 +24,8 @@ async function fetchContext() {
 function ownerLabel(owner) { return ({hy:'HY',family:'小因','950157':'950157',sam:'Sam',codex:'Codex'})[owner] || owner || 'HY' }
 function titleOf(x) { return x?.title || x?.name || x?.outcome || '未命名工作' }
 function taipeiDate() { return new Intl.DateTimeFormat('zh-TW',{timeZone:'Asia/Taipei',year:'numeric',month:'long',day:'numeric',weekday:'short'}).format(new Date()) }
+function artifactLabel(item,index){ return item?.title||item?.name||item?.filename||item?.type||`成果 ${index+1}` }
+function artifactUrl(item){ return item?.url||item?.href||item?.downloadUrl||item?.download_url||'' }
 
 export default function MobileAppV2({ onDesktopVersion }) {
   const [tab,setTab] = useState('home')
@@ -33,6 +35,8 @@ export default function MobileAppV2({ onDesktopVersion }) {
   const [core,setCore] = useState(null)
   const [error,setError] = useState('')
   const [busy,setBusy] = useState('')
+  const [expanded,setExpanded] = useState('')
+  const [drafts,setDrafts] = useState({})
 
   async function load(){
     setError('')
@@ -54,9 +58,20 @@ export default function MobileAppV2({ onDesktopVersion }) {
   const todayOpen = state?.todayTasks?.filter(x=>!x.completed) || []
   const approvals = waitingPlans.length + needsInput.length
 
+  function setDraft(id,value){ setDrafts(current=>({...current,[id]:value})) }
   async function decide(plan,decision){
     setBusy(plan.id)
     try { await decideAutonomousPlan(plan.id,decision); await load() } catch(e){ setError(e.message||'決策寫入失敗') } finally { setBusy('') }
+  }
+  async function answer(item){
+    const value=(drafts[item.id]||'').trim(); if(!value) return
+    setBusy(item.id)
+    try { await answerWorkClarification(item.id,value); setDraft(item.id,''); await load() } catch(e){ setError(e.message||'補充資料送出失敗') } finally { setBusy('') }
+  }
+  async function feedback(item){
+    const key=`feedback:${item.id}`, value=(drafts[key]||'').trim(); if(!value) return
+    setBusy(item.id)
+    try { await submitWorkFeedback(item.id,value,`hy-mobile-feedback-${item.id}-${Date.now()}`); setDraft(key,''); setExpanded(''); await load() } catch(e){ setError(e.message||'修改建議送出失敗') } finally { setBusy('') }
   }
   async function toggleTask(item,completed){
     setBusy(item.id)
@@ -89,10 +104,10 @@ export default function MobileAppV2({ onDesktopVersion }) {
         <section><div className="mobile-section-title"><h2>AI 工作中心</h2><span>你給方向・AI 自己做</span></div><div className="mobile-dashboard-grid"><div className="mobile-metric is-warning"><strong>{approvals}</strong><span>等你處理</span></div><div className="mobile-metric"><strong>{active.length}</strong><span>執行中</span></div><div className="mobile-metric"><strong>{done.length}</strong><span>最近完成</span></div></div></section>
         {(waitingPlans.length>0||needsInput.length>0)&&<section><div className="mobile-section-title"><h2>🔴 等你處理</h2><span>{approvals}</span></div><div className="mobile-list">
           {waitingPlans.map(p=><article className="mobile-approval" key={p.id}><span><ShieldCheck size={16}/>{ownerLabel(p.owner)} 準備開始</span><strong>{titleOf(p)}</strong>{p.whyNow&&<small>{p.whyNow}</small>}<div><button disabled={busy===p.id} onClick={()=>decide(p,'approve')}>同意</button><button disabled={busy===p.id} onClick={()=>decide(p,'approve_with_judgment')}>同意＋自行判斷</button><button disabled={busy===p.id} onClick={()=>decide(p,'reject')}>取消</button></div></article>)}
-          {needsInput.map(w=><article className="mobile-approval" key={w.id}><span><Clock3 size={16}/>{ownerLabel(w.owner)} 需要補充</span><strong>{titleOf(w)}</strong><small>{w.clarificationQuestion||w.error||'AI 需要你的方向才能繼續。'}</small><div><button type="button">到 Telegram / HY 回覆</button></div></article>)}
+          {needsInput.map(w=><article className="mobile-approval" key={w.id}><span><Clock3 size={16}/>{ownerLabel(w.owner)} 需要補充</span><strong>{titleOf(w)}</strong><small>{w.clarificationQuestion||w.error||'AI 需要你的方向才能繼續。'}</small><textarea value={drafts[w.id]||''} onChange={e=>setDraft(w.id,e.target.value)} placeholder="直接回答，送出後 AI 自動續跑" className="mobile-work-textarea"/><div><button disabled={busy===w.id||!(drafts[w.id]||'').trim()} onClick={()=>answer(w)}>回覆並繼續</button></div></article>)}
         </div></section>}
-        <section><div className="mobile-section-title"><h2>🟡 AI 正在工作</h2><span>{active.length}</span></div><div className="mobile-list">{active.map(w=><article className="mobile-bot-card" key={w.id}><div className="mobile-bot-head"><i/><span><strong>{titleOf(w)}</strong><small>{ownerLabel(w.owner)}・{w.status}</small></span><Bot size={17}/></div><p>{w.payload?.summary||w.kind||'AI 正在處理這項工作。'}</p><footer>預計成果完成後會回到這裡</footer></article>)}{!active.length&&<p className="mobile-empty">目前沒有執行中的 AI 工作。</p>}</div></section>
-        <section><div className="mobile-section-title"><h2>🟢 最近完成</h2><span>{done.length}</span></div><div className="mobile-list">{done.map(w=>{const r=results.find(x=>x.workItemId===w.id||x.id===w.resultId);return <article className="mobile-bot-card" key={w.id}><div className="mobile-bot-head"><CheckCircle2 size={17}/><span><strong>{titleOf(w)}</strong><small>{ownerLabel(w.owner)}・已完成</small></span></div><p>{r?.outcome||r?.summary||w.result?.summary||'成果已完成並寫回 Life OS。'}</p>{(r?.artifacts||w.artifacts||[]).length>0&&<footer><FileText size={14}/> {(r?.artifacts||w.artifacts).length} 個成果檔案</footer>}</article>})}{!done.length&&<p className="mobile-empty">完成的 AI 工作會出現在這裡。</p>}</div></section>
+        <section><div className="mobile-section-title"><h2>🟡 AI 正在工作</h2><span>{active.length}</span></div><div className="mobile-list">{active.map(w=><article className="mobile-bot-card" key={w.id}><div className="mobile-bot-head"><i/><span><strong>{titleOf(w)}</strong><small>{ownerLabel(w.owner)}・{w.status}</small></span><Bot size={17}/></div><p>{w.payload?.summary||w.kind||'AI 正在處理這項工作。'}</p><footer>完成後成果會回到這裡</footer></article>)}{!active.length&&<p className="mobile-empty">目前沒有執行中的 AI 工作。</p>}</div></section>
+        <section><div className="mobile-section-title"><h2>🟢 最近完成</h2><span>{done.length}</span></div><div className="mobile-list">{done.map(w=>{const r=results.find(x=>x.workItemId===w.id||x.id===w.resultId), arts=r?.artifacts||w.artifacts||[], open=expanded===w.id;return <article className="mobile-bot-card" key={w.id}><div className="mobile-bot-head"><CheckCircle2 size={17}/><span><strong>{titleOf(w)}</strong><small>{ownerLabel(w.owner)}・已完成</small></span></div><p>{r?.outcome||r?.summary||w.result?.summary||'成果已完成並寫回 Life OS。'}</p>{arts.length>0&&<div className="mobile-artifacts">{arts.map((a,i)=>{const url=artifactUrl(a);return url?<a key={i} href={url} target="_blank" rel="noreferrer"><FileText size={14}/>{artifactLabel(a,i)}</a>:<span key={i}><FileText size={14}/>{artifactLabel(a,i)}</span>})}</div>}<div className="mobile-work-actions"><button onClick={()=>setExpanded(open?'':w.id)}>{open?'收合':'查看成果／給建議'}</button></div>{open&&<div className="mobile-feedback-box"><textarea value={drafts[`feedback:${w.id}`]||''} onChange={e=>setDraft(`feedback:${w.id}`,e.target.value)} placeholder="告訴 HY 要怎麼改，送出後會建立修訂工作" className="mobile-work-textarea"/><button disabled={busy===w.id||!(drafts[`feedback:${w.id}`]||'').trim()} onClick={()=>feedback(w)}>送出建議並繼續做</button></div>}</article>})}{!done.length&&<p className="mobile-empty">完成的 AI 工作會出現在這裡。</p>}</div></section>
       </>}
 
       {tab==='world' && state && <PixelCity dailyOS={daily} state={state}/>} 
