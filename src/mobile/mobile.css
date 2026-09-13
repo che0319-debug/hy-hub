@@ -167,9 +167,13 @@
 .mobile-learning span { color: #64748b; font-size: 11px; }
 .mobile-learning strong { margin-top: 2px; color: #3730a3; font-size: 22px; }
 .mobile-learning p { grid-column: 1 / -1; margin: 2px 0 0; color: #475569; font-size: 12px; line-height: 1.55; }
-.mobile-review-rhythm p { display: grid; grid-template-columns: 44px 1fr; gap: 8px; margin: 0; font-size: 12px; line-height: 1.5; }
-.mobile-review-rhythm p + p { margin-top: 10px; padding-top: 10px; border-top: 1px solid #e2e8f0; }
-.mobile-review-rhythm b { color: #3730a3; }
+.mobile-review-actions { padding: 4px 14px; }
+.mobile-review-actions > button { display: flex; width: 100%; min-height: 62px; align-items: center; justify-content: space-between; text-align: left; }
+.mobile-review-actions > button + button { border-top: 1px solid #e2e8f0; }
+.mobile-review-actions b, .mobile-review-actions small { display: block; }
+.mobile-review-actions b { color: #3730a3; font-size: 14px; }
+.mobile-review-actions small { margin-top: 3px; color: #64748b; font-size: 11px; }
+.mobile-review-success { display: flex; align-items: center; gap: 6px; margin: 10px 0; color: #15803d; font-size: 12px; }
 
 .mobile-empty { padding: 22px 10px; text-align: center; color: #94a3b8; font-size: 13px; }
 .mobile-error { margin-bottom: 10px; padding: 10px 12px; border-radius: 10px; background: #fee2e2; color: #991b1b; font-size: 13px; }
@@ -210,6 +214,12 @@
 .weekly-editor-fields input { min-height: 46px; width: 100%; padding: 0 12px; border: 1px solid #cbd5e1; border-radius: 10px; font-size: 16px; }
 .weekly-save { width: 100%; min-height: 48px; margin-top: 18px; border-radius: 11px; background: #2563eb; color: white; font-weight: 700; }
 .weekly-save:disabled { opacity: .55; }
+.review-fields { display: grid; gap: 13px; margin-top: 18px; }
+.review-fields label > span { display: block; margin-bottom: 5px; color: #475569; font-size: 12px; font-weight: 700; }
+.review-fields textarea, .review-fields select, .review-fields input { width: 100%; min-height: 44px; padding: 10px 11px; border: 1px solid #cbd5e1; border-radius: 10px; background: white; font-size: 16px; }
+.review-fields textarea { min-height: 76px; resize: vertical; }
+.review-gap-fields { display: grid; grid-template-columns: minmax(0, 1fr) 86px; gap: 9px; }
+.review-hint { color: #64748b; font-size: 11px; line-height: 1.5; }
 
 .mobile-nav {
   position: fixed;

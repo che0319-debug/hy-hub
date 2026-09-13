@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Bot, BrainCircuit, CalendarDays, CheckCircle2, ChevronRight, Home, ListChecks, Monitor, Pencil, RefreshCw, ShieldCheck, Target, X } from 'lucide-react'
 import { fetchMobileState, fetchTodaySchedule, saveWeeklyPriorities, setMobileTaskCompleted } from '../api'
-import { decideAutonomousPlan, fetchDailyOS } from '../lifeOSApi'
+import { decideAutonomousPlan, fetchDailyOS, submitOperatingReview } from '../lifeOSApi'
 import './mobile.css'
 
 const TAB_META = {
@@ -72,6 +72,17 @@ function taipeiDate() {
   }).format(new Date())
 }
 
+function taipeiISODate() {
+  return new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'Asia/Taipei', year: 'numeric', month: '2-digit', day: '2-digit',
+  }).format(new Date())
+}
+
+const EMPTY_REVIEW = {
+  summary: '', resultOutcome: '', blocker: '', nextFocus: '', learning: '',
+  realityGapId: '', realityDelta: '0',
+}
+
 function shortDue(value) {
   if (!value) return ''
   return value.replaceAll('/', '-').slice(5)
@@ -94,6 +105,10 @@ export default function MobileApp({ onDesktopVersion }) {
   const [weeklySaving, setWeeklySaving] = useState(false)
   const [savingIds, setSavingIds] = useState(new Set())
   const [decidingId, setDecidingId] = useState('')
+  const [reviewOpen, setReviewOpen] = useState('')
+  const [reviewDraft, setReviewDraft] = useState(EMPTY_REVIEW)
+  const [reviewSaving, setReviewSaving] = useState(false)
+  const [reviewSaved, setReviewSaved] = useState('')
 
   async function load() {
     setError('')
@@ -194,6 +209,45 @@ export default function MobileApp({ onDesktopVersion }) {
       setError('本週重點未能儲存，請再試一次。')
     } finally {
       setWeeklySaving(false)
+    }
+  }
+
+  function openReview(period) {
+    const previous = period === 'daily' ? growth.latestDailyReview : growth.latestWeeklyReview
+    setReviewDraft(previous ? {
+      summary: previous.summary || '', resultOutcome: '', blocker: previous.blocker || '',
+      nextFocus: previous.nextFocus || '', learning: '', realityGapId: '', realityDelta: '0',
+    } : EMPTY_REVIEW)
+    setReviewSaved('')
+    setReviewOpen(period)
+  }
+
+  function updateReview(field, value) {
+    setReviewDraft(previous => ({ ...previous, [field]: value }))
+  }
+
+  async function saveReview() {
+    if (!reviewDraft.summary.trim()) {
+      setError('請先填寫回顧摘要。')
+      return
+    }
+    setReviewSaving(true)
+    setError('')
+    const key = globalThis.crypto?.randomUUID?.() || `${reviewOpen}-${Date.now()}`
+    try {
+      await submitOperatingReview({
+        ...reviewDraft,
+        period: reviewOpen,
+        date: taipeiISODate(),
+        realityDelta: Number(reviewDraft.realityDelta || 0),
+      }, key)
+      await load()
+      setReviewSaved(reviewOpen)
+      setReviewOpen('')
+    } catch (err) {
+      setError(err?.message || '覆盤未能儲存，請再試一次。')
+    } finally {
+      setReviewSaving(false)
     }
   }
 
@@ -391,15 +445,22 @@ export default function MobileApp({ onDesktopVersion }) {
               <div className="mobile-section-title"><h2>AI Learning</h2><BrainCircuit size={17} /></div>
               <div className="mobile-card mobile-learning">
                 <div><span>待改善</span><strong>{(growth.selfGaps || []).filter(item => item.status !== 'closed').length}</strong></div>
-                <div><span>下一步候選</span><strong>{(growth.nextIntents || []).filter(item => item.status === 'candidate').length}</strong></div>
+                <div><span>已吸收學習</span><strong>{growth.acceptedLearnings || 0}</strong></div>
                 <p>{growth.latestReview ? (growth.latestReview.summary || growth.latestReview.title || '最近一次覆盤已建立') : '完成任務並留下 Result 後，AI 會從成果持續校正。'}</p>
               </div>
             </section>
             <section>
               <h2>晚間回顧與週覆盤</h2>
-              <div className="mobile-card mobile-review-rhythm">
-                <p><b>今晚</b><span>整理今日 Results、未完成原因與明日第一步。</span></p>
-                <p><b>本週</b><span>比較 Goals、Reality Gap、Results 與未完成 Tasks。</span></p>
+              <div className="mobile-card mobile-review-actions">
+                {reviewSaved && <p className="mobile-review-success"><CheckCircle2 size={16} />覆盤已寫入 Life OS 閉環</p>}
+                <button type="button" onClick={() => openReview('daily')}>
+                  <span><b>今晚</b><small>{growth.latestDailyReview?.date ? `上次 ${growth.latestDailyReview.date}` : 'Results・卡點・明日第一步'}</small></span>
+                  <ChevronRight size={18} />
+                </button>
+                <button type="button" onClick={() => openReview('weekly')}>
+                  <span><b>本週</b><small>{growth.latestWeeklyReview?.date ? `上次 ${growth.latestWeeklyReview.date}` : '成果・Reality Gap・下週重點'}</small></span>
+                  <ChevronRight size={18} />
+                </button>
               </div>
             </section>
           </>
@@ -443,6 +504,30 @@ export default function MobileApp({ onDesktopVersion }) {
               ))}
             </div>
             <button type="button" className="weekly-save" disabled={weeklySaving} onClick={commitWeekly}>{weeklySaving ? '儲存中…' : '儲存並同步'}</button>
+          </div>
+        </div>
+      )}
+
+      {reviewOpen && (
+        <div className="principle-overlay" role="dialog" aria-modal="true" aria-label={reviewOpen === 'daily' ? '晚間回顧' : '週覆盤'}>
+          <div className="principle-sheet review-editor">
+            <div className="principle-sheet-head">
+              <div><span>寫入 Result → Gap → Learning</span><h2>{reviewOpen === 'daily' ? '晚間回顧' : '週覆盤'}</h2></div>
+              <button type="button" onClick={() => setReviewOpen('')} aria-label="關閉"><X size={21} /></button>
+            </div>
+            <div className="review-fields">
+              <label><span>一句話總結 *</span><textarea value={reviewDraft.summary} maxLength={1200} placeholder="今天／本週最重要的判斷" onChange={event => updateReview('summary', event.target.value)} /></label>
+              <label><span>完成的成果</span><textarea value={reviewDraft.resultOutcome} maxLength={1200} placeholder="具體完成了什麼；填寫後建立 canonical Result" onChange={event => updateReview('resultOutcome', event.target.value)} /></label>
+              <label><span>卡點</span><textarea value={reviewDraft.blocker} maxLength={1200} placeholder="什麼拖慢或阻礙了進展" onChange={event => updateReview('blocker', event.target.value)} /></label>
+              <label><span>{reviewOpen === 'daily' ? '明日第一步' : '下週第一步'}</span><textarea value={reviewDraft.nextFocus} maxLength={1200} placeholder="下一個最小可執行動作" onChange={event => updateReview('nextFocus', event.target.value)} /></label>
+              <label><span>要讓 AI 記住的學習</span><textarea value={reviewDraft.learning} maxLength={1200} placeholder="需先填成果；儲存後成為已核准 Learning 與 Memory" onChange={event => updateReview('learning', event.target.value)} /></label>
+              <div className="review-gap-fields">
+                <label><span>推進 Reality Gap</span><select value={reviewDraft.realityGapId} onChange={event => updateReview('realityGapId', event.target.value)}><option value="">不更新</option>{topGaps.map(gap => <option key={gap.id} value={gap.id}>{gap.dimension || gap.name}（差距 {gap.gap}）</option>)}</select></label>
+                <label><span>進展值</span><input type="number" min="-20" max="20" value={reviewDraft.realityDelta} onChange={event => updateReview('realityDelta', event.target.value)} /></label>
+              </div>
+              <small className="review-hint">更新 Gap 或 AI Learning 時，必須同時填寫「完成的成果」，確保每次校正都有 Result 證據。</small>
+            </div>
+            <button type="button" className="weekly-save" disabled={reviewSaving} onClick={saveReview}>{reviewSaving ? '寫入閉環中…' : '完成覆盤並同步'}</button>
           </div>
         </div>
       )}
