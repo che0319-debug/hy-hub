@@ -2,10 +2,10 @@ import { useMemo, useState } from 'react'
 import { ArrowRight, BriefcaseBusiness, Hammer, LockKeyhole, Sparkles } from 'lucide-react'
 
 const DISTRICTS = [
-  { id: 'hy', label: 'HY 初始基地', subtitle: '中央・治理・未來', color: '#a78bfa', position: [50, 35] },
-  { id: 'family', label: '小因生活莊園', subtitle: '健康・家庭・生活', color: '#5eead4', position: [22, 41] },
-  { id: '950157', label: '950157 研發工作坊', subtitle: '研發・創造・實踐', color: '#38bdf8', position: [38, 66] },
-  { id: 'sam', label: 'Sam 商業據點', subtitle: '商業・金融・連結', color: '#fb923c', position: [81, 44] },
+  { id: 'hy', label: 'HY 初始基地', subtitle: '中央・治理・未來', color: '#a78bfa', position: [56.6, 35.5] },
+  { id: 'family', label: '小因生活莊園', subtitle: '健康・家庭・生活', color: '#5eead4', position: [15.6, 33.3] },
+  { id: '950157', label: '950157 研發工作坊', subtitle: '研發・創造・實踐', color: '#38bdf8', position: [44.4, 50.6] },
+  { id: 'sam', label: 'Sam 商業據點', subtitle: '商業・金融・連結', color: '#fb923c', position: [83, 35.8] },
 ]
 
 const WORKING = new Set(['queued', 'claimed', 'running', 'in_progress', 'working', 'active'])
@@ -65,8 +65,6 @@ export default function PixelCity({ dailyOS, state, variant = 'mobile', onOpenDi
           return (
           <button type="button" key={district.id} className={`world-v2-hotspot ${motionState} ${selectedId === district.id ? 'is-selected' : ''}`} style={{ left: `${district.position[0]}%`, top: `${district.position[1]}%`, '--district': district.color }} onClick={() => setSelectedId(district.id)} aria-label={`查看${district.label}，${districtActive ? '正在工作' : districtNeedsHY ? '等待核准' : '待命中'}`}>
             <i />
-            <b className="world-v2-agent" aria-hidden="true"><em /><em />🤖</b>
-            <span>{district.id === 'hy' ? 'HY' : district.id === 'family' ? '小因' : district.id}<small>{districtActive ? '工作中' : districtNeedsHY ? '等 HY' : '待命'}</small></span>
           </button>
         )})}
         <div className="world-v2-lock"><LockKeyhole size={15} /><span>建立第一個 Goal<br />即可開放</span></div>
