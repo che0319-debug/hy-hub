@@ -355,10 +355,14 @@
 .world-v2-hud p small { margin-top: 4px; color: #bae6fd; font: 700 10px/1 ui-monospace, monospace; letter-spacing: .1em; }
 .world-v2-news { display: flex; align-items: center; gap: 7px; min-height: 38px; padding: 0 14px; border-block: 1px solid #415371; background: #0d1a30; color: #dbeafe; font-size: 11px; }
 .world-v2-news svg { flex: 0 0 auto; color: #facc15; }
-.world-v2-map { position: relative; width: 100%; aspect-ratio: 2 / 3; overflow: hidden; background: url('/hy-hub/world/hy-world-lv1.png') center top / 100% auto no-repeat; image-rendering: auto; }
+.world-v2-map { position: relative; width: 100%; aspect-ratio: 1024 / 980; overflow: hidden; background: url('/hy-hub/world/hy-world-map.webp') center top / 100% 100% no-repeat; image-rendering: auto; }
 .world-v2-map::after { content: ''; position: absolute; inset: 0; pointer-events: none; box-shadow: inset 0 -45px 35px #07101f; }
 .world-v2-hotspot { position: absolute; z-index: 3; width: 50px; height: 50px; padding: 0; transform: translate(-50%, -50%); border-radius: 50%; color: white; transition: filter .2s ease; }
 .world-v2-hotspot i { position: absolute; inset: 7px; border: 2px solid var(--district); border-radius: 50%; background: transparent; box-shadow: 0 0 0 3px rgb(7 16 31 / .2), 0 0 13px var(--district); animation: world-pulse 2.1s ease-out infinite; }
+.world-v2-character { position: absolute; z-index: 2; inset: -2px; background-repeat: no-repeat; background-size: 300% 100%; background-position: left center; image-rendering: pixelated; filter: drop-shadow(0 2px 2px rgb(0 0 0 / .75)); }
+.world-v2-hotspot.is-idle .world-v2-character { background-position: left center; animation: world-character-idle 2.5s ease-in-out infinite; }
+.world-v2-hotspot.is-working .world-v2-character { background-position: center center; animation: world-character-working .72s steps(2, end) infinite; }
+.world-v2-hotspot.is-attention .world-v2-character { background-position: right center; animation: world-character-attention .65s ease-in-out infinite; }
 .world-v2-hotspot i::before, .world-v2-hotspot i::after { content: ''; position: absolute; display: none; width: 5px; height: 5px; border-radius: 1px; background: #67e8f9; box-shadow: 0 0 7px #67e8f9; }
 .world-v2-hotspot.is-working i::before, .world-v2-hotspot.is-working i::after { display: block; animation: world-status-spark .9s ease-out infinite; }
 .world-v2-hotspot.is-working i::before { top: -6px; right: -3px; }
@@ -386,14 +390,17 @@
 @keyframes world-pulse { 75%, 100% { box-shadow: 0 0 0 12px transparent, 0 0 16px var(--district); } }
 @keyframes world-attention { 0%, 100% { filter: brightness(1); } 50% { filter: brightness(1.7) drop-shadow(0 0 9px #facc15); } }
 @keyframes world-status-spark { 0% { opacity: 0; transform: translate(0, 4px) scale(.5); } 35% { opacity: 1; } 100% { opacity: 0; transform: translate(5px, -9px) scale(1.4); } }
-@media (prefers-reduced-motion: reduce) { .world-v2-hotspot, .world-v2-hotspot i, .world-v2-hotspot i::before, .world-v2-hotspot i::after { animation: none; } }
+@keyframes world-character-idle { 0%, 100% { transform: translateY(1px) scale(.98); } 50% { transform: translateY(-3px) scale(1.02); } }
+@keyframes world-character-working { 0%, 100% { transform: translate(-3px, 1px) rotate(-2deg); } 50% { transform: translate(3px, -3px) rotate(2deg); } }
+@keyframes world-character-attention { 0%, 100% { transform: rotate(-4deg) scale(1); } 50% { transform: rotate(4deg) scale(1.08); } }
+@media (prefers-reduced-motion: reduce) { .world-v2-hotspot, .world-v2-hotspot i, .world-v2-hotspot i::before, .world-v2-hotspot i::after, .world-v2-character { animation: none; } }
 
 @media (min-width: 768px) {
   .mobile-life-os { display: none; }
   .world-v2-desktop { min-height: 0; margin: 0; padding-bottom: 28px; overflow: hidden; border: 1px solid #334155; border-radius: 16px; box-shadow: 0 12px 34px rgb(15 23 42 / .18); }
   .world-v2-desktop .world-v2-hud { padding: 18px 24px 15px; }
   .world-v2-desktop .world-v2-news { min-height: 42px; padding: 0 24px; font-size: 12px; }
-  .world-v2-desktop .world-v2-map { width: auto; height: min(64vh, 650px); min-height: 500px; aspect-ratio: auto; background-position: center 18%; background-size: cover; }
+  .world-v2-desktop .world-v2-map { width: 100%; height: auto; min-height: 0; aspect-ratio: 1024 / 980; background-position: center top; background-size: 100% 100%; }
   .world-v2-desktop .world-v2-hotspot { width: 62px; height: 62px; }
   .world-v2-desktop .world-v2-hotspot i { inset: 11px; }
   .world-v2-desktop .world-v2-hotspot.is-selected i { inset: 7px; }
