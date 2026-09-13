@@ -345,6 +345,39 @@
 @keyframes pixel-window { 50% { fill: #38bdf8; } }
 @keyframes pixel-work { 50% { transform: translateY(-2px); } }
 
+.world-v2 { min-height: calc(100vh - 76px); margin: -14px; padding-bottom: 164px; background: #07101f; color: #edf6ff; }
+.world-v2-hud { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: max(16px, env(safe-area-inset-top)) 17px 12px; background: linear-gradient(180deg, #101b31, #091426); }
+.world-v2-hud > div { display: flex; align-items: center; gap: 9px; }
+.world-v2-hud > div > span { font-size: 29px; }
+.world-v2-hud p { margin: 0; color: #cbd5e1; text-align: right; font-size: 10px; line-height: 1.35; }
+.world-v2-hud p b, .world-v2-hud p small { display: block; text-align: left; }
+.world-v2-hud p b { color: white; font: 800 21px/1 ui-monospace, monospace; letter-spacing: .06em; }
+.world-v2-hud p small { margin-top: 4px; color: #bae6fd; font: 700 10px/1 ui-monospace, monospace; letter-spacing: .1em; }
+.world-v2-news { display: flex; align-items: center; gap: 7px; min-height: 38px; padding: 0 14px; border-block: 1px solid #415371; background: #0d1a30; color: #dbeafe; font-size: 11px; }
+.world-v2-news svg { flex: 0 0 auto; color: #facc15; }
+.world-v2-map { position: relative; height: min(59vh, 590px); min-height: 430px; overflow: hidden; background: url('/hy-hub/world/hy-world-lv1.png') center 14% / cover no-repeat; image-rendering: auto; }
+.world-v2-map::after { content: ''; position: absolute; inset: 0; pointer-events: none; box-shadow: inset 0 -45px 35px #07101f; }
+.world-v2-hotspot { position: absolute; z-index: 3; width: 50px; height: 50px; padding: 0; transform: translate(-50%, -50%); border-radius: 50%; color: white; }
+.world-v2-hotspot i { position: absolute; inset: 12px; border: 2px solid var(--district); border-radius: 50%; background: rgb(7 16 31 / .45); box-shadow: 0 0 0 5px rgb(7 16 31 / .28), 0 0 16px var(--district); animation: world-pulse 2.1s ease-out infinite; }
+.world-v2-hotspot span { position: absolute; top: 47px; left: 50%; padding: 3px 6px; transform: translateX(-50%); border: 1px solid var(--district); border-radius: 3px; background: rgb(7 16 31 / .9); color: white; font: 700 9px/1 ui-monospace, monospace; white-space: nowrap; }
+.world-v2-hotspot.is-selected i { inset: 8px; border-width: 3px; background: color-mix(in srgb, var(--district) 30%, transparent); }
+.world-v2-lock { position: absolute; right: 7%; bottom: 9%; z-index: 3; display: flex; align-items: center; gap: 6px; padding: 7px 8px; border: 1px dashed #94a3b8; border-radius: 3px; background: rgb(7 16 31 / .82); color: #cbd5e1; font-size: 8px; line-height: 1.35; }
+.world-v2-sheet { position: relative; z-index: 5; margin: -22px 12px 0; padding: 9px 14px 14px; border: 1px solid #50617d; border-top: 2px solid var(--district); border-radius: 16px 16px 7px 7px; background: rgb(10 21 40 / .97); box-shadow: 0 -12px 30px rgb(0 0 0 / .35); }
+.world-v2-handle { width: 44px; height: 4px; margin: 0 auto 9px; border-radius: 4px; background: #64748b; }
+.world-v2-sheet header { display: flex; align-items: flex-start; justify-content: space-between; gap: 10px; }
+.world-v2-sheet header span { color: var(--district); font-size: 9px; letter-spacing: .05em; }
+.world-v2-sheet header h2 { margin: 3px 0 0; color: white; font-size: 17px; }
+.world-v2-sheet header > b { padding: 4px 7px; border: 1px solid var(--district); border-radius: 3px; color: var(--district); font: 800 11px/1 ui-monospace, monospace; }
+.world-v2-status { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-top: 11px; }
+.world-v2-status span { display: flex; align-items: center; gap: 4px; color: var(--district); font-size: 10px; }
+.world-v2-status strong { color: #cbd5e1; font-size: 9px; font-weight: 500; }
+.world-v2-status em { color: #67e8f9; font-size: 15px; font-style: normal; }
+.world-v2-progress { height: 7px; margin-top: 5px; overflow: hidden; border-radius: 6px; background: #334155; }
+.world-v2-progress i { display: block; height: 100%; border-radius: inherit; background: linear-gradient(90deg, var(--district), #67e8f9); }
+.world-v2-sheet > p { display: flex; align-items: center; gap: 7px; margin: 10px 0 0; padding: 8px 9px; border: 1px solid #334155; border-radius: 6px; color: #e2e8f0; font-size: 10px; line-height: 1.35; }
+@keyframes world-pulse { 75%, 100% { box-shadow: 0 0 0 12px transparent, 0 0 16px var(--district); } }
+@media (prefers-reduced-motion: reduce) { .world-v2-hotspot i { animation: none; } }
+
 @media (min-width: 768px) {
   .mobile-life-os { display: none; }
 }

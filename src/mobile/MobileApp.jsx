@@ -311,7 +311,7 @@ export default function MobileApp({ onDesktopVersion }) {
 
   return (
     <div className="mobile-life-os">
-      <header className="mobile-header">
+      {tab !== 'world' && <header className="mobile-header">
         <div>
           <p className="mobile-kicker">HY LIFE OS</p>
           <h1>{TAB_META[tab].label}</h1>
@@ -321,7 +321,7 @@ export default function MobileApp({ onDesktopVersion }) {
           <Monitor size={16} />
           完整版
         </button>
-      </header>
+      </header>}
 
       <main className="mobile-content">
         {error && <div className="mobile-error">{error}</div>}
