@@ -67,3 +67,12 @@ export async function retryNotification(notificationId) {
   })
   return parseResponse(response, 'retryNotification')
 }
+
+export async function reviewLearning(learningId, decision, memoryContent = '') {
+  const response = await fetch(`${API_BASE}/api/life-os/v1/learnings/${encodeURIComponent(learningId)}/review`, {
+    method: 'POST',
+    headers: { ...authHeaders(), 'Content-Type': 'application/json' },
+    body: JSON.stringify({ decision, memoryContent }),
+  })
+  return parseResponse(response, 'reviewLearning')
+}
