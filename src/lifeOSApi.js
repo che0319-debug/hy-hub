@@ -106,3 +106,12 @@ export async function runProactiveScan() {
   })
   return parseResponse(response, 'runProactiveScan')
 }
+
+
+export async function dismissWorkItem(workId) {
+  const response = await fetch(`${API_BASE}/api/life-os/v1/work-items/${encodeURIComponent(workId)}`, {
+    method: 'DELETE',
+    headers: { ...authHeaders() },
+  })
+  return parseResponse(response, 'dismissWorkItem')
+}
