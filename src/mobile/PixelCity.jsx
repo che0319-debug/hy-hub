@@ -53,11 +53,15 @@ export default function PixelCity({ dailyOS, state, variant = 'mobile', onOpenDi
       </header>
       <div className="world-v2-news"><Sparkles size={14} /><span>{firstGoal ? '第一個 Goal 將解鎖新的可開發土地' : `${selected.label}：${active ? '正在推進工作' : needsHY ? '等待 HY 決定' : '今日運作正常'}`}</span></div>
       <section className="world-v2-map" aria-label="可成長的 HY World 像素城市">
-        {districts.map(district => (
-          <button type="button" key={district.id} className={`world-v2-hotspot ${selectedId === district.id ? 'is-selected' : ''}`} style={{ left: `${district.position[0]}%`, top: `${district.position[1]}%`, '--district': district.color }} onClick={() => setSelectedId(district.id)} aria-label={`查看${district.label}`}>
-            <i /><span>{district.id === 'hy' ? 'HY' : district.id === 'family' ? '小因' : district.id}</span>
+        {districts.map(district => {
+          const districtActive = district.bot.status === 'running' || district.work > 0
+          const districtNeedsHY = district.bot.status === 'attention' || district.risks > 0
+          const motionState = districtActive ? 'is-working' : districtNeedsHY ? 'is-attention' : 'is-idle'
+          return (
+          <button type="button" key={district.id} className={`world-v2-hotspot ${motionState} ${selectedId === district.id ? 'is-selected' : ''}`} style={{ left: `${district.position[0]}%`, top: `${district.position[1]}%`, '--district': district.color }} onClick={() => setSelectedId(district.id)} aria-label={`查看${district.label}，${districtActive ? '正在工作' : districtNeedsHY ? '等待核准' : '待命中'}`}>
+            <i /><span>{district.id === 'hy' ? 'HY' : district.id === 'family' ? '小因' : district.id}<small>{districtActive ? '工作中' : districtNeedsHY ? '等 HY' : '待命'}</small></span>
           </button>
-        ))}
+        )})}
         <div className="world-v2-lock"><LockKeyhole size={15} /><span>建立第一個 Goal<br />即可開放</span></div>
       </section>
       <section className="world-v2-sheet" style={{ '--district': selected.color }}>

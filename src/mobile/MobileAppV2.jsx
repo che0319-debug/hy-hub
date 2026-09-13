@@ -47,7 +47,16 @@ export default function MobileAppV2({ onDesktopVersion }) {
     if(r[2].status==='fulfilled') setDaily(r[2].value)
     if(r[3].status==='fulfilled') setCore(r[3].value)
   }
-  useEffect(()=>{load()},[])
+  useEffect(()=>{
+    load()
+    const refresh = window.setInterval(load, 30000)
+    const refreshWhenVisible = () => { if (document.visibilityState === 'visible') load() }
+    document.addEventListener('visibilitychange', refreshWhenVisible)
+    return () => {
+      window.clearInterval(refresh)
+      document.removeEventListener('visibilitychange', refreshWhenVisible)
+    }
+  },[])
 
   const work = core?.workItems || []
   const plans = core?.autonomousPlans || []
