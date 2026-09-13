@@ -8,6 +8,9 @@ const DISTRICTS = [
   { id: 'sam', label: 'Sam 商業據點', subtitle: '商業・金融・連結', color: '#fb923c', position: [81, 44] },
 ]
 
+const WORKING = new Set(['queued', 'claimed', 'running', 'in_progress', 'working', 'active'])
+const ATTENTION = new Set(['attention', 'needs_clarification', 'waiting_approval', 'blocked', 'failed'])
+
 function agentFor(dailyOS, id) {
   const agents = dailyOS?.agents || {}
   return agents[id] || agents[id === 'family' ? '小因' : id] || {}
@@ -29,7 +32,9 @@ function districtState(dailyOS, state) {
     const gap = gaps[index % Math.max(1, gaps.length)]
     const progress = gap ? Math.max(0, Math.min(100, 100 - Number(gap.gap || 0))) : 0
     const level = Math.max(1, Math.min(12, 1 + Math.floor(results / 3)))
-    return { ...item, bot, gap, results, work, risks, progress, level }
+    const status = String(bot.status || '').toLowerCase()
+    const motion = ATTENTION.has(status) || risks > 0 ? 'attention' : WORKING.has(status) || work > 0 ? 'working' : 'idle'
+    return { ...item, bot, gap, results, work, risks, progress, level, motion }
   })
 }
 
@@ -42,8 +47,8 @@ export default function PixelCity({ dailyOS, state, variant = 'mobile', onOpenDi
   const worldLevel = Math.max(1, 1 + Math.floor((totalResults + acceptedLearning) / 8))
   const nextLevelResults = Math.max(1, 8 - ((totalResults + acceptedLearning) % 8))
   const firstGoal = totalResults === 0
-  const active = selected.bot.status === 'running' || selected.work > 0
-  const needsHY = selected.bot.status === 'attention' || selected.risks > 0
+  const active = selected.motion === 'working'
+  const needsHY = selected.motion === 'attention'
 
   return (
     <div className={`world-v2 ${variant === 'desktop' ? 'world-v2-desktop' : ''}`}>
@@ -54,12 +59,14 @@ export default function PixelCity({ dailyOS, state, variant = 'mobile', onOpenDi
       <div className="world-v2-news"><Sparkles size={14} /><span>{firstGoal ? '第一個 Goal 將解鎖新的可開發土地' : `${selected.label}：${active ? '正在推進工作' : needsHY ? '等待 HY 決定' : '今日運作正常'}`}</span></div>
       <section className="world-v2-map" aria-label="可成長的 HY World 像素城市">
         {districts.map(district => {
-          const districtActive = district.bot.status === 'running' || district.work > 0
-          const districtNeedsHY = district.bot.status === 'attention' || district.risks > 0
-          const motionState = districtActive ? 'is-working' : districtNeedsHY ? 'is-attention' : 'is-idle'
+          const districtActive = district.motion === 'working'
+          const districtNeedsHY = district.motion === 'attention'
+          const motionState = `is-${district.motion}`
           return (
           <button type="button" key={district.id} className={`world-v2-hotspot ${motionState} ${selectedId === district.id ? 'is-selected' : ''}`} style={{ left: `${district.position[0]}%`, top: `${district.position[1]}%`, '--district': district.color }} onClick={() => setSelectedId(district.id)} aria-label={`查看${district.label}，${districtActive ? '正在工作' : districtNeedsHY ? '等待核准' : '待命中'}`}>
-            <i /><span>{district.id === 'hy' ? 'HY' : district.id === 'family' ? '小因' : district.id}<small>{districtActive ? '工作中' : districtNeedsHY ? '等 HY' : '待命'}</small></span>
+            <i />
+            <b className="world-v2-agent" aria-hidden="true"><em /><em />🤖</b>
+            <span>{district.id === 'hy' ? 'HY' : district.id === 'family' ? '小因' : district.id}<small>{districtActive ? '工作中' : districtNeedsHY ? '等 HY' : '待命'}</small></span>
           </button>
         )})}
         <div className="world-v2-lock"><LockKeyhole size={15} /><span>建立第一個 Goal<br />即可開放</span></div>
