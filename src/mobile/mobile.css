@@ -375,9 +375,24 @@
 .world-v2-progress { height: 7px; margin-top: 5px; overflow: hidden; border-radius: 6px; background: #334155; }
 .world-v2-progress i { display: block; height: 100%; border-radius: inherit; background: linear-gradient(90deg, var(--district), #67e8f9); }
 .world-v2-sheet > p { display: flex; align-items: center; gap: 7px; margin: 10px 0 0; padding: 8px 9px; border: 1px solid #334155; border-radius: 6px; color: #e2e8f0; font-size: 10px; line-height: 1.35; }
+.world-v2-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+.world-v2-actions button { display: flex; align-items: center; justify-content: center; gap: 6px; min-height: 40px; padding: 0 13px; border: 1px solid var(--district); border-radius: 7px; background: color-mix(in srgb, var(--district) 18%, #10192c); color: white; font-size: 11px; font-weight: 700; }
+.world-v2-actions button + button { border-color: #50617d; background: #17243a; color: #cbd5e1; }
 @keyframes world-pulse { 75%, 100% { box-shadow: 0 0 0 12px transparent, 0 0 16px var(--district); } }
 @media (prefers-reduced-motion: reduce) { .world-v2-hotspot i { animation: none; } }
 
 @media (min-width: 768px) {
   .mobile-life-os { display: none; }
+  .world-v2-desktop { min-height: 0; margin: 0; padding-bottom: 28px; overflow: hidden; border: 1px solid #334155; border-radius: 16px; box-shadow: 0 12px 34px rgb(15 23 42 / .18); }
+  .world-v2-desktop .world-v2-hud { padding: 18px 24px 15px; }
+  .world-v2-desktop .world-v2-news { min-height: 42px; padding: 0 24px; font-size: 12px; }
+  .world-v2-desktop .world-v2-map { height: min(64vh, 650px); min-height: 500px; background-position: center 18%; }
+  .world-v2-desktop .world-v2-hotspot { width: 62px; height: 62px; }
+  .world-v2-desktop .world-v2-hotspot i { inset: 16px; }
+  .world-v2-desktop .world-v2-hotspot.is-selected i { inset: 11px; }
+  .world-v2-desktop .world-v2-hotspot span { top: 59px; padding: 4px 8px; font-size: 10px; }
+  .world-v2-desktop .world-v2-sheet { width: min(620px, calc(100% - 48px)); margin: -52px auto 0; padding: 12px 20px 18px; }
+  .world-v2-desktop .world-v2-sheet header h2 { font-size: 20px; }
+  .world-v2-desktop .world-v2-status strong, .world-v2-desktop .world-v2-status span, .world-v2-desktop .world-v2-sheet > p { font-size: 12px; }
+  .world-v2-desktop .world-v2-actions button { min-height: 42px; font-size: 12px; }
 }
