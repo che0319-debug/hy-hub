@@ -76,3 +76,11 @@ export async function reviewLearning(learningId, decision, memoryContent = '') {
   })
   return parseResponse(response, 'reviewLearning')
 }
+
+export async function runProactiveScan() {
+  const response = await fetch(`${API_BASE}/api/life-os/v1/proactive-scan/run`, {
+    method: 'POST',
+    headers: { ...authHeaders() },
+  })
+  return parseResponse(response, 'runProactiveScan')
+}
