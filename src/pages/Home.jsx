@@ -3,17 +3,18 @@ import { useNavigate } from 'react-router-dom'
 import { Bell, CheckCircle, Coins, RefreshCw, Pencil } from 'lucide-react'
 import { homeSummary } from '../mock/data'
 import { useSessionContext } from '../App'
-import PixelWorld from '../components/PixelWorld'
-import { fetchTodaySchedule, fetchAllMilestones, fetchMemoryHealth, fetchMobileState, fetchWeeklyChange, postWeeklyChange } from '../api'
+import PixelCity from '../mobile/PixelCity'
+import { fetchTodaySchedule, fetchAllMilestones, fetchMobileState, fetchWeeklyChange, postWeeklyChange } from '../api'
+import { fetchDailyOS } from '../lifeOSApi'
 
 const PENDING_STATUSES = ['await', 'failed']
 const REFRESH_INTERVAL_MS = 60000
 
 const BOT_ROUTE = {
-  HY:      '/line/hy',
+  hy:      '/line/hy',
   '950157':'/line/950157',
-  '小因':  '/line/xiaoyin',
-  Sam:     '/line/sam',
+  family:  '/line/xiaoyin',
+  sam:     '/line/sam',
 }
 
 function todayTaipei() {
@@ -358,37 +359,37 @@ function WeeklyChangeCard() {
 
 export default function Home() {
   const [view, setView]           = useState('data')
-  const [healthData, setHealthData] = useState(null)
+  const [worldState, setWorldState] = useState(null)
+  const [dailyOS, setDailyOS] = useState(null)
   const [refreshing, setRefreshing] = useState(false)
   const { sessions, refreshSessions } = useSessionContext()
   const navigate  = useNavigate()
   const timerRef  = useRef(null)
 
-  async function loadHealth() {
-    try {
-      const data = await fetchMemoryHealth()
-      setHealthData(data)
-    } catch (err) {
-      console.warn('[Home] fetchMemoryHealth failed:', err)
-    }
+  async function loadWorld() {
+    const results = await Promise.allSettled([fetchMobileState(), fetchDailyOS()])
+    if (results[0].status === 'fulfilled') setWorldState(results[0].value)
+    else console.warn('[Home] fetchMobileState failed:', results[0].reason)
+    if (results[1].status === 'fulfilled') setDailyOS(results[1].value)
+    else console.warn('[Home] fetchDailyOS failed:', results[1].reason)
   }
 
   async function handleRefresh() {
     setRefreshing(true)
-    await Promise.allSettled([loadHealth(), refreshSessions()])
+    await Promise.allSettled([loadWorld(), refreshSessions()])
     setRefreshing(false)
   }
 
   useEffect(() => {
-    loadHealth()
+    loadWorld()
     timerRef.current = setInterval(handleRefresh, REFRESH_INTERVAL_MS)
     return () => clearInterval(timerRef.current)
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   const pendingCount = sessions.filter(s => PENDING_STATUSES.includes(s.status)).length
 
-  function handleBotClick(botName) {
-    const route = BOT_ROUTE[botName]
+  function handleBotClick(botId) {
+    const route = BOT_ROUTE[botId]
     if (route) navigate(route)
     else navigate('/line/hy')
   }
@@ -460,17 +461,13 @@ export default function Home() {
               刷新
             </button>
           </div>
-          <div
-            className="bg-white rounded-xl overflow-hidden border border-slate-200 shadow-sm"
-            style={{ height: 'min(80vh, 720px)' }}
-          >
-            <PixelWorld
-              healthData={healthData}
-              sessions={sessions}
-              onBotClick={handleBotClick}
-              onDocClick={() => navigate('/dispatch')}
-            />
-          </div>
+          <PixelCity
+            dailyOS={dailyOS}
+            state={worldState}
+            variant="desktop"
+            onOpenDistrict={handleBotClick}
+            onOpenWork={() => navigate('/dispatch')}
+          />
         </div>
       )}
     </div>
