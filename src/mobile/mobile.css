@@ -206,6 +206,21 @@
 .mobile-learning span { color: #64748b; font-size: 11px; }
 .mobile-learning strong { margin-top: 2px; color: #3730a3; font-size: 22px; }
 .mobile-learning p { grid-column: 1 / -1; margin: 2px 0 0; color: #475569; font-size: 12px; line-height: 1.55; }
+.mobile-learning-rule { display: flex; gap: 6px; align-items: flex-start; margin: 9px 2px; color: #4338ca; font-size: 10px; line-height: 1.45; }
+.mobile-learning-rule svg { flex: 0 0 auto; margin-top: 1px; }
+.mobile-learning-list { margin-top: 8px; }
+.mobile-learning-proposal { padding: 13px; border: 1px solid #c7d2fe; border-radius: 14px; background: #f8faff; }
+.mobile-learning-proposal header { display: flex; align-items: center; justify-content: space-between; gap: 8px; color: #6366f1; font-size: 10px; }
+.mobile-learning-proposal header b { padding: 3px 6px; border-radius: 99px; background: #e0e7ff; }
+.mobile-learning-proposal > strong { display: block; margin-top: 9px; color: #1e1b4b; font-size: 14px; }
+.mobile-learning-proposal dl { margin: 10px 0 0; }
+.mobile-learning-proposal dl div { margin-top: 7px; }
+.mobile-learning-proposal dt { color: #64748b; font-size: 9px; font-weight: 700; }
+.mobile-learning-proposal dd { margin: 2px 0 0; color: #334155; font-size: 11px; line-height: 1.45; }
+.mobile-learning-proposal footer { display: grid; grid-template-columns: 1fr 1fr; gap: 7px; margin-top: 12px; }
+.mobile-learning-proposal footer button { min-height: 40px; border-radius: 9px; background: #4f46e5; color: white; font-size: 11px; font-weight: 700; }
+.mobile-learning-proposal footer button:last-child { background: #e2e8f0; color: #475569; }
+.mobile-learning-proposal footer button:disabled { opacity: .55; }
 .mobile-review-actions { padding: 4px 14px; }
 .mobile-review-actions > button { display: flex; width: 100%; min-height: 62px; align-items: center; justify-content: space-between; text-align: left; }
 .mobile-review-actions > button + button { border-top: 1px solid #e2e8f0; }

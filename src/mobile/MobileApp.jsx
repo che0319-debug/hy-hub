@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { BellRing, Bot, BrainCircuit, CalendarDays, CheckCircle2, ChevronRight, Home, ListChecks, Monitor, Pencil, RefreshCw, ShieldCheck, Target, X } from 'lucide-react'
 import { fetchMobileState, fetchTodaySchedule, saveWeeklyPriorities, setMobileTaskCompleted } from '../api'
-import { decideAutonomousPlan, fetchDailyOS, retryNotification, retryWorkItem, submitOperatingReview } from '../lifeOSApi'
+import { decideAutonomousPlan, fetchDailyOS, retryNotification, retryWorkItem, reviewLearning, submitOperatingReview } from '../lifeOSApi'
 import './mobile.css'
 
 const TAB_META = {
@@ -111,6 +111,7 @@ export default function MobileApp({ onDesktopVersion }) {
   const [reviewSaved, setReviewSaved] = useState('')
   const [retryingId, setRetryingId] = useState('')
   const [retryingNoticeId, setRetryingNoticeId] = useState('')
+  const [reviewingLearningId, setReviewingLearningId] = useState('')
 
   async function load() {
     setError('')
@@ -276,6 +277,19 @@ export default function MobileApp({ onDesktopVersion }) {
       setError(err?.message || 'Telegram 通知重送失敗，請稍後再試。')
     } finally {
       setRetryingNoticeId('')
+    }
+  }
+
+  async function decideLearning(item, decision) {
+    setReviewingLearningId(item.id)
+    setError('')
+    try {
+      await reviewLearning(item.id, decision, decision === 'accepted' ? item.action : '')
+      await load()
+    } catch (err) {
+      setError(err?.message || '學習決定未能儲存，請稍後再試。')
+    } finally {
+      setReviewingLearningId('')
     }
   }
 
@@ -524,6 +538,25 @@ export default function MobileApp({ onDesktopVersion }) {
                 <div><span>待改善</span><strong>{(growth.selfGaps || []).filter(item => item.status !== 'closed').length}</strong></div>
                 <div><span>已吸收學習</span><strong>{growth.acceptedLearnings || 0}</strong></div>
                 <p>{growth.latestReview ? (growth.latestReview.summary || growth.latestReview.title || '最近一次覆盤已建立') : '完成任務並留下 Result 後，AI 會從成果持續校正。'}</p>
+              </div>
+              {growth.learningReview?.rule && <p className="mobile-learning-rule"><ShieldCheck size={14} />{growth.learningReview.rule}</p>}
+              <div className="mobile-list mobile-learning-list">
+                {(growth.learningReview?.pending || []).map(item => (
+                  <article className="mobile-learning-proposal" key={item.id}>
+                    <header><span>{item.owner || 'AI'}・{item.capability || '能力改善'}</span><b>待 HY 採納</b></header>
+                    <strong>{item.action}</strong>
+                    <dl>
+                      <div><dt>為何要學</dt><dd>{item.evidence?.resultOutcome || item.evidence?.observed || '來自已完成 Result'}</dd></div>
+                      {item.evidence?.desired && <div><dt>期望能力</dt><dd>{item.evidence.desired}</dd></div>}
+                      <div><dt>如何驗證</dt><dd>{item.verification}</dd></div>
+                    </dl>
+                    <footer>
+                      <button disabled={reviewingLearningId === item.id} onClick={() => decideLearning(item, 'accepted')}>採納並記住</button>
+                      <button disabled={reviewingLearningId === item.id} onClick={() => decideLearning(item, 'rejected')}>不採納</button>
+                    </footer>
+                  </article>
+                ))}
+                {(growth.learningReview?.pending || []).length === 0 && <Empty>目前沒有等待你審核的學習。</Empty>}
               </div>
             </section>
             <section>
