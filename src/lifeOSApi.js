@@ -59,3 +59,11 @@ export async function retryWorkItem(workId) {
   })
   return parseResponse(response, 'retryWorkItem')
 }
+
+export async function retryNotification(notificationId) {
+  const response = await fetch(`${API_BASE}/api/life-os/v1/notifications/${encodeURIComponent(notificationId)}/retry`, {
+    method: 'POST',
+    headers: { ...authHeaders() },
+  })
+  return parseResponse(response, 'retryNotification')
+}
