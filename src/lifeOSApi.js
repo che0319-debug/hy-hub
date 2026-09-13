@@ -39,6 +39,28 @@ export async function decideAutonomousPlan(planId, decision, note = '') {
   return parseResponse(response, 'decideAutonomousPlan')
 }
 
+export async function answerWorkClarification(workId, answer) {
+  const response = await fetch(`${API_BASE}/api/life-os/v1/work-items/${encodeURIComponent(workId)}/clarification`, {
+    method: 'POST',
+    headers: { ...authHeaders(), 'Content-Type': 'application/json' },
+    body: JSON.stringify({ answer }),
+  })
+  return parseResponse(response, 'answerWorkClarification')
+}
+
+export async function submitWorkFeedback(workId, feedback, idempotencyKey) {
+  const response = await fetch(`${API_BASE}/api/life-os/v1/work-items/${encodeURIComponent(workId)}/feedback`, {
+    method: 'POST',
+    headers: {
+      ...authHeaders(),
+      'Content-Type': 'application/json',
+      'Idempotency-Key': idempotencyKey,
+    },
+    body: JSON.stringify({ feedback }),
+  })
+  return parseResponse(response, 'submitWorkFeedback')
+}
+
 export async function submitOperatingReview(payload, idempotencyKey) {
   const response = await fetch(`${API_BASE}/api/life-os/v1/reviews`, {
     method: 'POST',
