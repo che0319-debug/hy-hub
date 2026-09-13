@@ -196,6 +196,12 @@ export default function AIWorkCenter() {
                 <div className="flex items-center gap-2 text-sm text-red-600"><ShieldCheck size={16} />{label(plan.owner)} 準備開始</div>
                 <h3 className="mt-2 font-semibold">{title(plan)}</h3>
                 <p className="mt-2 text-sm text-slate-600">{plan.whyNow || plan.context}</p>
+                <div className="mt-3 space-y-2 rounded-lg bg-slate-50 p-3 text-sm text-slate-700">
+                  <p><b>觀察與證據：</b>{plan.observation || plan.context || '待補充'}</p>
+                  <p><b>建議作法：</b>{plan.suggestedAction || plan.proposedSteps?.[0] || '先完成必要查證'}</p>
+                  <p><b>預期成果：</b>{plan.expectedOutcome || '產出可驗證成果並縮小差距'}</p>
+                  {(plan.evidenceRefs || []).filter(ref => String(ref).startsWith('http')).map(ref => <a key={ref} href={ref} target="_blank" rel="noreferrer" className="block text-blue-600 underline">查看研究來源</a>)}
+                </div>
                 <div className="mt-4 flex flex-wrap gap-2">
                   <button disabled={busy === plan.id} onClick={() => decide(plan, 'approve')} className="rounded-lg bg-blue-600 px-4 py-2 text-sm text-white">同意</button>
                   <button disabled={busy === plan.id} onClick={() => decide(plan, 'approve_with_judgment')} className="rounded-lg bg-emerald-50 px-4 py-2 text-sm text-emerald-700">同意＋自行判斷</button>
