@@ -202,6 +202,7 @@ export default function AIWorkCenter() {
                   <p><b>建議作法：</b>{plan.suggestedAction || plan.proposedSteps?.[0] || '先完成必要查證'}</p>
                   <p><b>預期成果：</b>{plan.expectedOutcome || '產出可驗證成果並縮小差距'}</p>
                   <p><b>HY Review：</b>{plan.hyReview?.summary || '已完成角色、關聯、證據與行動性的基本檢查。'}</p>
+                  <p><b>執行模型：</b>AI Worker 設定（目前預設 Groq / gpt-oss-120b）</p>
                   {(plan.evidenceRefs || []).filter(ref => String(ref).startsWith('http')).map(ref => <a key={ref} href={ref} target="_blank" rel="noreferrer" className="block text-blue-600 underline">查看研究來源</a>)}
                 </div>
                 <div className="mt-4 flex flex-wrap gap-2">
