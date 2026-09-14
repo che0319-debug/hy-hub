@@ -43,6 +43,7 @@ export default function AIWorkCenter() {
   const [drafts, setDrafts] = useState({})
   const [refreshing, setRefreshing] = useState(false)
   const [ownerFilter, setOwnerFilter] = useState('all')
+  const [feedbackStatus, setFeedbackStatus] = useState({})
 
   async function load() {
     setError('')
@@ -138,13 +139,19 @@ export default function AIWorkCenter() {
   async function sendFeedback(item) {
     const key = `feedback:${item.id}`
     const value = (drafts[key] || '').trim()
-    if (!value) return
+    if (!value || busy) return
     setBusy(item.id)
+    setFeedbackStatus(current => ({ ...current, [item.id]: { type: 'sending', text: '正在建立下一輪工作…' } }))
     try {
-      await submitWorkFeedback(item.id, value, `hy-work-feedback-${item.id}-${Date.now()}`)
+      const response = await submitWorkFeedback(item.id, value, `hy-work-feedback-${item.id}-${Date.now()}`)
       setDraft(key, '')
+      setFeedbackStatus(current => ({ ...current, [item.id]: { type: 'success', text: `已建立下一輪工作：${response.item?.status === 'queued' ? '等待 AI 接手' : response.item?.status || '已送出'}` } }))
       await load()
-    } catch (err) { setError(err.message || '修改建議送出失敗') } finally { setBusy('') }
+    } catch (err) {
+      const message = err.message || '修改建議送出失敗'
+      setFeedbackStatus(current => ({ ...current, [item.id]: { type: 'error', text: message } }))
+      setError(message)
+    } finally { setBusy('') }
   }
 
   async function removeItem(item, mode = 'dismiss') {
@@ -200,7 +207,7 @@ export default function AIWorkCenter() {
         {item && DONE.has(item.status) && <div className="mt-5 rounded-xl bg-white p-4"><div className="max-h-80 overflow-y-auto overscroll-contain pr-3"><h3 className="text-sm font-semibold text-slate-700">本次交付（待你驗收）</h3><p className="mt-2 whitespace-pre-wrap text-sm leading-6 text-slate-600">{report.summary || output || '尚未提供可驗收摘要。'}</p>
           {!!report.workPerformed?.length && <div className="mt-4"><h4 className="text-sm font-medium text-slate-700">實際執行</h4><ul className="mt-1 list-disc pl-5 text-sm text-slate-600">{report.workPerformed.map((text, index) => <li key={index}>{String(text)}</li>)}</ul></div>}
           {!!report.deliverables?.length && <div className="mt-4"><h4 className="text-sm font-medium text-slate-700">成果檔案</h4><div className="mt-2 space-y-2">{report.deliverables.map((file, index) => <div key={index} className="rounded-lg border p-3 text-sm">{file.url ? <a href={file.url} target="_blank" rel="noreferrer" className="font-medium text-blue-700">{file.name || '開啟成果'}</a> : <span className="text-amber-700">{file.name || '成果'}：尚未建立可開啟檔案</span>}</div>)}</div></div>}
-          {!!report.acceptanceChecks?.length && <div className="mt-4"><h4 className="text-sm font-medium text-slate-700">驗收檢查</h4><div className="mt-2 space-y-1 text-sm">{report.acceptanceChecks.map((check, index) => <p key={index} className={check.passed ? 'text-emerald-700' : 'text-amber-700'}>{check.passed ? '✓' : '○'} {check.item}{check.evidence ? ` — ${check.evidence}` : ''}</p>)}</div></div>}</div><div className="sticky bottom-0 mt-4 border-t border-slate-100 bg-white pt-4"><label className="block text-sm font-medium text-slate-700">要求修改或加入下一個功能</label><textarea value={drafts[`feedback:${item.id}`] || ''} onChange={event => setDraft(`feedback:${item.id}`, event.target.value)} placeholder="例如：加入主管 Reviewer；下一版增加 PowerPoint 範本套用。" className="mt-2 min-h-24 w-full rounded-lg border border-slate-300 p-3 text-sm"/><div className="mt-2 flex flex-wrap gap-2"><button disabled={busy === item.id || !(drafts[`feedback:${item.id}`] || '').trim()} onClick={() => sendFeedback(item)} className="rounded-lg bg-emerald-600 px-4 py-2 text-sm text-white disabled:opacity-50">送出並繼續專案</button><button disabled={busy === item.id} onClick={() => removeItem(item, 'accept')} className="flex items-center gap-2 rounded-lg bg-slate-100 px-3 py-2 text-sm"><CheckCircle2 size={15} />核准本次成果</button></div></div></div>}
+          {!!report.acceptanceChecks?.length && <div className="mt-4"><h4 className="text-sm font-medium text-slate-700">驗收檢查</h4><div className="mt-2 space-y-1 text-sm">{report.acceptanceChecks.map((check, index) => <p key={index} className={check.passed ? 'text-emerald-700' : 'text-amber-700'}>{check.passed ? '✓' : '○'} {check.item}{check.evidence ? ` — ${check.evidence}` : ''}</p>)}</div></div>}</div><div className="sticky bottom-0 mt-4 border-t border-slate-100 bg-white pt-4"><label className="block text-sm font-medium text-slate-700">要求修改或加入下一個功能</label><textarea value={drafts[`feedback:${item.id}`] || ''} onChange={event => setDraft(`feedback:${item.id}`, event.target.value)} placeholder="例如：加入主管 Reviewer；下一版增加 PowerPoint 範本套用。" className="mt-2 min-h-24 w-full rounded-lg border border-slate-300 p-3 text-sm"/><div className="mt-2 flex flex-wrap gap-2"><button type="button" disabled={busy === item.id || !(drafts[`feedback:${item.id}`] || '').trim()} onClick={() => sendFeedback(item)} className="rounded-lg bg-emerald-600 px-4 py-2 text-sm text-white disabled:opacity-50">{busy === item.id ? '送出中…' : '送出並繼續專案'}</button><button type="button" disabled={busy === item.id} onClick={() => removeItem(item, 'accept')} className="flex items-center gap-2 rounded-lg bg-slate-100 px-3 py-2 text-sm"><CheckCircle2 size={15} />核准本次成果</button></div>{feedbackStatus[item.id] && <p className={`mt-2 text-sm ${feedbackStatus[item.id].type === 'error' ? 'text-red-600' : feedbackStatus[item.id].type === 'success' ? 'text-emerald-700' : 'text-blue-600'}`}>{feedbackStatus[item.id].text}</p>}</div></div>}
       </section>
     )
   }
