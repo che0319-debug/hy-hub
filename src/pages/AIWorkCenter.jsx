@@ -186,7 +186,8 @@ export default function AIWorkCenter() {
             <h3 className="text-sm font-semibold text-slate-700">專案紀錄</h3>
             <div className="mt-2 space-y-2 text-sm text-slate-600">
               <p>執行輪次：{project.items.length || 0}</p>
-              <p>執行引擎：{executor.model || executor.provider || '舊版工作器（未記錄）'}</p>\n              <p>同步方式：HY Life OS API 自動回報</p>
+              <p>執行引擎：{executor.model || executor.provider || '舊版工作器（未記錄）'}</p>
+              <p>同步方式：HY Life OS API 自動回報</p>
               <p>最近更新：{item?.updatedAt ? new Date(item.updatedAt).toLocaleString('zh-TW') : '尚未執行'}</p>
             </div>
           </div>
