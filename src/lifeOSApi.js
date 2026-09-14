@@ -128,7 +128,7 @@ export async function fetchResearchCenter({ owner = '', status = '' } = {}) {
 }
 
 export async function actOnResearch(findingId, action, note = '') {
-  const response = await fetch(`${API_BASE}/api/internal/research-center/v1/${encodeURIComponent(findingId)}/'}`, {
+  const response = await fetch(`${API_BASE}/api/internal/research-center/v1/${encodeURIComponent(findingId)}/action`, {
     method: 'POST',
     headers: { ...authHeaders(), 'Content-Type': 'application/json' },
     body: JSON.stringify({ action, note }),
