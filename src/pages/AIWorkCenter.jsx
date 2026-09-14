@@ -54,7 +54,8 @@ export default function AIWorkCenter() {
   async function decide(plan, decision) {
     setBusy(plan.id)
     try {
-      await decideAutonomousPlan(plan.id, decision)
+      const note = decision === 'reject' ? (window.prompt('可選填不採用原因，Bot 會用來改善下一次提案') || '') : ''
+      await decideAutonomousPlan(plan.id, decision, note)
       await load()
     } catch (err) {
       setError(err.message || '決策寫入失敗')
@@ -174,7 +175,7 @@ export default function AIWorkCenter() {
       <div className="mb-6 flex items-start justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold text-slate-900">AI 工作中心</h1>
-          <p className="mt-1 text-slate-500">你給方向・AI 自動工作・產出成果・你做決定</p>
+          <p className="mt-1 text-slate-500">通過 HY Review 的主動提案，以及你勾選派工的 AI 工作</p>
         </div>
         <button onClick={load} className="flex items-center gap-2 rounded-lg border bg-white px-3 py-2 text-sm"><RefreshCw size={16} />重新整理</button>
       </div>
@@ -193,19 +194,20 @@ export default function AIWorkCenter() {
           <div className="grid gap-4 lg:grid-cols-2">
             {waiting.map(plan => (
               <article key={plan.id} className="rounded-xl border-l-4 border-red-400 bg-white p-4 shadow-sm">
-                <div className="flex items-center gap-2 text-sm text-red-600"><ShieldCheck size={16} />{label(plan.owner)} 準備開始</div>
+                <div className="flex items-center gap-2 text-sm text-red-600"><ShieldCheck size={16} />{label(plan.owner)}・HY Review 流程</div>
                 <h3 className="mt-2 font-semibold">{title(plan)}</h3>
                 <p className="mt-2 text-sm text-slate-600">{plan.whyNow || plan.context}</p>
                 <div className="mt-3 space-y-2 rounded-lg bg-slate-50 p-3 text-sm text-slate-700">
                   <p><b>觀察與證據：</b>{plan.observation || plan.context || '待補充'}</p>
                   <p><b>建議作法：</b>{plan.suggestedAction || plan.proposedSteps?.[0] || '先完成必要查證'}</p>
                   <p><b>預期成果：</b>{plan.expectedOutcome || '產出可驗證成果並縮小差距'}</p>
+                  <p><b>HY Review：</b>{plan.hyReview?.summary || '已完成角色、關聯、證據與行動性的基本檢查。'}</p>
                   {(plan.evidenceRefs || []).filter(ref => String(ref).startsWith('http')).map(ref => <a key={ref} href={ref} target="_blank" rel="noreferrer" className="block text-blue-600 underline">查看研究來源</a>)}
                 </div>
                 <div className="mt-4 flex flex-wrap gap-2">
-                  <button disabled={busy === plan.id} onClick={() => decide(plan, 'approve')} className="rounded-lg bg-blue-600 px-4 py-2 text-sm text-white">同意</button>
+                  <button disabled={busy === plan.id} onClick={() => decide(plan, 'approve')} className="rounded-lg bg-blue-600 px-4 py-2 text-sm text-white">核准執行</button>
                   <button disabled={busy === plan.id} onClick={() => decide(plan, 'approve_with_judgment')} className="rounded-lg bg-emerald-50 px-4 py-2 text-sm text-emerald-700">同意＋自行判斷</button>
-                  <button disabled={busy === plan.id} onClick={() => decide(plan, 'reject')} className="rounded-lg bg-slate-100 px-4 py-2 text-sm">取消</button>
+                  <button disabled={busy === plan.id} onClick={() => decide(plan, 'reject')} className="rounded-lg bg-slate-100 px-4 py-2 text-sm">不採用</button>
                 </div>
               </article>
             ))}
