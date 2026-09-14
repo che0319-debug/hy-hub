@@ -152,6 +152,7 @@ export default function AIWorkCenter() {
     const result = results.find(x => x.workItemId === item.id || x.id === item.resultId)
     const artifacts = result?.artifacts || item.artifacts || []
     const summary = result?.outcome || result?.summary || item.payload?.summary || item.kind || 'AI 正在處理這項工作。'
+    const driveProject = item.payload?.driveProject || {}
     const isOpen = expanded === item.id
 
     return (
@@ -165,6 +166,21 @@ export default function AIWorkCenter() {
         </div>
 
         <p className={`mt-3 whitespace-pre-wrap text-sm leading-6 text-slate-600 ${!isOpen ? 'line-clamp-3' : ''}`}>{summary}</p>
+
+        {(driveProject.folderUrl || driveProject.referenceFolderUrl) && (
+          <div className="mt-3 flex flex-wrap gap-2">
+            {driveProject.folderUrl && (
+              <a href={driveProject.folderUrl} target="_blank" rel="noreferrer" className="flex items-center gap-1.5 rounded-lg bg-blue-50 px-3 py-2 text-sm font-medium text-blue-700 hover:bg-blue-100">
+                <ExternalLink size={14} />開啟專案資料夾
+              </a>
+            )}
+            {driveProject.referenceFolderUrl && (
+              <a href={driveProject.referenceFolderUrl} target="_blank" rel="noreferrer" className="flex items-center gap-1.5 rounded-lg bg-amber-50 px-3 py-2 text-sm font-medium text-amber-700 hover:bg-amber-100">
+                <FileText size={14} />上傳參考資料
+              </a>
+            )}
+          </div>
+        )}
 
         {artifacts.length > 0 && (
           <div className="mt-3 grid gap-2">
