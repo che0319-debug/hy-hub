@@ -134,8 +134,11 @@ export default function AIWorkCenter() {
   }
 
 
-  async function removeItem(item) {
-    if (!window.confirm(`確認已驗收「${title(item)}」？將從 AI Work 清單移除，成果與學習紀錄會保留。`)) return
+  async function removeItem(item, mode = 'dismiss') {
+    const message = mode === 'accept'
+      ? `確認驗收「${title(item)}」？將從 AI Work 清單移除；成果、學習紀錄及 Google Drive 專案檔案都會保留。`
+      : `確認刪除「${title(item)}」？只移除 AI Work 卡片；Google Drive 專案檔案不會刪除。`
+    if (!window.confirm(message)) return
     setBusy(item.id)
     try {
       await dismissWorkItem(item.id)
@@ -200,7 +203,7 @@ export default function AIWorkCenter() {
               <button type="button" onClick={() => setExpanded(isOpen ? '' : item.id)} className="rounded-lg bg-blue-600 px-3 py-2 text-sm font-medium text-white">
                 {isOpen ? '收合成果' : '查看成果'}
               </button>
-              <button type="button" disabled={busy === item.id} onClick={() => removeItem(item)} className="flex items-center gap-1 rounded-lg bg-slate-100 px-3 py-2 text-sm text-slate-600 disabled:opacity-50">
+              <button type="button" disabled={busy === item.id} onClick={() => removeItem(item, 'accept')} className="flex items-center gap-1 rounded-lg bg-slate-100 px-3 py-2 text-sm text-slate-600 disabled:opacity-50">
                 <CheckCircle2 size={15} />驗收完成
               </button>
             </div>
