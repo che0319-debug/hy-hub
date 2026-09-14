@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Calendar, CheckSquare, Square, Plus, X, Pencil, Check } from 'lucide-react'
 import { useSessionContext } from '../App'
 import { postMilestone, postDispatchSession, deleteDispatchSession } from '../api'
@@ -211,6 +211,7 @@ function BoardColumn({ col, onToggle, sessions, botConfig, onMutate }) {
 export default function AgentBoard({ boardData, botConfig, onMutate }) {
   const [board] = useState(() => initBoard(boardData))
   const { sessions, addSession, removeSession } = useSessionContext()
+  const migratedSessionIds = useRef(new Set())
 
   useEffect(() => {
     // One-time compatibility bridge: migrate legacy checked assignments into
@@ -220,7 +221,8 @@ export default function AgentBoard({ boardData, botConfig, onMutate }) {
     )
     for (const session of sessions) {
       const match = items.find(({ item }) => item.id === session.milestoneId)
-      if (!match) continue
+      if (!match || migratedSessionIds.current.has(session.milestoneId)) continue
+      migratedSessionIds.current.add(session.milestoneId)
       createDirectWorkItem({
         title: match.item.title,
         milestoneId: match.item.id,
@@ -230,9 +232,12 @@ export default function AgentBoard({ boardData, botConfig, onMutate }) {
         projectName: match.col.name,
         due: match.item.due || '',
         desc: match.item.desc || session.desc || '',
-      }).catch(error => console.warn('[AgentBoard] legacy AI Work migration failed:', error))
+      }).catch(error => {
+        migratedSessionIds.current.delete(session.milestoneId)
+        console.warn('[AgentBoard] legacy AI Work migration failed:', error)
+      })
     }
-  }, [])
+  }, [sessions, board.columns, botConfig.name])
 
   async function toggleAssign(colId, item, colName) {
     const itemId = item.id
