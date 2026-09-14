@@ -7,6 +7,7 @@ import App from './App'
 import Home from './pages/Home'
 import Helpers from './pages/Helpers'
 import AIWorkCenter from './pages/AIWorkCenter'
+import ResearchCenter from './pages/ResearchCenter'
 import LineHY from './pages/LineHY'
 import LineXiaoyin from './pages/LineXiaoyin'
 import Line950157 from './pages/Line950157'
@@ -29,6 +30,7 @@ function DesktopRoutes({ onMobileVersion }) {
         <Route path="life-os" element={<LifeOS />} />
         <Route path="helpers" element={<Helpers />} />
         <Route path="memory" element={<MemoryCenter />} />
+        <Route path="research" element={<ResearchCenter />} />
         <Route path="dispatch" element={<AIWorkCenter />} />
         <Route path="line/hy" element={<LineHY />} />
         <Route path="line/xiaoyin" element={<LineXiaoyin />} />
