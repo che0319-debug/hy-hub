@@ -271,6 +271,20 @@ export default function AIWorkCenter() {
                 <div className="flex items-center gap-2 text-sm text-amber-600"><Clock3 size={16} />{label(item.owner)} 需要補充</div>
                 <h3 className="mt-2 font-semibold">{title(item)}</h3>
                 <p className="mt-2 text-sm text-slate-600">{item.clarificationQuestion || item.error || '需要你的方向才能繼續。'}</p>
+                {(item.payload?.driveProject?.folderUrl || item.payload?.driveProject?.referenceFolderUrl) && (
+                  <div className="mt-3 flex flex-wrap gap-2">
+                    {item.payload?.driveProject?.folderUrl && (
+                      <a href={item.payload.driveProject.folderUrl} target="_blank" rel="noreferrer" className="flex items-center gap-1.5 rounded-lg bg-blue-50 px-3 py-2 text-sm font-medium text-blue-700 hover:bg-blue-100">
+                        <ExternalLink size={14} />開啟專案資料夾
+                      </a>
+                    )}
+                    {item.payload?.driveProject?.referenceFolderUrl && (
+                      <a href={item.payload.driveProject.referenceFolderUrl} target="_blank" rel="noreferrer" className="flex items-center gap-1.5 rounded-lg bg-amber-50 px-3 py-2 text-sm font-medium text-amber-700 hover:bg-amber-100">
+                        <FileText size={14} />上傳參考資料
+                      </a>
+                    )}
+                  </div>
+                )}
                 <textarea
                   value={drafts[item.id] || ''}
                   onChange={event => setDraft(item.id, event.target.value)}
