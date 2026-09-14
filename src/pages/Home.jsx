@@ -1,13 +1,12 @@
 import { useState, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Bell, CheckCircle, Coins, RefreshCw, Pencil } from 'lucide-react'
+import { AlertCircle, ClipboardList, RefreshCw, Pencil, Telescope } from 'lucide-react'
 import { homeSummary } from '../mock/data'
 import { useSessionContext } from '../App'
 import PixelCity from '../mobile/PixelCity'
-import { fetchTodaySchedule, fetchAllMilestones, fetchMobileState, fetchWeeklyChange, postWeeklyChange } from '../api'
-import { fetchDailyOS } from '../lifeOSApi'
+import { fetchTodaySchedule, fetchAllMilestones, fetchMobileState, fetchWeeklyChange, postWeeklyChange, fetchLifeOSContext } from '../api'
+import { fetchDailyOS, fetchResearchCenter } from '../lifeOSApi'
 
-const PENDING_STATUSES = ['await', 'failed']
 const REFRESH_INTERVAL_MS = 60000
 
 const BOT_ROUTE = {
@@ -31,20 +30,13 @@ function normalizeDue(due) {
   return due ? due.replace(/\//g, '-') : ''
 }
 
-function MetricCard({ icon: Icon, label, value, highlight, onClick }) {
+function SystemOverviewCard({ icon: Icon, title, onClick, items, accent='blue' }) {
+  const colors = accent === 'violet' ? 'text-violet-600 bg-violet-50' : 'text-blue-600 bg-blue-50'
   return (
-    <div
-      className={`bg-white rounded-xl p-5 flex flex-col gap-2 border border-slate-200 shadow-sm ${onClick ? 'cursor-pointer hover:bg-slate-50 transition-colors' : ''}`}
-      onClick={onClick}
-    >
-      <div className="flex items-center gap-2 text-slate-500 text-sm">
-        <Icon size={16} />
-        {label}
-      </div>
-      <div className={`text-2xl font-bold ${highlight ? 'text-red-500' : 'text-slate-800'}`}>
-        {value}
-      </div>
-    </div>
+    <button onClick={onClick} className="w-full rounded-xl border border-slate-200 bg-white p-5 text-left shadow-sm transition-colors hover:bg-slate-50">
+      <div className="mb-4 flex items-center gap-2 font-semibold text-slate-800"><span className={`rounded-lg p-2 ${colors}`}><Icon size={18}/></span>{title}</div>
+      <div className="grid grid-cols-3 gap-3">{items.map(([label,value,alert])=><div key={label}><div className={`text-2xl font-bold ${alert&&value>0?'text-red-500':'text-slate-800'}`}>{value}</div><div className="mt-1 text-xs text-slate-500">{label}</div></div>)}</div>
+    </button>
   )
 }
 
@@ -348,17 +340,23 @@ export default function Home() {
   const [view, setView]           = useState('data')
   const [worldState, setWorldState] = useState(null)
   const [dailyOS, setDailyOS] = useState(null)
+  const [researchData, setResearchData] = useState({ items: [] })
+  const [homeCore, setHomeCore] = useState(null)
   const [refreshing, setRefreshing] = useState(false)
   const { sessions, refreshSessions } = useSessionContext()
   const navigate  = useNavigate()
   const timerRef  = useRef(null)
 
   async function loadWorld() {
-    const results = await Promise.allSettled([fetchMobileState(), fetchDailyOS()])
+    const results = await Promise.allSettled([fetchMobileState(), fetchDailyOS(), fetchResearchCenter({}), fetchLifeOSContext()])
     if (results[0].status === 'fulfilled') setWorldState(results[0].value)
     else console.warn('[Home] fetchMobileState failed:', results[0].reason)
     if (results[1].status === 'fulfilled') setDailyOS(results[1].value)
     else console.warn('[Home] fetchDailyOS failed:', results[1].reason)
+    if (results[2].status === 'fulfilled') setResearchData(results[2].value)
+    else console.warn('[Home] fetchResearchCenter failed:', results[2].reason)
+    if (results[3].status === 'fulfilled') setHomeCore(results[3].value)
+    else console.warn('[Home] fetchLifeOSContext failed:', results[3].reason)
   }
 
   async function handleRefresh() {
@@ -373,7 +371,14 @@ export default function Home() {
     return () => clearInterval(timerRef.current)
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
-  const pendingCount = sessions.filter(s => PENDING_STATUSES.includes(s.status)).length
+  const researchItems = (researchData.items || []).filter(x => !['archived','stopped'].includes(x.researchStatus))
+  const researchNeedsYou = researchItems.filter(x => x.needsUserInput || x.researchStatus === 'human_review_ready').length
+  const plans = homeCore?.autonomousPlans || []
+  const workItems = homeCore?.workItems || []
+  const aiWaiting = plans.filter(x => x.status === 'waiting_approval').length + workItems.filter(x => x.status === 'needs_clarification').length
+  const aiRunning = workItems.filter(x => ['queued','running','claimed','in_progress'].includes(x.status)).length
+  const aiDone = workItems.filter(x => ['succeeded','completed','done'].includes(x.status)).length
+  const needsYou = researchNeedsYou + aiWaiting
 
   function handleBotClick(botId) {
     const route = BOT_ROUTE[botId]
@@ -410,25 +415,10 @@ export default function Home() {
         <div>
           <WeeklyChangeCard />
           <TodayResultsCard />
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
-            <MetricCard
-              icon={Bell}
-              label="待確認派工"
-              value={pendingCount}
-              highlight={pendingCount > 0}
-              onClick={() => navigate('/dispatch')}
-            />
-            <MetricCard
-              icon={CheckCircle}
-              label="進行中派工"
-              value={`${sessions.filter(s => s.status === 'running').length} 件`}
-            />
-            <MetricCard
-              icon={Coins}
-              label="花費"
-              value="查看 Console →"
-              onClick={() => window.open('https://console.anthropic.com', '_blank')}
-            />
+          {needsYou > 0 && <button onClick={() => navigate(aiWaiting ? '/dispatch' : '/research')} className="mb-4 flex w-full items-center gap-3 rounded-xl border border-red-200 bg-red-50 p-4 text-left text-red-800"><AlertCircle size={20}/><div><b>有 {needsYou} 件需要你處理</b><p className="text-sm">包含研究問題與 AI 工作決策</p></div></button>}
+          <div className="mb-6 grid grid-cols-1 gap-4 md:grid-cols-2">
+            <SystemOverviewCard icon={Telescope} title="Bot 研究" onClick={() => navigate('/research')} items={[[ '研究主題', researchItems.length ],[ '等待回答', researchItems.filter(x=>x.needsUserInput).length, true ],[ '等你查看', researchItems.filter(x=>x.researchStatus==='human_review_ready').length, true ]]}/>
+            <SystemOverviewCard icon={ClipboardList} title="AI 工作" accent="violet" onClick={() => navigate('/dispatch')} items={[[ '待你核准', aiWaiting, true ],[ '執行中', aiRunning ],[ '最近完成', aiDone ]]}/>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <TodoSection />
