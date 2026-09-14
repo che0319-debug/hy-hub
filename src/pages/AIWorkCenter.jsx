@@ -145,7 +145,7 @@ export default function AIWorkCenter() {
     try {
       const response = await submitWorkFeedback(item.id, value, `hy-work-feedback-${item.id}-${Date.now()}`)
       setDraft(key, '')
-      setFeedbackStatus(current => ({ ...current, [item.id]: { type: 'success', text: `已建立下一輪工作：${response.item?.status === 'queued' ? '等待 AI 接手' : response.item?.status || '已送出'}` } }))
+      setFeedbackStatus(current => ({ ...current, [item.id]: { type: 'success', text: `已送出修改建議：「${value}」；下一輪狀態：${response.item?.status === 'queued' ? '等待 AI 接手' : response.item?.status || '已送出'}` } }))
       await load()
     } catch (err) {
       const message = err.message || '修改建議送出失敗'
@@ -187,7 +187,8 @@ export default function AIWorkCenter() {
         <div className="mt-5 grid gap-4 lg:grid-cols-2">
           <div>
             <h3 className="text-sm font-semibold text-slate-700">目前進度</h3>
-            <p className="mt-2 whitespace-pre-wrap text-sm leading-6 text-slate-600">{item?.clarificationQuestion || output || plan?.whyNow || payload.summary || '等待 GPT Work 回寫進度。'}</p>
+            {payload.revisionFeedback && <div className="mt-2 rounded-lg border border-emerald-200 bg-emerald-50 p-3"><p className="text-xs font-medium text-emerald-700">本輪修改需求</p><p className="mt-1 whitespace-pre-wrap text-sm leading-6 text-slate-700">{payload.revisionFeedback}</p></div>}
+            <p className="mt-2 whitespace-pre-wrap text-sm leading-6 text-slate-600">{item?.clarificationQuestion || output || plan?.whyNow || payload.summary || '等待 AI 回寫進度。'}</p>
           </div>
           <div>
             <h3 className="text-sm font-semibold text-slate-700">專案紀錄</h3>
