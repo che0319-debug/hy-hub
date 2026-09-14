@@ -115,3 +115,23 @@ export async function dismissWorkItem(workId) {
   })
   return parseResponse(response, 'dismissWorkItem')
 }
+
+
+export async function fetchResearchCenter({ owner = '', status = '' } = {}) {
+  const params = new URLSearchParams()
+  if (owner) params.set('owner', owner)
+  if (status) params.set('status', status)
+  const response = await fetch(`${API_BASE}/api/internal/research-center/v1?${params}`, {
+    headers: { ...authHeaders() }, cache: 'no-store',
+  })
+  return parseResponse(response, 'fetchResearchCenter')
+}
+
+export async function actOnResearch(findingId, action, note = '') {
+  const response = await fetch(`${API_BASE}/api/internal/research-center/v1/${encodeURIComponent(findingId)}/'}`, {
+    method: 'POST',
+    headers: { ...authHeaders(), 'Content-Type': 'application/json' },
+    body: JSON.stringify({ action, note }),
+  })
+  return parseResponse(response, 'actOnResearch')
+}
