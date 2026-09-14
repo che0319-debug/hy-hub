@@ -187,7 +187,7 @@ export default function AIWorkCenter() {
             <div className="mt-2 space-y-2 text-sm text-slate-600">
               <p>執行輪次：{project.items.length || 0}</p>
               <p>執行引擎：{executor.model || executor.provider || '舊版工作器（未記錄）'}</p>
-              <p>同步方式：HY Life OS API 自動回報</p>
+              <p>回報方式：工作器 → AI Work 自動回報（非 ChatGPT 專案同步）</p>
               <p>最近更新：{item?.updatedAt ? new Date(item.updatedAt).toLocaleString('zh-TW') : '尚未執行'}</p>
             </div>
           </div>
