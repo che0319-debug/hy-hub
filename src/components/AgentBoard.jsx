@@ -1,7 +1,8 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Calendar, CheckSquare, Square, Plus, X, Pencil, Check } from 'lucide-react'
 import { useSessionContext } from '../App'
 import { postMilestone, postDispatchSession, deleteDispatchSession } from '../api'
+import { createDirectWorkItem } from '../lifeOSApi'
 
 function initBoard(boardData) {
   return {
@@ -91,7 +92,7 @@ function MilestoneCard({ item, colId, colName, onToggle, sessions, botConfig, on
           </button>
         )}
         <button
-          onClick={() => onToggle(colId, item.id, colName, item.title)}
+          onClick={() => onToggle(colId, item, colName)}
           className="flex items-center gap-1.5 text-xs transition-colors"
         >
           {assigned ? (
@@ -211,16 +212,55 @@ export default function AgentBoard({ boardData, botConfig, onMutate }) {
   const [board] = useState(() => initBoard(boardData))
   const { sessions, addSession, removeSession } = useSessionContext()
 
-  async function toggleAssign(colId, itemId, colName, itemTitle) {
+  useEffect(() => {
+    // One-time compatibility bridge: migrate legacy checked assignments into
+    // canonical AI Work. The endpoint is idempotent and only schedules queued work.
+    const items = board.columns.flatMap(col =>
+      col.items.map(item => ({ item, col }))
+    )
+    for (const session of sessions) {
+      const match = items.find(({ item }) => item.id === session.milestoneId)
+      if (!match) continue
+      createDirectWorkItem({
+        title: match.item.title,
+        milestoneId: match.item.id,
+        owner: botConfig.name,
+        sourceMilestone: match.col.name,
+        projectId: match.col.id,
+        projectName: match.col.name,
+        due: match.item.due || '',
+        desc: match.item.desc || session.desc || '',
+      }).catch(error => console.warn('[AgentBoard] legacy AI Work migration failed:', error))
+    }
+  }, [])
+
+  async function toggleAssign(colId, item, colName) {
+    const itemId = item.id
     const alreadyAssigned = sessions.some(s => s.milestoneId === itemId)
     if (!alreadyAssigned) {
       try {
         const session = await postDispatchSession({
-          title: itemTitle,
+          title: item.title,
           sourceMilestone: colName,
           assignee: botConfig.name,
           milestoneId: itemId,
+          desc: item.desc || '',
         })
+        try {
+          await createDirectWorkItem({
+            title: item.title,
+            milestoneId: itemId,
+            owner: botConfig.name,
+            sourceMilestone: colName,
+            projectId: colId,
+            projectName: colName,
+            due: item.due || '',
+            desc: item.desc || '',
+          })
+        } catch (error) {
+          await deleteDispatchSession(itemId).catch(() => {})
+          throw error
+        }
         addSession(session)
       } catch (e) {
         console.error('[AgentBoard] postDispatchSession failed:', e)
