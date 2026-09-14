@@ -1,6 +1,6 @@
 import { StrictMode, useEffect, useState } from 'react'
 import { createRoot } from 'react-dom/client'
-import { HashRouter, Routes, Route } from 'react-router-dom'
+import { HashRouter, Routes, Route, Navigate } from 'react-router-dom'
 import './index.css'
 import './mobile/mobile-v2.css'
 import App from './App'
@@ -17,7 +17,6 @@ import Settings from './pages/Settings'
 import AgentConfig from './pages/AgentConfig'
 import Goals from './pages/Goals'
 import Strategy from './pages/Strategy'
-import LifeOS from './pages/LifeOS'
 import MemoryCenter from './pages/MemoryCenter'
 import AuthGate from './components/AuthGate'
 import MobileAppV2 from './mobile/MobileAppV2'
@@ -27,7 +26,7 @@ function DesktopRoutes({ onMobileVersion }) {
     <Routes>
       <Route path="/" element={<App onMobileVersion={onMobileVersion} />}>
         <Route index element={<Home />} />
-        <Route path="life-os" element={<LifeOS />} />
+        <Route path="life-os" element={<Navigate to="/" replace />} />
         <Route path="helpers" element={<Helpers />} />
         <Route path="memory" element={<MemoryCenter />} />
         <Route path="research" element={<ResearchCenter />} />
