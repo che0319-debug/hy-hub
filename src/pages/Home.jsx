@@ -105,19 +105,6 @@ function TodoSection() {
   )
 }
 
-function WeeklyTop3Card() {
-  const [items, setItems] = useState(null)
-  useEffect(() => { fetchMobileState().then(data => setItems(data.weeklyTop3 || [])).catch(() => setItems([])) }, [])
-  return (
-    <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-5 mb-4">
-      <p className="text-sm font-semibold text-slate-700 mb-3">本週最重要 3 件事</p>
-      {items === null ? <p className="text-xs text-slate-400">載入中…</p> : items.length === 0 ? <p className="text-xs text-slate-400">本週尚未設定</p> : (
-        <ol className="space-y-2">{items.map((item, index) => <li key={item.id} className={`flex gap-3 text-sm ${item.completed ? 'text-slate-400 line-through' : 'text-slate-700'}`}><b className="text-blue-600">{index + 1}</b><span>{item.title}</span></li>)}</ol>
-      )}
-    </div>
-  )
-}
-
 function TodayResultsCard() {
   const [items, setItems] = useState(null)
   useEffect(() => { fetchMobileState().then(data => setItems(data.todayCompleted || [])).catch(() => setItems([])) }, [])
@@ -422,7 +409,6 @@ export default function Home() {
       {view === 'data' ? (
         <div>
           <WeeklyChangeCard />
-          <WeeklyTop3Card />
           <TodayResultsCard />
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
             <MetricCard
