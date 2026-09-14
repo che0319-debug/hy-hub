@@ -39,6 +39,15 @@ export async function decideAutonomousPlan(planId, decision, note = '') {
   return parseResponse(response, 'decideAutonomousPlan')
 }
 
+export async function createDirectWorkItem(payload) {
+  const response = await fetch(`${API_BASE}/api/life-os/v1/work-items/direct-assignment`, {
+    method: 'POST',
+    headers: { ...authHeaders(), 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  })
+  return parseResponse(response, 'createDirectWorkItem')
+}
+
 export async function answerWorkClarification(workId, answer) {
   const response = await fetch(`${API_BASE}/api/life-os/v1/work-items/${encodeURIComponent(workId)}/clarification`, {
     method: 'POST',
