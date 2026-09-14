@@ -326,3 +326,26 @@ export async function fetchAllMilestones() {
 
   return out;
 }
+
+export async function fetchAgentMemories(owner, status = '') {
+  const params = new URLSearchParams({ owner })
+  if (status) params.set('status', status)
+  const res = await fetch(`${API_BASE}/api/internal/memories/v1?${params}`, {
+    headers: { ...authHeaders() },
+    cache: 'no-store',
+  })
+  const result = await res.json().catch(() => ({}))
+  if (!res.ok || !result.ok) throw new Error(result.error || `fetchAgentMemories failed: ${res.status}`)
+  return result.memories || []
+}
+
+export async function reviewAgentMemory(memoryId, decision, note = '') {
+  const res = await fetch(`${API_BASE}/api/internal/memories/v1/${encodeURIComponent(memoryId)}/review`, {
+    method: 'POST',
+    headers: { ...authHeaders(), 'Content-Type': 'application/json' },
+    body: JSON.stringify({ decision, reviewer: 'human_hy', note }),
+  })
+  const result = await res.json().catch(() => ({}))
+  if (!res.ok || !result.ok) throw new Error(result.error || `reviewAgentMemory failed: ${res.status}`)
+  return result.memory
+}
