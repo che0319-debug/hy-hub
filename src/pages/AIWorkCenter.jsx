@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { Bot, CheckCircle2, Clock3, ExternalLink, FileText, FolderOpen, MessageSquare, RefreshCw, Send, ShieldCheck, Trash2 } from 'lucide-react'
+import { Bot, CheckCircle2, CircleAlert, Clock3, ExternalLink, FileText, FolderOpen, MessageSquare, RefreshCw, Send, ShieldCheck, Trash2 } from 'lucide-react'
 import { authHeaders } from '../auth'
 import { answerWorkClarification, createDirectWorkItem, decideAutonomousPlan, dismissWorkItem, submitWorkFeedback } from '../lifeOSApi'
 import { fetchDispatchSessions } from '../api'
@@ -184,20 +184,11 @@ export default function AIWorkCenter() {
           {drive.referenceFolderUrl && <a href={drive.referenceFolderUrl} target="_blank" rel="noreferrer" className="flex items-center gap-2 rounded-lg border bg-white px-4 py-2 text-sm text-amber-700"><FileText size={16} />上傳參考資料</a>}
         </div>
 
-        <div className="mt-5 grid gap-4 lg:grid-cols-2">
+        <div className="mt-5">
           <div>
             <h3 className="text-sm font-semibold text-slate-700">目前進度</h3>
             {payload.revisionFeedback && <div className="mt-2 rounded-lg border border-emerald-200 bg-emerald-50 p-3"><p className="text-xs font-medium text-emerald-700">本輪修改需求</p><p className="mt-1 whitespace-pre-wrap text-sm leading-6 text-slate-700">{payload.revisionFeedback}</p></div>}
             <p className="mt-2 whitespace-pre-wrap text-sm leading-6 text-slate-600">{item?.clarificationQuestion || output || plan?.whyNow || payload.summary || '等待 AI 回寫進度。'}</p>
-          </div>
-          <div>
-            <h3 className="text-sm font-semibold text-slate-700">專案紀錄</h3>
-            <div className="mt-2 space-y-2 text-sm text-slate-600">
-              <p>執行輪次：{project.items.length || 0}</p>
-              <p>執行引擎：{executor.model || executor.provider || '舊版工作器（未記錄）'}</p>
-              <p>回報方式：工作器 → AI Work 自動回報（非 ChatGPT 專案同步）</p>
-              <p>最近更新：{item?.updatedAt ? new Date(item.updatedAt).toLocaleString('zh-TW') : '尚未執行'}</p>
-            </div>
           </div>
         </div>
 
@@ -219,6 +210,14 @@ export default function AIWorkCenter() {
       {error && <div className="mb-4 rounded-lg bg-red-50 p-3 text-red-700">{error}</div>}
       <div className="mb-5 grid grid-cols-2 gap-3 lg:grid-cols-4"><div className="rounded-xl border bg-white p-4"><b className="text-2xl">{projects.length}</b><p className="text-sm text-slate-500">全部專案</p></div><div className="rounded-xl border bg-blue-50 p-4"><b className="text-2xl text-blue-700">{runningCount}</b><p className="text-sm text-slate-600">GPT 執行中</p></div><div className="rounded-xl border bg-red-50 p-4"><b className="text-2xl text-red-700">{waitingCount}</b><p className="text-sm text-slate-600">等你決定</p></div><div className="rounded-xl border bg-amber-50 p-4"><b className="text-2xl text-emerald-700">{reviewCount}</b><p className="text-sm text-slate-600">待你驗收</p></div></div>
       <div className="mb-5 flex flex-wrap gap-2">{[['all','全部'],['hy','HY'],['950157','950157'],['family','小因'],['sam','Sam']].map(([value,text]) => <button key={value} onClick={() => setOwnerFilter(value)} className={`rounded-lg border px-3 py-2 text-sm ${ownerFilter === value ? 'border-blue-500 bg-blue-50 text-blue-700' : 'bg-white text-slate-600'}`}>{text} {value === 'all' ? projects.length : projects.filter(project => project.owner === value).length}</button>)}</div>
+      <section className="mb-5 flex flex-col gap-3 rounded-xl border bg-white p-4 lg:flex-row lg:items-center lg:justify-between">
+        <div><p className="font-semibold text-slate-800">全部專案共用執行設定</p><p className="mt-1 text-sm text-slate-500">共用規則統一放在外層，各專案不重複顯示。</p></div>
+        <div className="flex flex-wrap gap-x-5 gap-y-2 text-sm text-slate-600">
+          <span className="flex items-center gap-1.5"><Bot size={15} className="text-blue-600"/>目前：HY Life OS 工作器</span>
+          <span className="flex items-center gap-1.5"><CircleAlert size={15} className="text-amber-600"/>GPT Work：尚未連結</span>
+          <span className="flex items-center gap-1.5"><FolderOpen size={15} className="text-blue-600"/>成果：Google Drive 保存</span>
+        </div>
+      </section>
       <div className="space-y-3">{visibleProjects.map(project => { const meta = statusMeta(project); const open = expanded === project.key; const latest = project.latest; const next = latest?.clarificationQuestion || latest?.payload?.nextIntentIfDone || (meta.key === 'review' ? '檢視並驗收本輪交付' : meta.key === 'running' ? '等待 GPT 回寫最新進度' : project.plan?.suggestedAction || '等待下一步'); return <div key={project.key}><button onClick={() => setExpanded(open ? '' : project.key)} className={`w-full rounded-xl border bg-white p-4 text-left shadow-sm transition ${open ? 'border-blue-400 ring-1 ring-blue-200' : 'border-slate-200 hover:border-blue-300'}`}><div className="flex items-start justify-between gap-3"><div><h2 className="font-semibold text-slate-900">{project.title}</h2><p className="mt-1 text-sm text-slate-500">{ownerLabel(project.owner)} · AI 專案 · {project.items.length || 0} 個執行輪次</p></div><span className={`rounded-full px-3 py-1 text-xs font-medium ${meta.cls}`}>{meta.text}</span></div><div className="mt-3 flex items-center justify-between gap-3 text-sm text-slate-600"><span className="line-clamp-1">下一步：{next}</span><span className="shrink-0 text-xs text-slate-400">{latest?.updatedAt ? new Date(latest.updatedAt).toLocaleDateString('zh-TW') : '待建立'}</span></div></button>{open && ProjectDetail({ project })}</div>})}{!visibleProjects.length && <div className="rounded-xl border border-dashed p-10 text-center text-slate-400">此 Bot 目前沒有 AI 專案。</div>}</div>
     </div>
   )
