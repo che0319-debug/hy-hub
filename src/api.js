@@ -349,3 +349,41 @@ export async function reviewAgentMemory(memoryId, decision, note = '') {
   if (!res.ok || !result.ok) throw new Error(result.error || `reviewAgentMemory failed: ${res.status}`)
   return result.memory
 }
+
+
+export async function fetchMemoryCenter(filters = {}) {
+  const params = new URLSearchParams()
+  Object.entries(filters).forEach(([key, value]) => { if (value) params.set(key, value) })
+  const res = await fetch(`${API_BASE}/api/internal/memories/v1/center?${params}`, { headers: { ...authHeaders() }, cache: 'no-store' })
+  const result = await res.json().catch(() => ({}))
+  if (!res.ok || !result.ok) throw new Error(result.error || `fetchMemoryCenter failed: ${res.status}`)
+  return result
+}
+
+export async function promoteShortTermMemory(memory) {
+  const res = await fetch(`${API_BASE}/api/internal/memories/v1/short-term/promote`, {
+    method: 'POST', headers: { ...authHeaders(), 'Content-Type': 'application/json' },
+    body: JSON.stringify({ owner: memory.owner, sourceRef: memory.id, content: memory.summary, category: 'other' }),
+  })
+  const result = await res.json().catch(() => ({}))
+  if (!res.ok || !result.ok) throw new Error(result.error || `promote failed: ${res.status}`)
+  return result.memory
+}
+
+export async function dismissShortTermMemory(sourceRef) {
+  const res = await fetch(`${API_BASE}/api/internal/memories/v1/short-term/dismiss`, {
+    method: 'POST', headers: { ...authHeaders(), 'Content-Type': 'application/json' }, body: JSON.stringify({ sourceRef }),
+  })
+  const result = await res.json().catch(() => ({}))
+  if (!res.ok || !result.ok) throw new Error(result.error || `dismiss failed: ${res.status}`)
+  return result
+}
+
+export async function updateAgentMemory(memoryId, payload) {
+  const res = await fetch(`${API_BASE}/api/internal/memories/v1/${encodeURIComponent(memoryId)}`, {
+    method: 'PUT', headers: { ...authHeaders(), 'Content-Type': 'application/json' }, body: JSON.stringify(payload),
+  })
+  const result = await res.json().catch(() => ({}))
+  if (!res.ok || !result.ok) throw new Error(result.error || `update memory failed: ${res.status}`)
+  return result.memory
+}
