@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { bots } from '../mock/data'
-import { fetchPersona, savePersona, fetchAgentTools, fetchAgentModels } from '../api'
+import { fetchPersona, savePersona, fetchAgentTools, fetchAgentModels, fetchAgentMemories, reviewAgentMemory } from '../api'
 
 const STATUS_COLOR = {
   running: 'bg-blue-500',
@@ -145,6 +145,10 @@ export default function AgentConfig() {
   const [tools, setTools] = useState(null)
   const [toolsError, setToolsError] = useState(false)
   const [models, setModels] = useState(null)
+  const [memories, setMemories] = useState([])
+  const [memoryLoading, setMemoryLoading] = useState(true)
+  const [memoryError, setMemoryError] = useState('')
+  const [memoryAction, setMemoryAction] = useState('')
 
   useEffect(() => {
     if (!personaBot) return
@@ -158,6 +162,36 @@ export default function AgentConfig() {
       .then(d => setModels(d.models))
       .catch(() => {})
   }, [])
+
+  async function loadMemories() {
+    if (!personaBot) return
+    setMemoryLoading(true)
+    setMemoryError('')
+    try {
+      setMemories(await fetchAgentMemories(personaBot))
+    } catch (e) {
+      setMemoryError(e.message)
+    } finally {
+      setMemoryLoading(false)
+    }
+  }
+
+  useEffect(() => {
+    loadMemories()
+  }, [personaBot])
+
+  async function handleMemoryDecision(memoryId, decision) {
+    setMemoryAction(memoryId)
+    setMemoryError('')
+    try {
+      await reviewAgentMemory(memoryId, decision)
+      await loadMemories()
+    } catch (e) {
+      setMemoryError(e.message)
+    } finally {
+      setMemoryAction('')
+    }
+  }
 
   if (!bot) {
     return (
@@ -245,17 +279,69 @@ export default function AgentConfig() {
           </ConfigSection>
         </div>
 
-        <ConfigSection title="Memory">
-          <div className="flex gap-6">
-            <div>
-              <p className="text-xs text-slate-400 mb-0.5">Scope</p>
-              <p className="text-xs text-slate-700">{bot.memory.scope}</p>
-            </div>
-            <div>
-              <p className="text-xs text-slate-400 mb-0.5">Store</p>
-              <p className="text-xs text-slate-700">{bot.memory.store}</p>
-            </div>
+        <ConfigSection title="正式記憶">
+          <div className="flex items-center justify-between mb-3">
+            <p className="text-xs text-slate-500">
+              已確認 {memories.filter(m => m.status === 'confirmed').length} ·
+              待確認 {memories.filter(m => m.status === 'pending_confirmation').length} ·
+              已封存 {memories.filter(m => m.status === 'archived').length}
+            </p>
+            <button
+              onClick={loadMemories}
+              disabled={memoryLoading}
+              className="px-2.5 py-1 text-xs border border-slate-300 text-slate-600 rounded hover:bg-slate-50 disabled:opacity-50"
+            >
+              重新整理
+            </button>
           </div>
+          {memoryLoading ? (
+            <p className="text-xs text-slate-400">載入中…</p>
+          ) : memoryError ? (
+            <p className="text-xs text-red-500">{memoryError}</p>
+          ) : memories.length === 0 ? (
+            <p className="text-xs text-slate-400">（尚無正式記憶或待確認項目）</p>
+          ) : (
+            <div className="space-y-2">
+              {memories.map(memory => (
+                <div key={memory.id} className="border border-slate-200 rounded-lg p-3">
+                  <div className="flex items-start justify-between gap-3">
+                    <div>
+                      <p className="text-xs text-slate-700">{memory.content}</p>
+                      <p className="text-[11px] text-slate-400 mt-1">
+                        {memory.kind || 'fact'} ·
+                        {memory.status === 'confirmed' ? ' 已確認' :
+                         memory.status === 'archived' ? ' 已封存' : ' 待本人確認'} ·
+                        v{memory.version || 1}
+                      </p>
+                    </div>
+                    <div className="flex gap-1 flex-shrink-0">
+                      {memory.status !== 'confirmed' && memory.status !== 'archived' && (
+                        <button
+                          onClick={() => handleMemoryDecision(memory.id, 'confirm')}
+                          disabled={memoryAction === memory.id}
+                          className="px-2 py-1 text-[11px] bg-blue-600 text-white rounded disabled:opacity-50"
+                        >
+                          確認
+                        </button>
+                      )}
+                      {memory.status !== 'archived' && (
+                        <button
+                          onClick={() => handleMemoryDecision(memory.id, 'archive')}
+                          disabled={memoryAction === memory.id}
+                          className="px-2 py-1 text-[11px] border border-slate-300 text-slate-600 rounded disabled:opacity-50"
+                        >
+                          封存
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+          <p className="text-[11px] text-slate-400 mt-3">
+            對話摘要不會自動成為正式記憶；只有你確認後，Bot 才能在後續對話使用。
+          </p>
         </ConfigSection>
 
       </div>
