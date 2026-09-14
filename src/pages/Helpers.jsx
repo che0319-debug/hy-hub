@@ -76,7 +76,7 @@ function BotCard({ botId, health }) {
           to={`/agent/${agentId}`}
           className="text-xs text-slate-400 hover:text-blue-600 flex-shrink-0 mt-0.5"
         >
-          ⚙ 人設
+          ⚙ 人設與記憶
         </Link>
       </div>
       <div className="flex flex-col gap-1.5">
@@ -104,7 +104,7 @@ export default function Helpers() {
         <span className="inline-block w-3 h-3 rounded-full bg-blue-600" />
         <h1 className="text-xl font-bold text-slate-800">我的小幫手</h1>
       </div>
-      <p className="text-sm text-slate-400 mb-6 ml-5">記憶健康探針 · 最後更新時間</p>
+      <div className="mb-6 ml-5 flex items-center gap-3"><p className="text-sm text-slate-400">記憶健康探針 · 最後更新時間</p><Link to="/memory" className="text-sm text-blue-600 hover:underline">開啟記憶中心 →</Link></div>
 
       {loading && <p className="text-sm text-slate-400">載入中…</p>}
       {error   && <p className="text-sm text-red-400">無法載入：{error}</p>}
