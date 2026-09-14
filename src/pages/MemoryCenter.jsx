@@ -15,7 +15,7 @@ export default function MemoryCenter() {
   const [owner, setOwner] = useState('')
   const [status, setStatus] = useState('')
   const [query, setQuery] = useState('')
-  const [tab, setTab] = useState('short')
+  const [tab, setTab] = useState('long')
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [busy, setBusy] = useState('')
@@ -44,7 +44,7 @@ export default function MemoryCenter() {
   return (
     <div className="space-y-5">
       <div className="flex flex-wrap items-start justify-between gap-3">
-        <div><h1 className="text-xl font-bold text-slate-800">記憶中心</h1><p className="mt-1 text-sm text-slate-400">短期記憶 → 本人確認 → 正式長期記憶</p></div>
+        <div><h1 className="text-xl font-bold text-slate-800">記憶中心</h1><p className="mt-1 text-sm text-slate-400">以正式長期記憶為主；短期內容由 Bots 自動整理</p></div>
         {h && <span className={`rounded-full border px-3 py-1 text-xs font-semibold ${levelStyle[h.level]}`}>● {levelLabel[h.level]}</span>}
       </div>
 
@@ -59,11 +59,11 @@ export default function MemoryCenter() {
         <input value={query} onChange={e => setQuery(e.target.value)} placeholder="搜尋內容、來源…" className="min-w-48 flex-1 rounded border border-slate-200 px-3 py-2 text-sm" />
       </div>
 
-      <div className="flex gap-1 border-b border-slate-200">{[['short','短期記憶'],['long','長期記憶'],['health','健康監測']].map(([k,l]) => <button key={k} onClick={() => setTab(k)} className={`px-4 py-2 text-sm ${tab === k ? 'border-b-2 border-blue-600 font-semibold text-blue-700' : 'text-slate-500'}`}>{l}</button>)}</div>
+      <div className="flex gap-1 border-b border-slate-200">{[['long','長期記憶'],['short','短期工作區'],['health','健康監測']].map(([k,l]) => <button key={k} onClick={() => setTab(k)} className={`px-4 py-2 text-sm ${tab === k ? 'border-b-2 border-blue-600 font-semibold text-blue-700' : 'text-slate-500'}`}>{l}</button>)}</div>
       {error && <p className="rounded bg-red-50 p-3 text-sm text-red-600">{error}</p>}
       {loading && <p className="text-sm text-slate-400">載入中…</p>}
 
-      {!loading && tab === 'short' && <div className="space-y-3">{short.length === 0 && <p className="text-sm text-slate-400">目前沒有短期記憶。</p>}{short.map(m => <div key={m.id} className="rounded-xl border border-slate-200 bg-white p-4"><div className="flex flex-wrap justify-between gap-2"><div><p className="text-sm font-medium text-slate-800">{m.summary}</p><p className="mt-1 text-xs text-slate-400">{ownerLabel[m.owner]} · {m.date} · 來源 {m.source || m.owner} · 未確認 · 保留 30 天</p></div><div className="flex gap-2"><button disabled={busy === m.id} onClick={() => act(m.id, () => promoteShortTermMemory(m))} className="rounded bg-blue-600 px-3 py-1.5 text-xs text-white disabled:opacity-50">升級候選</button><button disabled={busy === m.id} onClick={() => act(m.id, () => dismissShortTermMemory(m.id))} className="rounded border border-slate-300 px-3 py-1.5 text-xs text-slate-600">忽略</button></div></div>{m.highlights?.length > 0 && <ul className="mt-2 list-disc pl-5 text-xs text-slate-600">{m.highlights.map((x,i) => <li key={i}>{x}</li>)}</ul>}</div>)}</div>}
+      {!loading && tab === 'short' && <div className="space-y-3">{short.length === 0 && <p className="text-sm text-slate-400">目前沒有短期記憶。</p>}{short.map(m => <div key={m.id} className="rounded-xl border border-slate-200 bg-white p-4"><div className="flex flex-wrap justify-between gap-2"><div><p className="text-sm font-medium text-slate-800">{m.summary}</p><p className="mt-1 text-xs text-slate-400">{ownerLabel[m.owner]} · {m.date} · 來源 {m.source || m.owner} · 未確認 · Bot 工作區 · 保留 7 天</p></div><div className="flex gap-2"><button disabled={busy === m.id} onClick={() => act(m.id, () => promoteShortTermMemory(m))} className="rounded bg-blue-600 px-3 py-1.5 text-xs text-white disabled:opacity-50">升級候選</button><button disabled={busy === m.id} onClick={() => act(m.id, () => dismissShortTermMemory(m.id))} className="rounded border border-slate-300 px-3 py-1.5 text-xs text-slate-600">忽略</button></div></div>{m.highlights?.length > 0 && <ul className="mt-2 list-disc pl-5 text-xs text-slate-600">{m.highlights.map((x,i) => <li key={i}>{x}</li>)}</ul>}</div>)}</div>}
 
       {!loading && tab === 'long' && <div className="space-y-3">{(data?.longTerm || []).length === 0 && <p className="text-sm text-slate-400">目前沒有符合條件的長期記憶。</p>}{(data?.longTerm || []).map(m => <div key={m.id} className="rounded-xl border border-slate-200 bg-white p-4"><p className="text-sm text-slate-800">{m.content}</p><p className="mt-1 text-xs text-slate-400">{ownerLabel[m.owner]} · {m.category || m.kind} · {m.status} · 來源 {m.sourceType}{m.sourceRef ? ` / ${m.sourceRef}` : ''}</p><div className="mt-3 flex gap-2"><button onClick={() => edit(m)} className="rounded border border-slate-300 px-3 py-1 text-xs">編輯</button>{m.status === 'pending_confirmation' && <button onClick={() => act(m.id, () => reviewAgentMemory(m.id, 'confirm'))} className="rounded bg-green-600 px-3 py-1 text-xs text-white">確認</button>}{m.status !== 'archived' && <button onClick={() => act(m.id, () => reviewAgentMemory(m.id, 'archive'))} className="rounded border border-red-200 px-3 py-1 text-xs text-red-600">封存</button>}</div></div>)}</div>}
 
