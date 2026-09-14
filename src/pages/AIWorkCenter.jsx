@@ -39,16 +39,21 @@ export default function AIWorkCenter() {
       if (!response.ok) throw new Error(`HTTP ${response.status}`)
       let nextCore = await response.json()
 
-      const existingMilestones = new Set(
-        (nextCore.workItems || []).map(item => item?.payload?.milestoneId).filter(Boolean)
+      const existingByMilestone = new Map(
+        (nextCore.workItems || [])
+          .filter(item => item?.payload?.milestoneId)
+          .map(item => [item.payload.milestoneId, item])
       )
-      const missing = sessions.filter(session =>
-        session.status === 'pending' &&
-        session.milestoneId &&
-        !existingMilestones.has(session.milestoneId)
-      )
-      if (missing.length) {
-        await Promise.all(missing.map(session => createDirectWorkItem({
+      const pendingAssignments = sessions.filter(session => {
+        if (session.status !== 'pending' || !session.milestoneId) return false
+        const existing = existingByMilestone.get(session.milestoneId)
+        return !existing || (
+          existing.kind === 'direct-milestone-assignment' &&
+          existing.status === 'queued'
+        )
+      })
+      if (pendingAssignments.length) {
+        await Promise.all(pendingAssignments.map(session => createDirectWorkItem({
           title: session.title,
           milestoneId: session.milestoneId,
           owner: session.assignee,
