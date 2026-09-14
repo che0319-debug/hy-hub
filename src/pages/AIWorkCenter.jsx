@@ -169,7 +169,7 @@ export default function AIWorkCenter() {
     const executor = result?.executor || item?.executor || {}
     const gptWorkUrl = payload.gptWorkUrl || project.gptWorkUrl
     return (
-      <section className="mx-3 -mt-3 mb-3 rounded-b-2xl border-x border-b border-blue-200 bg-blue-50/50 p-5">
+      <section className="mx-3 -mt-3 mb-3 max-h-[65vh] overflow-y-auto overscroll-contain rounded-b-2xl border-x border-b border-blue-200 bg-blue-50/50 p-5 pr-3">
         <div className="flex flex-wrap items-center gap-2">
           {gptWorkUrl ? <a href={gptWorkUrl} target="_blank" rel="noreferrer" className="flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white"><MessageSquare size={16} />進入 GPT Work</a>
             : <button disabled className="flex items-center gap-2 rounded-lg bg-slate-200 px-4 py-2 text-sm text-slate-500"><MessageSquare size={16} />GPT Work 尚未連結</button>}
