@@ -1,7 +1,7 @@
 import { NavLink } from 'react-router-dom'
 import {
   Home, Bot, ClipboardList,
-  MessageSquare, Settings, Target, LayoutDashboard, Brain
+  MessageSquare, Settings, Target, LayoutDashboard, Brain, Telescope
 } from 'lucide-react'
 
 const navItems = [
@@ -9,6 +9,7 @@ const navItems = [
   { to: '/life-os',    label: 'Life OS',  icon: LayoutDashboard },
   { to: '/helpers',    label: '我的小幫手', icon: Bot },
   { to: '/memory',     label: '記憶中心', icon: Brain },
+  { to: '/research',   label: 'Bot 研究', icon: Telescope },
   { to: '/dispatch',   label: 'AI 工作', icon: ClipboardList },
   { to: '/goals',      label: '人生目標',  icon: Target },
   { to: '/strategy',   label: '戰略盤',   icon: Target },
