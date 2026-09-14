@@ -110,7 +110,8 @@ export default function AIWorkCenter() {
   const visibleProjects = ownerFilter === 'all' ? projects : projects.filter(project => project.owner === ownerFilter)
   const waitingCount = projects.filter(project => statusMeta(project).key === 'waiting').length
   const runningCount = projects.filter(project => statusMeta(project).key === 'running').length
-  const reviewCount = projects.filter(project => statusMeta(project).key === 'review').length\n  const riskCount = projects.filter(project => statusMeta(project).key === 'risk').length
+  const reviewCount = projects.filter(project => statusMeta(project).key === 'review').length
+  const riskCount = projects.filter(project => statusMeta(project).key === 'risk').length
 
   function setDraft(id, value) { setDrafts(current => ({ ...current, [id]: value })) }
 
@@ -163,7 +164,9 @@ export default function AIWorkCenter() {
     const payload = item?.payload || {}
     const drive = payload.driveProject || {}
     const result = item ? resultFor(results, item) : null
-    const output = result?.outcome || result?.summary || item?.result?.text || ''\n    const report = result?.report || item?.result?.report || {}\n    const executor = result?.executor || item?.executor || {}
+    const output = result?.outcome || result?.summary || item?.result?.text || ''
+    const report = result?.report || item?.result?.report || {}
+    const executor = result?.executor || item?.executor || {}
     const gptWorkUrl = payload.gptWorkUrl || project.gptWorkUrl
     return (
       <section className="mx-3 -mt-3 mb-3 rounded-b-2xl border-x border-b border-blue-200 bg-blue-50/50 p-5">
