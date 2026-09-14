@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react'
 import { Bot, CheckCircle2, Clock3, ExternalLink, FileText, RefreshCw, ShieldCheck, Trash2 } from 'lucide-react'
 import { authHeaders } from '../auth'
-import { answerWorkClarification, decideAutonomousPlan, dismissWorkItem, submitWorkFeedback } from '../lifeOSApi'
+import { answerWorkClarification, createDirectWorkItem, decideAutonomousPlan, dismissWorkItem, submitWorkFeedback } from '../lifeOSApi'
+import { fetchDispatchSessions } from '../api'
 
 const API_BASE = import.meta.env.VITE_API_BASE || ''
 const ACTIVE = new Set(['queued', 'running', 'claimed', 'in_progress', 'waiting_approval', 'needs_clarification'])
@@ -23,17 +24,49 @@ export default function AIWorkCenter() {
   const [error, setError] = useState('')
   const [expanded, setExpanded] = useState('')
   const [drafts, setDrafts] = useState({})
+  const [refreshing, setRefreshing] = useState(false)
 
   async function load() {
     setError('')
+    setRefreshing(true)
     try {
-      const response = await fetch(`${API_BASE}/api/life-os/v1/context`, {
-        headers: authHeaders(), cache: 'no-store',
-      })
+      const [response, sessions] = await Promise.all([
+        fetch(`${API_BASE}/api/life-os/v1/context`, {
+          headers: authHeaders(), cache: 'no-store',
+        }),
+        fetchDispatchSessions(),
+      ])
       if (!response.ok) throw new Error(`HTTP ${response.status}`)
-      setCore(await response.json())
+      let nextCore = await response.json()
+
+      const existingMilestones = new Set(
+        (nextCore.workItems || []).map(item => item?.payload?.milestoneId).filter(Boolean)
+      )
+      const missing = sessions.filter(session =>
+        session.status === 'pending' &&
+        session.milestoneId &&
+        !existingMilestones.has(session.milestoneId)
+      )
+      if (missing.length) {
+        await Promise.all(missing.map(session => createDirectWorkItem({
+          title: session.title,
+          milestoneId: session.milestoneId,
+          owner: session.assignee,
+          sourceMilestone: session.sourceMilestone,
+          projectName: session.sourceMilestone,
+          desc: session.desc || '',
+        })))
+        const refreshed = await fetch(`${API_BASE}/api/life-os/v1/context`, {
+          headers: authHeaders(), cache: 'no-store',
+        })
+        if (!refreshed.ok) throw new Error(`HTTP ${refreshed.status}`)
+        nextCore = await refreshed.json()
+      }
+      setCore(nextCore)
     } catch (err) {
       setError(`AI 工作讀取失敗：${err.message}`)
+    } finally {
+      setRefreshing(false)
     }
   }
 
@@ -177,7 +210,7 @@ export default function AIWorkCenter() {
           <h1 className="text-2xl font-bold text-slate-900">AI 工作中心</h1>
           <p className="mt-1 text-slate-500">通過 HY Review 的主動提案，以及你勾選派工的 AI 工作</p>
         </div>
-        <button onClick={load} className="flex items-center gap-2 rounded-lg border bg-white px-3 py-2 text-sm"><RefreshCw size={16} />重新整理</button>
+        <button onClick={load} disabled={refreshing} className="flex items-center gap-2 rounded-lg border bg-white px-3 py-2 text-sm disabled:opacity-60"><RefreshCw size={16} className={refreshing ? 'animate-spin' : ''} />{refreshing ? '整理中…' : '重新整理'}</button>
       </div>
 
       {error && <div className="mb-4 rounded-lg bg-red-50 p-3 text-red-700">{error}</div>}
