@@ -145,27 +145,6 @@ export async function fetchAgentModels() {
   return res.json();
 }
 
-export async function fetchAgentMemories(owner) {
-  const res = await fetch(`${API_BASE}/api/internal/memories/v1?owner=${encodeURIComponent(owner)}`, {
-    headers: { ...authHeaders() },
-    cache: 'no-store',
-  })
-  const result = await res.json().catch(() => ({}))
-  if (!res.ok || !result.ok) throw new Error(result.error || `fetchAgentMemories failed: ${res.status}`)
-  return result.memories || []
-}
-
-export async function reviewAgentMemory(memoryId, decision, note = '') {
-  const res = await fetch(`${API_BASE}/api/internal/memories/v1/${encodeURIComponent(memoryId)}/review`, {
-    method: 'POST',
-    headers: { ...authHeaders(), 'Content-Type': 'application/json' },
-    body: JSON.stringify({ decision, reviewer: 'human_hy', note }),
-  })
-  const result = await res.json().catch(() => ({}))
-  if (!res.ok || !result.ok) throw new Error(result.error || `reviewAgentMemory failed: ${res.status}`)
-  return result.memory
-}
-
 export async function fetchDispatchSessions() {
   const res = await fetch(`${API_BASE}/api/dispatch-sessions`, {
     headers: { ...authHeaders() },
