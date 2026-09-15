@@ -75,123 +75,62 @@ const FAMILY_LABELS = {
   shared_background: '共同背景', open_decisions: '待討論事項',
   allocation_status: '資料拆分狀態', relationships: '家庭關係',
   from: '成員一', to: '成員二', type: '關係類型', context: '關係說明',
-  governance: '資料治理', fact_states: '資料狀態', rule: '判定規則',
+  governance: '資料原則', fact_states: '資料狀態', rule: '判定規則',
 }
 
 function familyLabel(key) {
   return FAMILY_LABELS[key] || String(key).replaceAll('_', ' ')
 }
 
-function CompactFields({ value, onChange }) {
+function readableValue(value) {
   if (Array.isArray(value)) {
-    const hasObjects = value.some(item => item && typeof item === 'object')
-    if (!hasObjects) {
-      return <textarea rows={2} className="w-full text-xs border border-slate-200 rounded px-2 py-1.5 resize-y" value={value.join('\n')} onChange={e => onChange(e.target.value.split('\n').map(x => x.trim()).filter(Boolean))} />
-    }
-    return (
-      <div className="space-y-2">
-        {value.map((item, index) => (
-          <div key={index} className="border-l-2 border-slate-200 pl-2">
-            <CompactFields value={item} onChange={next => onChange(value.map((row, i) => i === index ? next : row))} />
-          </div>
-        ))}
-      </div>
-    )
+    return value.map(item => readableValue(item)).filter(Boolean).join('、')
   }
   if (value && typeof value === 'object') {
-    return (
-      <div className="space-y-2">
-        {Object.entries(value).map(([key, child]) => (
-          <div key={key}>
-            <label className="block text-[11px] text-slate-400 mb-0.5">{familyLabel(key)}</label>
-            <CompactFields value={child} onChange={next => onChange({ ...value, [key]: next })} />
-          </div>
-        ))}
-      </div>
-    )
+    return Object.entries(value)
+      .filter(([key]) => !['evidence', 'status'].includes(key))
+      .map(([key, child]) => {
+        const text = readableValue(child)
+        return text ? `${familyLabel(key)}：${text}` : ''
+      })
+      .filter(Boolean)
+      .join('；')
   }
-  return <textarea rows={String(value ?? '').length > 45 ? 2 : 1} className="w-full text-xs border border-slate-200 rounded px-2 py-1.5 resize-y" value={value ?? ''} onChange={e => onChange(e.target.value)} />
+  return String(value ?? '').trim()
 }
 
-const TABLE_CLASS = 'w-full min-w-[760px] text-xs border-collapse'
-const TH_CLASS = 'bg-slate-50 text-slate-500 font-medium text-left px-3 py-2 border border-slate-200'
-const TD_CLASS = 'align-top px-3 py-3 border border-slate-200'
-
-function FamilyMembersTable({ members, onChange }) {
-  return (
-    <div className="overflow-x-auto rounded-lg border border-slate-200">
-      <table className={TABLE_CLASS}>
-        <thead><tr>
-          <th className={TH_CLASS}>家庭成員</th>
-          <th className={TH_CLASS}>基本資料</th>
-          <th className={TH_CLASS}>人物資料與觀察</th>
-          <th className={TH_CLASS}>資料來源</th>
-        </tr></thead>
-        <tbody>
-          {Object.entries(members || {}).map(([id, member]) => {
-            const basic = Object.fromEntries(Object.entries(member).filter(([k]) => !['profile', 'evidence'].includes(k)))
-            return <tr key={id}>
-              <td className={TD_CLASS + ' w-28 font-semibold text-slate-700'}>{familyLabel(id)}</td>
-              <td className={TD_CLASS + ' w-52'}><CompactFields value={basic} onChange={next => onChange({ ...members, [id]: { ...member, ...next } })} /></td>
-              <td className={TD_CLASS}><CompactFields value={member.profile || {}} onChange={profile => onChange({ ...members, [id]: { ...member, profile } })} /></td>
-              <td className={TD_CLASS + ' w-48'}><CompactFields value={member.evidence || {}} onChange={evidence => onChange({ ...members, [id]: { ...member, evidence } })} /></td>
-            </tr>
-          })}
-        </tbody>
-      </table>
-    </div>
-  )
+function familyMembersSummary(members) {
+  return Object.entries(members || {}).map(([id, member]) => {
+    const detail = readableValue(Object.fromEntries(Object.entries(member).filter(([key]) => !['display_name', 'relation_to_hy', 'evidence'].includes(key))))
+    return `${familyLabel(id)}：${detail}`
+  }).join('\n')
 }
 
-function HouseholdTable({ households, onChange }) {
-  return (
-    <div className="overflow-x-auto rounded-lg border border-slate-200">
-      <table className={TABLE_CLASS}>
-        <thead><tr>
-          <th className={TH_CLASS}>家庭</th>
-          <th className={TH_CLASS}>成員</th>
-          <th className={TH_CLASS}>現況與背景</th>
-          <th className={TH_CLASS}>待討論事項</th>
-        </tr></thead>
-        <tbody>
-          {Object.entries(households || {}).map(([id, household]) => {
-            const context = Object.fromEntries(Object.entries(household).filter(([k]) => !['members', 'open_decisions'].includes(k)))
-            return <tr key={id}>
-              <td className={TD_CLASS + ' w-32 font-semibold text-slate-700'}>{familyLabel(id)}</td>
-              <td className={TD_CLASS + ' w-44'}><CompactFields value={household.members || []} onChange={members => onChange({ ...households, [id]: { ...household, members } })} /></td>
-              <td className={TD_CLASS}><CompactFields value={context} onChange={next => onChange({ ...households, [id]: { ...household, ...next } })} /></td>
-              <td className={TD_CLASS + ' w-56'}><CompactFields value={household.open_decisions || []} onChange={open_decisions => onChange({ ...households, [id]: { ...household, open_decisions } })} /></td>
-            </tr>
-          })}
-        </tbody>
-      </table>
-    </div>
-  )
+function householdSummary(households) {
+  return Object.entries(households || {}).map(([id, household]) =>
+    `${familyLabel(id)}：${readableValue(household)}`
+  ).join('\n')
 }
 
-function FamilyGraphTable({ graph, onChange }) {
-  const relationships = graph?.relationships || []
+function familyGraphSummary(graph) {
+  const lines = (graph?.relationships || []).map(row => {
+    const people = `${familyLabel(row.from)}與${familyLabel(row.to)}`
+    return `${people}：${familyLabel(row.type)}${row.context ? `；${row.context}` : ''}`
+  })
+  if (graph?.governance) lines.push(`資料原則：${readableValue(graph.governance)}`)
+  return lines.join('\n')
+}
+
+function FamilySummaryField({ label, value, rows }) {
   return (
-    <div className="overflow-x-auto rounded-lg border border-slate-200">
-      <table className={TABLE_CLASS}>
-        <thead><tr>
-          <th className={TH_CLASS}>成員一</th>
-          <th className={TH_CLASS}>成員二</th>
-          <th className={TH_CLASS}>關係</th>
-          <th className={TH_CLASS}>關係說明</th>
-        </tr></thead>
-        <tbody>
-          {relationships.map((row, index) => <tr key={index}>
-            {['from', 'to', 'type', 'context'].map(key => <td key={key} className={TD_CLASS}>
-              <CompactFields value={row[key] || ''} onChange={next => onChange({ ...graph, relationships: relationships.map((item, i) => i === index ? { ...item, [key]: next } : item) })} />
-            </td>)}
-          </tr>)}
-          {graph?.governance && <tr>
-            <td className={TD_CLASS + ' font-semibold text-slate-700'}>資料治理</td>
-            <td colSpan={3} className={TD_CLASS}><CompactFields value={graph.governance} onChange={governance => onChange({ ...graph, governance })} /></td>
-          </tr>}
-        </tbody>
-      </table>
+    <div>
+      <label className="block text-xs text-slate-500 mb-1">{label}</label>
+      <textarea
+        rows={rows}
+        className="w-full text-sm border border-slate-200 rounded-lg px-3 py-2 resize-y focus:outline-none"
+        value={value}
+        readOnly
+      />
     </div>
   )
 }
@@ -265,19 +204,21 @@ function ProfileModal({ onClose }) {
                 <p className="text-xs font-semibold text-slate-700">家庭</p>
                 <p className="text-xs text-slate-400 mt-0.5">人物資料、Household 與 Family Graph 共用同一份家庭正本</p>
               </div>
-              <div>
-                <p className="text-sm font-semibold text-slate-700 mb-2">人物資料</p>
-                <FamilyMembersTable members={family.members || {}} onChange={members => setFamily(f => ({ ...f, members }))} />
-              </div>
-              <div>
-                <p className="text-sm font-semibold text-slate-700 mb-2">Household</p>
-                <HouseholdTable households={family.household || {}} onChange={household => setFamily(f => ({ ...f, household }))} />
-              </div>
-              <div>
-                <p className="text-sm font-semibold text-slate-700 mb-2">Family Graph</p>
-                <FamilyGraphTable graph={family.family_graph || {}} onChange={family_graph => setFamily(f => ({ ...f, family_graph }))} />
-              </div>
-            </div>
+              <FamilySummaryField
+                label="人物資料"
+                value={familyMembersSummary(family.members)}
+                rows={12}
+              />
+              <FamilySummaryField
+                label="Household"
+                value={householdSummary(family.household)}
+                rows={6}
+              />
+              <FamilySummaryField
+                label="Family Graph"
+                value={familyGraphSummary(family.family_graph)}
+                rows={10}
+              />    </div>
           )}
           {error && <p className="text-xs text-red-500">{error}</p>}
         </div>
