@@ -113,6 +113,11 @@ export default function AIWorkCenter() {
   const runningCount = projects.filter(project => statusMeta(project).key === 'running').length
   const reviewCount = projects.filter(project => statusMeta(project).key === 'review').length
   const riskCount = projects.filter(project => statusMeta(project).key === 'risk').length
+  const gptWorkConnected = Boolean(
+    core?.gptWorkConnected ??
+    core?.runtime?.gptWorkConnected ??
+    work.some(item => Number(item?.attempt || 0) > 0 || item?.startedAt || item?.finishedAt)
+  )
 
   function setDraft(id, value) { setDrafts(current => ({ ...current, [id]: value })) }
 
@@ -214,7 +219,7 @@ export default function AIWorkCenter() {
         <div><p className="font-semibold text-slate-800">全部專案共用執行設定</p><p className="mt-1 text-sm text-slate-500">共用規則統一放在外層，各專案不重複顯示。</p></div>
         <div className="flex flex-wrap gap-x-5 gap-y-2 text-sm text-slate-600">
           <span className="flex items-center gap-1.5"><Bot size={15} className="text-blue-600"/>目前：HY Life OS 工作器</span>
-          <span className="flex items-center gap-1.5"><CircleAlert size={15} className="text-amber-600"/>GPT Work：尚未連結</span>
+          <span className={`flex items-center gap-1.5 ${gptWorkConnected ? 'text-emerald-700' : ''}`}>{gptWorkConnected ? <CheckCircle2 size={15} className="text-emerald-600"/> : <CircleAlert size={15} className="text-amber-600"/>}GPT Work：{gptWorkConnected ? '已連線' : '等待首次執行驗證'}</span>
           <span className="flex items-center gap-1.5"><FolderOpen size={15} className="text-blue-600"/>成果：Google Drive 保存</span>
         </div>
       </section>
