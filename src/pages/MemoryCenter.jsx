@@ -10,7 +10,7 @@ function Metric({ label, value }) {
   return <div className="rounded-lg border border-slate-200 bg-white p-3"><p className="text-xs text-slate-400">{label}</p><p className="mt-1 text-xl font-bold text-slate-800">{value ?? 0}</p></div>
 }
 
-export default function MemoryCenter() {
+export default function MemoryCenter({ embedded = false }) {
   const [data, setData] = useState(null)
   const [owner, setOwner] = useState('')
   const [status, setStatus] = useState('')
@@ -44,7 +44,7 @@ export default function MemoryCenter() {
   return (
     <div className="space-y-5">
       <div className="flex flex-wrap items-start justify-between gap-3">
-        <div><h1 className="text-xl font-bold text-slate-800">記憶中心</h1><p className="mt-1 text-sm text-slate-400">以正式長期記憶為主；短期內容由 Bots 自動整理</p></div>
+        <div>{embedded ? <h2 className="text-lg font-bold text-slate-800">記憶</h2> : <h1 className="text-xl font-bold text-slate-800">記憶中心</h1>}<p className="mt-1 text-sm text-slate-400">以正式長期記憶為主；短期內容由 Bots 自動整理</p></div>
         {h && <span className={`rounded-full border px-3 py-1 text-xs font-semibold ${levelStyle[h.level]}`}>● {levelLabel[h.level]}</span>}
       </div>
 
