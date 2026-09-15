@@ -57,6 +57,123 @@ function AgentTags({ names }) {
   )
 }
 
+const FAMILY_LABELS = {
+  hy: 'HY',
+  wife: '太太',
+  child_1: '大兒子',
+  child_2: '小兒子',
+  mother_in_law: '岳母',
+  father: '父親',
+  mother: '母親',
+  primary_household: '目前同住家庭',
+  parents_household: '父母家庭',
+  display_name: '稱呼',
+  relation_to_hy: '與 HY 的關係',
+  profile: '人物資料',
+  notes: '既有備註',
+  current_context: '目前家庭參與',
+  expectations: '期待',
+  unknown: '尚待了解',
+  work: '工作',
+  family_role: '家庭角色',
+  finance: '財務分工',
+  relationship_context: '互動現況',
+  education: '教育階段',
+  sport: '運動習慣',
+  commute: '通學方式',
+  commute_barrier: '目前障礙',
+  parent_view: '家長觀察',
+  concerns: '持續關注',
+  observation: '觀察內容',
+  perspective: '觀察者',
+  status: '狀態',
+  residence: '居住地',
+  mobility: '行動狀態',
+  individual_unknown: '個人資料尚待了解',
+  shared_household_ref: '共同家庭資料',
+  evidence: '資料來源',
+  source: '來源',
+  members: '家庭成員',
+  operating_context: '家庭運作現況',
+  location_detail: '居住說明',
+  shared_background: '共同背景',
+  open_decisions: '待討論事項',
+  allocation_status: '資料拆分狀態',
+  relationships: '家庭關係',
+  from: '成員一',
+  to: '成員二',
+  type: '關係類型',
+  context: '關係說明',
+  governance: '資料治理',
+  fact_states: '資料狀態',
+  rule: '判定規則',
+}
+
+function familyLabel(key) {
+  return FAMILY_LABELS[key] || String(key).replaceAll('_', ' ')
+}
+
+function FamilyFields({ value, onChange, level = 0 }) {
+  if (Array.isArray(value)) {
+    const objects = value.some(item => item && typeof item === 'object')
+    if (!objects) {
+      return (
+        <textarea
+          rows={Math.max(2, Math.min(5, value.length + 1))}
+          className="w-full text-sm border border-slate-200 rounded-lg px-3 py-2 resize-y focus:outline-none focus:ring-1 focus:ring-blue-400"
+          value={value.join('\n')}
+          onChange={e => onChange(e.target.value.split('\n').map(x => x.trim()).filter(Boolean))}
+        />
+      )
+    }
+    return (
+      <div className="space-y-2">
+        {value.map((item, index) => (
+          <div key={index} className="rounded-lg border border-slate-200 bg-slate-50/60 p-3">
+            <p className="text-xs font-medium text-slate-500 mb-2">第 {index + 1} 項</p>
+            <FamilyFields
+              value={item}
+              level={level + 1}
+              onChange={next => onChange(value.map((row, i) => i === index ? next : row))}
+            />
+          </div>
+        ))}
+      </div>
+    )
+  }
+
+  if (value && typeof value === 'object') {
+    return (
+      <div className={level > 0 ? 'space-y-3' : 'space-y-4'}>
+        {Object.entries(value).map(([key, child]) => {
+          const nested = child && typeof child === 'object'
+          return (
+            <div key={key} className={nested && level === 0 ? 'rounded-xl border border-slate-200 p-4' : ''}>
+              <label className={`block text-xs mb-1 ${nested ? 'font-semibold text-slate-700' : 'text-slate-500'}`}>
+                {familyLabel(key)}
+              </label>
+              <FamilyFields
+                value={child}
+                level={level + 1}
+                onChange={next => onChange({ ...value, [key]: next })}
+              />
+            </div>
+          )
+        })}
+      </div>
+    )
+  }
+
+  return (
+    <textarea
+      rows={String(value ?? '').length > 55 ? 2 : 1}
+      className="w-full text-sm border border-slate-200 rounded-lg px-3 py-2 resize-y focus:outline-none focus:ring-1 focus:ring-blue-400"
+      value={value ?? ''}
+      onChange={e => onChange(e.target.value)}
+    />
+  )
+}
+
 // ─── Profile Modal ──────────────────────────────────────────────
 
 const PROFILE_FIELDS = [
@@ -127,16 +244,25 @@ function ProfileModal({ onClose }) {
                 <p className="text-xs text-slate-400 mt-0.5">人物資料、Household 與 Family Graph 共用同一份家庭正本</p>
               </div>
               <div>
-                <label className="block text-xs text-slate-500 mb-1">人物資料</label>
-                <textarea rows={8} className="w-full font-mono text-xs border border-slate-200 rounded-lg px-3 py-2 resize-y focus:outline-none focus:ring-1 focus:ring-blue-400" value={JSON.stringify(family.members || {}, null, 2)} onChange={e => { try { const members = JSON.parse(e.target.value); setFamily(f => ({ ...f, members })) } catch {} }} disabled={saving} />
+                <p className="text-sm font-semibold text-slate-700 mb-3">人物資料</p>
+                <FamilyFields
+                  value={family.members || {}}
+                  onChange={members => setFamily(f => ({ ...f, members }))}
+                />
               </div>
               <div>
-                <label className="block text-xs text-slate-500 mb-1">Household</label>
-                <textarea rows={6} className="w-full font-mono text-xs border border-slate-200 rounded-lg px-3 py-2 resize-y focus:outline-none focus:ring-1 focus:ring-blue-400" value={JSON.stringify(family.household || {}, null, 2)} onChange={e => { try { const household = JSON.parse(e.target.value); setFamily(f => ({ ...f, household })) } catch {} }} disabled={saving} />
+                <p className="text-sm font-semibold text-slate-700 mb-3">Household</p>
+                <FamilyFields
+                  value={family.household || {}}
+                  onChange={household => setFamily(f => ({ ...f, household }))}
+                />
               </div>
               <div>
-                <label className="block text-xs text-slate-500 mb-1">Family Graph</label>
-                <textarea rows={7} className="w-full font-mono text-xs border border-slate-200 rounded-lg px-3 py-2 resize-y focus:outline-none focus:ring-1 focus:ring-blue-400" value={JSON.stringify(family.family_graph || {}, null, 2)} onChange={e => { try { const family_graph = JSON.parse(e.target.value); setFamily(f => ({ ...f, family_graph })) } catch {} }} disabled={saving} />
+                <p className="text-sm font-semibold text-slate-700 mb-3">Family Graph</p>
+                <FamilyFields
+                  value={family.family_graph || {}}
+                  onChange={family_graph => setFamily(f => ({ ...f, family_graph }))}
+                />
               </div>
             </div>
           )}
