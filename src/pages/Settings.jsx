@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { Wrench, Clock, Cpu, Sparkles, Database, Server, ExternalLink, User } from 'lucide-react'
 import { bots } from '../mock/data'
-import { fetchProfile, saveProfile } from '../api'
+import { fetchProfile, saveProfile, fetchFamilyData, saveFamilyData } from '../api'
 
 // 彙整：tool → 使用的 agent name 清單
 const toolMap = {}
@@ -72,13 +72,14 @@ const PROFILE_FIELDS = [
 
 function ProfileModal({ onClose }) {
   const [data, setData] = useState({})
+  const [family, setFamily] = useState({ members: {}, household: {}, family_graph: {} })
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState(null)
 
   useEffect(() => {
-    fetchProfile()
-      .then(d => { setData(d); setLoading(false) })
+    Promise.all([fetchProfile(), fetchFamilyData()])
+      .then(([profile, familyData]) => { setData(profile); setFamily(familyData); setLoading(false) })
       .catch(e => { setError(e.message); setLoading(false) })
   }, [])
 
@@ -86,7 +87,7 @@ function ProfileModal({ onClose }) {
     setSaving(true)
     setError(null)
     try {
-      await saveProfile(data)
+      await Promise.all([saveProfile(data), saveFamilyData(family)])
       onClose()
     } catch (e) {
       setError(e.message)
@@ -119,6 +120,26 @@ function ProfileModal({ onClose }) {
               />
             </div>
           ))}
+          {!loading && (
+            <div className="border-t border-slate-100 pt-4 space-y-4">
+              <div>
+                <p className="text-xs font-semibold text-slate-700">家庭</p>
+                <p className="text-xs text-slate-400 mt-0.5">人物資料、Household 與 Family Graph 共用同一份家庭正本</p>
+              </div>
+              <div>
+                <label className="block text-xs text-slate-500 mb-1">人物資料</label>
+                <textarea rows={8} className="w-full font-mono text-xs border border-slate-200 rounded-lg px-3 py-2 resize-y focus:outline-none focus:ring-1 focus:ring-blue-400" value={JSON.stringify(family.members || {}, null, 2)} onChange={e => { try { const members = JSON.parse(e.target.value); setFamily(f => ({ ...f, members })) } catch {} }} disabled={saving} />
+              </div>
+              <div>
+                <label className="block text-xs text-slate-500 mb-1">Household</label>
+                <textarea rows={6} className="w-full font-mono text-xs border border-slate-200 rounded-lg px-3 py-2 resize-y focus:outline-none focus:ring-1 focus:ring-blue-400" value={JSON.stringify(family.household || {}, null, 2)} onChange={e => { try { const household = JSON.parse(e.target.value); setFamily(f => ({ ...f, household })) } catch {} }} disabled={saving} />
+              </div>
+              <div>
+                <label className="block text-xs text-slate-500 mb-1">Family Graph</label>
+                <textarea rows={7} className="w-full font-mono text-xs border border-slate-200 rounded-lg px-3 py-2 resize-y focus:outline-none focus:ring-1 focus:ring-blue-400" value={JSON.stringify(family.family_graph || {}, null, 2)} onChange={e => { try { const family_graph = JSON.parse(e.target.value); setFamily(f => ({ ...f, family_graph })) } catch {} }} disabled={saving} />
+              </div>
+            </div>
+          )}
           {error && <p className="text-xs text-red-500">{error}</p>}
         </div>
 
