@@ -17,7 +17,6 @@ import Settings from './pages/Settings'
 import AgentConfig from './pages/AgentConfig'
 import Goals from './pages/Goals'
 import Strategy from './pages/Strategy'
-import MemoryCenter from './pages/MemoryCenter'
 import AuthGate from './components/AuthGate'
 import MobileAppV2 from './mobile/MobileAppV2'
 
@@ -28,7 +27,7 @@ function DesktopRoutes({ onMobileVersion }) {
         <Route index element={<Home />} />
         <Route path="life-os" element={<Navigate to="/" replace />} />
         <Route path="helpers" element={<Helpers />} />
-        <Route path="memory" element={<MemoryCenter />} />
+        <Route path="memory" element={<Navigate to="/helpers" replace />} />
         <Route path="research" element={<ResearchCenter />} />
         <Route path="dispatch" element={<AIWorkCenter />} />
         <Route path="line/hy" element={<LineHY />} />
