@@ -107,6 +107,26 @@ export async function saveProfile(payload) {
   return result;
 }
 
+export async function fetchFamilyData() {
+  const res = await fetch(`${API_BASE}/api/family-data`, {
+    headers: { ...authHeaders() },
+    cache: 'no-store',
+  });
+  if (!res.ok) throw new Error(`fetchFamilyData failed: ${res.status}`);
+  return res.json();
+}
+
+export async function saveFamilyData(payload) {
+  const res = await fetch(`${API_BASE}/api/family-data`, {
+    method: 'POST',
+    headers: { ...authHeaders(), 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  });
+  const result = await res.json();
+  if (!res.ok || !result.ok) throw new Error(result.error || `saveFamilyData failed: ${res.status}`);
+  return result;
+}
+
 export async function fetchPersona(bot) {
   const res = await fetch(`${API_BASE}/api/persona?bot=${encodeURIComponent(bot)}`, {
     headers: { ...authHeaders() },
