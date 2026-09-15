@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import { fetchMemoryHealth } from '../api'
+import MemoryCenter from './MemoryCenter'
 
 const BOT_META = {
   hy:      { name: 'HY',     role: '個人核心・總管' },
@@ -104,17 +105,21 @@ export default function Helpers() {
         <span className="inline-block w-3 h-3 rounded-full bg-blue-600" />
         <h1 className="text-xl font-bold text-slate-800">我的小幫手</h1>
       </div>
-      <div className="mb-6 ml-5 flex items-center gap-3"><p className="text-sm text-slate-400">記憶健康探針 · 最後更新時間</p><Link to="/memory" className="text-sm text-blue-600 hover:underline">開啟記憶中心 →</Link></div>
+      <div className="mb-6 ml-5 flex items-center gap-3"><p className="text-sm text-slate-400">Bot 狀態、記憶與學習狀況</p></div>
 
       {loading && <p className="text-sm text-slate-400">載入中…</p>}
       {error   && <p className="text-sm text-red-400">無法載入：{error}</p>}
       {!loading && !error && (
-        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
           {BOT_ORDER.map(id => (
             <BotCard key={id} botId={id} health={bots?.[id]} />
           ))}
         </div>
       )}
+
+      <div className="mt-8 border-t border-slate-200 pt-6">
+        <MemoryCenter embedded />
+      </div>
     </div>
   )
 }
