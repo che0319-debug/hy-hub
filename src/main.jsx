@@ -1,6 +1,6 @@
 import { StrictMode, useEffect, useState } from 'react'
 import { createRoot } from 'react-dom/client'
-import { HashRouter, Routes, Route, Navigate } from 'react-router-dom'
+import { HashRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom'
 import './index.css'
 import './mobile/mobile-v2.css'
 import App from './App'
@@ -19,6 +19,7 @@ import Goals from './pages/Goals'
 import Strategy from './pages/Strategy'
 import AuthGate from './components/AuthGate'
 import MobileAppV2 from './mobile/MobileAppV2'
+import CommandCenter from './pages/CommandCenter'
 
 function DesktopRoutes({ onMobileVersion }) {
   return (
@@ -45,6 +46,7 @@ function DesktopRoutes({ onMobileVersion }) {
 }
 
 function Experience() {
+  const location = useLocation()
   const [mobileWidth, setMobileWidth] = useState(() => window.matchMedia('(max-width: 767px)').matches)
   const [mode, setMode] = useState(() => sessionStorage.getItem('hy_world_view') || 'auto')
 
@@ -60,7 +62,8 @@ function Experience() {
     sessionStorage.setItem('hy_world_view', next)
   }
 
-  if (mobileWidth && mode !== 'desktop') {
+  if (location.pathname === '/command-center') return <CommandCenter />
+  if (mobileWidth && mode !== 'desktop' && location.pathname !== '/dispatch') {
     return <MobileAppV2 onDesktopVersion={() => choose('desktop')} />
   }
   return <DesktopRoutes onMobileVersion={mobileWidth ? () => choose('mobile') : null} />
@@ -75,3 +78,4 @@ createRoot(document.getElementById('root')).render(
     </AuthGate>
   </StrictMode>
 )
+

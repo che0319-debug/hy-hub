@@ -4,6 +4,7 @@ import { fetchMobileState, fetchTodaySchedule, setMobileTaskCompleted } from '..
 import { answerWorkClarification, decideAutonomousPlan, dismissWorkItem, fetchDailyOS, submitWorkFeedback } from '../lifeOSApi'
 import { authHeaders } from '../auth'
 import PixelCity from './PixelCity'
+import { Link } from 'react-router-dom'
 import './mobile.css'
 import './mobile-v2.css'
 
@@ -97,6 +98,7 @@ export default function MobileAppV2({ onDesktopVersion }) {
   return <div className="mobile-life-os mobile-v2">
     {tab!=='world' && <header className="mobile-header"><div><p className="mobile-kicker">HY LIFE OS</p><h1>{TABS[tab].label}</h1><p>{taipeiDate()}</p></div><button className="mobile-desktop-switch" onClick={onDesktopVersion}><Monitor size={16}/>完整版</button></header>}
     <main className="mobile-content">
+      {tab!=='world' && <Link to="/command-center" style={{display:'block',padding:'14px 16px',background:'#edf3ff',color:'#28548d',borderRadius:12,marginBottom:16,fontWeight:600}}>AI Command Center · 開啟團隊即時畫面 ↗</Link>}
       {error && <div className="mobile-error">{error}</div>}
       {!state && !error && <p className="mobile-empty">載入中…</p>}
 
@@ -131,3 +133,4 @@ export default function MobileAppV2({ onDesktopVersion }) {
     <nav className="mobile-nav" aria-label="手機版主要分頁">{Object.entries(TABS).map(([id,m])=>{const I=m.icon;return <button key={id} className={tab===id?'is-active':''} onClick={()=>setTab(id)}><I size={20}/><span>{m.label}</span></button>})}</nav>
   </div>
 }
+
