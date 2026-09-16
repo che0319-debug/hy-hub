@@ -10,7 +10,15 @@ export async function followExecution({ signal, onSnapshot, onState }) {
   let buffer = ''
   try {
     while (!signal.aborted) {
-      const { done, value } = await reader.read()
+      let watchdog
+      let packet
+      try {
+        packet = await Promise.race([
+          reader.read(),
+          new Promise((_, reject) => { watchdog = setTimeout(() => reject(new Error('超過 45 秒未收到串流訊號，正在重新連線')), 45000) }),
+        ])
+      } finally { clearTimeout(watchdog) }
+      const { done, value } = packet
       if (done) throw new Error('連線中斷，正在重新連線')
       buffer += decoder.decode(value, { stream: true }).replace(/\r\n/g, '\n')
       let end
