@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { Wrench, Clock, Cpu, Sparkles, Database, Server, ExternalLink, User } from 'lucide-react'
 import { bots } from '../mock/data'
-import { fetchProfile, saveProfile, fetchFamilyData, saveFamilyData } from '../api'
+import { fetchProfile, saveProfile, fetchFamilyData, saveFamilyData, fetchAgentMemories } from '../api'
 
 // 彙整：tool → 使用的 agent name 清單
 const toolMap = {}
@@ -151,13 +151,19 @@ const PROFILE_FIELDS = [
 function ProfileModal({ onClose }) {
   const [data, setData] = useState({})
   const [family, setFamily] = useState({ members: {}, household: {}, family_graph: {} })
+  const [samMemories, setSamMemories] = useState([])
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState(null)
 
   useEffect(() => {
-    Promise.all([fetchProfile(), fetchFamilyData()])
-      .then(([profile, familyData]) => { setData(profile); setFamily(familyData); setLoading(false) })
+    Promise.all([fetchProfile(), fetchFamilyData(), fetchAgentMemories('sam')])
+      .then(([profile, familyData, memories]) => {
+        setData(profile)
+        setFamily(familyData)
+        setSamMemories(memories.filter(m => m.status === 'confirmed'))
+        setLoading(false)
+      })
       .catch(e => { setError(e.message); setLoading(false) })
   }, [])
 
@@ -218,7 +224,28 @@ function ProfileModal({ onClose }) {
                 label="Family Graph"
                 value={familyGraphSummary(family.family_graph)}
                 rows={10}
-              />    </div>
+              />
+            </div>
+          )}
+          {!loading && (
+            <div className="border-t border-slate-100 pt-4 space-y-3">
+              <div>
+                <p className="text-xs font-semibold text-slate-700">Sam 事業記憶</p>
+                <p className="text-xs text-slate-400 mt-0.5">正式長期記憶正本；詳細編輯請至「我的小幫手 → Sam → 正式記憶」</p>
+              </div>
+              {samMemories.length === 0 ? (
+                <p className="text-xs text-slate-400">（尚無已確認的 Sam 事業記憶）</p>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                  {samMemories.map(memory => (
+                    <div key={memory.id} className="rounded-lg border border-slate-200 bg-slate-50 p-3">
+                      <p className="text-xs leading-5 text-slate-700">{memory.content}</p>
+                      <p className="mt-1 text-[11px] text-slate-400">Sam · {memory.kind || memory.category || 'fact'} · 已確認</p>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
           )}
           {error && <p className="text-xs text-red-500">{error}</p>}
         </div>
