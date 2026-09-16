@@ -141,6 +141,7 @@ export default function AgentConfig() {
   const bot = bots.find(b => b.id === id)
   const personaBot = PERSONA_BOT_MAP[id]
   const [personaOpen, setPersonaOpen] = useState(false)
+  const [personaData, setPersonaData] = useState(null)
 
   const [tools, setTools] = useState(null)
   const [toolsError, setToolsError] = useState(false)
@@ -149,6 +150,11 @@ export default function AgentConfig() {
   const [memoryLoading, setMemoryLoading] = useState(true)
   const [memoryError, setMemoryError] = useState('')
   const [memoryAction, setMemoryAction] = useState('')
+
+  useEffect(() => {
+    if (!personaBot) return
+    fetchPersona(personaBot).then(setPersonaData).catch(() => setPersonaData({}))
+  }, [personaBot])
 
   useEffect(() => {
     if (!personaBot) return
@@ -244,7 +250,18 @@ export default function AgentConfig() {
                 編輯
               </button>
             </div>
-            <p className="text-xs text-slate-400 mt-2">role / scope / personality / interaction / dosDonts / special</p>
+            {personaData === null ? (
+              <p className="text-xs text-slate-400 mt-3">載入中…</p>
+            ) : (
+              <div className="mt-3 grid grid-cols-1 md:grid-cols-2 gap-3">
+                {PERSONA_FIELDS.map(({ key, label }) => (
+                  <div key={key} className="rounded-lg border border-slate-100 bg-slate-50 p-3">
+                    <p className="text-[11px] font-semibold text-slate-500 mb-1">{label}</p>
+                    <p className="text-xs leading-5 text-slate-700 whitespace-pre-wrap">{personaData[key] || '（尚無）'}</p>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         )}
 
@@ -347,7 +364,10 @@ export default function AgentConfig() {
       </div>
 
       {personaOpen && personaBot && (
-        <PersonaModal personaBot={personaBot} onClose={() => setPersonaOpen(false)} />
+        <PersonaModal personaBot={personaBot} onClose={() => {
+          setPersonaOpen(false)
+          fetchPersona(personaBot).then(setPersonaData).catch(() => {})
+        }} />
       )}
     </div>
   )
