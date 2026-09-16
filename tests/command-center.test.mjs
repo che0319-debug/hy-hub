@@ -27,3 +27,22 @@ test('fallback uses actual legacy work and never fabricates execution events',()
  assert.equal(view.work[0].agent,null);assert.equal(view.work[0].current_activity,undefined)
  assert.deepEqual(view.events,[]);assert.equal(JSON.stringify(core),before)
 })
+
+import {officeMotion} from '../src/lib/officeMotion.js'
+test('busy motion requires live, fresh, explicit execution telemetry',()=>{
+ const now=Date.parse('2026-09-17T08:00:00Z')
+ const w={status:'reading',updated_at:'2026-09-17T07:59:00Z',current_activity:'讀取來源',telemetry_available:true}
+ assert.equal(officeMotion([w],'live',now).mode,'reading')
+ for(const connection of ['connecting','disconnected','snapshot','stale','paused'])assert.equal(officeMotion([w],connection,now).moving,false)
+ assert.equal(officeMotion([{...w,updated_at:'2026-09-14T00:00:00Z'}],'live',now).mode,'stalled')
+ assert.equal(officeMotion([{...w,updated_at:null}],'live',now).moving,false)
+ assert.equal(officeMotion([{...w,telemetry_available:false}],'live',now).moving,false)
+ assert.equal(officeMotion([{...w,current_activity:null}],'live',now).moving,false)
+ for(const status of ['waiting','review','failed','queued'])assert.equal(officeMotion([{...w,status}],'live',now).moving,false)
+ assert.equal(officeMotion([],'live',now).mode,'idle')
+})
+test('one idle or waiting work cannot hide another agents fresh activity',()=>{
+ const now=Date.parse('2026-09-17T08:00:00Z')
+ const work=[{status:'review'},{status:'analyzing',updated_at:'2026-09-17T07:59:00Z',current_activity:'比較來源',telemetry_available:true}]
+ assert.equal(officeMotion(work,'live',now).mode,'analyzing')
+})
