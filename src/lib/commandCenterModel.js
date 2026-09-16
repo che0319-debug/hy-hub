@@ -22,3 +22,23 @@ export function commandDraft(selection, offices, work, text) {
   const item = work.find(w => w.work === selection.work)
   return `請透過既有 HY Life OS connector 處理以下指令。\n對象：${contextText(selection, offices, work)}\nBot owner：${selection.bot}${selection.agent ? `\nAgent：${selection.agent}` : ''}${(item?.project || selection.project) ? `\nProject ID：${item?.project || selection.project}` : ''}${item ? `\nAI Work ID：${item.work}` : ''}\n指令：${text.trim()}\n請先讀取最新狀態，再依指令操作；重大系統修改須由 HY 核准。`
 }
+
+// Read-only compatibility for deployments where the new SSE endpoint is not yet
+// available. This never creates records or invents agent identities/events.
+export function legacySnapshot(core, offices) {
+  return {
+    ok:true, offices, events:[], revision:null, proposals:[], system_improvements:[],
+    work:(core.workItems||[]).map(w=>{
+      const e=w.execution||{},p=w.progress||{},payload=w.payload||{}
+      let status=e.status||w.status||'idle'
+      if(['queued','succeeded','failed','cancelled','needs_clarification'].includes(w.status))status=w.status
+      if(status==='needs_clarification')status='waiting'
+      if(w.status==='succeeded'&&w.deliveryState==='awaiting_review')status='review'
+      return {bot:w.owner,agent:e.agent_id||null,agent_name:e.agent_name||e.agent_id||null,run_id:w.workerRunId,
+        project:payload.projectId||w.projectId,project_name:payload.projectName,work:w.id,title:w.title,
+        lifecycle_status:w.status,status,stage:e.stage||p.stage,current_activity:e.current_activity||p.summary,
+        updated_at:w.updatedAt||e.updated_at||p.recordedAt,waiting_for:['waiting','review'].includes(status)?'human_hy':e.waiting_for,
+        telemetry_available:Boolean(w.execution||w.progress)}
+    }),
+  }
+}

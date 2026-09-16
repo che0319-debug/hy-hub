@@ -33,3 +33,11 @@ export async function followExecution({ signal, onSnapshot, onState }) {
     }
   } finally { await reader.cancel().catch(() => {}) }
 }
+
+export async function readExecutionFallback(signal) {
+  const response = await fetch(`${import.meta.env.VITE_API_BASE || ''}/api/life-os/v1/context`, {
+    headers: authHeaders(), cache: 'no-store', signal,
+  })
+  if (!response.ok) throw new Error(`狀態快照讀取失敗 (${response.status})`)
+  return response.json()
+}

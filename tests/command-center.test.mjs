@@ -1,6 +1,6 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import {agentGroups,isStalled,commandDraft} from '../src/lib/commandCenterModel.js'
+import {agentGroups,isStalled,commandDraft,legacySnapshot} from '../src/lib/commandCenterModel.js'
 test('one Bot supports four agents and multiple works per agent',()=>{
  const work=Array.from({length:4},(_,i)=>({bot:'950157',agent:`a${i}`,work:`w${i}`}));work.push({...work[0],work:'w4'})
  assert.equal(agentGroups(work).length,4);assert.equal(agentGroups(work)[0].work.length,2)
@@ -19,4 +19,11 @@ test('context handoff retains selected Bot Agent Project and Work IDs',()=>{
  for(const expected of ['950157','Research Agent','research','p1','w1','讀取來源'])assert.ok(draft.includes(expected))
  const projectDraft=commandDraft({bot:'sam',project:'p2'},[],[],'review')
  assert.ok(projectDraft.includes('p2'))
+})
+
+test('fallback uses actual legacy work and never fabricates execution events',()=>{
+ const core={workItems:[{id:'old',owner:'950157',status:'running',updatedAt:'2026-09-14T00:00:00Z'}]}
+ const before=JSON.stringify(core),view=legacySnapshot(core,[])
+ assert.equal(view.work[0].agent,null);assert.equal(view.work[0].current_activity,undefined)
+ assert.deepEqual(view.events,[]);assert.equal(JSON.stringify(core),before)
 })

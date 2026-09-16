@@ -1,8 +1,8 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { ArrowLeft, ArrowUpRight, Bot, Check, Copy, Focus, Mic, Minus, Plus, Radio, X } from 'lucide-react'
-import { followExecution } from '../commandCenterApi'
-import { ACTIVE, LABEL, agentGroups, commandDraft, contextText, isStalled } from '../lib/commandCenterModel'
+import { followExecution, readExecutionFallback } from '../commandCenterApi'
+import { ACTIVE, LABEL, agentGroups, commandDraft, contextText, isStalled, legacySnapshot } from '../lib/commandCenterModel'
 import './command-center.css'
 
 const POS = { hy:[390,25], '950157':[30,345], sam:[750,345], family:[390,655] }
@@ -32,7 +32,16 @@ export default function CommandCenter() {
       if(stopped || document.hidden) return
       controller=new AbortController(); setConnection('connecting')
       try { await followExecution({ signal:controller.signal, onSnapshot:value=>{setData(value);setError('');attempt=0}, onState:setConnection }) }
-      catch(e){ if(stopped || controller.signal.aborted) return;setConnection('disconnected');setError(e.message) }
+      catch(e){
+        if(stopped || controller.signal.aborted) return
+        setConnection('disconnected');setError(e.message)
+        try {
+          const core=await readExecutionFallback(controller.signal)
+          if(stopped || controller.signal.aborted)return
+          setData(legacySnapshot(core,FALLBACK));setConnection('snapshot')
+          setError('即時串流尚未連線；目前顯示既有後端的狀態快照。')
+        } catch { /* Preserve last known data and the original connection error. */ }
+      }
       if(!stopped && !document.hidden) timer=setTimeout(connect,Math.min(30000,1000*2**attempt++))
     }
     const visibility=()=>{ clearTimeout(timer);controller?.abort(); if(document.hidden)setConnection('paused');else connect() }
@@ -105,17 +114,17 @@ export default function CommandCenter() {
     {(data?.proposals||[]).map(p=><Link key={p.id} to="/dispatch" className="cc-alert"><span className="cc-badge s-review">待決策</span><b>{p.title}</b></Link>)}
     <h3>System Improvement</h3>
     {(data?.system_improvements||[]).map(s=><div key={s.id} className="cc-suggestion"><b>{s.title}</b><p>{s.detail}</p><small>建議・待 HY 核准</small></div>)}
-    {data&&!data.system_improvements?.length&&<p className="cc-muted">目前沒有規則巡查建議。</p>}
+    {data&&!data.system_improvements?.length&&<p className="cc-muted">{connection==='snapshot'?'等待即時服務恢復後取得巡查建議。':'目前沒有規則巡查建議。'}</p>}
   </>
   const activity = <>
     <div className="cc-panel-heading"><div><small>EXECUTION STREAM</small><h2>Live Activity</h2></div><button className="cc-mobile-only" onClick={()=>setPanel('')} aria-label="關閉"><X size={20}/></button><Radio size={17}/></div>
     <p className="cc-muted">後端實際回報 · 台北時間</p>
     <div className="cc-stream-filter"><button className={!selection.filter?'active':''} onClick={()=>setSelection(s=>({...s,filter:false}))}>全部</button><button className={selection.filter?'active':''} onClick={()=>setSelection(s=>({...s,filter:true}))}>{offices.find(o=>o.id===selection.bot)?.name}</button></div>
-    {data&&!data.events.length&&<div className="cc-empty"><Radio size={26}/><b>尚無執行事件</b><p>舊工作狀態可查看；部署後的活動回報會出現在這裡。</p></div>}
+    {data&&!data.events.length&&<div className="cc-empty"><Radio size={26}/><b>{connection==='snapshot'?'事件串流尚未連線':'尚無執行事件'}</b><p>舊工作狀態可查看；連線後的活動回報會出現在這裡。</p></div>}
     {[...(data?.events||[])].reverse().filter(e=>!selection.filter||e.data.bot===selection.bot).map(e=><button className="cc-event" key={e.id} onClick={()=>{const w=work.find(w=>w.work===e.data.work);if(w)selectWork(w)}}><time>{date(e.occurredAt)}</time><b>{offices.find(o=>o.id===e.data.bot)?.name || e.data.bot} / {e.data.agent_name || '未標示 Agent'}</b><span>{e.data.current_activity||LABEL[e.data.status]||e.data.status}</span><small>{e.data.title}</small><Badge w={e.data} now={NaN}/></button>)}
   </>
   return <div className="cc-root">
-    <header className="cc-header"><Link to="/" aria-label="返回 HY Life OS"><ArrowLeft size={20}/></Link><div><small>HY LIFE OS</small><h1>AI Command Center <em>V1</em></h1></div><span className={`cc-connection ${connection==='live'?'live':''}`}><i/>{({live:'已連線',connecting:'連線中',disconnected:'已斷線',stale:'資料同步異常',paused:'已暫停'})[connection]}</span><Link className="cc-work-link" to="/dispatch">AI 工作 <ArrowUpRight size={15}/></Link></header>
+    <header className="cc-header"><Link to="/" aria-label="返回 HY Life OS"><ArrowLeft size={20}/></Link><div><small>HY LIFE OS</small><h1>AI Command Center <em>V1</em></h1></div><span className={`cc-connection ${connection==='live'?'live':''}`}><i/>{({live:'已連線',connecting:'連線中',disconnected:'已斷線',stale:'資料同步異常',paused:'已暫停',snapshot:'快照・非即時'})[connection]}</span><Link className="cc-work-link" to="/dispatch">AI 工作 <ArrowUpRight size={15}/></Link></header>
     <div className="cc-mobile-tabs"><button onClick={()=>setPanel(panel==='brief'?'':'brief')}>AI Brief <b>{attention.length}</b></button><button className={!panel?'active':''} onClick={()=>setPanel('')}>Office World</button><button onClick={()=>setPanel(panel==='activity'?'':'activity')}>Live Activity <b>{data?.events.length||0}</b></button></div>
     <div className="cc-body"><aside className={`cc-panel cc-left ${panel==='brief'?'open':''}`}>{brief}</aside>
       <section className="cc-world-section">
@@ -125,7 +134,7 @@ export default function CommandCenter() {
           <div className={`cc-world ${!detailed?'cc-overview':''}`} style={{transform:`translate(${camera.x}px,${camera.y}px) scale(${camera.z})`}}>
             <svg className="cc-connections" width="1100" height="940" aria-hidden="true"><path d={mobile?"M320 130 H360 M160 260 V310 M520 260 V310":"M550 285 V310 H190 V345 M550 310 H910 V345 M550 310 V655"}/></svg>
             {offices.map(o=>{
-              const ow=work.filter(w=>w.bot===o.id),[x,y]=positions[o.id], visible=camera.x+(x+320)*camera.z>0&&camera.y+(y+270)*camera.z>0&&camera.x+x*camera.z<(viewport.current?.clientWidth||2000)&&camera.y+y*camera.z<(viewport.current?.clientHeight||1200)
+              const ow=work.filter(w=>w.bot===o.id),[x,y]=positions[o.id], visible=camera.x+(x+320)*camera.z>0&&camera.y+(y+500)*camera.z>0&&camera.x+x*camera.z<(viewport.current?.clientWidth||2000)&&camera.y+y*camera.z<(viewport.current?.clientHeight||1200)
               return <article key={o.id} style={{left:x,top:y}} className={`cc-office office-${o.id} ${selection.bot===o.id?'selected':''}`}>
                 <button className="cc-office-heading" onClick={()=>{setSelection({bot:o.id});focusOffice(o.id)}}><span className={`cc-avatar a-${o.id}`}><Bot size={24}/></span><span><small>{o.id==='hy'?'CHIEF AGENT':o.id==='950157'?'RESEARCH & WORK':o.id==='sam'?'BUSINESS DEVELOPMENT':'FAMILY & LIFE'}</small><h2>{o.name} Office</h2></span><ArrowUpRight size={18}/></button>
                 {!detailed||!visible?<><p className="cc-office-mission">{o.id==='hy'?'團隊協調・狀態巡查・改善建議':o.mission}</p><div className="cc-office-summary"><b>{data?ow.length:'—'}<small>AI Work</small></b><b>{data?groups[o.id].filter(g=>g.assigned).length:'—'}<small>已識別 Agent</small></b><span>{data?(ow.some(w=>isStalled(w,now))?'久未更新':ow.some(w=>ACTIVE.has(w.status))?'有執行工作':ow.length?'查看工作':'idle · 閒置'):'等待連線'}</span></div></>:<div className="cc-desks">
