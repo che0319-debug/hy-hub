@@ -566,6 +566,9 @@ input[type="date"] { color-scheme: light; }
 .contrib-table td { padding:10px 10px; border-top:1px solid var(--border); vertical-align:middle; }
 .contrib-table tr:hover td { background:var(--bg); }
 .contrib-table tfoot td { font-weight:700; border-top:2px solid var(--border); }
+
+/* Sam business map */
+.map-wrap{padding:18px;max-width:1500px;margin:0 auto}.map-toolbar{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:12px}.map-toolbar .filter{background:#fff;border:1px solid var(--border);border-radius:18px;padding:6px 10px;font-size:12px}.map-stage{position:relative;height:680px;background:#fff;border:1px solid var(--border);border-radius:14px;overflow:hidden;box-shadow:var(--shadow)}.map-stage svg{position:absolute;inset:0;width:100%;height:100%;pointer-events:none}.map-edge{stroke:#aeb8c4;stroke-width:2}.map-edge-label{font-size:11px;fill:#5e6c84;text-anchor:middle}.map-node{position:absolute;min-width:130px;max-width:180px;background:#fff;border:2px solid #dfe1e6;border-radius:12px;padding:10px 12px;box-shadow:0 4px 12px rgba(9,30,66,.12);cursor:grab;user-select:none;touch-action:none}.map-node:active{cursor:grabbing}.map-node.root{border-color:var(--brand-color);background:#f3f7ff}.map-node.selected{box-shadow:0 0 0 3px rgba(0,82,204,.18)}.map-node-title{font-weight:750;font-size:14px}.map-node-meta{font-size:11px;color:var(--text-muted);margin-top:4px}.map-tag{display:inline-block;border-radius:10px;padding:2px 6px;margin:5px 3px 0 0;background:#eef2f7;font-size:10px}.map-help{color:var(--text-muted);font-size:12px;margin-left:auto}.map-empty{padding:40px;text-align:center;color:var(--text-muted)}
 .strategy-suggestion-text { font-size:13px; color:var(--text-muted); line-height:1.7; }
 @media (max-width:767px) {
   .board-wrap { scroll-snap-type:x mandatory; -webkit-overflow-scrolling:touch; padding:12px; }
@@ -589,10 +592,8 @@ input[type="date"] { color-scheme: light; }
 
 <div class="tabs">
   <div class="tab active" onclick="switchTab('progress')">📊 進度追蹤</div>
-  <div class="tab" onclick="switchTab('futures')">📈 期貨</div>
+  <div class="tab" onclick="switchTab('map')">🕸️ 事業版圖</div>
   <div class="tab" onclick="switchTab('weekly')">📅 週覆盤</div>
-  <div class="tab" onclick="switchTab('portfolio')">💼 投資組合</div>
-  <div class="tab" onclick="switchTab('strategy')">🎯 戰略視角</div>
 </div>
 
 <!-- TAB 1: PROGRESS -->
@@ -601,6 +602,21 @@ input[type="date"] { color-scheme: light; }
     <div class="board" id="board">
       <div class="loading-state">⏳ 載入中...</div>
     </div>
+  </div>
+</div>
+
+<!-- TAB 2: BUSINESS MAP -->
+<div class="tab-content" id="tab-map">
+  <div class="map-wrap">
+    <div class="map-toolbar">
+      <button class="btn btn-blue" onclick="addMapNode()">＋ 新增節點</button>
+      <button class="btn btn-outline" onclick="editSelectedNode()">修改節點</button>
+      <button class="btn btn-outline" onclick="linkSelectedNodes()">建立關係</button>
+      <button class="btn btn-outline" onclick="unlinkSelectedNodes()">解除關係</button>
+      <span id="mapFilters"></span>
+      <span class="map-help">拖曳節點可自由排列；依序點選兩個節點可建立關係</span>
+    </div>
+    <div class="map-stage" id="mapStage"><div class="map-empty">載入事業版圖中…</div></div>
   </div>
 </div>
 
@@ -983,13 +999,13 @@ let isDragging = false; // prevent click-after-drag
 
 // ── TABS ──────────────────────────────────────────
 function switchTab(tab) {
-  const names = ['progress','futures','weekly','portfolio','strategy'];
+  const names = ['progress','map','weekly'];
   document.querySelectorAll('.tab').forEach((t,i) => {
     t.classList.toggle('active', names[i] === tab);
   });
   document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
   document.getElementById('tab-' + tab).classList.add('active');
-  if (tab === 'futures') initFuturesTab();
+  if (tab === 'map') renderBusinessMap();
   if (tab === 'weekly') initWeeklyTab();
   if (tab === 'portfolio') renderPortfolioTab();
   if (tab === 'strategy') { console.log('switching to strategy'); renderStrategyTab(); }
@@ -1308,6 +1324,52 @@ function isOverdue(due) {
 const todayTaipei = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Taipei' });
 function isActiveCard(m) { return !m.completed || String(m.completed_at || '').slice(0, 10) === todayTaipei; }
 
+// ── BUSINESS MAP ─────────────────────────────────
+const MAP_TYPES=['直屬企業','相關企業','投資企業','生產資源','合作夥伴','人脈','潛在客戶','其他'];
+let mapSelected=[];
+let mapVisibleTypes=new Set(MAP_TYPES);
+function escapeHtml(v){return String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
+function businessGraph(){
+  if(!data.business_ops.graph) data.business_ops.graph={nodes:[],relationships:[],updated_at:''};
+  return data.business_ops.graph;
+}
+function renderBusinessMap(){
+  if(!data) return;
+  const graph=businessGraph(), stage=document.getElementById('mapStage'), filters=document.getElementById('mapFilters');
+  filters.innerHTML=MAP_TYPES.map(t=>`<label class="filter"><input type="checkbox" ${mapVisibleTypes.has(t)?'checked':''} onchange="toggleMapType('${t}',this.checked)"> ${t}</label>`).join('');
+  const visible=graph.nodes.filter(n=>n.id==='sam'||(n.tags||[]).some(t=>mapVisibleTypes.has(t)));
+  const ids=new Set(visible.map(n=>n.id));
+  const lines=graph.relationships.filter(e=>ids.has(e.from)&&ids.has(e.to)).map(e=>{
+    const a=visible.find(n=>n.id===e.from),b=visible.find(n=>n.id===e.to); if(!a||!b)return'';
+    const x1=(a.x||0)+70,y1=(a.y||0)+32,x2=(b.x||0)+70,y2=(b.y||0)+32;
+    return `<line class="map-edge" x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}"/><text class="map-edge-label" x="${(x1+x2)/2}" y="${(y1+y2)/2-5}">${e.type||'合作'}</text>`;
+  }).join('');
+  stage.innerHTML=`<svg>${lines}</svg>`+visible.map(n=>`<div class="map-node ${n.id==='sam'?'root':''} ${mapSelected.includes(n.id)?'selected':''}" data-id="${n.id}" style="left:${n.x||20}px;top:${n.y||20}px"><div class="map-node-title">${escapeHtml(n.name)}</div><div class="map-node-meta">${escapeHtml(n.relationship_to_hy||n.industry||'')}</div><div>${(n.tags||[]).map(t=>`<span class="map-tag">${escapeHtml(t)}</span>`).join('')}</div></div>`).join('');
+  stage.querySelectorAll('.map-node').forEach(el=>enableNodeDrag(el));
+}
+function toggleMapType(t,on){on?mapVisibleTypes.add(t):mapVisibleTypes.delete(t);renderBusinessMap()}
+function enableNodeDrag(el){
+  let sx,sy,ox,oy,moved=false;
+  el.onpointerdown=e=>{sx=e.clientX;sy=e.clientY;ox=parseFloat(el.style.left)||0;oy=parseFloat(el.style.top)||0;moved=false;el.setPointerCapture(e.pointerId)};
+  el.onpointermove=e=>{if(sx===undefined)return;let dx=e.clientX-sx,dy=e.clientY-sy;if(Math.abs(dx)+Math.abs(dy)>4)moved=true;el.style.left=Math.max(0,ox+dx)+'px';el.style.top=Math.max(0,oy+dy)+'px'};
+  el.onpointerup=e=>{const id=el.dataset.id;if(moved){const n=businessGraph().nodes.find(x=>x.id===id);n.x=parseFloat(el.style.left);n.y=parseFloat(el.style.top);businessGraph().updated_at=new Date().toISOString();renderBusinessMap()}else{mapSelected=mapSelected.includes(id)?mapSelected.filter(x=>x!==id):[...mapSelected.slice(-1),id];renderBusinessMap()}sx=undefined};
+}
+function addMapNode(){
+  const name=prompt('節點名稱');if(!name)return;const type=prompt('類型：'+MAP_TYPES.join('／'),'其他')||'其他';
+  businessGraph().nodes.push({id:'node_'+Date.now(),name,tags:[type],status:'active',x:80+Math.random()*500,y:90+Math.random()*400,updated_at:new Date().toISOString()});renderBusinessMap();
+}
+function editSelectedNode(){
+  if(mapSelected.length!==1)return showToast('請選取一個節點','error');const n=businessGraph().nodes.find(x=>x.id===mapSelected[0]);if(!n)return;
+  const name=prompt('名稱',n.name);if(name===null)return;const tags=prompt('標籤（逗號分隔）',(n.tags||[]).join(','));if(tags===null)return;n.name=name;n.tags=tags.split(',').map(x=>x.trim()).filter(Boolean);n.updated_at=new Date().toISOString();renderBusinessMap();
+}
+function linkSelectedNodes(){
+  if(mapSelected.length!==2)return showToast('請依序選取兩個節點','error');const type=prompt('關係類型（持股／控制／投資／生產／供應／品牌／通路／經銷／合作／客戶／人脈／潛在合作）','合作');if(!type)return;
+  const g=businessGraph();if(!g.relationships.some(e=>e.from===mapSelected[0]&&e.to===mapSelected[1]&&e.type===type))g.relationships.push({id:'rel_'+Date.now(),from:mapSelected[0],to:mapSelected[1],type,confirmed:true,updated_at:new Date().toISOString()});mapSelected=[];renderBusinessMap();
+}
+function unlinkSelectedNodes(){
+  if(mapSelected.length!==2)return showToast('請選取兩個節點','error');const g=businessGraph();g.relationships=g.relationships.filter(e=>!((e.from===mapSelected[0]&&e.to===mapSelected[1])||(e.from===mapSelected[1]&&e.to===mapSelected[0])));mapSelected=[];renderBusinessMap();
+}
+
 // ── DATA ─────────────────────────────────────────
 async function loadData() {
   document.getElementById('lastUpdated').textContent = '讀取中...';
@@ -1316,6 +1378,7 @@ async function loadData() {
     if (!progressRes.ok) throw new Error(`HTTP ${progressRes.status}`);
     data = await progressRes.json();
     if (!data.business_ops) data.business_ops = { businesses: [], last_updated: '' };
+    businessGraph();
 
     dataLoaded = true;
     document.getElementById('saveBtn').disabled = false;
