@@ -139,7 +139,7 @@ export default function CommandCenter() {
             {offices.map(o=>{
               const ow=work.filter(w=>w.bot===o.id),[x,y]=positions[o.id]
               const visible=camera.x+(x+520)*camera.z>0&&camera.y+(y+490)*camera.z>0&&camera.x+x*camera.z<(viewport.current?.clientWidth||2000)&&camera.y+y*camera.z<(viewport.current?.clientHeight||1200)
-              return <article key={o.id} className="cc-office-island" style={{left:x,top:y,zIndex:Math.round(y)}}>
+              return <article key={o.id} className="cc-office-island" style={{left:x,top:y,'--room-depth':Math.round(y)}}>
                 <SpatialOffice office={o} work={ow} groups={groups[o.id]||[]} connection={data?connection:'connecting'} now={now} detailed={detailed} visible={visible} selected={selection.bot===o.id} selection={selection}
                   onOffice={()=>{setSelection({bot:o.id,inspect:true});focusOffice(o.id)}}
                   onAgent={g=>setSelection({bot:o.id,agent:g?.assigned?g.id:null,agent_name:g?.assigned?g.name:null,unassigned:g&&!g.assigned,inspect:true})}/>

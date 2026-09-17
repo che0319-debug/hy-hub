@@ -74,3 +74,13 @@
  .cc-style-a .cc-map-tools button{min-width:42px;min-height:42px}
 }
 @media(prefers-reduced-motion:reduce){.cc-style-a *{animation:none!important;transition:none!important}}
+/* Labels remain above neighboring cutaway walls. */
+.cc-room-art{z-index:var(--room-depth)}
+.cc-room-rug{z-index:calc(var(--room-depth) + 1)}
+.cc-office-representative{z-index:calc(var(--room-depth) + 2)}
+.cc-spatial-desk{z-index:calc(var(--room-depth) + 3)}
+.cc-spatial-desk:hover,.cc-spatial-desk:focus-visible,.cc-spatial-desk.is-selected{z-index:calc(var(--room-depth) + 4)}
+.cc-room-sign{z-index:1500}.cc-desk-more{z-index:1501}
+.cc-style-a .cc-event{overflow-wrap:anywhere}.cc-style-a .cc-panel{overflow-x:hidden}
+.cc-office-host{position:absolute;left:310px;top:153px;width:94px;height:100px;z-index:calc(var(--room-depth) + 2);pointer-events:none}
+.cc-office-host>span{display:block;white-space:nowrap;font-size:9px;text-align:center;color:#61758d;background:#ffffffda;border-radius:4px;padding:2px}

@@ -61,6 +61,7 @@ export default function SpatialOffice({office,work,groups,connection,now,detaile
     <div className="cc-room-rug"/>
     {!detailed&&<div className="cc-office-representative"><RobotDesk color={color} mode={effective}/></div>}
     {detailed&&visible&&<>
+      {desks.length>0&&<div className="cc-office-host"><RobotDesk color={color} mode={effective}/><span>{office.name} · Office Bot</span></div>}
       {desks.length ? desks.map((g,i)=>{
         const gm=officeMotion(g.work,connection,now)
         return <button key={g.id} className={`cc-spatial-desk ${selection.agent===g.id?'is-selected':''}`} style={{left:DESKS[i][0],top:DESKS[i][1]}} onClick={()=>onAgent(g)} aria-label={`${g.name}，${g.work.length} 項工作`}>
