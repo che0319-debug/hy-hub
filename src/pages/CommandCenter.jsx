@@ -17,11 +17,19 @@ function Badge({ w, now }) { return <span className={`cc-badge s-${w.status}`}>{
 export default function CommandCenter() {
   const [data,setData] = useState(null), [connection,setConnection] = useState('connecting'), [error,setError] = useState('')
   const [selection,setSelection] = useState({bot:'hy'}), [panel,setPanel] = useState(''), [command,setCommand] = useState(''), [copied,setCopied] = useState(false)
+  const [travelOpen,setTravelOpen]=useState(false),[viewportHeight,setViewportHeight]=useState(null)
   const [travelRequest,setTravelRequest]=useState(null),[travelMessage,setTravelMessage]=useState('角色移動不代表工作進度'),[destination,setDestination]=useState('hy'),[roaming,setRoaming]=useState(false)
   const [now,setNow] = useState(Date.now()), [camera,setCamera] = useState({x:0,y:0,z:.6})
   const viewport = useRef(null), gesture = useRef(null), pointers = useRef(new Map()), dataRef = useRef(null), contextRef = useRef(null)
   const [mobile,setMobile] = useState(()=>window.matchMedia('(max-width: 767px)').matches)
   useEffect(()=>{const media=window.matchMedia('(max-width: 767px)');const change=()=>setMobile(media.matches);media.addEventListener('change',change);return()=>media.removeEventListener('change',change)},[])
+  useEffect(()=>{
+    const visual=window.visualViewport
+    if(!visual)return
+    const resize=()=>setViewportHeight(visual.height)
+    resize();visual.addEventListener('resize',resize)
+    return()=>visual.removeEventListener('resize',resize)
+  },[])
   const positions = mobile ? MOBILE_POS : POS
   const offices = data?.offices || FALLBACK, work = data?.work || []
   const selected = work.find(w=>w.work===selection.work)
@@ -126,9 +134,9 @@ export default function CommandCenter() {
     <p className="cc-muted">後端實際回報 · 台北時間</p>
     <div className="cc-stream-filter"><button className={!selection.filter?'active':''} onClick={()=>setSelection(s=>({...s,filter:false}))}>全部</button><button className={selection.filter?'active':''} onClick={()=>setSelection(s=>({...s,filter:true}))}>{offices.find(o=>o.id===selection.bot)?.name}</button></div>
     {data&&!data.events.length&&<div className="cc-empty"><Radio size={26}/><b>{connection==='snapshot'?'事件串流尚未連線':'尚無執行事件'}</b><p>舊工作狀態可查看；連線後的活動回報會出現在這裡。</p></div>}
-    {[...(data?.events||[])].reverse().filter(e=>!selection.filter||e.data.bot===selection.bot).map(e=><button className="cc-event" key={e.id} onClick={()=>{const w=work.find(w=>w.work===e.data.work);if(w)selectWork(w)}}><time>{date(e.occurredAt)}</time><b>{offices.find(o=>o.id===e.data.bot)?.name || e.data.bot} / {e.data.agent_name || '未標示 Agent'}</b><span>{e.data.current_activity||LABEL[e.data.status]||e.data.status}</span><small>{e.data.title}</small><Badge w={e.data} now={NaN}/></button>)}
+    {[...(data?.events||[])].reverse().filter(e=>!selection.filter||e.data.bot===selection.bot).map(e=><button className="cc-event" key={e.id} onClick={()=>{const w=work.find(w=>w.work===e.data.work);if(w)selectWork(w)}}><time>{date(e.occurredAt)}</time><b>{offices.find(o=>o.id===e.data.bot)?.name || e.data.bot} / {e.data.agent_name || '未標示 Agent'}</b><span>{e.data.current_activity||LABEL[e.data.status]||e.data.status}</span>{e.data.handoff&&<small>交接：{e.data.handoff.from_bot} → {e.data.handoff.to_bot}</small>}<small>{e.data.title}</small><Badge w={e.data} now={NaN}/></button>)}
   </>
-  return <div className={`cc-root cc-style-a ${connection!=='live'?'cc-motion-paused':''}`}>
+  return <div className={`cc-root cc-style-a ${connection!=='live'?'cc-motion-paused':''}`} style={mobile&&viewportHeight?{height:viewportHeight}:undefined}>
     <header className="cc-header"><Link to="/" aria-label="返回 HY Life OS"><ArrowLeft size={20}/></Link><div><small>HY LIFE OS</small><h1>AI Command Center <em>V1</em></h1></div><span className={`cc-connection ${connection==='live'?'live':''}`}><i/>{({live:'已連線',connecting:'連線中',disconnected:'已斷線',stale:'資料同步異常',paused:'已暫停',snapshot:'快照・非即時'})[connection]}</span><Link className="cc-work-link" to="/dispatch">AI 工作 <ArrowUpRight size={15}/></Link></header>
     <div className="cc-mobile-tabs"><button onClick={()=>setPanel(panel==='brief'?'':'brief')}>AI Brief <b>{attention.length}</b></button><button className={!panel?'active':''} onClick={()=>setPanel('')}>Office World</button><button onClick={()=>setPanel(panel==='activity'?'':'activity')}>Live Activity <b>{data?.events.length||0}</b></button></div>
     <div className="cc-body"><aside className={`cc-panel cc-left ${panel==='brief'?'open':''}`}>{brief}</aside>
@@ -137,13 +145,14 @@ export default function CommandCenter() {
         {(error||connection==='stale')&&<div className="cc-error" role="status">{error||'同步失敗；目前顯示最後收到的資料。'}</div>}
         <div ref={viewport} className="cc-viewport" onPointerDown={pointerDown} onPointerMove={pointerMove} onPointerUp={pointerUp} onPointerCancel={pointerUp}>
           <div className={`cc-world ${!detailed?'cc-overview':''}`} style={{transform:`translate(${camera.x}px,${camera.y}px) scale(${camera.z})`}}>
-            <Headquarters offices={offices} work={work} groups={groups} connection={connection} now={now} detailed={detailed} selection={selection} travelRequest={travelRequest} roaming={roaming} onTravelState={setTravelMessage}
-              onOffice={id=>{setSelection({bot:id,inspect:true});focusOffice(id)}}
+            <Headquarters offices={offices} work={work} groups={groups} events={data?.events} connection={connection} now={now} detailed={detailed} selection={selection} travelRequest={travelRequest} roaming={roaming} onTravelState={setTravelMessage}
+              onOffice={id=>{setTravelOpen(false);setSelection({bot:id,inspect:true});focusOffice(id)}}
               onAgent={(id,g)=>setSelection({bot:id,agent:g.assigned?g.id:null,agent_name:g.assigned?g.name:null,unassigned:!g.assigned,inspect:true})}/>
 
           </div>
         </div>
-        <div className="cc-travel-bar"><div><b>{offices.find(o=>o.id===selection.bot)?.name} · 空間移動</b><label><input type="checkbox" checked={roaming} onChange={e=>setRoaming(e.target.checked)}/>閒置散步</label></div><div><select aria-label="移動目的地" value={destination} onChange={e=>setDestination(e.target.value)}>{offices.map(o=><option key={o.id} value={o.id}>{o.name} Office</option>)}</select><button disabled={!canTravel(work.filter(w=>w.bot===selection.bot),connection)} onClick={()=>{setTravelRequest({bot:selection.bot,destination,id:Date.now()});fit();setSelection(s=>({...s,inspect:false}))}}>前往</button></div><p role="status">{!canTravel(work.filter(w=>w.bot===selection.bot),connection)?'執行中或連線未就緒，暫停空間移動':travelMessage}</p></div>
+        <button className="cc-mobile-only cc-travel-toggle" aria-expanded={travelOpen} onClick={()=>{setTravelOpen(v=>!v);setSelection(s=>({...s,inspect:false}))}}>空間移動 {travelOpen?'−':'+'}</button>
+        {(!mobile||travelOpen)&&<div className="cc-travel-bar"><div><b>{offices.find(o=>o.id===selection.bot)?.name} · 空間移動</b><label><input type="checkbox" checked={roaming} onChange={e=>setRoaming(e.target.checked)}/>閒置散步</label></div><div><select aria-label="移動目的地" value={destination} onChange={e=>setDestination(e.target.value)}>{offices.map(o=><option key={o.id} value={o.id}>{o.name} Office</option>)}</select><button disabled={!canTravel(work.filter(w=>w.bot===selection.bot),connection)} onClick={()=>{setTravelRequest({bot:selection.bot,destination,id:Date.now()});fit();setSelection(s=>({...s,inspect:false}))}}>前往</button></div><p role="status">{!canTravel(work.filter(w=>w.bot===selection.bot),connection)?'執行中或連線未就緒，暫停空間移動':travelMessage}</p></div>}
         {detailed&&selection.inspect&&<section className="cc-office-inspector" aria-label="Office 工作詳情">
           <div className="cc-inspector-heading"><div><small>{selected?'EXECUTION DETAIL':'OFFICE WORKSPACE'}</small><h2>{selection.agent_name || offices.find(o=>o.id===selection.bot)?.name+' Office'}</h2></div><button aria-label="關閉工作詳情" onClick={()=>setSelection(s=>({...s,inspect:false}))}><X size={18}/></button></div>
           <div className="cc-inspector-scroll">

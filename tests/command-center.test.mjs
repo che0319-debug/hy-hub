@@ -60,3 +60,15 @@ test('travel pauses for disconnected, queued and busy work without changing work
  assert.equal(canTravel([],'disconnected'),false);assert.equal(canTravel([{status:'queued'}],'live'),false)
  assert.equal(canTravel([{status:'review'}],'live'),true);assert.equal(canTravel([],'live'),true)
 })
+
+import {collectHandoffs} from '../src/lib/handoffEvents.js'
+test('handoff movement skips baseline, replays, stale and superseded owners',()=>{
+ const now=Date.parse('2026-09-17T12:00:00Z'),work=[{work:'w',bot:'sam'}]
+ const event={id:'e',sequence:8,eventType:'execution',occurredAt:'2026-09-17T11:59:55Z',data:{work:'w',handoff:{from_bot:'950157',to_bot:'sam',reason:'owner_changed'}}}
+ assert.equal(collectHandoffs([event],null,work,now).moves.length,0)
+ assert.equal(collectHandoffs([event],7,work,now).moves.length,1)
+ assert.equal(collectHandoffs([event],8,work,now).moves.length,0)
+ assert.equal(collectHandoffs([event],7,[{work:'w',bot:'hy'}],now).moves.length,0)
+ assert.equal(collectHandoffs([event],7,work,now+180000).moves.length,0)
+ assert.equal(collectHandoffs([{...event,data:{work:'w',status:'review'}}],7,work,now).moves.length,0)
+})
