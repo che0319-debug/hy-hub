@@ -46,3 +46,17 @@ test('one idle or waiting work cannot hide another agents fresh activity',()=>{
  const work=[{status:'review'},{status:'analyzing',updated_at:'2026-09-17T07:59:00Z',current_activity:'比較來源',telemetry_available:true}]
  assert.equal(officeMotion(work,'live',now).mode,'analyzing')
 })
+
+import {HOMES,officeRoute,canTravel,routeLength,pointOnRoute} from '../src/lib/officeRoutes.js'
+test('all four offices connect through walkways around the central planter',()=>{
+ for(const from of Object.keys(HOMES))for(const to of Object.keys(HOMES)){
+  const route=officeRoute(from,to);assert.deepEqual(route[0],HOMES[from]);assert.deepEqual(route.at(-1),HOMES[to]);assert.deepEqual(pointOnRoute(route,routeLength(route)),HOMES[to])
+  for(let d=0;d<routeLength(route);d+=5){const [x,y]=pointOnRoute(route,d);assert.equal(x>530&&x<620&&y>320&&y<425,false)}
+ }
+})
+test('travel pauses for disconnected, queued and busy work without changing work',()=>{
+ const work=[{status:'running'}],before=JSON.stringify(work)
+ assert.equal(canTravel(work,'live'),false);assert.equal(JSON.stringify(work),before)
+ assert.equal(canTravel([],'disconnected'),false);assert.equal(canTravel([{status:'queued'}],'live'),false)
+ assert.equal(canTravel([{status:'review'}],'live'),true);assert.equal(canTravel([],'live'),true)
+})

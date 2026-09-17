@@ -4,10 +4,11 @@ import { ArrowLeft, ArrowUpRight, Bot, Check, Copy, Focus, Mic, Minus, Plus, Rad
 import { followExecution, readExecutionFallback } from '../commandCenterApi'
 import { ACTIVE, LABEL, agentGroups, commandDraft, contextText, isStalled, legacySnapshot } from '../lib/commandCenterModel'
 import './command-center.css'
-import SpatialOffice from '../components/commandCenter/SpatialOffice'
+import Headquarters from '../components/commandCenter/Headquarters'
+import { canTravel } from '../lib/officeRoutes'
 import './office-world.css'
 
-const POS = { hy:[315,0], '950157':[0,295], sam:[630,295], family:[315,590] }
+const POS = { hy:[315,-55], '950157':[0,120], sam:[660,120], family:[315,395] }
 const MOBILE_POS = POS
 const FALLBACK = [{id:'hy',name:'HY',mission:'總 Agent / Chief Agent'},{id:'950157',name:'950157',mission:'研發與工作'},{id:'sam',name:'Sam',mission:'事業發展'},{id:'family',name:'小因',mission:'家庭與生活'}]
 function date(value) { return value ? new Date(value).toLocaleString('zh-TW',{month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',timeZone:'Asia/Taipei'}) : '未回報' }
@@ -16,6 +17,7 @@ function Badge({ w, now }) { return <span className={`cc-badge s-${w.status}`}>{
 export default function CommandCenter() {
   const [data,setData] = useState(null), [connection,setConnection] = useState('connecting'), [error,setError] = useState('')
   const [selection,setSelection] = useState({bot:'hy'}), [panel,setPanel] = useState(''), [command,setCommand] = useState(''), [copied,setCopied] = useState(false)
+  const [travelRequest,setTravelRequest]=useState(null),[travelMessage,setTravelMessage]=useState('角色移動不代表工作進度'),[destination,setDestination]=useState('hy'),[roaming,setRoaming]=useState(false)
   const [now,setNow] = useState(Date.now()), [camera,setCamera] = useState({x:0,y:0,z:.6})
   const viewport = useRef(null), gesture = useRef(null), pointers = useRef(new Map()), dataRef = useRef(null), contextRef = useRef(null)
   const [mobile,setMobile] = useState(()=>window.matchMedia('(max-width: 767px)').matches)
@@ -55,7 +57,7 @@ export default function CommandCenter() {
 
   const fit = useCallback(()=>{
     const r=viewport.current?.getBoundingClientRect();if(!r)return
-    const width=1150,height=1080
+    const width=1150,height=863
     const z=Math.min((r.width-28)/width,(r.height-28)/height, .8)
     setCamera({x:(r.width-width*z)/2,y:(r.height-height*z)/2,z})
   },[])
@@ -131,22 +133,17 @@ export default function CommandCenter() {
     <div className="cc-mobile-tabs"><button onClick={()=>setPanel(panel==='brief'?'':'brief')}>AI Brief <b>{attention.length}</b></button><button className={!panel?'active':''} onClick={()=>setPanel('')}>Office World</button><button onClick={()=>setPanel(panel==='activity'?'':'activity')}>Live Activity <b>{data?.events.length||0}</b></button></div>
     <div className="cc-body"><aside className={`cc-panel cc-left ${panel==='brief'?'open':''}`}>{brief}</aside>
       <section className="cc-world-section">
-        <div className="cc-world-title"><span>OFFICE WORLD</span><small>{executionDetail?'執行細節':detailed?'Agent 與工作':'團隊全景'}</small></div>
+        <div className="cc-world-title"><span>AI OFFICE · HEADQUARTERS</span><small>{executionDetail?'執行細節':detailed?'Agent 與工作':'團隊全景'}</small></div>
         {(error||connection==='stale')&&<div className="cc-error" role="status">{error||'同步失敗；目前顯示最後收到的資料。'}</div>}
         <div ref={viewport} className="cc-viewport" onPointerDown={pointerDown} onPointerMove={pointerMove} onPointerUp={pointerUp} onPointerCancel={pointerUp}>
           <div className={`cc-world ${!detailed?'cc-overview':''}`} style={{transform:`translate(${camera.x}px,${camera.y}px) scale(${camera.z})`}}>
-            <svg className="cc-connections" width="1150" height="1080" aria-hidden="true"><path d="M575 420 260 590 575 805 890 590Z"/><path d="M575 420V805"/></svg>
-            {offices.map(o=>{
-              const ow=work.filter(w=>w.bot===o.id),[x,y]=positions[o.id]
-              const visible=camera.x+(x+520)*camera.z>0&&camera.y+(y+490)*camera.z>0&&camera.x+x*camera.z<(viewport.current?.clientWidth||2000)&&camera.y+y*camera.z<(viewport.current?.clientHeight||1200)
-              return <article key={o.id} className="cc-office-island" style={{left:x,top:y,'--room-depth':Math.round(y)}}>
-                <SpatialOffice office={o} work={ow} groups={groups[o.id]||[]} connection={data?connection:'connecting'} now={now} detailed={detailed} visible={visible} selected={selection.bot===o.id} selection={selection}
-                  onOffice={()=>{setSelection({bot:o.id,inspect:true});focusOffice(o.id)}}
-                  onAgent={g=>setSelection({bot:o.id,agent:g?.assigned?g.id:null,agent_name:g?.assigned?g.name:null,unassigned:g&&!g.assigned,inspect:true})}/>
-              </article>
-            })}
+            <Headquarters offices={offices} work={work} groups={groups} connection={connection} now={now} detailed={detailed} selection={selection} travelRequest={travelRequest} roaming={roaming} onTravelState={setTravelMessage}
+              onOffice={id=>{setSelection({bot:id,inspect:true});focusOffice(id)}}
+              onAgent={(id,g)=>setSelection({bot:id,agent:g.assigned?g.id:null,agent_name:g.assigned?g.name:null,unassigned:!g.assigned,inspect:true})}/>
+
           </div>
         </div>
+        <div className="cc-travel-bar"><div><b>{offices.find(o=>o.id===selection.bot)?.name} · 空間移動</b><label><input type="checkbox" checked={roaming} onChange={e=>setRoaming(e.target.checked)}/>閒置散步</label></div><div><select aria-label="移動目的地" value={destination} onChange={e=>setDestination(e.target.value)}>{offices.map(o=><option key={o.id} value={o.id}>{o.name} Office</option>)}</select><button disabled={!canTravel(work.filter(w=>w.bot===selection.bot),connection)} onClick={()=>{setTravelRequest({bot:selection.bot,destination,id:Date.now()});fit();setSelection(s=>({...s,inspect:false}))}}>前往</button></div><p role="status">{!canTravel(work.filter(w=>w.bot===selection.bot),connection)?'執行中或連線未就緒，暫停空間移動':travelMessage}</p></div>
         {detailed&&selection.inspect&&<section className="cc-office-inspector" aria-label="Office 工作詳情">
           <div className="cc-inspector-heading"><div><small>{selected?'EXECUTION DETAIL':'OFFICE WORKSPACE'}</small><h2>{selection.agent_name || offices.find(o=>o.id===selection.bot)?.name+' Office'}</h2></div><button aria-label="關閉工作詳情" onClick={()=>setSelection(s=>({...s,inspect:false}))}><X size={18}/></button></div>
           <div className="cc-inspector-scroll">
