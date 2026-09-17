@@ -13,8 +13,12 @@ export default function Headquarters({offices,work,groups,connection,now,detaile
  const [travel,setTravel]=useState({}),[pages,setPages]=useState({})
  latest.current={work,connection,roaming}
  const begin=(id,destination,kind='manual')=>{
-  if(journeys.current[id]||!canTravel(latest.current.work.filter(w=>w.bot===id),latest.current.connection)||locations.current[id]===destination)return
-  const points=officeRoute(locations.current[id],destination);if(points.length<2)return
+  if(journeys.current[id]){onTravelState('此 Bot 正在途中；抵達後可選下一個目的地。');return}
+  if(!canTravel(latest.current.work.filter(w=>w.bot===id),latest.current.connection))return
+  if(locations.current[id]===destination){onTravelState('此 Bot 已在目的地 · 空間位置不代表工作進度');return}
+  const points=officeRoute(locations.current[id],destination).map(p=>[...p]);if(points.length<2)return
+  points[0]=[...positions.current[id]]
+  if(destination!==id){const offset={hy:[-27,14],'950157':[27,14],sam:[-27,32],family:[27,32]}[id];points[points.length-1]=[points.at(-1)[0]+offset[0],points.at(-1)[1]+offset[1]]}
   journeys.current[id]={points,distance:0,total:routeLength(points),destination,kind}
   setTravel(t=>({...t,[id]:{destination,kind}}));onTravelState(`${offices.find(o=>o.id===id)?.name} 前往 ${offices.find(o=>o.id===destination)?.name} Office · 空間移動，非工作進度`)
  }
