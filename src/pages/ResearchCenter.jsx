@@ -38,13 +38,14 @@ function Findings({synthesis}){
 }
 
 function TopicCard({item,busy,onAction}){
- const state=item.researchStatus||'researching',sources=item.sources||[],synthesis=item.researchSynthesis
+ const state=item.researchStatus||'researching',sources=item.sources||[],synthesis=item.researchSynthesis,run=item.lastResearchRun||{}
  return <article className="rounded-xl border border-slate-200 bg-white p-4">
   <div className="flex items-start justify-between gap-3"><span className="rounded-full bg-blue-50 px-2 py-1 text-xs font-medium text-blue-700">{STATUS[state]||state}</span><span className="text-xs text-slate-400">更新：{dateTime(item.updatedAt||item.lastResearchRunAt)}</span></div>
   <h3 className="mt-3 text-lg font-semibold leading-7 text-slate-900">{item.title}</h3>
   <p className="mt-2 text-sm leading-6 text-slate-600"><b>要回答：</b>{item.researchQuestion}</p>
   <Progress item={item}/>
   <div className="mt-3 flex gap-2 text-xs"><span className="rounded-full bg-slate-100 px-2 py-1">累積資料 {sources.length} 筆</span><span className="rounded-full bg-slate-100 px-2 py-1">本輪新增 {item.sourcesAddedLastRun||0} 筆</span></div>
+  {item.lastResearchRunAt&&<div className="mt-3 grid grid-cols-4 gap-2 rounded-lg border border-slate-200 bg-slate-50 p-3 text-center text-xs"><div><b className="block text-base text-blue-700">{run.found||0}</b>找到</div><div><b className="block text-base text-cyan-700">{run.read||0}</b>讀取</div><div><b className="block text-base text-slate-500">{run.discarded||0}</b>淘汰</div><div><b className="block text-base text-emerald-700">{run.adopted||0}</b>採用</div></div>}
   {item.latestDirection&&<div className="mt-3 rounded-lg bg-blue-50 p-3 text-sm text-blue-900"><b>你最新給的方向：</b>{item.latestDirection}</div>}
   {item.needsUserInput&&<div className="mt-3 rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-800"><b>正在等你回答：</b>{item.userQuestion||'Bot 需要你補充研究條件。'}</div>}
   {synthesis?.currentAnswer&&<div className="mt-3 rounded-lg bg-violet-50 p-3 text-sm leading-6 text-violet-950"><b>目前研究判斷：</b>{synthesis.currentAnswer}</div>}
