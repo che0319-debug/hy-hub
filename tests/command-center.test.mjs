@@ -1,6 +1,6 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import {agentGroups,isStalled,commandDraft,legacySnapshot} from '../src/lib/commandCenterModel.js'
+import {agentGroups,isStalled,commandDraft,commandMode,legacySnapshot} from '../src/lib/commandCenterModel.js'
 test('one Bot supports four agents and multiple works per agent',()=>{
  const work=Array.from({length:4},(_,i)=>({bot:'950157',agent:`a${i}`,work:`w${i}`}));work.push({...work[0],work:'w4'})
  assert.equal(agentGroups(work).length,4);assert.equal(agentGroups(work)[0].work.length,2)
@@ -19,6 +19,16 @@ test('context handoff retains selected Bot Agent Project and Work IDs',()=>{
  for(const expected of ['dispatch_bot_command','confirmed=true','claim','complete','950157','Research Agent','research','p1','w1','讀取來源'])assert.ok(draft.includes(expected))
  const projectDraft=commandDraft({bot:'sam',project:'p2'},[],[],'review')
  assert.ok(projectDraft.includes('p2'))
+})
+
+test('command bar selects a safe canonical write path for each work state',()=>{
+ const waiting={work:'wait',status:'waiting',lifecycle_status:'needs_clarification'}
+ const review={work:'review',status:'review',lifecycle_status:'succeeded'}
+ const running={work:'run',status:'running',lifecycle_status:'running'}
+ assert.equal(commandMode({bot:'hy'},[]).kind,'create')
+ assert.equal(commandMode({bot:'hy',work:'wait'},[waiting]).kind,'clarification')
+ assert.equal(commandMode({bot:'hy',work:'review'},[review]).kind,'feedback')
+ assert.equal(commandMode({bot:'hy',work:'run'},[running]).kind,'blocked')
 })
 
 test('fallback uses actual legacy work and never fabricates execution events',()=>{

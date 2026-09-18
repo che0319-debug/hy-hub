@@ -6,3 +6,12 @@
 .cc-work>button.cc-project-button{padding:7px 11px 0;color:#597697;font-size:12px}
 
 @media(max-width:767px){.cc-desks{max-height:260px}.cc-overview .cc-office-mission{display:none}.cc-overview .cc-office-heading h2{font-size:31px}.cc-overview .cc-office-summary{padding-top:20px}.cc-overview .cc-office-summary small{font-size:22px}}
+
+/* Phase 4: canonical two-way AI Work interaction. */
+.cc-work-icon{flex:none;width:42px;height:42px;background:#eef3fc;border-radius:10px;display:grid;place-items:center;color:#4e6fa8}
+.cc-command-input input:disabled{background:#f1f3f6;color:#8a96a5}
+.cc-send,.cc-open-work{display:flex;align-items:center;justify-content:center;gap:8px;padding:11px 14px;border-radius:8px;background:#2d5285;color:white;font-size:13px;white-space:nowrap}
+.cc-open-work{background:#f0f4fa;color:#3f5b81}
+.cc-command>p.cc-command-success{color:#257158}
+.cc-command>p.cc-command-error{color:#ae3a38}
+@media(max-width:767px){.cc-work-icon{width:36px;height:42px}.cc-send{padding:12px}.cc-send span{display:none}.cc-open-work{font-size:11px;padding:13px 8px;gap:2px}.cc-open-work svg{width:12px}}

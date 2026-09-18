@@ -1,8 +1,9 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { ArrowLeft, ArrowUpRight, Bot, Check, Copy, Focus, Mic, Minus, Plus, Radio, X } from 'lucide-react'
+import { ArrowLeft, ArrowUpRight, Bot, Focus, MessageSquare, Minus, Plus, Radio, Send, X } from 'lucide-react'
 import { followExecution, readExecutionFallback } from '../commandCenterApi'
-import { ACTIVE, LABEL, agentGroups, commandDraft, contextText, isStalled, legacySnapshot } from '../lib/commandCenterModel'
+import { answerWorkClarification, createDirectWorkItem, submitWorkFeedback } from '../lifeOSApi'
+import { ACTIVE, LABEL, agentGroups, commandMode, contextText, isStalled, legacySnapshot } from '../lib/commandCenterModel'
 import './command-center.css'
 import Headquarters from '../components/commandCenter/Headquarters'
 import { canTravel } from '../lib/officeRoutes'
@@ -16,7 +17,8 @@ function Badge({ w, now }) { return <span className={`cc-badge s-${w.status}`}>{
 
 export default function CommandCenter() {
   const [data,setData] = useState(null), [connection,setConnection] = useState('connecting'), [error,setError] = useState('')
-  const [selection,setSelection] = useState({bot:'hy'}), [panel,setPanel] = useState(''), [command,setCommand] = useState(''), [copied,setCopied] = useState(false)
+  const [selection,setSelection] = useState({bot:'hy'}), [panel,setPanel] = useState(''), [command,setCommand] = useState('')
+  const [commandBusy,setCommandBusy] = useState(false), [commandStatus,setCommandStatus] = useState(null)
   const [travelOpen,setTravelOpen]=useState(false),[viewportHeight,setViewportHeight]=useState(null)
   const [travelRequest,setTravelRequest]=useState(null),[travelMessage,setTravelMessage]=useState('角色移動不代表工作進度'),[destination,setDestination]=useState('hy'),[roaming,setRoaming]=useState(false)
   const [now,setNow] = useState(Date.now()), [camera,setCamera] = useState({x:0,y:0,z:.6})
@@ -37,6 +39,7 @@ export default function CommandCenter() {
   const detailed = camera.z >= (mobile ? .5 : .78), executionDetail = detailed && Boolean(selection.work)
   const groups = useMemo(()=>Object.fromEntries(offices.map(o=>[o.id,agentGroups(work.filter(w=>w.bot===o.id))])),[data])
   const context = contextText(selection,offices,work)
+  const mode = commandMode(selection,work)
   dataRef.current=data; contextRef.current=selection
 
   useEffect(()=>{
@@ -110,11 +113,25 @@ export default function CommandCenter() {
     window.hyCommandCenter=api
     return()=>{if(window.hyCommandCenter===api)delete window.hyCommandCenter}
   },[])
-  async function copyCommand(){
-    if(!command.trim())return
-    try{await navigator.clipboard.writeText(commandDraft(selection,offices,work,command));setCopied(true)}catch{setError('無法自動複製，請長按下方文字複製')}
+  async function submitCommand(){
+    const text=command.trim()
+    if(!text||commandBusy||mode.kind==='blocked')return
+    setCommandBusy(true);setCommandStatus(null)
+    try{
+      let response
+      if(mode.kind==='clarification')response=await answerWorkClarification(selected.work,text)
+      else if(mode.kind==='feedback')response=await submitWorkFeedback(selected.work,text,`hy-command-feedback-${selected.work}-${Date.now()}`)
+      else response=await createDirectWorkItem({
+        title:text.split(/\r?\n/)[0].slice(0,80),desc:text,
+        milestoneId:`command-${Date.now()}`,owner:selection.bot||'hy',
+        projectId:selection.project||undefined,projectName:selection.project_name||undefined,
+      })
+      setCommand('')
+      setCommandStatus({type:'success',text:mode.kind==='clarification'?'已回覆，Bot 將繼續執行。':mode.kind==='feedback'?'已建立修訂工作。':`已建立 AI Work${response.item?.id?`：${response.item.id}`:''}`})
+    }catch(e){setCommandStatus({type:'error',text:e.message||'指令送出失敗'})}
+    finally{setCommandBusy(false)}
   }
-  useEffect(()=>setCopied(false),[command,selection])
+  useEffect(()=>setCommandStatus(null),[selection])
 
   const brief = <>
     <div className="cc-panel-heading"><div><small>TEAM OVERVIEW</small><h2>AI Brief</h2></div><button className="cc-mobile-only" onClick={()=>setPanel('')} aria-label="關閉"><X size={20}/></button></div>
@@ -170,6 +187,6 @@ export default function CommandCenter() {
         <div className="cc-map-hint">拖曳平移 · 雙指縮放 · 點選 Office 聚焦</div>
       </section><aside className={`cc-panel cc-right ${panel==='activity'?'open':''}`}>{activity}</aside>
     </div>
-    <footer className="cc-command"><div className="cc-command-context"><span>COMMAND CONTEXT</span><b>對 {context} 說……</b>{selected&&<small>{LABEL[selected.status]}</small>}</div><div className="cc-command-input"><a className="cc-voice" href="https://chatgpt.com/" target="_blank" rel="noreferrer" aria-label="開啟 ChatGPT，使用 App 語音"><Mic size={22}/></a><input aria-label="指令" value={command} onChange={e=>setCommand(e.target.value)} placeholder="輸入指令，複製後交給 ChatGPT…"/><button className="cc-copy" disabled={!command.trim()} onClick={copyCommand}>{copied?<Check size={17}/>:<Copy size={17}/>}<span>{copied?'已複製':'複製指令'}</span></button><a className="cc-chatgpt" href="https://chatgpt.com/" target="_blank" rel="noreferrer">ChatGPT <ArrowUpRight size={16}/></a></div><p>{copied?'已包含選取的 Bot／Agent／Project／Work ID；請到 ChatGPT 貼上。':'語音由 ChatGPT App 提供；此列不會自行送出或執行指令。'}</p>{error.startsWith('無法自動複製')&&<textarea readOnly value={commandDraft(selection,offices,work,command)}/>}</footer>
+    <footer className="cc-command"><div className="cc-command-context"><span>WORK INTERACTION</span><b>對 {context} 說……</b>{selected&&<small>{LABEL[selected.status]}</small>}</div><div className="cc-command-input"><span className="cc-work-icon" aria-hidden="true"><MessageSquare size={21}/></span><input aria-label="工作指令或回覆" value={command} disabled={mode.kind==='blocked'||commandBusy} onChange={e=>setCommand(e.target.value)} onKeyDown={e=>{if(e.key==='Enter'){e.preventDefault();submitCommand()}}} placeholder={mode.placeholder}/><button className="cc-send" disabled={!command.trim()||commandBusy||mode.kind==='blocked'} onClick={submitCommand}><Send size={17}/><span>{commandBusy?'送出中…':mode.label}</span></button><Link className="cc-open-work" to="/dispatch">AI 工作 <ArrowUpRight size={16}/></Link></div><p className={commandStatus?.type==='error'?'cc-command-error':commandStatus?.type==='success'?'cc-command-success':''}>{commandStatus?.text||mode.helper}</p></footer>
   </div>
 }
