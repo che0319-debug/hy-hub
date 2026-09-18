@@ -16,7 +16,7 @@ test('context handoff retains selected Bot Agent Project and Work IDs',()=>{
  const selection={bot:'950157',agent:'research',agent_name:'Research Agent',work:'w1'}
  const work=[{work:'w1',project:'p1',project_name:'Project One',title:'Work One'}]
  const draft=commandDraft(selection,[{id:'950157',name:'950157'}],work,'讀取來源')
- for(const expected of ['950157','Research Agent','research','p1','w1','讀取來源'])assert.ok(draft.includes(expected))
+ for(const expected of ['dispatch_bot_command','confirmed=true','claim','complete','950157','Research Agent','research','p1','w1','讀取來源'])assert.ok(draft.includes(expected))
  const projectDraft=commandDraft({bot:'sam',project:'p2'},[],[],'review')
  assert.ok(projectDraft.includes('p2'))
 })

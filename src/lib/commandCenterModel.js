@@ -20,7 +20,7 @@ export function contextText(selection, offices, work) {
 }
 export function commandDraft(selection, offices, work, text) {
   const item = work.find(w => w.work === selection.work)
-  return `請透過既有 HY Life OS connector 處理以下指令。\n對象：${contextText(selection, offices, work)}\nBot owner：${selection.bot}${selection.agent ? `\nAgent：${selection.agent}` : ''}${(item?.project || selection.project) ? `\nProject ID：${item?.project || selection.project}` : ''}${item ? `\nAI Work ID：${item.work}` : ''}\n指令：${text.trim()}\n請先讀取最新狀態，再依指令操作；重大系統修改須由 HY 核准。`
+  return `請透過既有 HY Life OS connector 的 dispatch_bot_command 正式派工，寫入既有 AI Work。\n對象：${contextText(selection, offices, work)}\nBot owner：${selection.bot}${selection.agent ? `\nRequested Agent ID：${selection.agent}` : ''}${selection.agent_name ? `\nRequested Agent Name：${selection.agent_name}` : ''}${(item?.project || selection.project) ? `\nProject ID：${item?.project || selection.project}` : ''}${item ? `\nRelated AI Work ID：${item.work}` : ''}\n指令：${text.trim()}\n本訊息代表 HY 明確要求執行，confirmed=true；請產生穩定唯一的 dispatch_id。派工後在本對話 claim、回報真實進度並 complete，再把結果回覆給我。若涉及重大決策，僅提出建議，仍由 HY 核准。`
 }
 
 // Read-only compatibility for deployments where the new SSE endpoint is not yet
