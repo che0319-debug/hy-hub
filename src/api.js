@@ -334,6 +334,9 @@ export async function fetchAllMilestones() {
     if (result.status !== "fulfilled") return;
     for (const p of getProjects(result.value) || []) {
       for (const m of p.milestones || []) {
+        const isCompleted = Boolean(m.completed)
+          || ['done', 'cancelled'].includes(String(m.execute_status || '').toLowerCase());
+        if (isCompleted) continue;
         out.push({ title: m.title, due: m.due || "", _source: source, _project: p.name });
       }
     }
