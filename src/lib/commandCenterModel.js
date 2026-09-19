@@ -56,6 +56,7 @@ export function legacySnapshot(core, offices) {
       if(w.status==='succeeded'&&w.deliveryState==='awaiting_review')status='review'
       return {bot:w.owner,agent:e.agent_id||null,agent_name:e.agent_name||e.agent_id||null,run_id:w.workerRunId,
         project:payload.projectId||w.projectId,project_name:payload.projectName,work:w.id,title:w.title,
+        executor:w.executor_type||payload.executor_type||w.routing?.executor_type||'chatgpt',
         lifecycle_status:w.status,status,stage:e.stage||p.stage,current_activity:e.current_activity||p.summary,
         updated_at:w.updatedAt||e.updated_at||p.recordedAt,waiting_for:['waiting','review'].includes(status)?'human_hy':e.waiting_for,
         telemetry_available:Boolean(w.execution||w.progress)}
