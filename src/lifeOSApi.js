@@ -169,6 +169,31 @@ export async function approveWorkspacePlan(projectId) {
   return parseResponse(response, 'approveWorkspacePlan')
 }
 
+export async function saveWorkspacePlan(projectId, payload) {
+  const response = await fetch(`${API_BASE}/api/life-os/v1/workspace/projects/${encodeURIComponent(projectId)}/plan`, {
+    method: 'PUT',
+    headers: { ...authHeaders(), 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  })
+  return parseResponse(response, 'saveWorkspacePlan')
+}
+
+export async function createWorkspacePlanRevision(projectId, payload) {
+  const response = await fetch(`${API_BASE}/api/life-os/v1/workspace/projects/${encodeURIComponent(projectId)}/plan/revisions`, {
+    method: 'POST',
+    headers: { ...authHeaders(), 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  })
+  return parseResponse(response, 'createWorkspacePlanRevision')
+}
+
+export async function clearLegacyWorkspaceWork() {
+  const response = await fetch(`${API_BASE}/api/life-os/v1/workspace/legacy-work`, {
+    method: 'DELETE', headers: { ...authHeaders() },
+  })
+  return parseResponse(response, 'clearLegacyWorkspaceWork')
+}
+
 export async function approveWorkspaceMilestone(projectId, milestoneId, workId) {
   const response = await fetch(`${API_BASE}/api/life-os/v1/workspace/projects/${encodeURIComponent(projectId)}/milestones/${encodeURIComponent(milestoneId)}/approve`, {
     method: 'POST',
