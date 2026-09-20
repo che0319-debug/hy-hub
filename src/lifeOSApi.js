@@ -162,6 +162,13 @@ export async function createWorkspaceProject(payload) {
   return parseResponse(response, 'createWorkspaceProject')
 }
 
+export async function archiveWorkspaceProject(projectId) {
+  const response = await fetch(`${API_BASE}/api/life-os/v1/workspace/projects/${encodeURIComponent(projectId)}`, {
+    method: 'DELETE', headers: { ...authHeaders() },
+  })
+  return parseResponse(response, 'archiveWorkspaceProject')
+}
+
 export async function approveWorkspacePlan(projectId) {
   const response = await fetch(`${API_BASE}/api/life-os/v1/workspace/projects/${encodeURIComponent(projectId)}/plan/approve`, {
     method: 'POST', headers: { ...authHeaders() },
