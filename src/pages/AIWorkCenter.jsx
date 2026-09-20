@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Bot, CheckCircle2, CircleAlert, Clock3, ExternalLink, FileText, FolderOpen, MessageSquare, RefreshCw, Send, ShieldCheck, Telescope, Trash2 } from 'lucide-react'
 import { authHeaders } from '../auth'
-import { actOnResearch, answerWorkClarification, createDirectWorkItem, decideAutonomousPlan, dismissWorkItem, fetchResearchCenter, submitWorkFeedback } from '../lifeOSApi'
+import { actOnResearch, answerWorkClarification, approveWorkspacePlan, createDirectWorkItem, decideAutonomousPlan, dismissWorkItem, fetchResearchCenter, submitWorkFeedback } from '../lifeOSApi'
 import { fetchDispatchSessions } from '../api'
 
 const API_BASE = import.meta.env.VITE_API_BASE || ''
@@ -21,6 +21,14 @@ function resultFor(results, item) {
 }
 
 function statusMeta(project) {
+  if (project.workspaceProject) {
+    const formal = project.workspaceProject
+    if (formal.workspaceStatus === 'completed') return { key: 'completed', text: '完成', cls: 'bg-slate-100 text-slate-700' }
+    if (formal.projectPlan?.approvalStatus !== 'approved') return { key: 'waiting', text: '規劃中', cls: 'bg-amber-50 text-amber-700' }
+    const latestStatus = project.latest?.status
+    if (DONE.has(latestStatus)) return { key: 'review', text: '等我確認', cls: 'bg-emerald-50 text-emerald-700' }
+    return { key: 'running', text: '進行中', cls: 'bg-blue-50 text-blue-700' }
+  }
   if (project.research) {
     if (project.research.needsUserInput) return { key: 'waiting', text: '等我確認', cls: 'bg-amber-50 text-amber-700' }
     if (['ready_for_review', 'completed'].includes(project.research.researchStatus)) return { key: 'review', text: '等我確認', cls: 'bg-emerald-50 text-emerald-700' }
@@ -37,7 +45,7 @@ function statusMeta(project) {
 
 function projectKey(item) {
   const payload = item?.payload || {}
-  return payload.driveProject?.folderId || payload.projectId || item.taskId || item.id
+  return payload.workspaceProjectId || payload.driveProject?.folderId || payload.projectId || item.taskId || item.id
 }
 
 export default function AIWorkCenter() {
@@ -104,6 +112,14 @@ export default function AIWorkCenter() {
       project.owner = item.owner || project.owner
       project.title = cleanTitle(item.title || project.title)
     }
+    for (const formal of (core?.projects || []).filter(project => project?.projectPlan)) {
+      const key = formal.id
+      const existing = grouped.get(key) || { key, items: [], owner: formal.owner, title: cleanTitle(formal.title), latest: null }
+      existing.workspaceProject = formal
+      existing.owner = formal.owner || existing.owner
+      existing.title = cleanTitle(formal.title || existing.title)
+      grouped.set(key, existing)
+    }
     for (const plan of plans.filter(plan => plan.status === 'waiting_approval')) {
       const key = `plan:${plan.id}`
       if (!grouped.has(key)) grouped.set(key, { key, items: [], owner: plan.owner, title: cleanTitle(plan.title), plan, latest: null })
@@ -121,7 +137,7 @@ export default function AIWorkCenter() {
       if (aWait !== bWait) return bWait - aWait
       return String(b.latest?.updatedAt || b.plan?.updatedAt || '').localeCompare(String(a.latest?.updatedAt || a.plan?.updatedAt || ''))
     })
-  }, [work, plans, researchItems])
+  }, [work, plans, researchItems, core?.projects])
 
   const visibleProjects = ownerFilter === 'all' ? projects : projects.filter(project => project.owner === ownerFilter)
   const waitingCount = projects.filter(project => statusMeta(project).key === 'waiting').length
@@ -174,6 +190,18 @@ export default function AIWorkCenter() {
     } finally { setBusy('') }
   }
 
+  async function approveFormalPlan(project) {
+    setBusy(project.id)
+    try {
+      await approveWorkspacePlan(project.id)
+      await load()
+    } catch (err) {
+      setError(err.message || '規劃書核准失敗')
+    } finally {
+      setBusy('')
+    }
+  }
+
   async function updateResearch(project, action) {
     const item = project.research
     let note = ''
@@ -204,6 +232,19 @@ export default function AIWorkCenter() {
   }
 
   function ProjectDetail({ project }) {
+    const formal = project.workspaceProject
+    if (formal) {
+      const plan = formal.projectPlan || {}
+      const milestones = plan.milestones || []
+      return (
+        <section className="mx-3 -mt-3 mb-3 rounded-b-2xl border-x border-b border-blue-200 bg-blue-50/50 p-5">
+          <div className="rounded-xl bg-white p-4"><div className="flex flex-wrap items-center justify-between gap-2"><div><h3 className="text-sm font-semibold text-slate-700">專案規劃書 v{plan.version || '1.0'}</h3><p className="mt-1 text-xs text-slate-400">{plan.approvalStatus === 'approved' ? `已核准 · ${new Date(plan.approvedAt).toLocaleDateString('zh-TW')}` : '等待核准'}</p></div>{plan.approvalStatus !== 'approved' && <button disabled={busy === formal.id} onClick={() => approveFormalPlan(formal)} className="rounded-lg bg-blue-600 px-4 py-2 text-sm text-white disabled:opacity-50">核准並啟動專案</button>}</div><p className="mt-3 text-sm leading-6 text-slate-600">{plan.objective || '尚未填寫專案目的。'}</p></div>
+          <div className="mt-5"><h3 className="text-sm font-semibold text-slate-700">目前進度</h3><div className="mt-3 space-y-2">{milestones.map(item => <div key={item.id} className={`rounded-lg border bg-white p-3 text-sm ${formal.currentMilestoneId === item.id ? 'border-blue-400' : 'border-slate-200'}`}><div className="flex items-center justify-between"><span>{item.id} {item.title}</span><span className="text-xs text-slate-400">{item.status === 'completed' ? '✓ 完成' : formal.currentMilestoneId === item.id ? '目前' : '待執行'}</span></div><p className="mt-1 text-xs text-slate-500">成果：{(item.deliverables || []).map(row => row.name || row.type || String(row)).join('、')}</p></div>)}</div></div>
+          <div className="mt-5 rounded-xl bg-white p-4"><h3 className="text-sm font-semibold text-slate-700">最新成果</h3><p className="mt-2 text-sm text-slate-600">{project.latest ? '本 Milestone 已有執行紀錄；成果與 Feedback 顯示於下方工作輪次。' : plan.approvalStatus === 'approved' ? '尚未產生可開啟 Deliverable。' : '規劃書核准前禁止啟動 Milestone。'}</p></div>
+          <div className="mt-5 rounded-xl bg-white p-4"><label className="text-sm font-medium text-slate-700">我的意見／指示</label><p className="mt-2 text-sm text-slate-500">規劃變更必須建立新版規劃書並重新核准；AI 不會直接修改已核准版本。</p></div>
+        </section>
+      )
+    }
     if (project.research) {
       const research = project.research
       const synthesis = research.researchSynthesis || {}
@@ -271,7 +312,7 @@ export default function AIWorkCenter() {
           <span className="flex items-center gap-1.5"><FolderOpen size={15} className="text-blue-600"/>成果：Google Drive 保存</span>
         </div>
       </section>
-      <div className="space-y-3">{visibleProjects.map(project => { const meta = statusMeta(project); const open = expanded === project.key; const latest = project.latest; const next = latest?.clarificationQuestion || latest?.payload?.nextIntentIfDone || (meta.key === 'review' ? '檢視並驗收本輪交付' : meta.key === 'running' ? '等待 GPT 回寫最新進度' : project.plan?.suggestedAction || '等待下一步'); return <div key={project.key}><button onClick={() => setExpanded(open ? '' : project.key)} className={`w-full rounded-xl border bg-white p-4 text-left shadow-sm transition ${open ? 'border-blue-400 ring-1 ring-blue-200' : 'border-slate-200 hover:border-blue-300'}`}><div className="flex items-start justify-between gap-3"><div><h2 className="font-semibold text-slate-900">{project.title}</h2><p className="mt-1 text-sm text-slate-500">{ownerLabel(project.owner)} · {project.research ? '研究 Project' : '長期 Project'} · {project.research ? `${project.research.sources?.length || 0} 筆證據` : `${project.items.length || 0} 個執行輪次`}</p></div><span className={`rounded-full px-3 py-1 text-xs font-medium ${meta.cls}`}>{meta.text}</span></div><div className="mt-3 flex items-center justify-between gap-3 text-sm text-slate-600"><span className="line-clamp-1">下一步：{next}</span><span className="shrink-0 text-xs text-slate-400">{latest?.updatedAt ? new Date(latest.updatedAt).toLocaleDateString('zh-TW') : '待建立'}</span></div></button>{open && ProjectDetail({ project })}</div>})}{!visibleProjects.length && <div className="rounded-xl border border-dashed p-10 text-center text-slate-400">目前沒有符合條件的長期 Project。</div>}</div>
+      <div className="space-y-3">{visibleProjects.map(project => { const meta = statusMeta(project); const open = expanded === project.key; const latest = project.latest; const next = latest?.clarificationQuestion || latest?.payload?.nextIntentIfDone || (meta.key === 'review' ? '檢視並驗收本輪交付' : meta.key === 'running' ? '等待 GPT 回寫最新進度' : project.plan?.suggestedAction || '等待下一步'); return <div key={project.key}><button onClick={() => setExpanded(open ? '' : project.key)} className={`w-full rounded-xl border bg-white p-4 text-left shadow-sm transition ${open ? 'border-blue-400 ring-1 ring-blue-200' : 'border-slate-200 hover:border-blue-300'}`}><div className="flex items-start justify-between gap-3"><div><h2 className="font-semibold text-slate-900">{project.title}</h2><p className="mt-1 text-sm text-slate-500">{ownerLabel(project.owner)} · {project.workspaceProject ? '正式 Project' : project.research ? '研究 Project' : '長期 Project'} · {project.workspaceProject ? `Plan v${project.workspaceProject.projectPlan?.version || '1.0'}` : project.research ? `${project.research.sources?.length || 0} 筆證據` : `${project.items.length || 0} 個執行輪次`}</p></div><span className={`rounded-full px-3 py-1 text-xs font-medium ${meta.cls}`}>{meta.text}</span></div><div className="mt-3 flex items-center justify-between gap-3 text-sm text-slate-600"><span className="line-clamp-1">下一步：{next}</span><span className="shrink-0 text-xs text-slate-400">{latest?.updatedAt ? new Date(latest.updatedAt).toLocaleDateString('zh-TW') : '待建立'}</span></div></button>{open && ProjectDetail({ project })}</div>})}{!visibleProjects.length && <div className="rounded-xl border border-dashed p-10 text-center text-slate-400">目前沒有符合條件的長期 Project。</div>}</div>
     </div>
   )
 }
