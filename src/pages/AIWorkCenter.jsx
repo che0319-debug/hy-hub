@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { ArrowLeft, CheckCircle2, ExternalLink, FileText, Pencil, Plus, RefreshCw, Save, Send, Trash2, X } from 'lucide-react'
-import { approveWorkspacePlan, archiveWorkspaceProject, createWorkspacePlanRevision, createWorkspaceProject, fetchWorkspace, saveWorkspacePlan } from '../lifeOSApi'
+import { approveWorkspacePlan, archiveWorkspaceProject, createWorkspacePlanRevision, createWorkspaceProject, fetchWorkspace, requestWorkspacePlanAnalysis, saveWorkspacePlan } from '../lifeOSApi'
 
 function planMarkdown(project) {
   const plan = project.projectPlan || {}
@@ -81,7 +81,7 @@ export default function AIWorkCenter() {
   async function addProject() {
     const title = newTitle.trim(), objective = newObjective.trim()
     if (!title) return
-    const contentMarkdown = `# ${title}\n\n## 專案目的\n${objective}\n\n## Scope\n請在此定義專案範圍與不包含事項。\n\n## 執行策略\n請在此說明執行方式。\n\n# Milestones\n\n## M1｜第一階段\n\n### Deliverables\n- 第一階段可開啟成果\n\n### 驗收條件\n- 使用者完成檢視與核准`
+    const contentMarkdown = `# ${title}\n\n## 目的\n${objective || '請描述這個專案希望完成什麼。'}\n\n## 限制\n請填寫時間、預算、範圍或不希望執行的事項。\n\n## 階段規劃\n請用自然語言描述預計分成哪些階段，不需要固定格式。\n\n## 產出\n請描述最後希望取得的文件、簡報、程式、數據、圖片或其他可開啟成果。`
     setBusy(true); setError('')
     try {
       const result = await createWorkspaceProject({ title, objective, contentMarkdown, milestones: [{ id: 'M1', title: '第一階段', deliverables: [{ name: '第一階段可開啟成果' }], acceptanceCriteria: ['使用者完成檢視與核准'] }] })
@@ -97,6 +97,26 @@ export default function AIWorkCenter() {
     setBusy(true); setError('')
     try { await archiveWorkspaceProject(project.id); await load() }
     catch (err) { setError(err.message || '刪除專案失敗') }
+    finally { setBusy(false) }
+  }
+
+  async function analyzePlan() {
+    if (!selected) return
+    setBusy(true); setError(''); setNotice('')
+    try { await requestWorkspacePlanAnalysis(selected.id); await load(); setNotice('已送交 GPT 解析，將由每小時 20 分的巡航接手。') }
+    catch (err) { setError(err.message || '送交 AI 解析失敗') }
+    finally { setBusy(false) }
+  }
+
+  async function confirmAnalysis() {
+    const analysis = selected?.planAnalysis?.candidate
+    if (!analysis?.milestones?.length || analysis.needsClarification) return
+    setBusy(true); setError(''); setNotice('')
+    try {
+      await saveWorkspacePlan(selected.id, { contentMarkdown: draft, objective: analysis.objective || '', scope: { constraints: analysis.constraints || [] }, milestones: analysis.milestones })
+      const result = await approveWorkspacePlan(selected.id)
+      await load(); setNotice(`規劃書已核准，${result.item?.title || 'M1'} 已加入 queued，等待下一次 GPT 巡航。`); setTab('overview')
+    } catch (err) { setError(err.message || '確認並啟動失敗') }
     finally { setBusy(false) }
   }
 
@@ -125,8 +145,9 @@ export default function AIWorkCenter() {
       <section className="rounded-2xl border bg-white p-6"><h2 className="font-semibold text-slate-900">最新成果</h2>{deliverable ? <a href={deliverable.url || deliverable.uri} target="_blank" rel="noreferrer" className="mt-4 flex items-center gap-2 text-blue-700"><ExternalLink size={16}/>{deliverable.name || '開啟成果'}</a> : <p className="mt-3 text-sm text-slate-400">尚未產生可開啟 Deliverable。</p>}</section>
       <section className="rounded-2xl border bg-white p-6"><h2 className="font-semibold text-slate-900">我的意見／指示</h2><textarea value={feedback} onChange={e => setFeedback(e.target.value)} placeholder="輸入對本 Milestone 或成果的修改要求" className="mt-4 min-h-28 w-full rounded-xl border p-3 text-sm"/><button disabled={!feedback.trim()} className="mt-3 flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm text-white disabled:opacity-40"><Send size={15}/>送出意見</button></section>
     </div> : <div className="mt-6 rounded-2xl border bg-white">
-      <div className="flex flex-wrap items-center justify-between gap-3 border-b p-4"><div><b>專案規劃書 v{plan.version || '1.0'}</b><span className="ml-3 text-xs text-slate-400">{plan.approvalStatus === 'approved' ? '已核准' : '草稿'}</span></div><div className="flex gap-2"><button onClick={() => setMode(mode === 'edit' ? 'preview' : 'edit')} className="flex items-center gap-2 rounded-lg border px-3 py-2 text-sm"><Pencil size={15}/>{mode === 'edit' ? '預覽' : '編輯'}</button>{mode === 'edit' && <button onClick={saveDraft} disabled={busy} className="flex items-center gap-2 rounded-lg bg-slate-900 px-3 py-2 text-sm text-white"><Save size={15}/>儲存草稿</button>}{plan.approvalStatus !== 'approved' && mode !== 'edit' && <button onClick={approvePlan} disabled={busy} className="flex items-center gap-2 rounded-lg bg-blue-600 px-3 py-2 text-sm text-white"><CheckCircle2 size={15}/>核准並啟動</button>}</div></div>
+      <div className="flex flex-wrap items-center justify-between gap-3 border-b p-4"><div><b>專案規劃書 v{plan.version || '1.0'}</b><span className="ml-3 text-xs text-slate-400">{plan.approvalStatus === 'approved' ? '已核准' : '草稿'}</span></div><div className="flex gap-2"><button onClick={() => setMode(mode === 'edit' ? 'preview' : 'edit')} className="flex items-center gap-2 rounded-lg border px-3 py-2 text-sm"><Pencil size={15}/>{mode === 'edit' ? '預覽' : '編輯'}</button>{mode === 'edit' && <button onClick={saveDraft} disabled={busy} className="flex items-center gap-2 rounded-lg bg-slate-900 px-3 py-2 text-sm text-white"><Save size={15}/>儲存草稿</button>}{plan.approvalStatus !== 'approved' && mode !== 'edit' && !selected.planAnalysis?.candidate && <button onClick={analyzePlan} disabled={busy || ['queued','claimed','running','in_progress'].includes(selected.planAnalysis?.status)} className="flex items-center gap-2 rounded-lg bg-blue-600 px-3 py-2 text-sm text-white disabled:opacity-50">AI 解析規劃書</button>}</div></div>
       <div className="p-6">{mode === 'edit' ? <textarea value={draft} onChange={e => setDraft(e.target.value)} spellCheck="false" className="min-h-[620px] w-full resize-y rounded-xl border bg-slate-950 p-5 font-mono text-sm leading-7 text-slate-100 outline-none focus:border-blue-500"/> : <MarkdownPreview value={draft}/>}</div>
+      {selected.planAnalysis && <div className="border-t bg-slate-50 p-6"><h3 className="font-semibold text-slate-900">AI 解析結果</h3>{['queued','claimed','running','in_progress'].includes(selected.planAnalysis.status) && <p className="mt-2 text-sm text-blue-700">等待 GPT 巡航解析中；巡航為每小時 20 分。</p>}{selected.planAnalysis.candidate && <div className="mt-4 space-y-3">{selected.planAnalysis.candidate.needsClarification && <div className="rounded-lg bg-amber-50 p-3 text-sm text-amber-800">內容需要補充：{(selected.planAnalysis.candidate.questions || []).join('、')}</div>}{(selected.planAnalysis.candidate.milestones || []).map(item => <div key={item.id} className="rounded-xl border bg-white p-4"><b>{item.id}　{item.title}</b><p className="mt-2 text-xs text-slate-500">成果：{(item.deliverables || []).map(row => row.name || String(row)).join('、')}</p><p className="mt-1 text-xs text-slate-500">驗收：{(item.acceptanceCriteria || []).map(row => typeof row === 'string' ? row : row.name).join('、')}</p></div>)}{!selected.planAnalysis.candidate.needsClarification && <button onClick={confirmAnalysis} disabled={busy} className="mt-2 flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm text-white"><CheckCircle2 size={15}/>確認 Milestones 並核准啟動</button>}</div>}</div>}
     </div>}
   </div>
 }
