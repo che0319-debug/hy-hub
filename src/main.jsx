@@ -18,7 +18,6 @@ import Goals from './pages/Goals'
 import Strategy from './pages/Strategy'
 import AuthGate from './components/AuthGate'
 import MobileAppV2 from './mobile/MobileAppV2'
-import CommandCenter from './pages/CommandCenter'
 
 function DesktopRoutes({ onMobileVersion }) {
   return (
@@ -68,7 +67,7 @@ function Experience() {
     sessionStorage.setItem('hy_life_os_view', next)
   }
 
-  if (location.pathname === '/command-center') return <CommandCenter />
+  if (location.pathname === '/command-center') return <Navigate to="/workspace" replace />
   if (mobileWidth && mode !== 'desktop' && location.pathname !== '/workspace') {
     return <MobileAppV2 onDesktopVersion={() => choose('desktop')} />
   }
@@ -84,4 +83,3 @@ createRoot(document.getElementById('root')).render(
     </AuthGate>
   </StrictMode>
 )
-
