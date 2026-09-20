@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { LockKeyhole } from 'lucide-react'
 import {
+  AUTH_EXPIRED_EVENT,
   clearAccessToken,
   getAccessToken,
   loginWithPassword,
@@ -12,6 +13,16 @@ export default function AuthGate({ children }) {
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
   const [showPassword, setShowPassword] = useState(false)
+
+  useEffect(() => {
+    const handleExpired = () => {
+      setPassword('')
+      setError('登入已過期，請重新登入')
+      setState('login')
+    }
+    window.addEventListener(AUTH_EXPIRED_EVENT, handleExpired)
+    return () => window.removeEventListener(AUTH_EXPIRED_EVENT, handleExpired)
+  }, [])
 
   useEffect(() => {
     if (state !== 'checking') return
