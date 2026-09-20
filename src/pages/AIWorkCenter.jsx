@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
-import { Bot, CheckCircle2, CircleAlert, Clock3, ExternalLink, FileText, FolderOpen, MessageSquare, RefreshCw, Send, ShieldCheck, Trash2 } from 'lucide-react'
+import { Bot, CheckCircle2, CircleAlert, Clock3, ExternalLink, FileText, FolderOpen, MessageSquare, RefreshCw, Send, ShieldCheck, Telescope, Trash2 } from 'lucide-react'
 import { authHeaders } from '../auth'
-import { answerWorkClarification, createDirectWorkItem, decideAutonomousPlan, dismissWorkItem, submitWorkFeedback } from '../lifeOSApi'
+import { actOnResearch, answerWorkClarification, createDirectWorkItem, decideAutonomousPlan, dismissWorkItem, fetchResearchCenter, submitWorkFeedback } from '../lifeOSApi'
 import { fetchDispatchSessions } from '../api'
 
 const API_BASE = import.meta.env.VITE_API_BASE || ''
@@ -21,6 +21,11 @@ function resultFor(results, item) {
 }
 
 function statusMeta(project) {
+  if (project.research) {
+    if (project.research.needsUserInput) return { key: 'waiting', text: '等我確認', cls: 'bg-amber-50 text-amber-700' }
+    if (['ready_for_review', 'completed'].includes(project.research.researchStatus)) return { key: 'review', text: '等我確認', cls: 'bg-emerald-50 text-emerald-700' }
+    return { key: 'running', text: '進行中', cls: 'bg-blue-50 text-blue-700' }
+  }
   if (project.plan?.status === 'waiting_approval') return { key: 'waiting', text: '等你決定', cls: 'bg-red-50 text-red-700' }
   const status = project.latest?.status
   if (status === 'needs_clarification') return { key: 'waiting', text: '需要你補充', cls: 'bg-amber-50 text-amber-700' }
@@ -44,15 +49,18 @@ export default function AIWorkCenter() {
   const [refreshing, setRefreshing] = useState(false)
   const [ownerFilter, setOwnerFilter] = useState('all')
   const [feedbackStatus, setFeedbackStatus] = useState({})
+  const [researchItems, setResearchItems] = useState([])
 
   async function load() {
     setError('')
     setRefreshing(true)
     try {
-      const [response, sessions] = await Promise.all([
+      const [response, sessions, research] = await Promise.all([
         fetch(`${API_BASE}/api/life-os/v1/context`, { headers: authHeaders(), cache: 'no-store' }),
         fetchDispatchSessions(),
+        fetchResearchCenter({}),
       ])
+      setResearchItems((research.items || []).filter(item => !['archived', 'stopped'].includes(item.researchStatus)))
       if (!response.ok) throw new Error(`HTTP ${response.status}`)
       let nextCore = await response.json()
       const existingByMilestone = new Map(
@@ -100,13 +108,20 @@ export default function AIWorkCenter() {
       const key = `plan:${plan.id}`
       if (!grouped.has(key)) grouped.set(key, { key, items: [], owner: plan.owner, title: cleanTitle(plan.title), plan, latest: null })
     }
+    for (const research of researchItems) {
+      const key = `research:${research.id}`
+      if (!grouped.has(key)) grouped.set(key, {
+        key, items: [], owner: research.owner, title: cleanTitle(research.title),
+        research, latest: { status: research.researchStatus, updatedAt: research.updatedAt || research.lastResearchRunAt },
+      })
+    }
     return [...grouped.values()].sort((a, b) => {
       const aWait = statusMeta(a).key === 'waiting' ? 1 : 0
       const bWait = statusMeta(b).key === 'waiting' ? 1 : 0
       if (aWait !== bWait) return bWait - aWait
       return String(b.latest?.updatedAt || b.plan?.updatedAt || '').localeCompare(String(a.latest?.updatedAt || a.plan?.updatedAt || ''))
     })
-  }, [work, plans])
+  }, [work, plans, researchItems])
 
   const visibleProjects = ownerFilter === 'all' ? projects : projects.filter(project => project.owner === ownerFilter)
   const waitingCount = projects.filter(project => statusMeta(project).key === 'waiting').length
@@ -159,6 +174,24 @@ export default function AIWorkCenter() {
     } finally { setBusy('') }
   }
 
+  async function updateResearch(project, action) {
+    const item = project.research
+    let note = ''
+    if (action === 'direction') {
+      note = window.prompt(item.needsUserInput ? (item.userQuestion || '請回答研究問題') : '請輸入新的研究方向或限制') || ''
+      if (!note) return
+    }
+    setBusy(item.id)
+    try {
+      await actOnResearch(item.id, action, note)
+      await load()
+    } catch (err) {
+      setError(err.message || '研究更新失敗')
+    } finally {
+      setBusy('')
+    }
+  }
+
   async function removeItem(item, mode = 'dismiss') {
     const message = mode === 'accept'
       ? `確認核准本次成果？專案與 Google Drive 檔案會保留，仍可繼續加入新功能。`
@@ -171,6 +204,19 @@ export default function AIWorkCenter() {
   }
 
   function ProjectDetail({ project }) {
+    if (project.research) {
+      const research = project.research
+      const synthesis = research.researchSynthesis || {}
+      const sources = research.sources || []
+      return (
+        <section className="mx-3 -mt-3 mb-3 rounded-b-2xl border-x border-b border-blue-200 bg-blue-50/50 p-5">
+          <div><h3 className="text-sm font-semibold text-slate-700">專案規劃書</h3><p className="mt-2 text-sm leading-6 text-slate-600">研究目的：{research.researchQuestion || research.title}</p><p className="mt-1 text-xs text-amber-700">既有 Bot 研究已映射進工作區；正式 Milestones 將在規劃書核准後建立。</p></div>
+          <div className="mt-5"><h3 className="text-sm font-semibold text-slate-700">目前進度</h3><p className="mt-2 text-sm text-slate-600">{research.latestDirection || synthesis.currentAnswer || '正在累積研究證據。'}</p><p className="mt-1 text-xs text-slate-400">累積資料 {sources.length} 筆 · 進度 {Number(research.progress || 0)}%</p></div>
+          <div className="mt-5 rounded-xl bg-white p-4"><h3 className="text-sm font-semibold text-slate-700">最新成果</h3><p className="mt-2 whitespace-pre-wrap text-sm leading-6 text-slate-600">{synthesis.currentAnswer || '尚未形成可驗收 Deliverable；因此不會標示完成。'}</p>{!!sources.length && <div className="mt-3 space-y-2">{sources.slice(0, 5).map(source => <a key={source.id || source.url} href={source.url} target="_blank" rel="noreferrer" className="block text-sm text-blue-700 hover:underline">{source.title || source.url}</a>)}</div>}</div>
+          <div className="mt-5 rounded-xl bg-white p-4"><label className="text-sm font-medium text-slate-700">我的意見／指示</label>{research.needsUserInput && <p className="mt-2 text-sm text-amber-700">{research.userQuestion || '需要你補充研究條件。'}</p>}<div className="mt-3 flex flex-wrap gap-2"><button disabled={busy === research.id} onClick={() => updateResearch(project, 'direction')} className="rounded-lg bg-blue-600 px-4 py-2 text-sm text-white disabled:opacity-50">送出意見</button><button disabled={busy === research.id} onClick={() => updateResearch(project, 'prioritize')} className="rounded-lg border bg-white px-4 py-2 text-sm">設為優先</button></div></div>
+        </section>
+      )
+    }
     const item = project.latest
     const plan = project.plan
     const payload = item?.payload || {}
@@ -213,19 +259,19 @@ export default function AIWorkCenter() {
 
   return (
     <div className="mx-auto max-w-7xl">
-      <div className="mb-5 flex flex-wrap items-start justify-between gap-4"><div><h1 className="text-2xl font-bold text-slate-900">AI Work 專案總覽</h1><p className="mt-1 text-slate-500">統一掌握 GPT Work 專案；需要深入時再進入專案工作室。</p></div><button onClick={load} disabled={refreshing} className="flex items-center gap-2 rounded-lg border bg-white px-3 py-2 text-sm disabled:opacity-60"><RefreshCw size={16} className={refreshing ? 'animate-spin' : ''}/>{refreshing ? '同步中…' : '同步狀態'}</button></div>
+      <div className="mb-5 flex flex-wrap items-start justify-between gap-4"><div><h1 className="text-2xl font-bold text-slate-900">工作區</h1><p className="mt-1 text-slate-500">長期 Project 的規劃、Milestone、成果與意見集中在同一處。</p></div><button onClick={load} disabled={refreshing} className="flex items-center gap-2 rounded-lg border bg-white px-3 py-2 text-sm disabled:opacity-60"><RefreshCw size={16} className={refreshing ? 'animate-spin' : ''}/>{refreshing ? '同步中…' : '同步狀態'}</button></div>
       {error && <div className="mb-4 rounded-lg bg-red-50 p-3 text-red-700">{error}</div>}
       <div className="mb-5 grid grid-cols-2 gap-3 lg:grid-cols-4"><div className="rounded-xl border bg-white p-4"><b className="text-2xl">{projects.length}</b><p className="text-sm text-slate-500">全部專案</p></div><div className="rounded-xl border bg-blue-50 p-4"><b className="text-2xl text-blue-700">{runningCount}</b><p className="text-sm text-slate-600">GPT 執行中</p></div><div className="rounded-xl border bg-red-50 p-4"><b className="text-2xl text-red-700">{waitingCount}</b><p className="text-sm text-slate-600">等你決定</p></div><div className="rounded-xl border bg-amber-50 p-4"><b className="text-2xl text-emerald-700">{reviewCount}</b><p className="text-sm text-slate-600">待你驗收</p></div></div>
       <div className="mb-5 flex flex-wrap gap-2">{[['all','全部'],['hy','HY'],['950157','950157'],['family','小因'],['sam','Sam']].map(([value,text]) => <button key={value} onClick={() => setOwnerFilter(value)} className={`rounded-lg border px-3 py-2 text-sm ${ownerFilter === value ? 'border-blue-500 bg-blue-50 text-blue-700' : 'bg-white text-slate-600'}`}>{text} {value === 'all' ? projects.length : projects.filter(project => project.owner === value).length}</button>)}</div>
       <section className="mb-5 flex flex-col gap-3 rounded-xl border bg-white p-4 lg:flex-row lg:items-center lg:justify-between">
-        <div><p className="font-semibold text-slate-800">全部專案共用執行設定</p><p className="mt-1 text-sm text-slate-500">共用規則統一放在外層，各專案不重複顯示。</p></div>
+        <div><p className="font-semibold text-slate-800">工作區執行原則</p><p className="mt-1 text-sm text-slate-500">規劃書核准後才啟動 Milestone；沒有可開啟成果，不得標示完成。</p></div>
         <div className="flex flex-wrap gap-x-5 gap-y-2 text-sm text-slate-600">
           <span className="flex items-center gap-1.5"><Bot size={15} className="text-blue-600"/>目前：HY Life OS 工作器</span>
           <span className={`flex items-center gap-1.5 ${gptWorkConnected ? 'text-emerald-700' : ''}`}>{gptWorkConnected ? <CheckCircle2 size={15} className="text-emerald-600"/> : <CircleAlert size={15} className="text-amber-600"/>}GPT Work：{gptWorkConnected ? '已連線' : '等待首次執行驗證'}</span>
           <span className="flex items-center gap-1.5"><FolderOpen size={15} className="text-blue-600"/>成果：Google Drive 保存</span>
         </div>
       </section>
-      <div className="space-y-3">{visibleProjects.map(project => { const meta = statusMeta(project); const open = expanded === project.key; const latest = project.latest; const next = latest?.clarificationQuestion || latest?.payload?.nextIntentIfDone || (meta.key === 'review' ? '檢視並驗收本輪交付' : meta.key === 'running' ? '等待 GPT 回寫最新進度' : project.plan?.suggestedAction || '等待下一步'); return <div key={project.key}><button onClick={() => setExpanded(open ? '' : project.key)} className={`w-full rounded-xl border bg-white p-4 text-left shadow-sm transition ${open ? 'border-blue-400 ring-1 ring-blue-200' : 'border-slate-200 hover:border-blue-300'}`}><div className="flex items-start justify-between gap-3"><div><h2 className="font-semibold text-slate-900">{project.title}</h2><p className="mt-1 text-sm text-slate-500">{ownerLabel(project.owner)} · AI 專案 · {project.items.length || 0} 個執行輪次</p></div><span className={`rounded-full px-3 py-1 text-xs font-medium ${meta.cls}`}>{meta.text}</span></div><div className="mt-3 flex items-center justify-between gap-3 text-sm text-slate-600"><span className="line-clamp-1">下一步：{next}</span><span className="shrink-0 text-xs text-slate-400">{latest?.updatedAt ? new Date(latest.updatedAt).toLocaleDateString('zh-TW') : '待建立'}</span></div></button>{open && ProjectDetail({ project })}</div>})}{!visibleProjects.length && <div className="rounded-xl border border-dashed p-10 text-center text-slate-400">此 Bot 目前沒有 AI 專案。</div>}</div>
+      <div className="space-y-3">{visibleProjects.map(project => { const meta = statusMeta(project); const open = expanded === project.key; const latest = project.latest; const next = latest?.clarificationQuestion || latest?.payload?.nextIntentIfDone || (meta.key === 'review' ? '檢視並驗收本輪交付' : meta.key === 'running' ? '等待 GPT 回寫最新進度' : project.plan?.suggestedAction || '等待下一步'); return <div key={project.key}><button onClick={() => setExpanded(open ? '' : project.key)} className={`w-full rounded-xl border bg-white p-4 text-left shadow-sm transition ${open ? 'border-blue-400 ring-1 ring-blue-200' : 'border-slate-200 hover:border-blue-300'}`}><div className="flex items-start justify-between gap-3"><div><h2 className="font-semibold text-slate-900">{project.title}</h2><p className="mt-1 text-sm text-slate-500">{ownerLabel(project.owner)} · {project.research ? '研究 Project' : '長期 Project'} · {project.research ? `${project.research.sources?.length || 0} 筆證據` : `${project.items.length || 0} 個執行輪次`}</p></div><span className={`rounded-full px-3 py-1 text-xs font-medium ${meta.cls}`}>{meta.text}</span></div><div className="mt-3 flex items-center justify-between gap-3 text-sm text-slate-600"><span className="line-clamp-1">下一步：{next}</span><span className="shrink-0 text-xs text-slate-400">{latest?.updatedAt ? new Date(latest.updatedAt).toLocaleDateString('zh-TW') : '待建立'}</span></div></button>{open && ProjectDetail({ project })}</div>})}{!visibleProjects.length && <div className="rounded-xl border border-dashed p-10 text-center text-slate-400">目前沒有符合條件的長期 Project。</div>}</div>
     </div>
   )
 }
