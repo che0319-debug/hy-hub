@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
-import { ArrowLeft, CheckCircle2, ExternalLink, FileText, Pencil, RefreshCw, Save, Send } from 'lucide-react'
-import { approveWorkspacePlan, createWorkspacePlanRevision, fetchWorkspace, saveWorkspacePlan } from '../lifeOSApi'
+import { ArrowLeft, CheckCircle2, ExternalLink, FileText, Pencil, Plus, RefreshCw, Save, Send, Trash2, X } from 'lucide-react'
+import { approveWorkspacePlan, archiveWorkspaceProject, createWorkspacePlanRevision, createWorkspaceProject, fetchWorkspace, saveWorkspacePlan } from '../lifeOSApi'
 
 function planMarkdown(project) {
   const plan = project.projectPlan || {}
@@ -42,6 +42,9 @@ export default function AIWorkCenter() {
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
   const [notice, setNotice] = useState('')
+  const [creating, setCreating] = useState(false)
+  const [newTitle, setNewTitle] = useState('')
+  const [newObjective, setNewObjective] = useState('')
 
   async function load() {
     setBusy(true); setError('')
@@ -75,14 +78,37 @@ export default function AIWorkCenter() {
     finally { setBusy(false) }
   }
 
+  async function addProject() {
+    const title = newTitle.trim(), objective = newObjective.trim()
+    if (!title) return
+    const contentMarkdown = `# ${title}\n\n## 專案目的\n${objective}\n\n## Scope\n請在此定義專案範圍與不包含事項。\n\n## 執行策略\n請在此說明執行方式。\n\n# Milestones\n\n## M1｜第一階段\n\n### Deliverables\n- 第一階段可開啟成果\n\n### 驗收條件\n- 使用者完成檢視與核准`
+    setBusy(true); setError('')
+    try {
+      const result = await createWorkspaceProject({ title, objective, contentMarkdown, milestones: [{ id: 'M1', title: '第一階段', deliverables: [{ name: '第一階段可開啟成果' }], acceptanceCriteria: ['使用者完成檢視與核准'] }] })
+      setCreating(false); setNewTitle(''); setNewObjective(''); await load()
+      if (result.project) openProject(result.project)
+    } catch (err) { setError(err.message || '新增專案失敗') }
+    finally { setBusy(false) }
+  }
+
+  async function removeProject(event, project) {
+    event.stopPropagation()
+    if (!window.confirm(`確定刪除「${project.title}」？專案會封存，成果與歷史紀錄仍保留。`)) return
+    setBusy(true); setError('')
+    try { await archiveWorkspaceProject(project.id); await load() }
+    catch (err) { setError(err.message || '刪除專案失敗') }
+    finally { setBusy(false) }
+  }
+
   if (!selected) return <div className="mx-auto max-w-7xl">
-    <div className="mb-8 flex items-start justify-between gap-4"><div><h1 className="text-3xl font-bold text-slate-900">工作區</h1><p className="mt-2 text-slate-500">長期 Project 的規劃、成果與下一步。</p></div><button onClick={load} disabled={busy} className="flex items-center gap-2 rounded-lg border bg-white px-3 py-2 text-sm"><RefreshCw size={16} className={busy ? 'animate-spin' : ''}/>同步</button></div>
+    <div className="mb-8 flex items-start justify-between gap-4"><div><h1 className="text-3xl font-bold text-slate-900">工作區</h1><p className="mt-2 text-slate-500">長期 Project 的規劃、成果與下一步。</p></div><div className="flex gap-2"><button onClick={() => setCreating(true)} className="flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm text-white"><Plus size={16}/>新增專案</button><button onClick={load} disabled={busy} className="flex items-center gap-2 rounded-lg border bg-white px-3 py-2 text-sm"><RefreshCw size={16} className={busy ? 'animate-spin' : ''}/>同步</button></div></div>
     {error && <div className="mb-4 rounded-lg bg-red-50 p-3 text-red-700">{error}</div>}
     <div className="overflow-hidden rounded-2xl border bg-white">
       <div className="hidden grid-cols-[2fr_140px_2fr_2fr] gap-5 border-b bg-slate-50 px-6 py-3 text-xs font-semibold text-slate-500 md:grid"><span>專案名稱</span><span>狀態</span><span>最新成果</span><span>下一步</span></div>
-      {projects.map(project => { const [status, cls] = statusMeta(project); const deliverable = (project.latestDeliverables || [])[0]; const milestone = (project.projectPlan?.milestones || []).find(row => row.id === project.currentMilestoneId); return <button key={project.id} onClick={() => openProject(project)} className="grid w-full gap-3 border-b px-6 py-5 text-left last:border-0 hover:bg-blue-50/40 md:grid-cols-[2fr_140px_2fr_2fr] md:items-center md:gap-5"><div><b className="text-slate-900">{project.title}</b><p className="mt-1 text-xs text-slate-400">Plan v{project.projectPlan?.version || '1.0'}</p></div><span><i className={`rounded-full px-3 py-1 text-xs not-italic ${cls}`}>{status}</i></span><span className="text-sm text-slate-600">{deliverable ? deliverable.name || '開啟成果' : '尚無成果'}</span><span className="text-sm text-slate-600">{project.projectPlan?.approvalStatus !== 'approved' ? '檢視並核准規劃書' : milestone ? `執行 ${milestone.id} ${milestone.title}` : '等待下一步'}</span></button> })}
+      {projects.map(project => { const [status, cls] = statusMeta(project); const deliverable = (project.latestDeliverables || [])[0]; const milestone = (project.projectPlan?.milestones || []).find(row => row.id === project.currentMilestoneId); return <button key={project.id} onClick={() => openProject(project)} className="group relative grid w-full gap-3 border-b px-6 py-5 pr-14 text-left last:border-0 hover:bg-blue-50/40 md:grid-cols-[2fr_140px_2fr_2fr] md:items-center md:gap-5"><div><b className="text-slate-900">{project.title}</b><p className="mt-1 text-xs text-slate-400">Plan v{project.projectPlan?.version || '1.0'}</p></div><span><i className={`rounded-full px-3 py-1 text-xs not-italic ${cls}`}>{status}</i></span><span className="text-sm text-slate-600">{deliverable ? deliverable.name || '開啟成果' : '尚無成果'}</span><span className="text-sm text-slate-600">{project.projectPlan?.approvalStatus !== 'approved' ? '檢視並核准規劃書' : milestone ? `執行 ${milestone.id} ${milestone.title}` : '等待下一步'}</span><span role="button" aria-label={`刪除 ${project.title}`} onClick={event => removeProject(event, project)} className="absolute right-4 top-1/2 -translate-y-1/2 rounded-lg p-2 text-slate-300 hover:bg-red-50 hover:text-red-600"><Trash2 size={17}/></span></button> })}
       {!projects.length && <div className="p-14 text-center"><FileText className="mx-auto text-slate-300"/><h2 className="mt-3 font-semibold text-slate-700">目前沒有正式 Project</h2><p className="mt-1 text-sm text-slate-400">長期工作確認後，第一步會先建立專案規劃書。</p></div>}
     </div>
+    {creating && <div className="fixed inset-0 z-50 grid place-items-center bg-slate-900/40 p-4"><div className="w-full max-w-lg rounded-2xl bg-white p-6 shadow-2xl"><div className="flex items-center justify-between"><h2 className="text-lg font-semibold">新增專案</h2><button onClick={() => setCreating(false)} className="p-2 text-slate-400"><X size={18}/></button></div><label className="mt-5 block text-sm font-medium">專案名稱</label><input autoFocus value={newTitle} onChange={e => setNewTitle(e.target.value)} className="mt-2 w-full rounded-lg border p-3" placeholder="例如：HY Life OS 工作區 V1"/><label className="mt-4 block text-sm font-medium">專案目的</label><textarea value={newObjective} onChange={e => setNewObjective(e.target.value)} className="mt-2 min-h-24 w-full rounded-lg border p-3" placeholder="簡短說明希望完成什麼；建立後可在規劃書完整修改。"/><div className="mt-5 flex justify-end gap-2"><button onClick={() => setCreating(false)} className="rounded-lg border px-4 py-2 text-sm">取消</button><button onClick={addProject} disabled={!newTitle.trim() || busy} className="rounded-lg bg-blue-600 px-4 py-2 text-sm text-white disabled:opacity-40">建立並編輯規劃書</button></div></div></div>}
   </div>
 
   const plan = selected.projectPlan || {}
