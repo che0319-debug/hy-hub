@@ -144,3 +144,36 @@ export async function actOnResearch(findingId, action, note = '') {
   })
   return parseResponse(response, 'actOnResearch')
 }
+
+
+export async function fetchWorkspace() {
+  const response = await fetch(`${API_BASE}/api/life-os/v1/workspace`, {
+    headers: { ...authHeaders() }, cache: 'no-store',
+  })
+  return parseResponse(response, 'fetchWorkspace')
+}
+
+export async function createWorkspaceProject(payload) {
+  const response = await fetch(`${API_BASE}/api/life-os/v1/workspace/projects`, {
+    method: 'POST',
+    headers: { ...authHeaders(), 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  })
+  return parseResponse(response, 'createWorkspaceProject')
+}
+
+export async function approveWorkspacePlan(projectId) {
+  const response = await fetch(`${API_BASE}/api/life-os/v1/workspace/projects/${encodeURIComponent(projectId)}/plan/approve`, {
+    method: 'POST', headers: { ...authHeaders() },
+  })
+  return parseResponse(response, 'approveWorkspacePlan')
+}
+
+export async function approveWorkspaceMilestone(projectId, milestoneId, workId) {
+  const response = await fetch(`${API_BASE}/api/life-os/v1/workspace/projects/${encodeURIComponent(projectId)}/milestones/${encodeURIComponent(milestoneId)}/approve`, {
+    method: 'POST',
+    headers: { ...authHeaders(), 'Content-Type': 'application/json' },
+    body: JSON.stringify({ workId }),
+  })
+  return parseResponse(response, 'approveWorkspaceMilestone')
+}
