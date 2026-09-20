@@ -7,7 +7,11 @@ import PixelCity from '../mobile/PixelCity'
 import { fetchTodaySchedule, fetchAllMilestones, fetchMobileState, fetchWeeklyChange, postWeeklyChange, fetchLifeOSContext } from '../api'
 import { fetchDailyOS, fetchWorkspace } from '../lifeOSApi'
 
-const REFRESH_INTERVAL_MS = 60000
+let homeDataCache = null
+let weeklyChangeCache
+let todayResultsCache
+let todoCache
+let scheduleCache
 
 const BOT_ROUTE = {
   hy:      '/line/hy',
@@ -55,35 +59,26 @@ function WorkspaceOverviewCard({ projects, core, onClick }) {
   const waiting = rows.filter(item => ['waiting', 'review'].includes(item.state))
   const active = rows.filter(item => item.state === 'active')
   const withResults = rows.filter(item => item.artifacts.length > 0)
-  const priority = { waiting: 0, review: 0, active: 1, planning: 2, completed: 3 }
-  const ordered = [...rows].sort((a, b) => priority[a.state] - priority[b.state])
   return (
-    <button onClick={onClick} className="w-full rounded-xl border border-slate-200 bg-white p-5 text-left shadow-sm transition-colors hover:bg-slate-50">
-      <div className="mb-4 flex items-center justify-between gap-3">
-        <div className="flex items-center gap-2 font-semibold text-slate-800"><span className="rounded-lg bg-violet-50 p-2 text-violet-600"><ClipboardList size={18}/></span>工作區</div>
-        <span className="text-xs text-blue-600">開啟工作區 →</span>
-      </div>
-      <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
+    <button onClick={onClick} className="mb-4 flex w-full items-center gap-5 rounded-xl border border-slate-200 bg-white p-5 text-left shadow-sm transition-colors hover:bg-slate-50">
+      <div className="min-w-20 border-r border-slate-200 pr-5 text-center"><span className="mx-auto grid w-9 place-items-center rounded-lg bg-violet-50 p-2 text-violet-600"><ClipboardList size={18}/></span><div className="mt-1 text-xs font-semibold text-slate-600">工作區</div></div>
+      <div className="grid min-w-0 flex-1 grid-cols-2 gap-4 sm:grid-cols-4">
         {[[ '正式專案', projects.length ], [ '等你確認', waiting.length, true ], [ '進行中', active.length ], [ '已有成果', withResults.length ]].map(([label, value, alert]) => (
           <div key={label}><div className={`text-2xl font-bold ${alert && value > 0 ? 'text-red-500' : 'text-slate-800'}`}>{value}</div><div className="mt-1 text-xs text-slate-500">{label}</div></div>
         ))}
       </div>
-      {ordered.length > 0 && <div className="mt-4 border-t border-slate-100 pt-3">
-        <div className="hidden grid-cols-[1.25fr_.65fr_1fr_1.2fr] gap-3 px-1 pb-2 text-xs text-slate-400 md:grid"><span>專案</span><span>狀態</span><span>最新成果</span><span>下一步</span></div>
-        {ordered.slice(0, 3).map(item => <div key={item.id} className="grid gap-1 border-t border-slate-50 px-1 py-2 text-sm first:border-0 md:grid-cols-[1.25fr_.65fr_1fr_1.2fr] md:gap-3">
-          <span className="font-medium text-slate-800">{item.title}</span><span className={item.state === 'waiting' || item.state === 'review' ? 'text-red-600' : 'text-slate-600'}>{item.status}</span><span className="truncate text-slate-600">{item.latest}</span><span className="truncate text-slate-500">{item.next}</span>
-        </div>)}
-      </div>}
+      <span className="hidden text-xs text-blue-600 sm:block">開啟 →</span>
     </button>
   )
 }
 
 function TodoSection() {
-  const [milestones, setMilestones] = useState(null)
+  const [milestones, setMilestones] = useState(todoCache ?? null)
 
   useEffect(() => {
+    if (todoCache !== undefined) return
     fetchAllMilestones()
-      .then(data => setMilestones(data))
+      .then(data => { todoCache = data; setMilestones(data) })
       .catch(err => { console.warn('[Home] fetchAllMilestones failed:', err); setMilestones([]) })
   }, [])
 
@@ -136,8 +131,11 @@ function TodoSection() {
 }
 
 function TodayResultsCard() {
-  const [items, setItems] = useState(null)
-  useEffect(() => { fetchMobileState().then(data => setItems(data.todayCompleted || [])).catch(() => setItems([])) }, [])
+  const [items, setItems] = useState(todayResultsCache ?? null)
+  useEffect(() => {
+    if (todayResultsCache !== undefined) return
+    fetchMobileState().then(data => { todayResultsCache = data.todayCompleted || []; setItems(todayResultsCache) }).catch(() => setItems([]))
+  }, [])
   return (
     <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-5 mb-4 flex items-center gap-5">
       <div className="min-w-20 text-center border-r border-slate-200 pr-5">
@@ -155,12 +153,13 @@ function TodayResultsCard() {
 }
 
 function ScheduleSection() {
-  const [events, setEvents] = useState(null)
+  const [events, setEvents] = useState(scheduleCache ?? null)
   const [error, setError]   = useState(null)
 
   useEffect(() => {
+    if (scheduleCache !== undefined) return
     fetchTodaySchedule()
-      .then(data => { if (data.error) setError(data.error); else setEvents(data.events || []) })
+      .then(data => { if (data.error) setError(data.error); else { scheduleCache = data.events || []; setEvents(scheduleCache) } })
       .catch(err => { console.warn('[Home] fetchTodaySchedule failed:', err); setError(err.message) })
   }, [])
 
@@ -212,7 +211,7 @@ function isoWeekOf(dateStr) {
 }
 
 function WeeklyChangeCard() {
-  const [data, setData] = useState(null)    // null=loading, false=error, object=loaded
+  const [data, setData] = useState(weeklyChangeCache ?? null)    // null=loading, false=error, object=loaded
   const [editing, setEditing] = useState(false)
   const [draft, setDraft] = useState('')
   const [draftErr, setDraftErr] = useState('')
@@ -221,8 +220,9 @@ function WeeklyChangeCard() {
   const taRef = useRef(null)
 
   useEffect(() => {
+    if (weeklyChangeCache !== undefined) return
     fetchWeeklyChange()
-      .then(d => setData(d))
+      .then(d => { weeklyChangeCache = d; setData(d) })
       .catch(() => setData(false))
   }, [])
 
@@ -260,6 +260,7 @@ function WeeklyChangeCard() {
         ...prev,
         entries: [newEntry, ...(prev?.entries || []).filter(e => e.id !== result.id)]
       }))
+      weeklyChangeCache = { ...data, entries: [newEntry, ...(data?.entries || []).filter(e => e.id !== result.id)] }
       setEditing(false)
     } catch (err) {
       setSaveErr(err.message || '儲存失敗，請再試')
@@ -376,25 +377,26 @@ function WeeklyChangeCard() {
 
 export default function Home() {
   const [view, setView]           = useState('data')
-  const [worldState, setWorldState] = useState(null)
-  const [dailyOS, setDailyOS] = useState(null)
-  const [workspaceProjects, setWorkspaceProjects] = useState([])
-  const [workspaceCore, setWorkspaceCore] = useState(null)
+  const [worldState, setWorldState] = useState(homeDataCache?.worldState || null)
+  const [dailyOS, setDailyOS] = useState(homeDataCache?.dailyOS || null)
+  const [workspaceProjects, setWorkspaceProjects] = useState(homeDataCache?.workspaceProjects || [])
+  const [workspaceCore, setWorkspaceCore] = useState(homeDataCache?.workspaceCore || null)
   const [refreshing, setRefreshing] = useState(false)
-  const { sessions, refreshSessions } = useSessionContext()
+  const { refreshSessions } = useSessionContext()
   const navigate  = useNavigate()
-  const timerRef  = useRef(null)
 
   async function loadWorld() {
     const results = await Promise.allSettled([fetchMobileState(), fetchDailyOS(), fetchWorkspace(), fetchLifeOSContext()])
-    if (results[0].status === 'fulfilled') setWorldState(results[0].value)
+    const next = { ...(homeDataCache || {}) }
+    if (results[0].status === 'fulfilled') { next.worldState = results[0].value; setWorldState(results[0].value) }
     else console.warn('[Home] fetchMobileState failed:', results[0].reason)
-    if (results[1].status === 'fulfilled') setDailyOS(results[1].value)
+    if (results[1].status === 'fulfilled') { next.dailyOS = results[1].value; setDailyOS(results[1].value) }
     else console.warn('[Home] fetchDailyOS failed:', results[1].reason)
-    if (results[2].status === 'fulfilled') setWorkspaceProjects(results[2].value.projects || [])
+    if (results[2].status === 'fulfilled') { next.workspaceProjects = results[2].value.projects || []; setWorkspaceProjects(next.workspaceProjects) }
     else console.warn('[Home] fetchWorkspace failed:', results[2].reason)
-    if (results[3].status === 'fulfilled') setWorkspaceCore(results[3].value)
+    if (results[3].status === 'fulfilled') { next.workspaceCore = results[3].value; setWorkspaceCore(results[3].value) }
     else console.warn('[Home] fetchLifeOSContext failed:', results[3].reason)
+    homeDataCache = next
   }
 
   async function handleRefresh() {
@@ -404,9 +406,7 @@ export default function Home() {
   }
 
   useEffect(() => {
-    loadWorld()
-    timerRef.current = setInterval(handleRefresh, REFRESH_INTERVAL_MS)
-    return () => clearInterval(timerRef.current)
+    if (!homeDataCache) loadWorld()
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   function handleBotClick(botId) {
@@ -444,7 +444,7 @@ export default function Home() {
         <div>
           <WeeklyChangeCard />
           <TodayResultsCard />
-          <div className="mb-6"><WorkspaceOverviewCard projects={workspaceProjects} core={workspaceCore} onClick={() => navigate('/workspace')}/></div>
+          <WorkspaceOverviewCard projects={workspaceProjects} core={workspaceCore} onClick={() => navigate('/workspace')}/>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <TodoSection />
             <ScheduleSection />
