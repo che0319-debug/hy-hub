@@ -1,18 +1,29 @@
 const API_BASE = import.meta.env.VITE_API_BASE || ''
-const TOKEN_KEY = 'hy_world_access_token'
+const TOKEN_KEY = 'hy_life_os_access_token'
+const LEGACY_TOKEN_KEY = 'hy_world_access_token'
 export const AUTH_EXPIRED_EVENT = 'hy-auth-expired'
 
 export function getAccessToken() {
-  return sessionStorage.getItem(TOKEN_KEY) || ''
+  const token = sessionStorage.getItem(TOKEN_KEY)
+  if (token) return token
+
+  const legacyToken = sessionStorage.getItem(LEGACY_TOKEN_KEY)
+  if (legacyToken) {
+    sessionStorage.setItem(TOKEN_KEY, legacyToken)
+    sessionStorage.removeItem(LEGACY_TOKEN_KEY)
+  }
+  return legacyToken || ''
 }
 
 export function setAccessToken(token) {
+  sessionStorage.removeItem(LEGACY_TOKEN_KEY)
   if (token) sessionStorage.setItem(TOKEN_KEY, token)
   else sessionStorage.removeItem(TOKEN_KEY)
 }
 
 export function clearAccessToken() {
   sessionStorage.removeItem(TOKEN_KEY)
+  sessionStorage.removeItem(LEGACY_TOKEN_KEY)
 }
 
 export function expireSession() {

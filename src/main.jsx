@@ -48,7 +48,13 @@ function DesktopRoutes({ onMobileVersion }) {
 function Experience() {
   const location = useLocation()
   const [mobileWidth, setMobileWidth] = useState(() => window.matchMedia('(max-width: 767px)').matches)
-  const [mode, setMode] = useState(() => sessionStorage.getItem('hy_world_view') || 'auto')
+  const [mode, setMode] = useState(() => {
+    const current = sessionStorage.getItem('hy_life_os_view')
+    const legacy = sessionStorage.getItem('hy_world_view')
+    if (!current && legacy) sessionStorage.setItem('hy_life_os_view', legacy)
+    sessionStorage.removeItem('hy_world_view')
+    return current || legacy || 'auto'
+  })
 
   useEffect(() => {
     const media = window.matchMedia('(max-width: 767px)')
@@ -59,7 +65,7 @@ function Experience() {
 
   function choose(next) {
     setMode(next)
-    sessionStorage.setItem('hy_world_view', next)
+    sessionStorage.setItem('hy_life_os_view', next)
   }
 
   if (location.pathname === '/command-center') return <CommandCenter />
