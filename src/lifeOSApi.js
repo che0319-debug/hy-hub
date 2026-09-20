@@ -185,6 +185,13 @@ export async function saveWorkspacePlan(projectId, payload) {
   return parseResponse(response, 'saveWorkspacePlan')
 }
 
+export async function requestWorkspacePlanAnalysis(projectId) {
+  const response = await fetch(`${API_BASE}/api/life-os/v1/workspace/projects/${encodeURIComponent(projectId)}/plan/analyze`, {
+    method: 'POST', headers: { ...authHeaders() },
+  })
+  return parseResponse(response, 'requestWorkspacePlanAnalysis')
+}
+
 export async function createWorkspacePlanRevision(projectId, payload) {
   const response = await fetch(`${API_BASE}/api/life-os/v1/workspace/projects/${encodeURIComponent(projectId)}/plan/revisions`, {
     method: 'POST',
