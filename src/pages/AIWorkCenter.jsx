@@ -1,8 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Bot, CheckCircle2, CircleAlert, Clock3, ExternalLink, FileText, FolderOpen, MessageSquare, RefreshCw, Send, ShieldCheck, Telescope, Trash2 } from 'lucide-react'
 import { authHeaders } from '../auth'
-import { actOnResearch, answerWorkClarification, approveWorkspacePlan, createDirectWorkItem, decideAutonomousPlan, dismissWorkItem, fetchResearchCenter, submitWorkFeedback } from '../lifeOSApi'
-import { fetchDispatchSessions } from '../api'
+import { actOnResearch, answerWorkClarification, approveWorkspacePlan, decideAutonomousPlan, dismissWorkItem, fetchResearchCenter, submitWorkFeedback } from '../lifeOSApi'
 
 const API_BASE = import.meta.env.VITE_API_BASE || ''
 const ACTIVE = new Set(['queued', 'running', 'claimed', 'in_progress'])
@@ -63,32 +62,13 @@ export default function AIWorkCenter() {
     setError('')
     setRefreshing(true)
     try {
-      const [response, sessions, research] = await Promise.all([
+      const [response, research] = await Promise.all([
         fetch(`${API_BASE}/api/life-os/v1/context`, { headers: authHeaders(), cache: 'no-store' }),
-        fetchDispatchSessions(),
         fetchResearchCenter({}),
       ])
       setResearchItems((research.items || []).filter(item => !['archived', 'stopped'].includes(item.researchStatus)))
       if (!response.ok) throw new Error(`HTTP ${response.status}`)
-      let nextCore = await response.json()
-      const existingByMilestone = new Map(
-        (nextCore.workItems || []).filter(item => item?.payload?.milestoneId).map(item => [item.payload.milestoneId, item])
-      )
-      const pendingAssignments = sessions.filter(session => {
-        if (session.status !== 'pending' || !session.milestoneId) return false
-        const existing = existingByMilestone.get(session.milestoneId)
-        return !existing || (existing.kind === 'direct-milestone-assignment' && existing.status === 'queued')
-      })
-      if (pendingAssignments.length) {
-        await Promise.all(pendingAssignments.map(session => createDirectWorkItem({
-          title: session.title, milestoneId: session.milestoneId, owner: session.assignee,
-          sourceMilestone: session.sourceMilestone, projectName: session.sourceMilestone, desc: session.desc || '',
-        })))
-        const refreshed = await fetch(`${API_BASE}/api/life-os/v1/context`, { headers: authHeaders(), cache: 'no-store' })
-        if (!refreshed.ok) throw new Error(`HTTP ${refreshed.status}`)
-        nextCore = await refreshed.json()
-      }
-      setCore(nextCore)
+      setCore(await response.json())
     } catch (err) {
       setError(`AI 工作讀取失敗：${err.message}`)
     } finally {
