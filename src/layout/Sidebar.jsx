@@ -5,7 +5,6 @@ import {
 } from 'lucide-react'
 
 const navItems = [
-  { to: '/command-center', label: 'AI 指揮中心', icon: Bot },
   { to: '/',           label: '首頁',     icon: Home },
   { to: '/helpers',    label: '我的小幫手', icon: Bot },
   { to: '/workspace',  label: '工作區', icon: ClipboardList },
@@ -68,4 +67,3 @@ export default function Sidebar({ open }) {
     </aside>
   )
 }
-
