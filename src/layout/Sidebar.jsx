@@ -1,15 +1,14 @@
 import { NavLink } from 'react-router-dom'
 import {
   Home, Bot, ClipboardList,
-  MessageSquare, Settings, Target, Telescope
+  MessageSquare, Settings, Target
 } from 'lucide-react'
 
 const navItems = [
   { to: '/command-center', label: 'AI 指揮中心', icon: Bot },
   { to: '/',           label: '首頁',     icon: Home },
   { to: '/helpers',    label: '我的小幫手', icon: Bot },
-  { to: '/research',   label: 'Bot 研究', icon: Telescope },
-  { to: '/dispatch',   label: 'AI 工作', icon: ClipboardList },
+  { to: '/workspace',  label: '工作區', icon: ClipboardList },
   { to: '/goals',      label: '人生目標',  icon: Target },
   { to: '/strategy',   label: '戰略盤',   icon: Target },
 ]

@@ -7,7 +7,6 @@ import App from './App'
 import Home from './pages/Home'
 import Helpers from './pages/Helpers'
 import AIWorkCenter from './pages/AIWorkCenter'
-import ResearchCenter from './pages/ResearchCenter'
 import LineHY from './pages/LineHY'
 import LineXiaoyin from './pages/LineXiaoyin'
 import Line950157 from './pages/Line950157'
@@ -29,8 +28,9 @@ function DesktopRoutes({ onMobileVersion }) {
         <Route path="life-os" element={<Navigate to="/" replace />} />
         <Route path="helpers" element={<Helpers />} />
         <Route path="memory" element={<Navigate to="/helpers" replace />} />
-        <Route path="research" element={<ResearchCenter />} />
-        <Route path="dispatch" element={<AIWorkCenter />} />
+        <Route path="workspace" element={<AIWorkCenter />} />
+        <Route path="research" element={<Navigate to="/workspace" replace />} />
+        <Route path="dispatch" element={<Navigate to="/workspace" replace />} />
         <Route path="line/hy" element={<LineHY />} />
         <Route path="line/xiaoyin" element={<LineXiaoyin />} />
         <Route path="line/950157" element={<Line950157 />} />
@@ -69,7 +69,7 @@ function Experience() {
   }
 
   if (location.pathname === '/command-center') return <CommandCenter />
-  if (mobileWidth && mode !== 'desktop' && location.pathname !== '/dispatch') {
+  if (mobileWidth && mode !== 'desktop' && location.pathname !== '/workspace') {
     return <MobileAppV2 onDesktopVersion={() => choose('desktop')} />
   }
   return <DesktopRoutes onMobileVersion={mobileWidth ? () => choose('mobile') : null} />
