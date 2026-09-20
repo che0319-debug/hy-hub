@@ -1,10 +1,24 @@
-import { authHeaders } from './auth'
+import { authHeaders, expireSession, isAuthFailure } from './auth'
 const BASE = `${import.meta.env.VITE_API_BASE || ''}/api/life-os/v1/command-center`
+
+export class AuthenticationExpiredError extends Error {
+  constructor() {
+    super('登入已過期，請重新登入')
+    this.name = 'AuthenticationExpiredError'
+  }
+}
+
+function rejectExpiredSession(status) {
+  if (!isAuthFailure(status)) return
+  expireSession()
+  throw new AuthenticationExpiredError()
+}
 
 // Fetch streaming supports the existing bearer header; credentials never enter URLs.
 export async function followExecution({ signal, onSnapshot, onState }) {
   const response = await fetch(`${BASE}/stream`, { headers: authHeaders(), cache: 'no-store', signal })
-  if (!response.ok) throw new Error(response.status === 401 ? '登入已過期，請重新登入' : `連線失敗 (${response.status})`)
+  rejectExpiredSession(response.status)
+  if (!response.ok) throw new Error(`連線失敗 (${response.status})`)
   if (!response.body || !response.headers.get('content-type')?.includes('text/event-stream')) throw new Error('伺服器尚未提供事件串流')
   const reader = response.body.getReader(), decoder = new TextDecoder()
   let buffer = ''
@@ -28,7 +42,10 @@ export async function followExecution({ signal, onSnapshot, onState }) {
         const raw = frame.split('\n').filter(x => x.startsWith('data:')).map(x => x.slice(5).trimStart()).join('\n')
         if (type === 'snapshot') { onSnapshot(JSON.parse(raw)); onState('live') }
         if (type === 'unavailable') onState('stale')
-        if (type === 'auth_expired') throw new Error('登入已過期，請重新登入')
+        if (type === 'auth_expired') {
+          expireSession()
+          throw new AuthenticationExpiredError()
+        }
       }
     }
   } finally { await reader.cancel().catch(() => {}) }
@@ -38,6 +55,7 @@ export async function readExecutionFallback(signal) {
   const response = await fetch(`${import.meta.env.VITE_API_BASE || ''}/api/life-os/v1/context`, {
     headers: authHeaders(), cache: 'no-store', signal,
   })
+  rejectExpiredSession(response.status)
   if (!response.ok) throw new Error(`狀態快照讀取失敗 (${response.status})`)
   return response.json()
 }
