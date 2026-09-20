@@ -72,8 +72,8 @@ export default function AuthGate({ children }) {
             <LockKeyhole size={22} />
           </div>
           <div>
-            <h1 className="text-xl font-bold">HY World</h1>
-            <p className="text-sm text-slate-400">登入 HY Life OS</p>
+            <h1 className="text-xl font-bold">HY Life OS</h1>
+            <p className="text-sm text-slate-400">Canonical Operations Hub</p>
           </div>
         </div>
 
