@@ -1,11 +1,11 @@
 import { useState, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { AlertCircle, ClipboardList, RefreshCw, Pencil, Telescope } from 'lucide-react'
+import { ClipboardList, RefreshCw, Pencil } from 'lucide-react'
 import { homeSummary } from '../mock/data'
 import { useSessionContext } from '../App'
 import PixelCity from '../mobile/PixelCity'
 import { fetchTodaySchedule, fetchAllMilestones, fetchMobileState, fetchWeeklyChange, postWeeklyChange, fetchLifeOSContext } from '../api'
-import { fetchDailyOS, fetchResearchCenter } from '../lifeOSApi'
+import { fetchDailyOS, fetchWorkspace } from '../lifeOSApi'
 
 const REFRESH_INTERVAL_MS = 60000
 
@@ -30,12 +30,50 @@ function normalizeDue(due) {
   return due ? due.replace(/\//g, '-') : ''
 }
 
-function SystemOverviewCard({ icon: Icon, title, onClick, items, accent='blue' }) {
-  const colors = accent === 'violet' ? 'text-violet-600 bg-violet-50' : 'text-blue-600 bg-blue-50'
+function WorkspaceOverviewCard({ projects, core, onClick }) {
+  const workItems = core?.workItems || []
+  const results = core?.results || []
+  const rows = projects.map(project => {
+    const work = workItems
+      .filter(item => item?.payload?.workspaceProjectId === project.id)
+      .sort((a, b) => String(b.updatedAt || b.createdAt || '').localeCompare(String(a.updatedAt || a.createdAt || '')))[0]
+    const result = results.find(item => item.workItemId === work?.id || item.sourceWorkItemId === work?.id || item.id === work?.resultId) || work?.result
+    const rawArtifacts = result?.artifacts || work?.artifacts || []
+    const artifacts = Array.isArray(rawArtifacts) ? rawArtifacts : []
+    const state = project.projectPlan?.approvalStatus !== 'approved' ? 'planning'
+      : ['needs_clarification', 'waiting_approval'].includes(work?.status) ? 'waiting'
+      : ['succeeded', 'completed', 'done'].includes(work?.status) ? 'review'
+      : project.workspaceStatus === 'completed' ? 'completed' : 'active'
+    const status = { planning: '規劃中', waiting: '等你確認', review: '等你驗收', completed: '完成', active: '進行中' }[state]
+    const latest = artifacts[0]?.title || artifacts[0]?.name || artifacts[0]?.filename || '尚無可開啟成果'
+    const next = state === 'planning' ? '完成並核准規劃書'
+      : state === 'waiting' ? '補充或確認 AI 提問'
+      : state === 'review' ? '檢視成果並決定下一步'
+      : state === 'completed' ? '已完成' : (work?.status === 'queued' ? '等待 GPT 巡航接手' : '推進目前 Milestone')
+    return { ...project, state, status, latest, next, artifacts }
+  })
+  const waiting = rows.filter(item => ['waiting', 'review'].includes(item.state))
+  const active = rows.filter(item => item.state === 'active')
+  const withResults = rows.filter(item => item.artifacts.length > 0)
+  const priority = { waiting: 0, review: 0, active: 1, planning: 2, completed: 3 }
+  const ordered = [...rows].sort((a, b) => priority[a.state] - priority[b.state])
   return (
     <button onClick={onClick} className="w-full rounded-xl border border-slate-200 bg-white p-5 text-left shadow-sm transition-colors hover:bg-slate-50">
-      <div className="mb-4 flex items-center gap-2 font-semibold text-slate-800"><span className={`rounded-lg p-2 ${colors}`}><Icon size={18}/></span>{title}</div>
-      <div className="grid grid-cols-3 gap-3">{items.map(([label,value,alert])=><div key={label}><div className={`text-2xl font-bold ${alert&&value>0?'text-red-500':'text-slate-800'}`}>{value}</div><div className="mt-1 text-xs text-slate-500">{label}</div></div>)}</div>
+      <div className="mb-4 flex items-center justify-between gap-3">
+        <div className="flex items-center gap-2 font-semibold text-slate-800"><span className="rounded-lg bg-violet-50 p-2 text-violet-600"><ClipboardList size={18}/></span>工作區</div>
+        <span className="text-xs text-blue-600">開啟工作區 →</span>
+      </div>
+      <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
+        {[[ '正式專案', projects.length ], [ '等你確認', waiting.length, true ], [ '進行中', active.length ], [ '已有成果', withResults.length ]].map(([label, value, alert]) => (
+          <div key={label}><div className={`text-2xl font-bold ${alert && value > 0 ? 'text-red-500' : 'text-slate-800'}`}>{value}</div><div className="mt-1 text-xs text-slate-500">{label}</div></div>
+        ))}
+      </div>
+      {ordered.length > 0 && <div className="mt-4 border-t border-slate-100 pt-3">
+        <div className="hidden grid-cols-[1.25fr_.65fr_1fr_1.2fr] gap-3 px-1 pb-2 text-xs text-slate-400 md:grid"><span>專案</span><span>狀態</span><span>最新成果</span><span>下一步</span></div>
+        {ordered.slice(0, 3).map(item => <div key={item.id} className="grid gap-1 border-t border-slate-50 px-1 py-2 text-sm first:border-0 md:grid-cols-[1.25fr_.65fr_1fr_1.2fr] md:gap-3">
+          <span className="font-medium text-slate-800">{item.title}</span><span className={item.state === 'waiting' || item.state === 'review' ? 'text-red-600' : 'text-slate-600'}>{item.status}</span><span className="truncate text-slate-600">{item.latest}</span><span className="truncate text-slate-500">{item.next}</span>
+        </div>)}
+      </div>}
     </button>
   )
 }
@@ -340,22 +378,22 @@ export default function Home() {
   const [view, setView]           = useState('data')
   const [worldState, setWorldState] = useState(null)
   const [dailyOS, setDailyOS] = useState(null)
-  const [researchData, setResearchData] = useState({ items: [] })
-  const [homeCore, setHomeCore] = useState(null)
+  const [workspaceProjects, setWorkspaceProjects] = useState([])
+  const [workspaceCore, setWorkspaceCore] = useState(null)
   const [refreshing, setRefreshing] = useState(false)
   const { sessions, refreshSessions } = useSessionContext()
   const navigate  = useNavigate()
   const timerRef  = useRef(null)
 
   async function loadWorld() {
-    const results = await Promise.allSettled([fetchMobileState(), fetchDailyOS(), fetchResearchCenter({}), fetchLifeOSContext()])
+    const results = await Promise.allSettled([fetchMobileState(), fetchDailyOS(), fetchWorkspace(), fetchLifeOSContext()])
     if (results[0].status === 'fulfilled') setWorldState(results[0].value)
     else console.warn('[Home] fetchMobileState failed:', results[0].reason)
     if (results[1].status === 'fulfilled') setDailyOS(results[1].value)
     else console.warn('[Home] fetchDailyOS failed:', results[1].reason)
-    if (results[2].status === 'fulfilled') setResearchData(results[2].value)
-    else console.warn('[Home] fetchResearchCenter failed:', results[2].reason)
-    if (results[3].status === 'fulfilled') setHomeCore(results[3].value)
+    if (results[2].status === 'fulfilled') setWorkspaceProjects(results[2].value.projects || [])
+    else console.warn('[Home] fetchWorkspace failed:', results[2].reason)
+    if (results[3].status === 'fulfilled') setWorkspaceCore(results[3].value)
     else console.warn('[Home] fetchLifeOSContext failed:', results[3].reason)
   }
 
@@ -370,15 +408,6 @@ export default function Home() {
     timerRef.current = setInterval(handleRefresh, REFRESH_INTERVAL_MS)
     return () => clearInterval(timerRef.current)
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
-
-  const researchItems = (researchData.items || []).filter(x => !['archived','stopped'].includes(x.researchStatus))
-  const researchNeedsYou = researchItems.filter(x => x.needsUserInput || x.researchStatus === 'human_review_ready').length
-  const plans = homeCore?.autonomousPlans || []
-  const workItems = homeCore?.workItems || []
-  const aiWaiting = plans.filter(x => x.status === 'waiting_approval').length + workItems.filter(x => x.status === 'needs_clarification').length
-  const aiRunning = workItems.filter(x => ['queued','running','claimed','in_progress'].includes(x.status)).length
-  const aiDone = workItems.filter(x => ['succeeded','completed','done'].includes(x.status)).length
-  const needsYou = researchNeedsYou + aiWaiting
 
   function handleBotClick(botId) {
     const route = BOT_ROUTE[botId]
@@ -415,11 +444,7 @@ export default function Home() {
         <div>
           <WeeklyChangeCard />
           <TodayResultsCard />
-          {needsYou > 0 && <button onClick={() => navigate(aiWaiting ? '/dispatch' : '/research')} className="mb-4 flex w-full items-center gap-3 rounded-xl border border-red-200 bg-red-50 p-4 text-left text-red-800"><AlertCircle size={20}/><div><b>有 {needsYou} 件需要你處理</b><p className="text-sm">包含研究問題與 AI 工作決策</p></div></button>}
-          <div className="mb-6 grid grid-cols-1 gap-4 md:grid-cols-2">
-            <SystemOverviewCard icon={Telescope} title="Bot 研究" onClick={() => navigate('/research')} items={[[ '研究主題', researchItems.length ],[ '等待回答', researchItems.filter(x=>x.needsUserInput).length, true ],[ '等你查看', researchItems.filter(x=>x.researchStatus==='human_review_ready').length, true ]]}/>
-            <SystemOverviewCard icon={ClipboardList} title="AI 工作" accent="violet" onClick={() => navigate('/dispatch')} items={[[ '待你核准', aiWaiting, true ],[ '執行中', aiRunning ],[ '最近完成', aiDone ]]}/>
-          </div>
+          <div className="mb-6"><WorkspaceOverviewCard projects={workspaceProjects} core={workspaceCore} onClick={() => navigate('/workspace')}/></div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <TodoSection />
             <ScheduleSection />
