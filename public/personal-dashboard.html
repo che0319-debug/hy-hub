@@ -416,7 +416,7 @@ header { background:var(--header-bg); padding:0 24px; display:flex; align-items:
 
 <script>
 var API         = 'https://hy-agent-v2.onrender.com';
-var ACCESS_TOKEN = sessionStorage.getItem('hy_world_access_token') || '';
+var ACCESS_TOKEN = sessionStorage.getItem('hy_life_os_access_token') || sessionStorage.getItem('hy_world_access_token') || '';
 var HEADERS     = { 'Content-Type':'application/json', 'Authorization':'Bearer '+ACCESS_TOKEN };
 var GET_HEADERS = { 'Authorization':'Bearer '+ACCESS_TOKEN, 'Cache-Control':'no-store' };
 
