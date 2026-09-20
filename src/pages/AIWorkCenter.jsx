@@ -56,8 +56,7 @@ export default function AIWorkCenter() {
     finally { setBusy(false) }
   }
   useEffect(() => {
-    const pending = (workspaceCache || []).some(item => ['queued','claimed','running','in_progress'].includes(item.planAnalysis?.status))
-    if (!workspaceCache || pending) load()
+    if (!workspaceCache) load()
   }, [])
   const selected = useMemo(() => projects.find(item => item.id === selectedId), [projects, selectedId])
   function openProject(project) { setSelectedId(project.id); setTab('overview'); setMode('preview'); setDraft(planMarkdown(project)); setNotice('') }
