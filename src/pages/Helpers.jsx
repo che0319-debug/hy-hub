@@ -42,14 +42,6 @@ function dailyHealth(isoStr) {
   }
 }
 
-function reviewsHealth(dateStr) {
-  if (!dateStr) return { ok: null, label: '無資料' }
-  const nowStr = taipeiDateStr(Date.now())
-  const days = Math.round((new Date(nowStr) - new Date(dateStr)) / 86400000)
-  const label = days === 0 ? '今天' : days === 1 ? '昨天' : `${days} 天前`
-  return { ok: days <= 8, label }
-}
-
 function HealthRow({ rowLabel, h }) {
   const color = h.ok === null ? 'text-slate-400' : h.ok ? 'text-green-600' : 'text-red-500'
   const icon  = h.ok === null ? '' : h.ok ? '✅' : '🔴'
@@ -63,8 +55,7 @@ function HealthRow({ rowLabel, h }) {
 
 function BotCard({ botId, health }) {
   const meta    = BOT_META[botId]
-  const daily   = dailyHealth(health?.daily_last)
-  const reviews = reviewsHealth(health?.reviews_last)
+  const memory = dailyHealth(health?.memory_last)
   const agentId = AGENT_ROUTE_ID[botId]
   return (
     <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-5 flex flex-col gap-3">
@@ -81,8 +72,7 @@ function BotCard({ botId, health }) {
         </Link>
       </div>
       <div className="flex flex-col gap-1.5">
-        <HealthRow rowLabel="記憶更新" h={daily} />
-        <HealthRow rowLabel="週覆盤"   h={reviews} />
+        <HealthRow rowLabel="記憶更新" h={memory} />
       </div>
     </div>
   )
