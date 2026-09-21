@@ -44,26 +44,32 @@ function WorkspaceOverviewCard({ projects, core, onClick }) {
     const result = results.find(item => item.workItemId === work?.id || item.sourceWorkItemId === work?.id || item.id === work?.resultId) || work?.result
     const rawArtifacts = result?.artifacts || work?.artifacts || []
     const artifacts = Array.isArray(rawArtifacts) ? rawArtifacts : []
-    const state = project.projectPlan?.approvalStatus !== 'approved' ? 'planning'
+    const aiPending = ['queued', 'claimed', 'running', 'in_progress'].includes(project.planAnalysis?.status)
+      || ['queued', 'claimed', 'running', 'in_progress'].includes(work?.status)
+    const state = aiPending ? 'ai'
+      : project.planAnalysis?.candidate?.needsClarification ? 'waiting'
+      : project.projectPlan?.approvalStatus !== 'approved' ? 'planning'
       : ['needs_clarification', 'waiting_approval'].includes(work?.status) ? 'waiting'
       : ['succeeded', 'completed', 'done'].includes(work?.status) ? 'review'
       : project.workspaceStatus === 'completed' ? 'completed' : 'active'
-    const status = { planning: '規劃中', waiting: '等你確認', review: '等你驗收', completed: '完成', active: '進行中' }[state]
+    const status = { planning: '規劃中', waiting: '等你確認', ai: '待 AI 處理', review: '等你驗收', completed: '完成', active: '進行中' }[state]
     const latest = artifacts[0]?.title || artifacts[0]?.name || artifacts[0]?.filename || '尚無可開啟成果'
-    const next = state === 'planning' ? '完成並核准規劃書'
+    const next = state === 'ai' ? '等待 AI 接手或完成處理'
+      : state === 'planning' ? '完成並核准規劃書'
       : state === 'waiting' ? '補充或確認 AI 提問'
       : state === 'review' ? '檢視成果並決定下一步'
       : state === 'completed' ? '已完成' : (work?.status === 'queued' ? '等待 GPT 巡航接手' : '推進目前 Milestone')
     return { ...project, state, status, latest, next, artifacts }
   })
   const waiting = rows.filter(item => ['waiting', 'review'].includes(item.state))
+  const aiPending = rows.filter(item => item.state === 'ai')
   const active = rows.filter(item => item.state === 'active')
   const withResults = rows.filter(item => item.artifacts.length > 0)
   return (
     <button onClick={onClick} className="mb-4 flex w-full items-center gap-5 rounded-xl border border-slate-200 bg-white p-5 text-left shadow-sm transition-colors hover:bg-slate-50">
       <div className="min-w-20 border-r border-slate-200 pr-5 text-center"><span className="mx-auto grid w-9 place-items-center rounded-lg bg-violet-50 p-2 text-violet-600"><ClipboardList size={18}/></span><div className="mt-1 text-xs font-semibold text-slate-600">工作區</div></div>
-      <div className="grid min-w-0 flex-1 grid-cols-2 gap-4 sm:grid-cols-4">
-        {[[ '正式專案', projects.length ], [ '等你確認', waiting.length, true ], [ '進行中', active.length ], [ '已有成果', withResults.length ]].map(([label, value, alert]) => (
+      <div className="grid min-w-0 flex-1 grid-cols-2 gap-4 sm:grid-cols-5">
+        {[[ '正式專案', projects.length ], [ '等你確認', waiting.length, true ], [ '待 AI 處理', aiPending.length ], [ '進行中', active.length ], [ '已有成果', withResults.length ]].map(([label, value, alert]) => (
           <div key={label}><div className={`text-2xl font-bold ${alert && value > 0 ? 'text-red-500' : 'text-slate-800'}`}>{value}</div><div className="mt-1 text-xs text-slate-500">{label}</div></div>
         ))}
       </div>
