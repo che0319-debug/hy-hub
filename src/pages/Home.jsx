@@ -6,6 +6,7 @@ import { useSessionContext } from '../App'
 import PixelCity from '../mobile/PixelCity'
 import { fetchTodaySchedule, fetchAllMilestones, fetchMobileState, fetchWeeklyChange, postWeeklyChange, fetchLifeOSContext } from '../api'
 import { fetchDailyOS, fetchWorkspace } from '../lifeOSApi'
+import { WORKSPACE_STATUS_ORDER, workspaceStatus, workspaceStatusLabel } from '../workspaceStatus'
 
 let homeDataCache = null
 let weeklyChangeCache
@@ -34,47 +35,21 @@ function normalizeDue(due) {
   return due ? due.replace(/\//g, '-') : ''
 }
 
-function WorkspaceOverviewCard({ projects, core, onClick }) {
-  const workItems = core?.workItems || []
-  const results = core?.results || []
-  const rows = projects.map(project => {
-    const work = workItems
-      .filter(item => item?.payload?.workspaceProjectId === project.id)
-      .sort((a, b) => String(b.updatedAt || b.createdAt || '').localeCompare(String(a.updatedAt || a.createdAt || '')))[0]
-    const result = results.find(item => item.workItemId === work?.id || item.sourceWorkItemId === work?.id || item.id === work?.resultId) || work?.result
-    const rawArtifacts = result?.artifacts || work?.artifacts || []
-    const artifacts = Array.isArray(rawArtifacts) ? rawArtifacts : []
-    const aiPending = ['queued', 'claimed', 'running', 'in_progress'].includes(project.planAnalysis?.status)
-      || ['queued', 'claimed', 'running', 'in_progress'].includes(work?.status)
-    const state = project.workspaceStatus === 'completed' ? 'completed'
-      : aiPending ? 'ai'
-      : project.planAnalysis?.candidate?.needsClarification ? 'waiting'
-      : project.projectPlan?.approvalStatus !== 'approved' ? 'planning'
-      : ['needs_clarification', 'waiting_approval'].includes(work?.status) ? 'waiting'
-      : ['succeeded', 'completed', 'done'].includes(work?.status) ? 'review'
-      : 'active'
-    const status = { planning: '規劃中', waiting: '等你確認', ai: '待 AI 處理', review: '等你驗收', completed: '完成', active: '進行中' }[state]
-    const latest = artifacts[0]?.title || artifacts[0]?.name || artifacts[0]?.filename || '尚無可開啟成果'
-    const next = state === 'ai' ? '等待 AI 接手或完成處理'
-      : state === 'planning' ? '完成並核准規劃書'
-      : state === 'waiting' ? '補充或確認 AI 提問'
-      : state === 'review' ? '檢視成果並決定下一步'
-      : state === 'completed' ? '已完成' : (work?.status === 'queued' ? '等待 GPT 巡航接手' : '推進目前 Milestone')
-    return { ...project, state, status, latest, next, artifacts, hasResult: artifacts.length > 0 || Boolean(result) }
-  })
-  const waiting = rows.filter(item => ['waiting', 'review'].includes(item.state))
-  const aiPending = rows.filter(item => item.state === 'ai')
-  const active = rows.filter(item => item.state === 'active')
-  const withResults = rows.filter(item => item.hasResult)
+function WorkspaceOverviewCard({ projects, onClick }) {
+  const counts = Object.fromEntries(WORKSPACE_STATUS_ORDER.map(key => [key, 0]))
+  projects.forEach(project => { counts[workspaceStatus(project).key] += 1 })
+  const summary = [
+    ['projects', '專案數量', projects.length],
+    ...WORKSPACE_STATUS_ORDER.map(key => [key, workspaceStatusLabel(key), counts[key]]),
+  ]
   return (
     <button onClick={onClick} className="mb-4 flex w-full items-center gap-5 rounded-xl border border-slate-200 bg-white p-5 text-left shadow-sm transition-colors hover:bg-slate-50">
       <div className="min-w-20 border-r border-slate-200 pr-5 text-center"><span className="mx-auto grid w-9 place-items-center rounded-lg bg-violet-50 p-2 text-violet-600"><ClipboardList size={18}/></span><div className="mt-1 text-xs font-semibold text-slate-600">工作區</div></div>
-      <div className="grid min-w-0 flex-1 grid-cols-2 gap-4 sm:grid-cols-5">
-        {[[ '正式專案', projects.length ], [ '等你確認', waiting.length, true ], [ '待 AI 處理', aiPending.length ], [ '進行中', active.length ], [ '已有成果', withResults.length ]].map(([label, value, alert]) => (
-          <div key={label}><div className={`text-2xl font-bold ${alert && value > 0 ? 'text-red-500' : 'text-slate-800'}`}>{value}</div><div className="mt-1 text-xs text-slate-500">{label}</div></div>
+      <div className="grid min-w-0 flex-1 grid-cols-2 gap-4 sm:grid-cols-4 xl:grid-cols-7">
+        {summary.map(([key, label, value]) => (
+          <div key={key}><div className={`text-2xl font-bold ${['confirmation', 'review'].includes(key) && value > 0 ? 'text-red-500' : 'text-slate-800'}`}>{value}</div><div className="mt-1 text-xs text-slate-500">{label}</div></div>
         ))}
       </div>
-      <span className="hidden text-xs text-blue-600 sm:block">開啟 →</span>
     </button>
   )
 }
