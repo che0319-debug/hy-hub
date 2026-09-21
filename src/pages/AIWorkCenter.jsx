@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { ArrowLeft, CheckCircle2, ExternalLink, FileText, Pencil, Plus, RefreshCw, Save, Send, Trash2, X } from 'lucide-react'
 import { approveWorkspaceMilestone, approveWorkspacePlan, archiveWorkspaceProject, createWorkspacePlanRevision, createWorkspaceProject, fetchWorkspace, requestWorkspacePlanAnalysis, saveWorkspacePlan, submitWorkFeedback } from '../lifeOSApi'
+import { workspaceStatus } from '../workspaceStatus'
 
 let workspaceCache = null
 
@@ -29,12 +30,8 @@ function MarkdownPreview({ value }) {
 }
 
 function statusMeta(project) {
-  if (project.workspaceStatus === 'completed') return ['完成', 'bg-slate-100 text-slate-700']
-  if (project.workspaceStatus === 'review') return ['等待驗收', 'bg-emerald-50 text-emerald-700']
-  if (['queued', 'claimed'].includes(project.planAnalysis?.status)) return ['待 AI 處理', 'bg-violet-50 text-violet-700']
-  if (['running', 'in_progress'].includes(project.planAnalysis?.status)) return ['AI 處理中', 'bg-blue-50 text-blue-700']
-  if (project.projectPlan?.approvalStatus !== 'approved') return ['規劃中', 'bg-amber-50 text-amber-700']
-  return ['進行中', 'bg-blue-50 text-blue-700']
+  return workspaceStatus(project).meta
+
 }
 
 export default function AIWorkCenter() {
