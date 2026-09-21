@@ -590,15 +590,11 @@ export default function MobileApp({ onDesktopVersion }) {
               </div>
             </section>
             <section>
-              <h2>晚間回顧與週覆盤</h2>
+              <h2>晚間回顧</h2>
               <div className="mobile-card mobile-review-actions">
                 {reviewSaved && <p className="mobile-review-success"><CheckCircle2 size={16} />覆盤已寫入 Life OS 閉環</p>}
                 <button type="button" onClick={() => openReview('daily')}>
                   <span><b>今晚</b><small>{growth.latestDailyReview?.date ? `上次 ${growth.latestDailyReview.date}` : 'Results・卡點・明日第一步'}</small></span>
-                  <ChevronRight size={18} />
-                </button>
-                <button type="button" onClick={() => openReview('weekly')}>
-                  <span><b>本週</b><small>{growth.latestWeeklyReview?.date ? `上次 ${growth.latestWeeklyReview.date}` : '成果・Reality Gap・下週重點'}</small></span>
                   <ChevronRight size={18} />
                 </button>
               </div>
