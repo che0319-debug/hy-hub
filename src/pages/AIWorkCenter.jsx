@@ -1,8 +1,13 @@
 import { useEffect, useMemo, useState } from 'react'
-import { ArrowLeft, CheckCircle2, ExternalLink, FileText, Pencil, Plus, RefreshCw, Save, Send, Trash2, X } from 'lucide-react'
+import { ArrowLeft, Bot, CheckCircle2, ExternalLink, FileText, Pencil, Plus, RefreshCw, Save, Send, Trash2, X } from 'lucide-react'
 import { approveWorkspacePlan, archiveWorkspaceProject, createWorkspacePlanRevision, createWorkspaceProject, fetchWorkspace, requestWorkspacePlanAnalysis, saveWorkspacePlan } from '../lifeOSApi'
 
 let workspaceCache = null
+
+const WORK_STATUS = {
+  queued: '等待執行', running: '執行中', needs_clarification: '等待 HY',
+  review: '等待驗收', awaiting_review: '等待驗收', succeeded: '等待驗收',
+}
 
 function planMarkdown(project) {
   const plan = project.projectPlan || {}
@@ -36,6 +41,7 @@ function statusMeta(project) {
 
 export default function AIWorkCenter() {
   const [projects, setProjects] = useState(workspaceCache || [])
+  const [workItems, setWorkItems] = useState([])
   const [selectedId, setSelectedId] = useState('')
   const [tab, setTab] = useState('overview')
   const [mode, setMode] = useState('preview')
@@ -51,13 +57,16 @@ export default function AIWorkCenter() {
 
   async function load() {
     setBusy(true); setError('')
-    try { const data = await fetchWorkspace(); workspaceCache = data.projects || []; setProjects(workspaceCache) }
+    try {
+      const data = await fetchWorkspace()
+      workspaceCache = data.projects || []
+      setProjects(workspaceCache)
+      setWorkItems(data.workItems || [])
+    }
     catch (err) { setError(err.message || '工作區讀取失敗') }
     finally { setBusy(false) }
   }
-  useEffect(() => {
-    if (!workspaceCache) load()
-  }, [])
+  useEffect(() => { load() }, [])
   const selected = useMemo(() => projects.find(item => item.id === selectedId), [projects, selectedId])
   function openProject(project) { setSelectedId(project.id); setTab('overview'); setMode('preview'); setDraft(planMarkdown(project)); setNotice('') }
   function back() { setSelectedId(''); setTab('overview'); setMode('preview'); setNotice('') }
@@ -141,6 +150,15 @@ export default function AIWorkCenter() {
   if (!selected) return <div className="mx-auto max-w-7xl">
     <div className="mb-8 flex items-start justify-between gap-4"><div><h1 className="text-3xl font-bold text-slate-900">工作區</h1><p className="mt-2 text-slate-500">長期 Project 的規劃、成果與下一步。</p></div><div className="flex gap-2"><button onClick={() => setCreating(true)} className="flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm text-white"><Plus size={16}/>新增專案</button><button onClick={load} disabled={busy} className="flex items-center gap-2 rounded-lg border bg-white px-3 py-2 text-sm"><RefreshCw size={16} className={busy ? 'animate-spin' : ''}/>同步</button></div></div>
     {error && <div className="mb-4 rounded-lg bg-red-50 p-3 text-red-700">{error}</div>}
+    {!!workItems.length && <section className="mb-6 overflow-hidden rounded-2xl border bg-white">
+      <div className="border-b bg-slate-50 px-6 py-3"><h2 className="font-semibold text-slate-800">工作</h2></div>
+      {workItems.map(item => <article key={item.id} className="grid w-full gap-3 border-b px-6 py-5 text-left last:border-0 md:grid-cols-[2fr_140px_160px_2fr] md:items-center md:gap-5">
+        <div><b className="text-slate-900">{item.title}</b><p className="mt-1 text-xs text-slate-400">{item.id}</p></div>
+        <span className="text-sm text-slate-600">{WORK_STATUS[item.status] || item.status}</span>
+        <span className="flex items-center gap-2 text-sm text-slate-600"><Bot size={15}/>{item.payload?.requestedAgent?.name || (item.owner === 'hy' ? 'HY' : item.owner)} Bot</span>
+        <span className="text-sm text-slate-600">{item.latestProgress || item.execution?.current_activity || '等待 Bot 更新進度'}</span>
+      </article>)}
+    </section>}
     <div className="overflow-hidden rounded-2xl border bg-white">
       <div className="hidden grid-cols-[2fr_140px_2fr_2fr] gap-5 border-b bg-slate-50 px-6 py-3 text-xs font-semibold text-slate-500 md:grid"><span>專案名稱</span><span>狀態</span><span>最新成果</span><span>下一步</span></div>
       {projects.map(project => { const [status, cls] = statusMeta(project); const deliverable = (project.latestDeliverables || [])[0]; const milestone = (project.projectPlan?.milestones || []).find(row => row.id === project.currentMilestoneId); return <button key={project.id} onClick={() => openProject(project)} className="group relative grid w-full gap-3 border-b px-6 py-5 pr-14 text-left last:border-0 hover:bg-blue-50/40 md:grid-cols-[2fr_140px_2fr_2fr] md:items-center md:gap-5"><div><b className="text-slate-900">{project.title}</b><p className="mt-1 text-xs text-slate-400">Plan v{project.projectPlan?.version || '1.0'}</p></div><span><i className={`rounded-full px-3 py-1 text-xs not-italic ${cls}`}>{status}</i></span><span className="text-sm text-slate-600">{deliverable ? deliverable.name || '開啟成果' : '尚無成果'}</span><span className="text-sm text-slate-600">{project.projectPlan?.approvalStatus !== 'approved' ? '檢視並核准規劃書' : milestone ? `執行 ${milestone.id} ${milestone.title}` : '等待下一步'}</span><span role="button" aria-label={`刪除 ${project.title}`} onClick={event => removeProject(event, project)} className="absolute right-4 top-1/2 -translate-y-1/2 rounded-lg p-2 text-slate-300 hover:bg-red-50 hover:text-red-600"><Trash2 size={17}/></span></button> })}
