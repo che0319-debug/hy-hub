@@ -46,12 +46,13 @@ function WorkspaceOverviewCard({ projects, core, onClick }) {
     const artifacts = Array.isArray(rawArtifacts) ? rawArtifacts : []
     const aiPending = ['queued', 'claimed', 'running', 'in_progress'].includes(project.planAnalysis?.status)
       || ['queued', 'claimed', 'running', 'in_progress'].includes(work?.status)
-    const state = aiPending ? 'ai'
+    const state = project.workspaceStatus === 'completed' ? 'completed'
+      : aiPending ? 'ai'
       : project.planAnalysis?.candidate?.needsClarification ? 'waiting'
       : project.projectPlan?.approvalStatus !== 'approved' ? 'planning'
       : ['needs_clarification', 'waiting_approval'].includes(work?.status) ? 'waiting'
       : ['succeeded', 'completed', 'done'].includes(work?.status) ? 'review'
-      : project.workspaceStatus === 'completed' ? 'completed' : 'active'
+      : 'active'
     const status = { planning: '規劃中', waiting: '等你確認', ai: '待 AI 處理', review: '等你驗收', completed: '完成', active: '進行中' }[state]
     const latest = artifacts[0]?.title || artifacts[0]?.name || artifacts[0]?.filename || '尚無可開啟成果'
     const next = state === 'ai' ? '等待 AI 接手或完成處理'
@@ -59,12 +60,12 @@ function WorkspaceOverviewCard({ projects, core, onClick }) {
       : state === 'waiting' ? '補充或確認 AI 提問'
       : state === 'review' ? '檢視成果並決定下一步'
       : state === 'completed' ? '已完成' : (work?.status === 'queued' ? '等待 GPT 巡航接手' : '推進目前 Milestone')
-    return { ...project, state, status, latest, next, artifacts }
+    return { ...project, state, status, latest, next, artifacts, hasResult: artifacts.length > 0 || Boolean(result) }
   })
   const waiting = rows.filter(item => ['waiting', 'review'].includes(item.state))
   const aiPending = rows.filter(item => item.state === 'ai')
   const active = rows.filter(item => item.state === 'active')
-  const withResults = rows.filter(item => item.artifacts.length > 0)
+  const withResults = rows.filter(item => item.hasResult)
   return (
     <button onClick={onClick} className="mb-4 flex w-full items-center gap-5 rounded-xl border border-slate-200 bg-white p-5 text-left shadow-sm transition-colors hover:bg-slate-50">
       <div className="min-w-20 border-r border-slate-200 pr-5 text-center"><span className="mx-auto grid w-9 place-items-center rounded-lg bg-violet-50 p-2 text-violet-600"><ClipboardList size={18}/></span><div className="mt-1 text-xs font-semibold text-slate-600">工作區</div></div>
