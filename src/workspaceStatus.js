@@ -21,12 +21,15 @@ export function workspaceStatus(project) {
     return { key: 'completed', meta: META.completed }
   if (project.workspaceStatus === 'review')
     return { key: 'review', meta: META.review }
-  const analysis = project.planAnalysis?.status
+  const approved = project.projectPlan?.approvalStatus === 'approved'
+  const analysis = approved ? null : project.planAnalysis?.status
   const work = project.latestWork?.status
   if (
-    project.planAnalysis?.candidate?.needsClarification ||
+    (!approved && project.planAnalysis?.candidate?.needsClarification) ||
     ['needs_clarification', 'waiting_approval'].includes(work)
   )
+    return { key: 'confirmation', meta: META.confirmation }
+  if (approved && work === 'succeeded' && project.currentMilestoneId)
     return { key: 'confirmation', meta: META.confirmation }
   if (
     ['running', 'in_progress'].includes(analysis) ||
@@ -39,7 +42,7 @@ export function workspaceStatus(project) {
   )
     return { key: 'ai_pending', meta: META.ai_pending }
   if (
-    project.planAnalysis?.candidate &&
+    !approved && project.planAnalysis?.candidate &&
     project.projectPlan?.approvalStatus !== 'approved'
   )
     return { key: 'confirmation', meta: META.confirmation }
