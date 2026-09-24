@@ -87,8 +87,9 @@ function projectRow(project) {
       : approved ? '執行期 · 里程碑待定' : '規劃期 · 里程碑待定'
   const latest = project.latestWork
   const deliverable = (project.latestDeliverables || [])[0]
-  const hasResult = latest?.status === 'succeeded' && Boolean(latest.summary || deliverable)
-  const result = hasResult ? latest.summary || deliverable.name || '開啟成果' : '尚無成果'
+  const resultSummary = project.latestResultSummary || (latest?.status === 'succeeded' ? latest.summary : '')
+  const hasResult = Boolean(resultSummary || deliverable)
+  const result = hasResult ? resultSummary || deliverable.name || '開啟成果' : '尚無成果'
   const analysisPending = ['queued', 'claimed', 'running', 'in_progress'].includes(project.planAnalysis?.status)
   const awaitingReview = ['confirmation', 'review'].includes(project.workspaceStatus) || latest?.deliveryState === 'awaiting_review'
   let current = '等待建立規劃書'
