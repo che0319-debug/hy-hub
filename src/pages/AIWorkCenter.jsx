@@ -80,7 +80,7 @@ function projectRow(project) {
   const milestones = plan.milestones || []
   const currentIndex = milestones.findIndex(item => item.id === project.currentMilestoneId)
   const approved = plan.approvalStatus === 'approved'
-  const phase = project.workspaceStatus === 'completed' && approved && milestones.length && !project.currentMilestoneId
+  const phase = project.workspaceStatus === 'completed' && approved && milestones.length && milestones.every(item => item.status === 'completed') && !project.currentMilestoneId
     ? '結案'
     : approved && milestones.length && currentIndex >= 0
       ? `執行期 · ${currentIndex + 1}/${milestones.length}`
@@ -91,13 +91,17 @@ function projectRow(project) {
   const hasResult = Boolean(resultSummary || deliverable)
   const result = hasResult ? resultSummary || deliverable.name || '開啟成果' : '尚無成果'
   const analysisPending = ['queued', 'claimed', 'running', 'in_progress'].includes(project.planAnalysis?.status)
-  const awaitingReview = ['confirmation', 'review'].includes(project.workspaceStatus) || latest?.deliveryState === 'awaiting_review'
+  const resultForCurrentMilestone = !project.currentMilestoneId || project.latestResultMilestoneId === project.currentMilestoneId
+  const awaitingReview = ['confirmation', 'review'].includes(project.workspaceStatus) && resultForCurrentMilestone
   let current = '等待建立規劃書'
   let next = '編輯並確認規劃書'
 
   if (project.workspaceStatus === 'completed' && phase === '結案') {
     current = '專案已結案'
     next = '無待辦事項'
+  } else if (project.workspaceStatus === 'ai_running') {
+    current = 'AI 正在處理工作'
+    next = currentIndex >= 0 ? `等待 ${milestones[currentIndex].id} 成果` : '等待 AI 回報成果'
   } else if (awaitingReview) {
     current = hasResult ? '成果已交付，等待你確認' : '等待你確認'
     next = currentIndex >= 0 ? `檢視並確認 ${milestones[currentIndex].id} 成果` : '檢視成果並確認後續安排'
@@ -107,6 +111,9 @@ function projectRow(project) {
   } else if (latest?.status === 'queued') {
     current = '工作已排入 AI 佇列'
     next = '等待 AI 接手'
+  } else if (approved && currentIndex >= 0 && milestones[currentIndex].status !== 'completed' && !resultForCurrentMilestone) {
+    current = `${milestones[currentIndex].id} 尚未完成`
+    next = `執行 ${milestones[currentIndex].id} ${milestones[currentIndex].title}`
   } else if (hasResult) {
     current = approved && currentIndex >= 0 ? `${milestones[currentIndex].id} 有成果，待確認後續` : '已有成果，後續工作待確認'
     next = approved && currentIndex >= 0 ? `檢視 ${milestones[currentIndex].id} 成果與後續工作` : '檢視成果並確認後續工作'
