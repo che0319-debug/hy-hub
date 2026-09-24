@@ -19,7 +19,7 @@ function BotSelector({ project, onChange, disabled }) {
     <select aria-label={`${project.title} 負責 Bot`} className="rounded border bg-white px-2 py-1 text-slate-800"
       value={project.responsibleBot || project.owner || 'hy'} disabled={disabled}
       onChange={event => { event.stopPropagation(); onChange(project.id, event.target.value) }}>
-      {['hy', '950157', 'family', 'sam'].map(bot => <option key={bot} value={bot}>{bot}</option>)}
+      {[['hy', 'HY'], ['950157', '950157'], ['family', '小因'], ['sam', 'Sam']].map(([bot, label]) => <option key={bot} value={bot}>{label}</option>)}
     </select>
   </label>
 }
