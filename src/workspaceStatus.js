@@ -1,11 +1,4 @@
-export const WORKSPACE_STATUS_ORDER = [
-  'planning',
-  'ai_pending',
-  'ai_running',
-  'confirmation',
-  'review',
-  'completed',
-]
+export const WORKSPACE_STATUS_ORDER = ['planning', 'ai_pending', 'ai_running', 'confirmation', 'review', 'completed']
 
 const META = {
   planning: ['規劃中', 'bg-amber-50 text-amber-700'],
@@ -17,38 +10,8 @@ const META = {
 }
 
 export function workspaceStatus(project) {
-  if (project.workspaceStatus === 'completed')
-    return { key: 'completed', meta: META.completed }
-  if (project.workspaceStatus === 'review')
-    return { key: 'review', meta: META.review }
-  const approved = project.projectPlan?.approvalStatus === 'approved'
-  const analysis = approved ? null : project.planAnalysis?.status
-  const work = project.latestWork?.status
-  if (
-    (!approved && project.planAnalysis?.candidate?.needsClarification) ||
-    ['needs_clarification', 'waiting_approval'].includes(work)
-  )
-    return { key: 'confirmation', meta: META.confirmation }
-  if (approved && work === 'succeeded' && project.currentMilestoneId)
-    return { key: 'confirmation', meta: META.confirmation }
-  if (
-    ['running', 'in_progress'].includes(analysis) ||
-    ['running', 'in_progress'].includes(work)
-  )
-    return { key: 'ai_running', meta: META.ai_running }
-  if (
-    ['queued', 'claimed'].includes(analysis) ||
-    ['queued', 'claimed'].includes(work)
-  )
-    return { key: 'ai_pending', meta: META.ai_pending }
-  if (
-    !approved && project.planAnalysis?.candidate &&
-    project.projectPlan?.approvalStatus !== 'approved'
-  )
-    return { key: 'confirmation', meta: META.confirmation }
-  if (project.projectPlan?.approvalStatus !== 'approved')
-    return { key: 'planning', meta: META.planning }
-  return { key: 'ai_pending', meta: META.ai_pending }
+  const key = project.workspaceStatus === 'in_progress' ? 'ai_pending' : project.workspaceStatus
+  return { key, meta: META[key] || [key || '規劃中', 'bg-slate-100 text-slate-700'] }
 }
 
 export function workspaceStatusLabel(key) {
