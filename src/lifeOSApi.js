@@ -153,6 +153,13 @@ export async function fetchWorkspace() {
   return parseResponse(response, 'fetchWorkspace')
 }
 
+export async function updateWorkspaceResponsibleBot(projectId, responsibleBot) {
+  const response = await fetch(`${API_BASE}/api/life-os/v1/workspace/projects/${encodeURIComponent(projectId)}/responsible-bot`, {
+    method: 'PATCH', headers: { ...authHeaders(), 'Content-Type': 'application/json' }, body: JSON.stringify({ responsibleBot }),
+  })
+  return parseResponse(response, 'updateWorkspaceResponsibleBot')
+}
+
 export async function createWorkspaceProject(payload) {
   const response = await fetch(`${API_BASE}/api/life-os/v1/workspace/projects`, {
     method: 'POST',
