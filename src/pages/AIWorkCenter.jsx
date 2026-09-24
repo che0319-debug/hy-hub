@@ -42,11 +42,11 @@ function ReportPreview({ value }) {
         i++
       }
       i--
-      blocks.push(<div key={i} className="overflow-x-auto rounded-lg border"><table className="min-w-[750px] w-full border-collapse text-left text-sm"><tbody>{rows.map((cells, row) => <tr key={row} className={row === 0 ? 'bg-slate-100 font-semibold' : 'border-t'}>{cells.map((cell, col) => <td key={col} className="min-w-28 p-3 align-top whitespace-pre-wrap">{cell.replace(/\\*\\*/g, '')}</td>)}</tr>)}</tbody></table></div>)
+      blocks.push(<div key={i} className="overflow-x-auto rounded-lg border"><table className="min-w-[750px] w-full border-collapse text-left text-sm"><tbody>{rows.map((cells, row) => <tr key={row} className={row === 0 ? 'bg-slate-100 font-semibold' : 'border-t'}>{cells.map((cell, col) => <td key={col} className="min-w-28 p-3 align-top whitespace-pre-wrap">{cell.replace(/\*\*/g, '')}</td>)}</tr>)}</tbody></table></div>)
     } else if (line.startsWith('# ')) blocks.push(<h2 key={i} className="text-xl font-bold">{line.slice(2)}</h2>)
     else if (line.startsWith('## ')) blocks.push(<h3 key={i} className="mt-5 border-b pb-2 text-lg font-semibold">{line.slice(3)}</h3>)
-    else if (line.startsWith('- ') || /^\\d+\\. /.test(line)) blocks.push(<p key={i} className="pl-4 leading-7">{line.replace(/^[-\\d.]+\\s*/, '• ').replace(/\\*\\*/g, '')}</p>)
-    else if (line) blocks.push(<p key={i} className="leading-7">{line.replace(/\\*\\*/g, '')}</p>)
+    else if (line.startsWith('- ') || /^\d+\. /.test(line)) blocks.push(<p key={i} className="pl-4 leading-7">{line.replace(/^[-\d.]+\s*/, '• ').replace(/\*\*/g, '')}</p>)
+    else if (line) blocks.push(<p key={i} className="leading-7">{line.replace(/\*\*/g, '')}</p>)
   }
   return <div className="space-y-3 text-slate-700">{blocks}</div>
 }
