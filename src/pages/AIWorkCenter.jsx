@@ -29,6 +29,28 @@ function MarkdownPreview({ value }) {
   })}</div>
 }
 
+function ReportPreview({ value }) {
+  const lines = String(value || '').split('\n')
+  const blocks = []
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i].trim()
+    if (line.startsWith('|') && line.endsWith('|')) {
+      const rows = []
+      while (i < lines.length && lines[i].trim().startsWith('|')) {
+        const cells = lines[i].trim().slice(1, -1).split('|').map(cell => cell.trim())
+        if (!cells.every(cell => /^:?-{3,}:?$/.test(cell))) rows.push(cells)
+        i++
+      }
+      i--
+      blocks.push(<div key={i} className="overflow-x-auto rounded-lg border"><table className="min-w-[750px] w-full border-collapse text-left text-sm"><tbody>{rows.map((cells, row) => <tr key={row} className={row === 0 ? 'bg-slate-100 font-semibold' : 'border-t'}>{cells.map((cell, col) => <td key={col} className="min-w-28 p-3 align-top whitespace-pre-wrap">{cell.replace(/\\*\\*/g, '')}</td>)}</tr>)}</tbody></table></div>)
+    } else if (line.startsWith('# ')) blocks.push(<h2 key={i} className="text-xl font-bold">{line.slice(2)}</h2>)
+    else if (line.startsWith('## ')) blocks.push(<h3 key={i} className="mt-5 border-b pb-2 text-lg font-semibold">{line.slice(3)}</h3>)
+    else if (line.startsWith('- ') || /^\\d+\\. /.test(line)) blocks.push(<p key={i} className="pl-4 leading-7">{line.replace(/^[-\\d.]+\\s*/, '• ').replace(/\\*\\*/g, '')}</p>)
+    else if (line) blocks.push(<p key={i} className="leading-7">{line.replace(/\\*\\*/g, '')}</p>)
+  }
+  return <div className="space-y-3 text-slate-700">{blocks}</div>
+}
+
 function statusMeta(project) {
   return workspaceStatus(project).meta
 
@@ -41,6 +63,7 @@ export default function AIWorkCenter() {
   const [mode, setMode] = useState('preview')
   const [draft, setDraft] = useState('')
   const [feedback, setFeedback] = useState('')
+  const [reportOpen, setReportOpen] = useState(false)
   const [clarification, setClarification] = useState('')
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
@@ -61,8 +84,8 @@ export default function AIWorkCenter() {
   }
   useEffect(() => { load() }, [])
   const selected = useMemo(() => projects.find(item => item.id === selectedId), [projects, selectedId])
-  function openProject(project) { setSelectedId(project.id); setTab('overview'); setMode('preview'); setDraft(planMarkdown(project)); setNotice('') }
-  function back() { setSelectedId(''); setTab('overview'); setMode('preview'); setNotice('') }
+  function openProject(project) { setReportOpen(false); setSelectedId(project.id); setTab('overview'); setMode('preview'); setDraft(planMarkdown(project)); setNotice('') }
+  function back() { setReportOpen(false); setSelectedId(''); setTab('overview'); setMode('preview'); setNotice('') }
 
   async function saveDraft() {
     if (!selected) return
@@ -186,7 +209,7 @@ export default function AIWorkCenter() {
     {error && <div className="mt-5 rounded-lg bg-red-50 p-3 text-red-700">{error}</div>}{notice && <div className="mt-5 rounded-lg bg-emerald-50 p-3 text-emerald-700">{notice}</div>}
     {tab === 'overview' ? <div className="mt-6 space-y-5">
       <section className="rounded-2xl border bg-white p-6"><h2 className="font-semibold text-slate-900">目前進度</h2><div className="mt-4 space-y-2">{milestones.map(item => <div key={item.id} className={`rounded-xl border p-4 ${item.id === selected.currentMilestoneId ? 'border-blue-400 bg-blue-50/40' : 'bg-white'}`}><div className="flex justify-between gap-3"><b>{item.id}　{item.title}</b><span className="text-xs text-slate-500">{item.status === 'completed' ? '✓ 完成' : item.id === selected.currentMilestoneId ? '目前' : '待執行'}</span></div></div>)}</div><p className="mt-5 text-sm text-slate-600"><b>目前正在做：</b>{plan.approvalStatus !== 'approved' && ['queued','claimed','running','in_progress'].includes(selected.planAnalysis?.status) ? '等待 AI 解析規劃書' : current ? `${current.id} ${current.title}` : plan.approvalStatus === 'approved' ? '等待下一階段' : '等待規劃書核准'}</p><p className="mt-2 text-sm text-slate-600"><b>下一步：</b>{statusMeta(selected)[0] === '等待確認' && selected.latestWork?.status === 'succeeded' ? '檢視 M1 成果，選擇同意驗收或送出修改意見' : selected.workspaceStatus === 'review' ? '檢視成果，選擇同意驗收或送出修改意見' : plan.approvalStatus !== 'approved' && ['queued','claimed','running','in_progress'].includes(selected.planAnalysis?.status) ? '由 AI 接手處理，目前不需要你的操作' : plan.approvalStatus === 'approved' ? '依規劃書產出可開啟成果' : '檢視並核准規劃書'}</p></section>
-      <section className="rounded-2xl border bg-white p-6"><h2 className="font-semibold text-slate-900">最新成果</h2>{deliverable ? <a href={deliverable.url || deliverable.uri} target="_blank" rel="noreferrer" className="mt-4 flex items-center gap-2 text-blue-700"><ExternalLink size={16}/>{deliverable.title || deliverable.name || '開啟成果'}</a> : latestResultSummary ? <p className="mt-3 whitespace-pre-wrap text-sm text-slate-600">{latestResultSummary}</p> : <p className="mt-3 text-sm text-slate-400">尚未產生可開啟 Deliverable。</p>}</section>
+      <section className="rounded-2xl border bg-white p-6"><h2 className="font-semibold text-slate-900">最新成果</h2>{deliverable ? <><button type="button" onClick={() => setReportOpen(value => !value)} className="mt-4 flex items-center gap-2 text-left text-blue-700 underline"><FileText size={16}/>{deliverable.title || deliverable.name || '檢視成果'}（{reportOpen ? '收合' : '展開'}）</button>{reportOpen && <div className="mt-5 border-t pt-5">{selected.latestWork?.contentMarkdown ? <ReportPreview value={selected.latestWork.contentMarkdown}/> : <p className="text-sm text-slate-600">{latestResultSummary || '成果內容載入中，請按「同步」更新。'}</p>}</div>}</> : latestResultSummary ? <p className="mt-3 whitespace-pre-wrap text-sm text-slate-600">{latestResultSummary}</p> : <p className="mt-3 text-sm text-slate-400">尚未產生可開啟 Deliverable。</p>}</section>
       <section className="rounded-2xl border bg-white p-6"><h2 className="font-semibold text-slate-900">驗收／修改意見</h2><textarea value={feedback} onChange={e => setFeedback(e.target.value)} placeholder="若成果需要修改，請輸入對本 Milestone 的要求" className="mt-4 min-h-28 w-full rounded-xl border p-3 text-sm"/><div className="mt-3 flex flex-wrap gap-2"><button onClick={submitFeedback} disabled={busy || !feedback.trim() || !selected.latestWork?.id} className="flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm text-white disabled:opacity-40"><Send size={15}/>送出修改意見</button>{statusMeta(selected)[0] === '等待確認' && selected.latestWork?.status === 'succeeded' && <button onClick={acceptMilestone} disabled={busy} className="flex items-center gap-2 rounded-lg bg-emerald-600 px-4 py-2 text-sm text-white disabled:opacity-40"><CheckCircle2 size={15}/>同意驗收</button>}</div></section>
     </div> : <div className="mt-6 rounded-2xl border bg-white">
       <div className="flex flex-wrap items-center justify-between gap-3 border-b p-4"><div><b>專案規劃書 v{plan.version || '1.0'}</b><span className="ml-3 text-xs text-slate-400">{plan.approvalStatus === 'approved' ? '已核准' : '草稿'}</span></div><div className="flex gap-2"><button onClick={() => setMode(mode === 'edit' ? 'preview' : 'edit')} className="flex items-center gap-2 rounded-lg border px-3 py-2 text-sm"><Pencil size={15}/>{mode === 'edit' ? '預覽' : '編輯'}</button>{mode === 'edit' && <button onClick={saveDraft} disabled={busy} className="flex items-center gap-2 rounded-lg bg-slate-900 px-3 py-2 text-sm text-white"><Save size={15}/>儲存草稿</button>}{plan.approvalStatus !== 'approved' && mode !== 'edit' && !selected.planAnalysis?.candidate && <button onClick={analyzePlan} disabled={busy || ['queued','claimed','running','in_progress'].includes(selected.planAnalysis?.status)} className="flex items-center gap-2 rounded-lg bg-blue-600 px-3 py-2 text-sm text-white disabled:opacity-50">AI 解析規劃書</button>}</div></div>
