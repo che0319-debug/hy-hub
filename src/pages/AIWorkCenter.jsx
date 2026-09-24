@@ -1,9 +1,28 @@
 import { useEffect, useMemo, useState } from 'react'
 import { ArrowLeft, CheckCircle2, ExternalLink, FileText, Pencil, Plus, RefreshCw, Save, Send, Trash2, X } from 'lucide-react'
-import { approveWorkspaceMilestone, approveWorkspacePlan, archiveWorkspaceProject, createWorkspacePlanRevision, createWorkspaceProject, fetchWorkspace, requestWorkspacePlanAnalysis, saveWorkspacePlan, submitWorkFeedback } from '../lifeOSApi'
+import { approveWorkspaceMilestone, approveWorkspacePlan, archiveWorkspaceProject, createWorkspacePlanRevision, createWorkspaceProject, fetchWorkspace, requestWorkspacePlanAnalysis, saveWorkspacePlan, submitWorkFeedback, updateWorkspaceResponsibleBot } from '../lifeOSApi'
 import { workspaceStatus } from '../workspaceStatus'
 
 let workspaceCache = null
+
+function statusTime(project) {
+  const value = project.statusChangedAt
+  if (!value) return '時間待同步'
+  const date = new Date(value)
+  return Number.isNaN(date.getTime()) ? '時間待同步' : new Intl.DateTimeFormat('zh-TW', {
+    timeZone: 'Asia/Taipei', month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit', hour12: false,
+  }).format(date)
+}
+
+function BotSelector({ project, onChange, disabled }) {
+  return <label className="text-xs text-slate-500" onClick={event => event.stopPropagation()}>負責 Bot　
+    <select aria-label={`${project.title} 負責 Bot`} className="rounded border bg-white px-2 py-1 text-slate-800"
+      value={project.responsibleBot || project.owner || 'hy'} disabled={disabled}
+      onChange={event => { event.stopPropagation(); onChange(project.id, event.target.value) }}>
+      {['hy', '950157', 'family', 'sam'].map(bot => <option key={bot} value={bot}>{bot}</option>)}
+    </select>
+  </label>
+}
 
 function planMarkdown(project) {
   const plan = project.projectPlan || {}
@@ -71,6 +90,15 @@ export default function AIWorkCenter() {
   const [creating, setCreating] = useState(false)
   const [newTitle, setNewTitle] = useState('')
   const [newObjective, setNewObjective] = useState('')
+
+  async function assignBot(projectId, bot) {
+    setBusy(true); setError('')
+    try {
+      await updateWorkspaceResponsibleBot(projectId, bot)
+      await load()
+    } catch (err) { setError(err.message || '負責 Bot 更新失敗'); await load() }
+    finally { setBusy(false) }
+  }
 
   async function load() {
     setBusy(true); setError('')
@@ -190,8 +218,8 @@ export default function AIWorkCenter() {
     <div className="mb-8 flex items-start justify-between gap-4"><div><h1 className="text-3xl font-bold text-slate-900">工作區</h1><p className="mt-2 text-slate-500">長期 Project 的規劃、成果與下一步。</p></div><div className="flex gap-2"><button onClick={() => setCreating(true)} className="flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm text-white"><Plus size={16}/>新增專案</button><button onClick={load} disabled={busy} className="flex items-center gap-2 rounded-lg border bg-white px-3 py-2 text-sm"><RefreshCw size={16} className={busy ? 'animate-spin' : ''}/>同步</button></div></div>
     {error && <div className="mb-4 rounded-lg bg-red-50 p-3 text-red-700">{error}</div>}
     <div className="overflow-hidden rounded-2xl border bg-white">
-      <div className="hidden grid-cols-[2fr_140px_2fr_2fr] gap-5 border-b bg-slate-50 px-6 py-3 text-xs font-semibold text-slate-500 md:grid"><span>專案名稱</span><span>狀態</span><span>最新成果</span><span>下一步</span></div>
-      {projects.map(project => { const [status, cls] = statusMeta(project); const deliverable = (project.latestDeliverables || [])[0]; const milestone = (project.projectPlan?.milestones || []).find(row => row.id === project.currentMilestoneId); const latest = project.latestWork; const analysisPending = ['queued','claimed','running','in_progress'].includes(project.planAnalysis?.status); const resultText = deliverable ? deliverable.name || '開啟成果' : latest?.summary || '尚無成果'; const next = statusMeta(project)[0] === '等待確認' && latest?.status === 'succeeded' ? '檢視 M1 成果並確認' : project.workspaceStatus === 'review' ? '檢視並驗收成果' : analysisPending ? '等待 AI 解析規劃書' : project.projectPlan?.approvalStatus !== 'approved' ? '檢視並核准規劃書' : milestone ? `執行 ${milestone.id} ${milestone.title}` : '等待下一步'; return <button key={project.id} onClick={() => openProject(project)} className="group relative grid w-full gap-3 border-b px-6 py-5 pr-14 text-left last:border-0 hover:bg-blue-50/40 md:grid-cols-[2fr_140px_2fr_2fr] md:items-center md:gap-5"><div><b className="text-slate-900">{project.title}</b><p className="mt-1 text-xs text-slate-400">Plan v{project.projectPlan?.version || '1.0'}</p></div><span><i className={`rounded-full px-3 py-1 text-xs not-italic ${cls}`}>{status}</i></span><span className="text-sm text-slate-600">{resultText}</span><span className="text-sm text-slate-600">{next}</span><span role="button" aria-label={`刪除 ${project.title}`} onClick={event => removeProject(event, project)} className="absolute right-4 top-1/2 -translate-y-1/2 rounded-lg p-2 text-slate-300 hover:bg-red-50 hover:text-red-600"><Trash2 size={17}/></span></button> })}
+      <div className="hidden grid-cols-[2fr_140px_2fr_2fr] gap-5 border-b bg-slate-50 px-6 py-3 text-xs font-semibold text-slate-500 md:grid"><span>專案名稱</span><span>狀態／變更時間</span><span>負責 Bot</span><span>最新成果</span><span>下一步</span></div>
+      {projects.map(project => { const [status, cls] = statusMeta(project); const deliverable = (project.latestDeliverables || [])[0]; const milestone = (project.projectPlan?.milestones || []).find(row => row.id === project.currentMilestoneId); const latest = project.latestWork; const analysisPending = ['queued','claimed','running','in_progress'].includes(project.planAnalysis?.status); const resultText = deliverable ? deliverable.name || '開啟成果' : latest?.summary || '尚無成果'; const next = statusMeta(project)[0] === '等待確認' && latest?.status === 'succeeded' ? '檢視 M1 成果並確認' : project.workspaceStatus === 'review' ? '檢視並驗收成果' : analysisPending ? '等待 AI 解析規劃書' : project.projectPlan?.approvalStatus !== 'approved' ? '檢視並核准規劃書' : milestone ? `執行 ${milestone.id} ${milestone.title}` : '等待下一步'; return <div key={project.id} role="button" tabIndex={0} onKeyDown={event => { if (event.key === 'Enter') openProject(project) }} onClick={() => openProject(project)} className="group relative grid w-full gap-3 border-b px-6 py-5 pr-14 text-left last:border-0 hover:bg-blue-50/40 md:grid-cols-[2fr_180px_130px_2fr_2fr] md:items-center md:gap-5"><div><b className="text-slate-900">{project.title}</b><p className="mt-1 text-xs text-slate-400">Plan v{project.projectPlan?.version || '1.0'}</p></div><span><i className={`rounded-full px-3 py-1 text-xs not-italic ${cls}`}>{status}</i><small className="mt-1 block text-slate-400">{statusTime(project)}</small></span><BotSelector project={project} onChange={assignBot} disabled={busy}/><span className="text-sm text-slate-600">{resultText}</span><span className="text-sm text-slate-600">{next}</span><span role="button" aria-label={`刪除 ${project.title}`} onClick={event => removeProject(event, project)} className="absolute right-4 top-1/2 -translate-y-1/2 rounded-lg p-2 text-slate-300 hover:bg-red-50 hover:text-red-600"><Trash2 size={17}/></span></div> })}
       {!projects.length && <div className="p-14 text-center"><FileText className="mx-auto text-slate-300"/><h2 className="mt-3 font-semibold text-slate-700">目前沒有正式 Project</h2><p className="mt-1 text-sm text-slate-400">長期工作確認後，第一步會先建立專案規劃書。</p></div>}
     </div>
     {creating && <div className="fixed inset-0 z-50 grid place-items-center bg-slate-900/40 p-4"><div className="w-full max-w-lg rounded-2xl bg-white p-6 shadow-2xl"><div className="flex items-center justify-between"><h2 className="text-lg font-semibold">新增專案</h2><button onClick={() => setCreating(false)} className="p-2 text-slate-400"><X size={18}/></button></div><label className="mt-5 block text-sm font-medium">專案名稱</label><input autoFocus value={newTitle} onChange={e => setNewTitle(e.target.value)} className="mt-2 w-full rounded-lg border p-3" placeholder="例如：HY Life OS 工作區 V1"/><label className="mt-4 block text-sm font-medium">專案目的</label><textarea value={newObjective} onChange={e => setNewObjective(e.target.value)} className="mt-2 min-h-24 w-full rounded-lg border p-3" placeholder="簡短說明希望完成什麼；建立後可在規劃書完整修改。"/><div className="mt-5 flex justify-end gap-2"><button onClick={() => setCreating(false)} className="rounded-lg border px-4 py-2 text-sm">取消</button><button onClick={addProject} disabled={!newTitle.trim() || busy} className="rounded-lg bg-blue-600 px-4 py-2 text-sm text-white disabled:opacity-40">建立並編輯規劃書</button></div></div></div>}
@@ -204,7 +232,7 @@ export default function AIWorkCenter() {
   const latestResultSummary = selected.latestWork?.summary
   return <div className="mx-auto max-w-5xl">
     <button onClick={back} className="mb-5 flex items-center gap-2 text-sm text-slate-500"><ArrowLeft size={16}/>返回工作區</button>
-    <h1 className="text-3xl font-bold text-slate-900">{selected.title}</h1><p className="mt-2 text-sm text-slate-500">Plan v{plan.version || '1.0'} · {plan.approvalStatus === 'approved' ? '已核准' : '草稿／等待核准'}</p>
+    <h1 className="text-3xl font-bold text-slate-900">{selected.title}</h1><div className="mt-3 flex flex-wrap items-center gap-4"><span className="text-sm">狀態：{statusMeta(selected)[0]} · 最近變更：{statusTime(selected)}</span><BotSelector project={selected} onChange={assignBot} disabled={busy}/></div><p className="mt-2 text-sm text-slate-500">Plan v{plan.version || '1.0'} · {plan.approvalStatus === 'approved' ? '已核准' : '草稿／等待核准'}</p>
     <div className="mt-7 flex gap-7 border-b"><button onClick={() => setTab('overview')} className={`pb-3 text-sm font-medium ${tab === 'overview' ? 'border-b-2 border-blue-600 text-blue-700' : 'text-slate-500'}`}>專案總覽</button><button onClick={() => setTab('plan')} className={`pb-3 text-sm font-medium ${tab === 'plan' ? 'border-b-2 border-blue-600 text-blue-700' : 'text-slate-500'}`}>專案規劃書</button></div>
     {error && <div className="mt-5 rounded-lg bg-red-50 p-3 text-red-700">{error}</div>}{notice && <div className="mt-5 rounded-lg bg-emerald-50 p-3 text-emerald-700">{notice}</div>}
     {tab === 'overview' ? <div className="mt-6 space-y-5">
