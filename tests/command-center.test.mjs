@@ -82,3 +82,11 @@ test('handoff movement skips baseline, replays, stale and superseded owners',()=
  assert.equal(collectHandoffs([event],7,work,now+180000).moves.length,0)
  assert.equal(collectHandoffs([{...event,data:{work:'w',status:'review'}}],7,work,now).moves.length,0)
 })
+
+import {workspaceStatus} from '../src/workspaceStatus.js'
+test('Workspace and home status use canonical Project after reload', () => {
+ const project={workspaceStatus:'confirmation',latestWork:{status:'queued'},planAnalysis:{status:'running'},statusChangedAt:'2026-09-24T02:00:00Z'}
+ assert.equal(workspaceStatus(project).key,'confirmation')
+ assert.equal(workspaceStatus(structuredClone(project)).meta[0],'等待確認')
+ assert.equal(workspaceStatus({...project,workspaceStatus:'completed',latestWork:{status:'queued'}}).key,'completed')
+})
