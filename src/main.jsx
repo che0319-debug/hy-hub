@@ -7,6 +7,7 @@ import App from './App'
 import Home from './pages/Home'
 import Helpers from './pages/Helpers'
 import AIWorkCenter from './pages/AIWorkCenter'
+import AIWorkPilot from './pages/AIWorkPilot'
 import LineHY from './pages/LineHY'
 import LineXiaoyin from './pages/LineXiaoyin'
 import Line950157 from './pages/Line950157'
@@ -28,6 +29,7 @@ function DesktopRoutes({ onMobileVersion }) {
         <Route path="helpers" element={<Helpers />} />
         <Route path="memory" element={<Navigate to="/helpers" replace />} />
         <Route path="workspace" element={<AIWorkCenter />} />
+        <Route path="ai-work-test" element={<AIWorkPilot />} />
         <Route path="research" element={<Navigate to="/workspace" replace />} />
         <Route path="dispatch" element={<Navigate to="/workspace" replace />} />
         <Route path="line/hy" element={<LineHY />} />
