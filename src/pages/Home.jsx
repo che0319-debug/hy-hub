@@ -58,10 +58,19 @@ function TodoSection() {
   const [milestones, setMilestones] = useState(todoCache ?? null)
 
   useEffect(() => {
-    if (todoCache !== undefined) return
-    fetchAllMilestones()
-      .then(data => { todoCache = data; setMilestones(data) })
-      .catch(err => { console.warn('[Home] fetchAllMilestones failed:', err); setMilestones([]) })
+    let active = true
+    const refresh = () => fetchAllMilestones()
+      .then(data => { todoCache = data; if (active) setMilestones(data) })
+      .catch(err => { console.warn('[Home] fetchAllMilestones failed:', err); if (active && todoCache === undefined) setMilestones([]) })
+    refresh()
+    const onFocus = () => { if (document.visibilityState === 'visible') refresh() }
+    window.addEventListener('focus', onFocus)
+    document.addEventListener('visibilitychange', onFocus)
+    return () => {
+      active = false
+      window.removeEventListener('focus', onFocus)
+      document.removeEventListener('visibilitychange', onFocus)
+    }
   }, [])
 
   const today = todayTaipei()
