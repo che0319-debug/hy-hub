@@ -66,6 +66,10 @@ export default function AIWorkPilot() {
   const [goalDraft, setGoalDraft] = useState('')
   const [goalReason, setGoalReason] = useState('')
   const [noteDraft, setNoteDraft] = useState('')
+  const [summaryDraft, setSummaryDraft] = useState('')
+  const [editingSummary, setEditingSummary] = useState(false)
+  const [referenceTitle, setReferenceTitle] = useState('')
+  const [referenceUrl, setReferenceUrl] = useState('')
   const [editingReport, setEditingReport] = useState(false)
   const [copied, setCopied] = useState(false)
   const [reportDraft, setReportDraft] = useState('')
@@ -97,7 +101,7 @@ export default function AIWorkPilot() {
       await sendAIWorkPilotEvent(project.id, step[0], step[1])
     })
   }
-  const tabs = ['目標', '開發規格與進度', '開發日誌', '成果']
+  const tabs = ['目標', '開發規格與進度', '開發日誌', '成果', '參考資料']
   const report = selected?.developmentReport
   const eventLabel = { claim: 'AI 接手', artifact: '新增成果', criterion: '驗證完成條件', progress: '更新進展', checkpoint: '等待使用者決策', resume: '依決策繼續', complete: '目標完成' }
   return <div className="pilot-page text-slate-800">
@@ -126,7 +130,8 @@ export default function AIWorkPilot() {
           <textarea className="pilot-note-input" rows={3} value={noteDraft} onChange={e => setNoteDraft(e.target.value)} placeholder="輸入你對目標或執行方向的建議…" aria-label="輸入目標建議"/><button disabled={busy || !noteDraft.trim()} className="pilot-primary" onClick={async () => { await run(() => sendAIWorkPilotEvent(selected.id, 'note_add', { actor: 'user', content: noteDraft })); setNoteDraft('') }}>送出建議</button>
         </section>
       </div>}
-      {tab === '成果' && <section className={`${panel} pilot-card`}><h3>成果</h3><div className="pilot-result-summary"><h4>目前成果小結</h4><p>{selected.artifacts.length ? `目前已有 ${selected.artifacts.length} 項成果，完成條件確認 ${selected.criteriaMet.length}/${selected.successCriteria.length} 項。${selected.currentState}；下一步：${selected.nextAction}。` : '目前尚無成果。待執行後在此整理已完成內容、品質判斷與待補項目。'}</p><small>此為 TEST 資料摘要；條件計數不代表成果品質已通過驗收。</small></div><p className="pilot-muted">檔案存放於 Google Drive，這裡可直接開啟成果或專案資料夾。</p>{folderUrl(selected) && <a className="pilot-folder" target="_blank" rel="noopener noreferrer" href={folderUrl(selected)}><Folder size={20}/>開啟 {selected.testCode} Drive 資料夾 <ExternalLink size={16}/></a>}{artifacts(selected)}</section>}
+      {tab === '成果' && <section className={`${panel} pilot-card`}><h3>成果</h3><div className="pilot-result-summary"><div className="pilot-card-head"><h4>目前成果小結</h4><button className="pilot-action" onClick={() => { setSummaryDraft(selected.resultSummary || ''); setEditingSummary(true) }}>編輯小結</button></div>{editingSummary ? <><textarea className="pilot-field" rows={6} value={summaryDraft} onChange={e => setSummaryDraft(e.target.value)} placeholder="根據實際成果寫出關鍵發現、交付內容、品質與限制；不要報檔案數或狀態。"/><button disabled={busy} className="pilot-primary" onClick={async () => { await run(() => sendAIWorkPilotEvent(selected.id, 'result_summary_update', { actor: 'user', summary: summaryDraft })); setEditingSummary(false) }}>儲存小結</button></> : <p>{selected.resultSummary || '尚未撰寫成果內容小結；請先核對實際檔案後補上。'}</p>}</div>{folderUrl(selected) && <a className="pilot-folder" target="_blank" rel="noopener noreferrer" href={folderUrl(selected)}><Folder size={20}/>開啟 Drive 資料夾 <ExternalLink size={16}/></a>}{artifacts(selected)}</section>}
+      {tab === '參考資料' && <section className={`${panel} pilot-card`}><h3>參考資料</h3><p className="pilot-muted">放需求、範例、照片與來源文件，與交付成果分開。</p>{(selected.referenceMaterials || []).map(item => <p key={item.id}><a href={item.url} target="_blank" rel="noopener noreferrer" className="pilot-open">{item.title} <ExternalLink size={14}/></a></p>)}{!(selected.referenceMaterials || []).length && <p>尚未加入參考資料。</p>}<div className="grid gap-3 mt-5"><input className="pilot-field" placeholder="資料名稱" value={referenceTitle} onChange={e => setReferenceTitle(e.target.value)}/><input className="pilot-field" type="url" placeholder="https://…" value={referenceUrl} onChange={e => setReferenceUrl(e.target.value)}/><button className="pilot-primary" disabled={busy || !referenceTitle.trim() || !referenceUrl.startsWith('https://')} onClick={async () => { await run(() => sendAIWorkPilotEvent(selected.id, 'reference_add', { actor: 'user', title: referenceTitle, url: referenceUrl })); setReferenceTitle(''); setReferenceUrl('') }}>新增參考資料</button></div></section>}
       {tab === '開發規格與進度' && <div className="pilot-overview"><section className={`${panel} pilot-card`}>
         {!report ? <><h3>開發規格與進度</h3><p className="pilot-muted">先用 PPT 開發程式建立一份可編輯的 TEST 範本，記錄規格、進度與版本。</p>{selected.testCode === 'TEST-03' && <button className="pilot-primary" disabled={busy} onClick={() => run(() => sendAIWorkPilotEvent(selected.id, 'report_seed', {}))}>建立 TEST 開發範本</button>}</> : <>
           <div className="pilot-card-head"><h3>{report.title}</h3><span className="pilot-version">V{report.version} · 更新 {date(report.updatedAt)}</span></div><p className="pilot-muted">隔離試跑範本：內容描述目前驗證過的部分，未完成事項仍需實際執行。</p>
@@ -136,8 +141,6 @@ export default function AIWorkPilot() {
         </>}
       </section></div>}
       {tab === '開發日誌' && <section className={`${panel} pilot-card`}><h3>開發日誌</h3><p className="pilot-muted">保留每次進展與決策；開發規格與進度頁顯示目前有效版本。</p>{[...(selected.developmentReport?.history || []).map(h => ({ label: `開發規格與進度 V${h.version} · ${h.reason}`, at: h.changedAt })), ...(selected.developmentLog || []).map(h => ({ label: h.label, at: h.changedAt })), ...(selected.pilotEvents || []).map(e => ({ label: `${eventLabel[e.event] || e.event}${e.detail ? ` · ${e.detail}` : ''}`, at: e.changedAt })), ...selected.statusHistory.map(h => ({ label: `狀態：${STATUS[h.from]?.[0] || '建立'} → ${STATUS[h.to]?.[0]}`, at: h.changedAt }))].sort((a,b) => (b.at || '').localeCompare(a.at || '')).map((entry, i) => <div className="pilot-log-row" key={i}><time>{date(entry.at)}</time><span>{entry.label}</span></div>)}</section>}
-      {selected.testCode === 'TEST-03' && <Link to="/ai-work-test/ppt-prototype" className="mt-6 inline-block rounded-lg border border-blue-300 bg-white px-4 py-2 text-blue-700">開啟隔離 PPT 原型與審查測試</Link>}
-      <div className="mt-6 rounded-2xl border border-blue-200 bg-blue-50 p-5"><p className="mb-3 text-sm text-blue-900">Pilot 試跑：每按一次執行下一個隔離測試事件。模擬使用者選擇只作用於 TEST 專案。</p><button disabled={busy || !SCENARIOS[selected.testCode]?.[selected.pilotEvents?.length || 0]} onClick={() => nextStep(selected)} className="rounded-lg bg-blue-600 px-4 py-2 text-white disabled:opacity-50">{SCENARIOS[selected.testCode]?.[selected.pilotEvents?.length || 0]?.[2] || '本案試跑步驟完成'}</button><p className="mt-2 text-xs text-slate-500">完成條件：{selected.criteriaMet.length}/{selected.successCriteria.length}；單一成果不會自動結案。</p></div>
     </>}
   </div>
 }
