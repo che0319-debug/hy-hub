@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { ArrowLeft, RefreshCw, Plus, ExternalLink } from 'lucide-react'
+import { ArrowLeft, RefreshCw, Plus, ExternalLink, Search, Check, Clock3, Folder, GitBranch } from 'lucide-react'
+import './ai-work-pilot.css'
 import { fetchAIWorkPilot, seedAIWorkPilot, sendAIWorkPilotEvent } from '../lifeOSApi'
 
 const STATUS = {
@@ -9,6 +10,13 @@ const STATUS = {
   confirmation: ['等待確認', 'bg-amber-50 text-amber-700'],
   completed: ['完成', 'bg-emerald-50 text-emerald-700'],
 }
+const DRIVE = {
+  'TEST-01': { folder: '1vuTLtkyUnDdNUgQDj59WYXRY9RktKmie', files: { '中秋小旅行方案 V1': '1WfkQuwypXYmoholNJtMpCckat4kAVJwE', '中秋台中詳細行程 V1': '1TtNoK5YzMpk0N5asaAN_PDPMuEC7IUhn' } },
+  'TEST-02': { folder: '1vVi7U8HrJ9NZmt-W4YBFOSjV5W2RsJAJ', files: { '競品與價格帶分析 V1': '1BNZGO67HJraxKoDgNjKYyIj46IUVrFEF', '成本與毛利模型 V1': '1mxkqjkkhFAGcw4oOKrI0TKAbCqYRj8l1' } },
+  'TEST-03': { folder: '1GOPkyapZn7z6SUflMMlbef1ZWk5T_4vC', files: { 'PPT AI Tool 需求與系統架構 V1': '1KA4PQMDz0MTrmYt9pG_HT3MDrqbIY1Qq', 'PPT AI Tool MVP Prototype V1': '1gqThSYEuQay-gj0bamJadOxzFNjasaBc' } },
+}
+const fileUrl = (p, a) => a.url || (a.driveFileId || DRIVE[p.testCode]?.files[a.title] ? `https://drive.google.com/file/d/${a.driveFileId || DRIVE[p.testCode]?.files[a.title]}/view` : null)
+const folderUrl = p => `https://drive.google.com/drive/folders/${p.driveFolderId || DRIVE[p.testCode]?.folder}`
 const BOTS = { family: '小櫻', sam: 'Sam', '950157': '950157', hy: 'HY' }
 const SCENARIOS = {
   'TEST-01': [
@@ -47,6 +55,7 @@ const SCENARIOS = {
 }
 const date = value => value ? new Intl.DateTimeFormat('zh-TW', { timeZone: 'Asia/Taipei', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', hour12: false }).format(new Date(value)) : '—'
 const badge = p => <span className={`rounded-full px-3 py-1 text-sm font-medium ${STATUS[p.workspaceStatus]?.[1] || ''}`}>{STATUS[p.workspaceStatus]?.[0] || p.workspaceStatus}</span>
+const artifacts = p => p.artifacts.length ? p.artifacts.slice().reverse().map(a => <div key={a.artifactId} className="pilot-artifact"><span className="pilot-file-icon">▤</span><span className="pilot-artifact-name">{a.title}<small>{a.summary}</small></span>{fileUrl(p, a) ? <a className="pilot-open" href={fileUrl(p, a)} target="_blank" rel="noopener noreferrer">開啟 <ExternalLink size={14}/></a> : <span>待上傳</span>}</div>) : <p>尚無成果</p>
 const panel = 'rounded-2xl border border-slate-200 bg-white px-6 py-5'
 
 export default function AIWorkPilot() {
@@ -54,11 +63,12 @@ export default function AIWorkPilot() {
   const [selectedId, setSelectedId] = useState('')
   const [tab, setTab] = useState('總覽')
   const [filter, setFilter] = useState('全部')
+  const [query, setQuery] = useState('')
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
   const selected = projects.find(p => p.id === selectedId)
   const counts = useMemo(() => Object.fromEntries(Object.keys(STATUS).map(k => [k, projects.filter(p => p.workspaceStatus === k).length])), [projects])
-  const visible = projects.filter(p => filter === '全部' || STATUS[p.workspaceStatus]?.[0] === filter)
+  const visible = projects.filter(p => (filter === '全部' || STATUS[p.workspaceStatus]?.[0] === filter) && `${p.title} ${p.goal}`.toLowerCase().includes(query.toLowerCase()))
   async function refresh() {
     try { const data = await fetchAIWorkPilot(); setProjects(data.projects || []); setError('') }
     catch (e) { setError(e.message || '測試資料讀取失敗') }
@@ -78,22 +88,22 @@ export default function AIWorkPilot() {
     })
   }
   const tabs = ['總覽', '成果', '推進紀錄', '目標歷程', 'Google Drive']
-  return <div className="mx-auto max-w-7xl text-slate-800">
-    <div className="mb-7 flex items-center justify-between gap-4"><div><h1 className="text-3xl font-semibold">AI Work Test</h1><p className="mt-1 text-sm text-slate-500">隔離 Pilot · 三個 TEST 專案 · 不影響正式工作區</p></div><button onClick={() => run(refresh)} disabled={busy} aria-label="重新整理" className="rounded-xl border bg-white p-3"><RefreshCw size={18}/></button></div>
+  return <div className="pilot-page text-slate-800">
+    <div className="pilot-heading mb-7 flex items-center justify-between gap-4"><div><h1 className="text-3xl font-semibold">AI Work Test</h1><p className="mt-1 text-sm text-slate-500">隔離 Pilot · 三個 TEST 專案 · 不影響正式工作區</p></div><button onClick={() => run(refresh)} disabled={busy} aria-label="重新整理" className="rounded-xl border bg-white p-3"><RefreshCw size={18}/></button></div>
     {error && <p role="alert" className="mb-5 rounded-xl bg-red-50 p-4 text-red-700">{error}</p>}
     {!selected ? <>
-      <div className="grid gap-4 md:grid-cols-5">{[['ai_running', '進行中'], ['confirmation', '等待確認'], ['completed', '已完成'], ['all', '全部專案']].map(([key, title]) => <div key={key} className={panel}><p className="text-sm text-slate-500">{title}</p><p className="mt-2 text-3xl font-semibold">{key === 'all' ? projects.length : counts[key]}</p></div>)}<button onClick={() => run(seedAIWorkPilot)} disabled={busy || projects.length > 0} className="rounded-2xl bg-blue-600 px-4 py-5 text-white disabled:opacity-50"><Plus className="mr-2 inline" size={18}/>建立三個 TEST 案</button></div>
-      <div className="my-7 flex gap-2 border-b">{['全部', '進行中', '等待確認', '完成'].map(name => <button key={name} onClick={() => setFilter(name)} className={`px-4 py-3 text-sm ${filter === name ? 'border-b-2 border-blue-600 font-semibold text-blue-700' : 'text-slate-500'}`}>{name}</button>)}</div>
-      <div className="overflow-x-auto rounded-2xl border bg-white"><div className="min-w-[980px]"><div className="grid grid-cols-[2fr_110px_120px_1.4fr_1.4fr_100px] gap-4 border-b bg-slate-50 px-6 py-4 text-sm text-slate-500"><span>專案名稱 / 目標</span><span>負責 Bot</span><span>狀態</span><span>目前狀況</span><span>下一步</span><span>更新時間</span></div>{visible.map(p => <button key={p.id} onClick={() => { setSelectedId(p.id); setTab('總覽') }} className="grid w-full grid-cols-[2fr_110px_120px_1.4fr_1.4fr_100px] items-center gap-4 border-b px-6 py-5 text-left last:border-0 hover:bg-blue-50/40"><span><b>{p.title}</b><small className="mt-1 block line-clamp-2 text-slate-500">{p.goal}</small></span><span>{BOTS[p.responsibleBot]}</span><span>{badge(p)}</span><span className="text-sm">{p.currentState}</span><span className="text-sm">{p.nextAction}</span><span className="text-xs text-slate-500">{date(p.updatedAt)}</span></button>)}</div></div>
+      <div className="pilot-stats grid gap-4 md:grid-cols-5">{[['ai_running', '進行中'], ['confirmation', '等待確認'], ['completed', '已完成'], ['all', '全部專案']].map(([key, title]) => <div key={key} className="pilot-stat"><span className={`pilot-stat-icon ${key}`}>{key === 'ai_running' ? <GitBranch size={20}/> : key === 'confirmation' ? <Clock3 size={20}/> : key === 'completed' ? <Check size={20}/> : <Folder size={20}/>}</span><div><p className="text-sm text-slate-500">{title}</p><p className="mt-2 text-3xl font-semibold">{key === 'all' ? projects.length : counts[key]}</p></div></div>)}<button onClick={() => run(seedAIWorkPilot)} disabled={busy || projects.length > 0} className="pilot-create rounded-2xl bg-blue-600 px-4 py-5 text-white disabled:opacity-50"><Plus className="mr-2 inline" size={18}/>{projects.length ? 'AI Work Test 已建立' : '新增 AI Work'}</button></div>
+      <div className="pilot-tools"><div className="pilot-filters my-7 flex gap-2 border-b">{['全部', '進行中', '等待確認', '完成'].map(name => <button key={name} onClick={() => setFilter(name)} className={`px-4 py-3 text-sm ${filter === name ? 'border-b-2 border-blue-600 font-semibold text-blue-700' : 'text-slate-500'}`}>{name}</button>)}</div><label className="pilot-search"><Search size={18}/><input placeholder="搜尋專案..." value={query} onChange={e => setQuery(e.target.value)}/></label></div>
+      <div className="pilot-list overflow-x-auto rounded-2xl border bg-white"><div className="min-w-[980px]"><div className="pilot-columns grid grid-cols-[2fr_110px_120px_1.4fr_1.4fr_100px] gap-4 border-b bg-slate-50 px-6 py-4 text-sm text-slate-500"><span>專案名稱 / 目標</span><span>負責 Bot</span><span>狀態</span><span>目前狀況</span><span>下一步</span><span>更新時間</span></div>{visible.map(p => <button key={p.id} onClick={() => { setSelectedId(p.id); setTab('總覽') }} className="pilot-row grid w-full grid-cols-[2fr_110px_120px_1.4fr_1.4fr_100px] items-center gap-4 border-b px-6 py-5 text-left last:border-0 hover:bg-blue-50/40"><span className="pilot-project"><span className={`pilot-thumb thumb-${p.testCode}`} aria-hidden="true">{p.testCode === 'TEST-01' ? '🏞' : p.testCode === 'TEST-02' ? '🍰' : '✦'}</span><span><b>{p.title.replace('TEST｜AI Work V2｜', '')}</b><small className="mt-1 block line-clamp-2 text-slate-500">{p.goal}</small></span></span><span className="pilot-bot"><i>{p.responsibleBot === 'family' ? '🌸' : p.responsibleBot === 'sam' ? 'S' : '95'}</i>{BOTS[p.responsibleBot]}</span><span>{badge(p)}</span><span className="text-sm">{p.currentState}</span><span className="text-sm">{p.nextAction}</span><span className="text-xs text-slate-500">{date(p.updatedAt)}</span></button>)}</div></div>
     </> : <>
       <button onClick={() => setSelectedId('')} className="mb-5 flex items-center gap-2 text-sm text-slate-500"><ArrowLeft size={16}/>返回 AI Work Test</button>
-      <div className="flex flex-wrap items-center justify-between gap-3"><h2 className="text-3xl font-semibold">{selected.title}</h2><div className="flex items-center gap-3">{BOTS[selected.responsibleBot]} · {badge(selected)}</div></div>
-      <div className="my-6 flex flex-wrap gap-8 border-b">{tabs.map(name => <button key={name} onClick={() => setTab(name)} className={`pb-3 ${tab === name ? 'border-b-2 border-blue-600 text-blue-700' : 'text-slate-500'}`}>{name}</button>)}</div>
-      {tab === '總覽' && <div className="space-y-5"><section className={panel}><h3 className="mb-2 text-xl font-semibold">🎯 目標 Goal</h3><p>{selected.goal}</p><p className="mt-2 text-sm text-slate-500">Goal V{selected.goalVersion} · 正式修改需由使用者確認</p></section><div className="grid gap-5 md:grid-cols-2"><section className={panel}><h3 className="mb-2 text-xl font-semibold">目前狀況</h3><p>{selected.currentState}</p></section><section className={panel}><h3 className="mb-2 text-xl font-semibold">下一步</h3><p>{selected.nextAction}</p></section></div><section className={panel}><h3 className="mb-2 text-xl font-semibold">需要你</h3>{selected.checkpoint ? <><p>{selected.checkpoint.question}</p><p className="text-sm text-slate-500">{selected.checkpoint.basis}</p><p className="mt-2">選項：{selected.checkpoint.options.join(' / ')}</p></> : <p>{selected.workspaceStatus === 'completed' ? '目標已完成，目前沒有需要你處理的事項。' : '目前沒有需要你處理的事項，AI 可繼續自主推進。'}</p>}</section><section className={panel}><h3 className="mb-2 text-xl font-semibold">最新成果</h3>{selected.artifacts.length ? selected.artifacts.slice().reverse().map(a => <p key={a.artifactId} className="py-1">{date(a.createdAt)}　{a.title} <span className="text-xs text-slate-400">（測試索引，未寫入 Drive）</span></p>) : <p className="text-slate-500">尚無成果</p>}</section></div>}
-      {tab === '成果' && <div className={panel}>{selected.artifacts.length ? selected.artifacts.map(a => <div key={a.artifactId} className="border-b py-3"><b>{a.title}</b><p className="text-sm text-slate-500">{a.summary}</p><small>Google Drive 未接通 · 無可開啟連結</small></div>) : '尚無成果'}</div>}
+      <div className="pilot-inner-head flex flex-wrap items-center justify-between gap-3"><h2 className="text-3xl font-semibold">{selected.title}</h2><div className="flex items-center gap-3">{BOTS[selected.responsibleBot]} · {badge(selected)}</div></div>
+      <div className="pilot-tabs my-6 flex flex-wrap gap-8 border-b">{tabs.map(name => <button key={name} onClick={() => setTab(name)} className={`pb-3 ${tab === name ? 'border-b-2 border-blue-600 text-blue-700' : 'text-slate-500'}`}>{name}</button>)}</div>
+      {tab === '總覽' && <div className="pilot-overview space-y-5"><section className={`${panel} pilot-card`}><h3 className="mb-2 text-xl font-semibold">🎯 目標 Goal</h3><p>{selected.goal}</p><p className="mt-2 text-sm text-slate-500">Goal V{selected.goalVersion} · 正式修改需由使用者確認</p></section><div className="pilot-pair grid gap-5 md:grid-cols-2"><section className={`${panel} pilot-card`}><h3 className="mb-2 text-xl font-semibold">目前狀況</h3><p>{selected.currentState}</p></section><section className={`${panel} pilot-card`}><h3 className="mb-2 text-xl font-semibold">下一步</h3><p>{selected.nextAction}</p></section></div><section className={`${panel} pilot-card`}><h3 className="mb-2 text-xl font-semibold">需要你</h3>{selected.checkpoint ? <><p>{selected.checkpoint.question}</p><p className="text-sm text-slate-500">{selected.checkpoint.basis}</p><p className="mt-2">選項：{selected.checkpoint.options.join(' / ')}</p></> : <p>{selected.workspaceStatus === 'completed' ? '目標已完成，目前沒有需要你處理的事項。' : '目前沒有需要你處理的事項，AI 可繼續自主推進。'}</p>}</section><section className={`${panel} pilot-card`}><h3 className="mb-2 text-xl font-semibold">最新成果</h3>{artifacts(selected)}<p className="pilot-drive-note">成果實體存放於 Google Drive；HY Life OS 保存索引與狀態。</p></section></div>}
+      {tab === '成果' && <div className={`${panel} pilot-card`}>{artifacts(selected)}</div>}
       {tab === '推進紀錄' && <div className={panel}><h3 className="mb-3 font-semibold">狀態轉換</h3>{selected.statusHistory.map((h, i) => <p key={i} className="border-b py-3 text-sm">{date(h.changedAt)}　{STATUS[h.from]?.[0] || '建立'} → {STATUS[h.to]?.[0]}　<span className="text-slate-500">{h.event}</span></p>)}<h3 className="mb-3 mt-6 font-semibold">試跑事件</h3>{(selected.pilotEvents || []).map((e, i) => <p key={i} className="border-b py-2 text-sm">{date(e.changedAt)}　{e.event}{e.detail ? ` · ${e.detail}` : ''}</p>)}</div>}
       {tab === '目標歷程' && <div className={panel}>{selected.goalHistory.map(h => <p key={h.version}>V{h.version}　{h.goal}　<span className="text-sm text-slate-500">{date(h.changedAt)}</span></p>)}</div>}
-      {tab === 'Google Drive' && <div className={panel}><h3 className="font-semibold">Google Drive</h3><p className="mt-2 text-slate-500">尚未建立測試資料夾；目前僅記錄成果 metadata，無 Drive 檔案。</p></div>}
+      {tab === 'Google Drive' && <div className={`${panel} pilot-card`}><h3 className="font-semibold">Google Drive</h3><p className="pilot-drive-note">此 TEST 案的獨立資料夾與成果檔案</p><a className="pilot-folder" target="_blank" rel="noopener noreferrer" href={folderUrl(selected)}><Folder size={20}/>開啟 {selected.testCode} 資料夾 <ExternalLink size={16}/></a>{artifacts(selected)}</div>}
       {selected.testCode === 'TEST-03' && <Link to="/ai-work-test/ppt-prototype" className="mt-6 inline-block rounded-lg border border-blue-300 bg-white px-4 py-2 text-blue-700">開啟隔離 PPT 原型與審查測試</Link>}
       <div className="mt-6 rounded-2xl border border-blue-200 bg-blue-50 p-5"><p className="mb-3 text-sm text-blue-900">Pilot 試跑：每按一次執行下一個隔離測試事件。模擬使用者選擇只作用於 TEST 專案。</p><button disabled={busy || !SCENARIOS[selected.testCode]?.[selected.pilotEvents?.length || 0]} onClick={() => nextStep(selected)} className="rounded-lg bg-blue-600 px-4 py-2 text-white disabled:opacity-50">{SCENARIOS[selected.testCode]?.[selected.pilotEvents?.length || 0]?.[2] || '本案試跑步驟完成'}</button><p className="mt-2 text-xs text-slate-500">完成條件：{selected.criteriaMet.length}/{selected.successCriteria.length}；單一成果不會自動結案。</p></div>
     </>}
