@@ -7,3 +7,5 @@
 .pilot-result-summary{padding:18px 20px;margin:12px 0 22px;border:1px solid #d7e5f8;border-radius:14px;background:#f4f8ff}
 .pilot-result-summary h4{font-weight:700;color:#305e9c;margin-bottom:7px}
 .pilot-result-summary small{color:#6e819d}
+
+.pilot-thumb{overflow:hidden}.pilot-thumb img{display:block;width:100%;height:100%;object-fit:cover}.pilot-goal-summary{display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;overflow:hidden;max-height:3em}
