@@ -232,6 +232,12 @@ export async function seedAIWorkPilot() {
   return parseResponse(await fetch(`${API_BASE}/api/life-os/v1/ai-work-test/seed`, { method: 'POST', headers: { ...authHeaders() } }), 'seedAIWorkPilot')
 }
 
+export async function createAIWorkPilotProject(payload) {
+  return parseResponse(await fetch(`${API_BASE}/api/life-os/v1/ai-work-test/projects`, {
+    method: 'POST', headers: { ...authHeaders(), 'Content-Type': 'application/json' }, body: JSON.stringify(payload),
+  }), 'createAIWorkPilotProject')
+}
+
 export async function sendAIWorkPilotEvent(id, event, payload = {}) {
   return parseResponse(await fetch(`${API_BASE}/api/life-os/v1/ai-work-test/projects/${encodeURIComponent(id)}/events/${encodeURIComponent(event)}`, {
     method: 'POST', headers: { ...authHeaders(), 'Content-Type': 'application/json' }, body: JSON.stringify(payload),
