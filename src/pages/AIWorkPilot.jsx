@@ -66,7 +66,8 @@ export default function AIWorkPilot() {
   const [goalDraft, setGoalDraft] = useState('')
   const [goalReason, setGoalReason] = useState('')
   const [noteDraft, setNoteDraft] = useState('')
-  const [reportField, setReportField] = useState('')
+  const [editingReport, setEditingReport] = useState(false)
+  const [copied, setCopied] = useState(false)
   const [reportDraft, setReportDraft] = useState('')
   const [filter, setFilter] = useState('全部')
   const [query, setQuery] = useState('')
@@ -93,9 +94,8 @@ export default function AIWorkPilot() {
       await sendAIWorkPilotEvent(project.id, step[0], step[1])
     })
   }
-  const tabs = ['目標', '成果', '開發規格與進度', '開發日誌', 'Google Drive']
+  const tabs = ['目標', '開發規格與進度', '開發日誌', '成果']
   const report = selected?.developmentReport
-  const reportStatus = { pending: '待處理', in_progress: '進行中', confirmation: '待你確認', completed: '已完成' }
   const eventLabel = { claim: 'AI 接手', artifact: '新增成果', criterion: '驗證完成條件', progress: '更新進展', checkpoint: '等待使用者決策', resume: '依決策繼續', complete: '目標完成' }
   return <div className="pilot-page text-slate-800">
     <div className="pilot-heading mb-7 flex items-center justify-between gap-4"><div><h1 className="text-3xl font-semibold">AI Work Test</h1><p className="mt-1 text-sm text-slate-500">隔離 Pilot · 三個 TEST 專案 · 不影響正式工作區</p></div><button onClick={() => run(refresh)} disabled={busy} aria-label="重新整理" className="rounded-xl border bg-white p-3"><RefreshCw size={18}/></button></div>
@@ -114,25 +114,24 @@ export default function AIWorkPilot() {
           <p className="pilot-version">Goal V{selected.goalVersion} · 只有你儲存後才正式改版；Bot 註記不會覆寫 Goal。</p>
           <details className="pilot-versions"><summary>查看 Goal 版本紀錄（{selected.goalHistory.length}）</summary>{selected.goalHistory.slice().reverse().map(h => <div key={h.version}><b>V{h.version}</b> · {date(h.changedAt)} · {h.reason || '建立目標'}<p>{h.goal}</p></div>)}</details>
         </section>
-        <section className={`${panel} pilot-card`}><h3 className="text-xl font-semibold">討論與補充</h3><p className="pilot-muted">你的建議與 Bot 的註記會保留來源和時間；對話自動擷取尚待串接。</p>
-          {(selected.goalNotes || []).length ? selected.goalNotes.slice().reverse().map(n => <div className="pilot-note" key={n.id}><b>{n.actor === 'user' ? '你的建議' : `${BOTS[selected.responsibleBot]} · Bot 註記`}</b><small>{date(n.createdAt)}{n.source ? ` · ${n.source}` : ''}</small><p>{n.content}</p></div>) : <p className="pilot-muted">目前還沒有註記。你可以先留下方向或修正建議。</p>}
+        <section className={`${panel} pilot-card`}><h3 className="text-xl font-semibold">Bot 晨會標註</h3><p className="pilot-muted">對話自動擷取仍待串接；以下註記會標示來源與時間。</p>
+          {(selected.goalNotes || []).filter(n => n.actor === 'bot').length ? selected.goalNotes.filter(n => n.actor === 'bot').slice().reverse().map(n => <div className="pilot-note" key={n.id}><b>{BOTS[selected.responsibleBot]} · Bot 註記</b><small>{date(n.createdAt)}{n.source ? ` · ${n.source}` : ''}</small><p>{n.content}</p></div>) : <p className="pilot-muted">目前沒有 Bot 標註。</p>}
+        </section>
+        <section className={`${panel} pilot-card`}><h3 className="text-xl font-semibold">我的建議</h3>
+          {(selected.goalNotes || []).filter(n => n.actor === 'user').slice().reverse().map(n => <div className="pilot-note" key={n.id}><small>{date(n.createdAt)}</small><p>{n.content}</p></div>)}
           <textarea className="pilot-note-input" rows={3} value={noteDraft} onChange={e => setNoteDraft(e.target.value)} placeholder="輸入你對目標或執行方向的建議…" aria-label="輸入目標建議"/><button disabled={busy || !noteDraft.trim()} className="pilot-primary" onClick={async () => { await run(() => sendAIWorkPilotEvent(selected.id, 'note_add', { actor: 'user', content: noteDraft })); setNoteDraft('') }}>送出建議</button>
         </section>
-        <div className="pilot-pair grid gap-5 md:grid-cols-2"><section className={`${panel} pilot-card`}><h3 className="text-xl font-semibold">目前狀況</h3><p>{selected.currentState}</p></section><section className={`${panel} pilot-card`}><h3 className="text-xl font-semibold">下一步</h3><p>{selected.nextAction}</p></section></div>
-        <section className={`${panel} pilot-card`}><h3 className="text-xl font-semibold">需要你</h3>{selected.checkpoint ? <><p>{selected.checkpoint.question}</p><p className="pilot-muted">{selected.checkpoint.basis} · 選項：{selected.checkpoint.options.join(' / ')}</p></> : <p>{selected.workspaceStatus === 'completed' ? '目標已完成，目前沒有需要你處理的事項。' : '目前沒有需要你處理的事項，AI 可繼續自主推進。'}</p>}</section>
-        <section className={`${panel} pilot-card`}><h3 className="text-xl font-semibold">最新成果</h3>{artifacts(selected)}<p className="pilot-drive-note">目前六份成果主要用於驗證流程，並非完整產品成果。</p></section>
       </div>}
-      {tab === '成果' && <div className={`${panel} pilot-card`}>{artifacts(selected)}</div>}
+      {tab === '成果' && <section className={`${panel} pilot-card`}><h3>成果</h3><p className="pilot-muted">檔案存放於 Google Drive，這裡可直接開啟成果或專案資料夾。</p><a className="pilot-folder" target="_blank" rel="noopener noreferrer" href={folderUrl(selected)}><Folder size={20}/>開啟 {selected.testCode} Drive 資料夾 <ExternalLink size={16}/></a>{artifacts(selected)}</section>}
       {tab === '開發規格與進度' && <div className="pilot-overview"><section className={`${panel} pilot-card`}>
         {!report ? <><h3>開發規格與進度</h3><p className="pilot-muted">先用 PPT 開發程式建立一份可編輯的 TEST 範本，記錄規格、進度與版本。</p>{selected.testCode === 'TEST-03' && <button className="pilot-primary" disabled={busy} onClick={() => run(() => sendAIWorkPilotEvent(selected.id, 'report_seed', {}))}>建立 TEST 開發範本</button>}</> : <>
           <div className="pilot-card-head"><h3>{report.title}</h3><span className="pilot-version">V{report.version} · 更新 {date(report.updatedAt)}</span></div><p className="pilot-muted">隔離試跑範本：內容描述目前驗證過的部分，未完成事項仍需實際執行。</p>
-          {[[ 'purpose', '產品目標' ], [ 'scope', '範圍與功能' ], [ 'acceptance', '驗收條件' ], [ 'next', '下一步' ]].map(([field, title]) => <div className="pilot-report-section" key={field}><div className="pilot-card-head"><h4>{title}</h4><button className="pilot-action" onClick={() => { setReportField(field); setReportDraft(report[field]) }}>編輯</button></div>{reportField === field ? <div className="pilot-editor"><textarea value={reportDraft} onChange={e => setReportDraft(e.target.value)} rows={3}/><button disabled={busy || !reportDraft.trim()} className="pilot-primary" onClick={async () => { await run(() => sendAIWorkPilotEvent(selected.id, 'report_update', { actor: 'user', expectedVersion: report.version, field, value: reportDraft })); setReportField('') }}>儲存並改版</button><button className="pilot-action" onClick={() => setReportField('')}>取消</button></div> : <p>{report[field]}</p>}</div>)}
-          <h4 className="pilot-report-title">執行項目與完成情況</h4><div className="pilot-report-list">{report.items.map(item => <div className="pilot-report-item" key={item.id}><span><b>{item.title}</b><small>{item.evidence || '尚無成果連結'}</small></span><select aria-label={`${item.title}狀態`} disabled={busy} value={item.status} onChange={e => run(() => sendAIWorkPilotEvent(selected.id, 'report_update', { actor: 'user', expectedVersion: report.version, itemId: item.id, status: e.target.value }))}>{Object.entries(reportStatus).map(([key, label]) => <option key={key} value={key}>{label}</option>)}</select></div>)}</div>
+          <div className="pilot-document-actions"><button className="pilot-action" onClick={async () => { await navigator.clipboard.writeText(report.document); setCopied(true) }}>{copied ? '已複製' : '複製全文'}</button><button className="pilot-action" onClick={() => { setReportDraft(report.document); setEditingReport(true); setCopied(false) }}>編輯全文</button></div>
+          {editingReport ? <div className="pilot-editor"><textarea className="pilot-document-editor" value={reportDraft} onChange={e => setReportDraft(e.target.value)} rows={24} aria-label="編輯完整工作規劃書"/><div><button disabled={busy || !reportDraft.trim()} className="pilot-primary" onClick={async () => { await run(() => sendAIWorkPilotEvent(selected.id, 'report_update', { actor: 'user', expectedVersion: report.version, field: 'document', value: reportDraft, reason: '編輯整份工作規劃書' })); setEditingReport(false) }}>儲存新版本</button><button className="pilot-action" onClick={() => setEditingReport(false)}>取消</button></div></div> : <pre className="pilot-document">{report.document}</pre>}
           <details className="pilot-versions"><summary>版本更新紀錄（{report.history.length}）</summary>{report.history.slice().reverse().map(h => <p key={h.version}>V{h.version} · {date(h.changedAt)} · {h.reason}</p>)}</details>
         </>}
       </section></div>}
       {tab === '開發日誌' && <section className={`${panel} pilot-card`}><h3>開發日誌</h3><p className="pilot-muted">保留每次進展與決策；開發規格與進度頁顯示目前有效版本。</p>{[...(selected.developmentReport?.history || []).map(h => ({ label: `開發規格與進度 V${h.version} · ${h.reason}`, at: h.changedAt })), ...(selected.developmentLog || []).map(h => ({ label: h.label, at: h.changedAt })), ...(selected.pilotEvents || []).map(e => ({ label: `${eventLabel[e.event] || e.event}${e.detail ? ` · ${e.detail}` : ''}`, at: e.changedAt })), ...selected.statusHistory.map(h => ({ label: `狀態：${STATUS[h.from]?.[0] || '建立'} → ${STATUS[h.to]?.[0]}`, at: h.changedAt }))].sort((a,b) => (b.at || '').localeCompare(a.at || '')).map((entry, i) => <div className="pilot-log-row" key={i}><time>{date(entry.at)}</time><span>{entry.label}</span></div>)}</section>}
-      {tab === 'Google Drive' && <div className={`${panel} pilot-card`}><h3 className="font-semibold">Google Drive</h3><p className="pilot-drive-note">此 TEST 案的獨立資料夾與成果檔案</p><a className="pilot-folder" target="_blank" rel="noopener noreferrer" href={folderUrl(selected)}><Folder size={20}/>開啟 {selected.testCode} 資料夾 <ExternalLink size={16}/></a>{<button className="pilot-sync" disabled={busy} onClick={() => run(() => sendAIWorkPilotEvent(selected.id, 'drive_sync', {}))}>同步 Drive 索引</button>}{artifacts(selected)}</div>}
       {selected.testCode === 'TEST-03' && <Link to="/ai-work-test/ppt-prototype" className="mt-6 inline-block rounded-lg border border-blue-300 bg-white px-4 py-2 text-blue-700">開啟隔離 PPT 原型與審查測試</Link>}
       <div className="mt-6 rounded-2xl border border-blue-200 bg-blue-50 p-5"><p className="mb-3 text-sm text-blue-900">Pilot 試跑：每按一次執行下一個隔離測試事件。模擬使用者選擇只作用於 TEST 專案。</p><button disabled={busy || !SCENARIOS[selected.testCode]?.[selected.pilotEvents?.length || 0]} onClick={() => nextStep(selected)} className="rounded-lg bg-blue-600 px-4 py-2 text-white disabled:opacity-50">{SCENARIOS[selected.testCode]?.[selected.pilotEvents?.length || 0]?.[2] || '本案試跑步驟完成'}</button><p className="mt-2 text-xs text-slate-500">完成條件：{selected.criteriaMet.length}/{selected.successCriteria.length}；單一成果不會自動結案。</p></div>
     </>}
