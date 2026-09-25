@@ -169,6 +169,12 @@ export async function createWorkspaceProject(payload) {
   return parseResponse(response, 'createWorkspaceProject')
 }
 
+export async function retryWorkspaceDriveFolder(projectId) {
+  return parseResponse(await fetch(`${API_BASE}/api/life-os/v1/workspace/projects/${encodeURIComponent(projectId)}/drive/retry`, {
+    method: 'POST', headers: { ...authHeaders() },
+  }), 'retryWorkspaceDriveFolder')
+}
+
 export async function archiveWorkspaceProject(projectId) {
   const response = await fetch(`${API_BASE}/api/life-os/v1/workspace/projects/${encodeURIComponent(projectId)}`, {
     method: 'DELETE', headers: { ...authHeaders() },
