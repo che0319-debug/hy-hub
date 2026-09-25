@@ -5,8 +5,9 @@ import { homeSummary } from '../mock/data'
 import { useSessionContext } from '../App'
 import PixelCity from '../mobile/PixelCity'
 import { fetchTodaySchedule, fetchAllMilestones, fetchMobileState, fetchWeeklyChange, postWeeklyChange, fetchLifeOSContext } from '../api'
-import { fetchDailyOS, fetchWorkspace } from '../lifeOSApi'
-import { WORKSPACE_STATUS_ORDER, workspaceStatus, workspaceStatusLabel } from '../workspaceStatus'
+import { fetchDailyOS } from '../lifeOSApi'
+import { useAIWork } from '../aiWorkStore'
+import AIWorkSummary from '../components/AIWorkSummary'
 
 let homeDataCache = null
 let weeklyChangeCache
@@ -33,25 +34,6 @@ function addDays(ymd, n) {
 
 function normalizeDue(due) {
   return due ? due.replace(/\//g, '-') : ''
-}
-
-function WorkspaceOverviewCard({ projects, onClick }) {
-  const counts = Object.fromEntries(WORKSPACE_STATUS_ORDER.map(key => [key, 0]))
-  projects.forEach(project => { counts[workspaceStatus(project).key] += 1 })
-  const summary = [
-    ['projects', '專案數量', projects.length],
-    ...WORKSPACE_STATUS_ORDER.map(key => [key, workspaceStatusLabel(key), counts[key]]),
-  ]
-  return (
-    <button onClick={onClick} className="mb-4 flex w-full items-center gap-5 rounded-xl border border-slate-200 bg-white p-5 text-left shadow-sm transition-colors hover:bg-slate-50">
-      <div className="min-w-20 border-r border-slate-200 pr-5 text-center"><span className="mx-auto grid w-9 place-items-center rounded-lg bg-violet-50 p-2 text-violet-600"><ClipboardList size={18}/></span><div className="mt-1 text-xs font-semibold text-slate-600">工作區</div></div>
-      <div className="grid min-w-0 flex-1 grid-cols-2 gap-4 sm:grid-cols-4 xl:grid-cols-7">
-        {summary.map(([key, label, value]) => (
-          <div key={key}><div className={`text-2xl font-bold ${['confirmation', 'review'].includes(key) && value > 0 ? 'text-red-500' : 'text-slate-800'}`}>{value}</div><div className="mt-1 text-xs text-slate-500">{label}</div></div>
-        ))}
-      </div>
-    </button>
-  )
 }
 
 function TodoSection() {
@@ -370,23 +352,20 @@ export default function Home() {
   const [view, setView]           = useState('data')
   const [worldState, setWorldState] = useState(homeDataCache?.worldState || null)
   const [dailyOS, setDailyOS] = useState(homeDataCache?.dailyOS || null)
-  const [workspaceProjects, setWorkspaceProjects] = useState(homeDataCache?.workspaceProjects || [])
+  const aiWork = useAIWork()
   const [workspaceCore, setWorkspaceCore] = useState(homeDataCache?.workspaceCore || null)
   const [refreshing, setRefreshing] = useState(false)
   const { refreshSessions } = useSessionContext()
   const navigate  = useNavigate()
 
   async function loadWorld() {
-    const results = await Promise.allSettled([fetchMobileState(), fetchDailyOS(), fetchWorkspace(), fetchLifeOSContext()])
+    const results = await Promise.allSettled([fetchMobileState(), fetchDailyOS(), fetchLifeOSContext()])
     const next = { ...(homeDataCache || {}) }
     if (results[0].status === 'fulfilled') { next.worldState = results[0].value; setWorldState(results[0].value) }
     else console.warn('[Home] fetchMobileState failed:', results[0].reason)
     if (results[1].status === 'fulfilled') { next.dailyOS = results[1].value; setDailyOS(results[1].value) }
     else console.warn('[Home] fetchDailyOS failed:', results[1].reason)
-    if (results[2].status === 'fulfilled') { next.workspaceProjects = results[2].value.projects || []; setWorkspaceProjects(next.workspaceProjects) }
-    else console.warn('[Home] fetchWorkspace failed:', results[2].reason)
-    if (results[3].status === 'fulfilled') { next.workspaceCore = results[3].value; setWorkspaceCore(results[3].value) }
-    else console.warn('[Home] fetchLifeOSContext failed:', results[3].reason)
+    if (results[2].status === 'fulfilled') { next.workspaceCore = results[2].value; setWorkspaceCore(results[2].value) }
     homeDataCache = next
   }
 
@@ -435,7 +414,7 @@ export default function Home() {
         <div>
           <WeeklyChangeCard />
           <TodayResultsCard />
-          <WorkspaceOverviewCard projects={workspaceProjects} core={workspaceCore} onClick={() => navigate('/workspace')}/>
+          <section className="mb-4"><h2 className="mb-3 text-sm font-semibold text-slate-600">AI Work 區</h2><AIWorkSummary summary={aiWork.summary} onOpen={() => navigate('/ai-work')}/>{aiWork.error && <p role="alert" className="mt-2 text-sm text-red-600">{aiWork.error}</p>}</section>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <TodoSection />
             <ScheduleSection />
@@ -465,3 +444,4 @@ export default function Home() {
     </div>
   )
 }
+
