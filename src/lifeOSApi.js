@@ -243,3 +243,7 @@ export async function sendAIWorkPilotEvent(id, event, payload = {}) {
     method: 'POST', headers: { ...authHeaders(), 'Content-Type': 'application/json' }, body: JSON.stringify(payload),
   }), 'sendAIWorkPilotEvent')
 }
+
+export async function fetchAIWorkDriveCapability() {
+  return parseResponse(await fetch(`${API_BASE}/api/life-os/v1/workspace/drive-capability`, { headers: { ...authHeaders() }, cache: "no-store" }), "fetchAIWorkDriveCapability")
+}

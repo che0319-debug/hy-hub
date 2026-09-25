@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { ArrowLeft, RefreshCw, Plus, ExternalLink, Search, Check, Clock3, Folder, GitBranch } from 'lucide-react'
 import './ai-work-pilot.css'
-import { fetchAIWorkPilot, createAIWorkPilotProject, sendAIWorkPilotEvent } from '../lifeOSApi'
+import { fetchAIWorkPilot, createAIWorkPilotProject, sendAIWorkPilotEvent, fetchAIWorkDriveCapability } from '../lifeOSApi'
 
 const STATUS = {
   ai_pending: ['待 AI 處理', 'bg-violet-50 text-violet-700'],
@@ -80,6 +80,7 @@ export default function AIWorkPilot() {
   const [newProject, setNewProject] = useState({ title: '', goal: '', responsibleBot: 'hy' })
   const [newCriteria, setNewCriteria] = useState('')
   const [error, setError] = useState('')
+  const [driveCapability, setDriveCapability] = useState(null)
   const selected = projects.find(p => p.id === selectedId)
   const counts = useMemo(() => Object.fromEntries(Object.keys(STATUS).map(k => [k, projects.filter(p => p.workspaceStatus === k).length])), [projects])
   const visible = projects.filter(p => (filter === '全部' || STATUS[p.workspaceStatus]?.[0] === filter) && `${p.title} ${p.goal}`.toLowerCase().includes(query.toLowerCase()))
@@ -105,7 +106,8 @@ export default function AIWorkPilot() {
   const report = selected?.developmentReport
   const eventLabel = { claim: 'AI 接手', artifact: '新增成果', criterion: '驗證完成條件', progress: '更新進展', checkpoint: '等待使用者決策', resume: '依決策繼續', complete: '目標完成' }
   return <div className="pilot-page text-slate-800">
-    <div className="pilot-heading mb-7 flex items-center justify-between gap-4"><div><h1 className="text-3xl font-semibold">AI Work Test</h1><p className="mt-1 text-sm text-slate-500">隔離 Pilot · 三個 TEST 專案 · 不影響正式工作區</p></div><button onClick={() => run(refresh)} disabled={busy} aria-label="重新整理" className="rounded-xl border bg-white p-3"><RefreshCw size={18}/></button></div>
+    <div className="pilot-heading mb-7 flex items-center justify-between gap-4"><div><h1 className="text-3xl font-semibold">AI Work Test</h1><p className="mt-1 text-sm text-slate-500">隔離 Pilot · 三個 TEST 專案 · 不影響正式工作區</p></div><div className="flex items-center gap-2"><button type="button" className="pilot-action" disabled={busy} onClick={async () => { setBusy(true); try { setDriveCapability(await fetchAIWorkDriveCapability()) } catch (e) { setDriveCapability({ status: "unavailable" }) } finally { setBusy(false) } }}>檢查 Drive 權限</button><button onClick={() => run(refresh)} disabled={busy} aria-label="重新整理" className="rounded-xl border bg-white p-3"><RefreshCw size={18}/></button></div></div>
+    {driveCapability && <p role="status" className="mb-4 rounded-xl bg-slate-100 p-3 text-sm">後端 Drive：{driveCapability.status === "readable" ? driveCapability.writeScope ? "可讀取，持有寫入 scope；尚未驗證建檔" : "可讀取，缺少寫入 scope" : driveCapability.status === "insufficient_permission" ? "權限不足" : "目前不可用"}</p>}
     {error && <p role="alert" className="mb-5 rounded-xl bg-red-50 p-4 text-red-700">{error}</p>}
     {!selected ? <>
       <div className="pilot-stats grid gap-4 md:grid-cols-5">{[['ai_running', '進行中'], ['confirmation', '等待確認'], ['completed', '已完成'], ['all', '全部專案']].map(([key, title]) => <div key={key} className="pilot-stat"><span className={`pilot-stat-icon ${key}`}>{key === 'ai_running' ? <GitBranch size={20}/> : key === 'confirmation' ? <Clock3 size={20}/> : key === 'completed' ? <Check size={20}/> : <Folder size={20}/>}</span><div><p className="text-sm text-slate-500">{title}</p><p className="mt-2 text-3xl font-semibold">{key === 'all' ? projects.length : counts[key]}</p></div></div>)}<button onClick={() => setShowCreate(true)} disabled={busy} className="pilot-create rounded-2xl bg-blue-600 px-4 py-5 text-white"><Plus className="mr-2 inline" size={18}/>新增 AI Work Test</button></div>
