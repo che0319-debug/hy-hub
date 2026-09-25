@@ -11,7 +11,6 @@ import AIWorkSummary from '../components/AIWorkSummary'
 
 let homeDataCache = null
 let weeklyChangeCache
-let todayResultsCache
 let todoCache
 let scheduleCache
 
@@ -99,28 +98,6 @@ function TodoSection() {
           })}
         </ul>
       )}
-    </div>
-  )
-}
-
-function TodayResultsCard() {
-  const [items, setItems] = useState(todayResultsCache ?? null)
-  useEffect(() => {
-    if (todayResultsCache !== undefined) return
-    fetchMobileState().then(data => { todayResultsCache = data.todayCompleted || []; setItems(todayResultsCache) }).catch(() => setItems([]))
-  }, [])
-  return (
-    <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-5 mb-4 flex items-center gap-5">
-      <div className="min-w-20 text-center border-r border-slate-200 pr-5">
-        <div className="text-3xl font-bold text-green-600">{items?.length || 0}</div>
-        <div className="text-xs text-slate-400">今日完成</div>
-      </div>
-      <div className="min-w-0 flex-1">
-        <p className="text-sm font-semibold text-slate-700 mb-2">今日成果</p>
-        {items === null ? <p className="text-xs text-slate-400">載入中…</p> : items.length === 0 ? <p className="text-xs text-slate-400">尚無完成項目</p> : (
-          <ul className="space-y-1">{items.slice(0, 5).map(item => <li key={`${item.source}-${item.id}`} className="text-sm text-slate-600 truncate">✓ {item.title}</li>)}</ul>
-        )}
-      </div>
     </div>
   )
 }
@@ -413,7 +390,6 @@ export default function Home() {
       {view === 'data' ? (
         <div>
           <WeeklyChangeCard />
-          <TodayResultsCard />
           <section className="mb-4"><h2 className="mb-3 text-sm font-semibold text-slate-600">AI Work 區</h2><AIWorkSummary summary={aiWork.summary} onOpen={() => navigate('/ai-work')}/>{aiWork.error && <p role="alert" className="mt-2 text-sm text-red-600">{aiWork.error}</p>}</section>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <TodoSection />
