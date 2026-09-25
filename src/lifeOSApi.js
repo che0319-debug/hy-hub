@@ -223,3 +223,17 @@ export async function approveWorkspaceMilestone(projectId, milestoneId, workId) 
   })
   return parseResponse(response, 'approveWorkspaceMilestone')
 }
+
+export async function fetchAIWorkPilot() {
+  return parseResponse(await fetch(`${API_BASE}/api/life-os/v1/ai-work-test`, { headers: { ...authHeaders() }, cache: 'no-store' }), 'fetchAIWorkPilot')
+}
+
+export async function seedAIWorkPilot() {
+  return parseResponse(await fetch(`${API_BASE}/api/life-os/v1/ai-work-test/seed`, { method: 'POST', headers: { ...authHeaders() } }), 'seedAIWorkPilot')
+}
+
+export async function sendAIWorkPilotEvent(id, event, payload = {}) {
+  return parseResponse(await fetch(`${API_BASE}/api/life-os/v1/ai-work-test/projects/${encodeURIComponent(id)}/events/${encodeURIComponent(event)}`, {
+    method: 'POST', headers: { ...authHeaders(), 'Content-Type': 'application/json' }, body: JSON.stringify(payload),
+  }), 'sendAIWorkPilotEvent')
+}
