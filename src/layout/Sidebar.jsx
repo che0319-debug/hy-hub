@@ -43,9 +43,10 @@ function NavItem({ to, label, Icon }) {
   )
 }
 
-export default function Sidebar({ open }) {
+export default function Sidebar({ open, pilot = false }) {
   return (
-    <aside className={`fixed top-12 left-0 bottom-0 w-[200px] bg-white flex flex-col py-4 px-2 overflow-y-auto z-40 border-r border-slate-200 transition-transform duration-200 md:translate-x-0 ${open ? 'translate-x-0' : '-translate-x-full'}`}>
+    <aside className={`fixed ${pilot ? 'top-0 w-[242px] pilot-sidebar' : 'top-12 w-[200px]'} left-0 bottom-0 bg-white flex flex-col py-4 px-2 overflow-y-auto z-40 border-r border-slate-200 transition-transform duration-200 md:translate-x-0 ${open ? 'translate-x-0' : '-translate-x-full'}`}>
+      {pilot && <div className="pilot-sidebar-title">HY Life OS</div>}
       <nav className="flex flex-col gap-0.5">
         {navItems.map(({ to, label, icon: Icon }) => (
           <NavItem key={to} to={to} label={label} Icon={Icon} />
