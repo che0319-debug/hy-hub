@@ -6,9 +6,7 @@ import './mobile/mobile-v2.css'
 import App from './App'
 import Home from './pages/Home'
 import Helpers from './pages/Helpers'
-import AIWorkCenter from './pages/AIWorkCenter'
 import AIWorkPilot from './pages/AIWorkPilot'
-import PPTPilotPrototype from './pages/PPTPilotPrototype'
 import LineHY from './pages/LineHY'
 import LineXiaoyin from './pages/LineXiaoyin'
 import Line950157 from './pages/Line950157'
@@ -21,6 +19,11 @@ import Strategy from './pages/Strategy'
 import AuthGate from './components/AuthGate'
 import MobileAppV2 from './mobile/MobileAppV2'
 
+function LegacyAIWorkRedirect() {
+  const location = useLocation()
+  return <Navigate to={'/ai-work' + location.search} replace />
+}
+
 function DesktopRoutes({ onMobileVersion }) {
   return (
     <Routes>
@@ -29,11 +32,11 @@ function DesktopRoutes({ onMobileVersion }) {
         <Route path="life-os" element={<Navigate to="/" replace />} />
         <Route path="helpers" element={<Helpers />} />
         <Route path="memory" element={<Navigate to="/helpers" replace />} />
-        <Route path="workspace" element={<AIWorkCenter />} />
-        <Route path="ai-work-test" element={<AIWorkPilot />} />
-        <Route path="ai-work-test/ppt-prototype" element={<PPTPilotPrototype />} />
-        <Route path="research" element={<Navigate to="/workspace" replace />} />
-        <Route path="dispatch" element={<Navigate to="/workspace" replace />} />
+        <Route path="workspace/*" element={<LegacyAIWorkRedirect />} />
+        <Route path="ai-work" element={<AIWorkPilot />} />
+        <Route path="ai-work-test/*" element={<LegacyAIWorkRedirect />} />
+        <Route path="research" element={<Navigate to="/ai-work" replace />} />
+        <Route path="dispatch" element={<Navigate to="/ai-work" replace />} />
         <Route path="line/hy" element={<LineHY />} />
         <Route path="line/xiaoyin" element={<LineXiaoyin />} />
         <Route path="line/950157" element={<Line950157 />} />
@@ -71,8 +74,8 @@ function Experience() {
     sessionStorage.setItem('hy_life_os_view', next)
   }
 
-  if (location.pathname === '/command-center') return <Navigate to="/workspace" replace />
-  if (mobileWidth && mode !== 'desktop' && location.pathname !== '/workspace') {
+  if (location.pathname === '/command-center') return <Navigate to="/ai-work" replace />
+  if (mobileWidth && mode !== 'desktop' && !['/workspace', '/ai-work', '/ai-work-test'].some(path => location.pathname.startsWith(path))) {
     return <MobileAppV2 onDesktopVersion={() => choose('desktop')} />
   }
   return <DesktopRoutes onMobileVersion={mobileWidth ? () => choose('mobile') : null} />
@@ -87,3 +90,4 @@ createRoot(document.getElementById('root')).render(
     </AuthGate>
   </StrictMode>
 )
+

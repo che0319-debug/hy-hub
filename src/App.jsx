@@ -15,7 +15,7 @@ export default function App({ onMobileVersion }) {
   const [sessions, setSessions] = useState([])
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const location = useLocation()
-  const pilotRoute = location.pathname.startsWith('/ai-work-test')
+  const pilotRoute = location.pathname.startsWith('/ai-work')
 
   useEffect(() => {
     setSidebarOpen(false)
@@ -71,3 +71,4 @@ export default function App({ onMobileVersion }) {
     </SessionContext.Provider>
   )
 }
+
