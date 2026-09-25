@@ -15,6 +15,7 @@ export default function App({ onMobileVersion }) {
   const [sessions, setSessions] = useState([])
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const location = useLocation()
+  const pilotRoute = location.pathname.startsWith('/ai-work-test')
 
   useEffect(() => {
     setSidebarOpen(false)
@@ -48,7 +49,7 @@ export default function App({ onMobileVersion }) {
   return (
     <SessionContext.Provider value={{ sessions, addSession, removeSession, refreshSessions }}>
       <div className="min-h-screen bg-slate-50 text-slate-800">
-        <TopBar onMobileVersion={onMobileVersion} />
+        {!pilotRoute && <TopBar onMobileVersion={onMobileVersion} />}
         <button
           className="md:hidden fixed top-2 left-2 z-50 p-2 rounded-md bg-white shadow text-slate-700"
           onClick={() => setSidebarOpen(v => !v)}
@@ -62,8 +63,8 @@ export default function App({ onMobileVersion }) {
             onClick={() => setSidebarOpen(false)}
           />
         )}
-        <Sidebar open={sidebarOpen} />
-        <main className="ml-0 md:ml-[200px] pt-12 p-6 min-h-screen">
+        <Sidebar open={sidebarOpen} pilot={pilotRoute} />
+        <main className={pilotRoute ? "ml-0 md:ml-[242px] p-5 md:p-8 min-h-screen" : "ml-0 md:ml-[200px] pt-12 p-6 min-h-screen"}>
           <Outlet />
         </main>
       </div>
