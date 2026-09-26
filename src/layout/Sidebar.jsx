@@ -1,7 +1,4 @@
 import { NavLink } from 'react-router-dom'
-import { isolatedTestUrl } from '../aiWorkTestLink.mjs'
-
-const testUrl = isolatedTestUrl(import.meta.env.VITE_AI_WORK_TEST_URL, window.location.origin)
 import {
   Home, Bot, ClipboardList,
   MessageSquare, Settings, Target
@@ -11,6 +8,7 @@ const navItems = [
   { to: '/',           label: '首頁',     icon: Home },
   { to: '/helpers',    label: '我的小幫手', icon: Bot },
   { to: '/ai-work', label: 'AI Work 區', icon: ClipboardList },
+  { to: '/ai-work-test', label: 'AI Work Test', icon: ClipboardList },
   { to: '/goals',      label: '人生目標',  icon: Target },
   { to: '/strategy',   label: '戰略盤',   icon: Target },
 ]
@@ -53,17 +51,7 @@ export default function Sidebar({ open, pilot = false }) {
         {navItems.map(({ to, label, icon: Icon }) => (
           <NavItem key={to} to={to} label={label} Icon={Icon} />
         ))}
-        {testUrl ? (
-          <a href={testUrl} target="_blank" rel="noopener noreferrer"
-            className="flex items-center gap-2.5 px-3 py-2 rounded-md text-sm text-slate-600 hover:bg-slate-100">
-            <ClipboardList size={16} /> AI Work Test
-          </a>
-        ) : (
-          <span aria-disabled="true" title="Test 環境尚未發布"
-            className="flex items-center gap-2.5 px-3 py-2 text-sm text-slate-400">
-            <ClipboardList size={16} /> AI Work Test · 尚未發布
-          </span>
-        )}
+
       </nav>
 
       <div className="mt-4 mb-1 px-3 text-xs text-slate-400 font-medium tracking-wider">── Bot 團隊 ──</div>
