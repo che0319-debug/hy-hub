@@ -11,9 +11,11 @@ import { getProjectPresentation } from '../aiWorkPresentation'
 const STATUS = { ai_pending: ['待 AI 接手','bg-violet-50 text-violet-700'], ai_running: ['進行中','bg-blue-50 text-blue-700'], confirmation: ['等待確認','bg-amber-50 text-amber-700'], completed: ['完成','bg-emerald-50 text-emerald-700'] }
 const BOTS = { hy:'HY', family:'小因', '950157':'950157', sam:'Sam' }
 const date = value => value ? new Intl.DateTimeFormat('zh-TW', {timeZone:'Asia/Taipei', month:'2-digit', day:'2-digit', hour:'2-digit', minute:'2-digit', hour12:false}).format(new Date(value)) : '—'
+const projectStatus = p => p.workspaceStatus === 'review' ? 'confirmation' : ['planning','in_progress'].includes(p.workspaceStatus) ? 'ai_pending' : STATUS[p.workspaceStatus] ? p.workspaceStatus : 'ai_pending'
 const badge = p => {
-  const Icon = p.workspaceStatus === 'completed' ? CircleCheck : p.workspaceStatus === 'ai_running' ? CirclePlay : Clock3
-  return <span className="pilot-badge" data-status={p.workspaceStatus}><Icon size={15} aria-hidden="true"/>{STATUS[p.workspaceStatus]?.[0] || p.workspaceStatus}</span>
+  const status = projectStatus(p)
+  const Icon = status === 'completed' ? CircleCheck : status === 'ai_running' ? CirclePlay : Clock3
+  return <span className="pilot-badge" data-status={status}><Icon size={15} aria-hidden="true"/>{STATUS[status][0]}</span>
 }
 const panel = 'rounded-2xl border border-slate-200 bg-white px-6 py-5 pilot-card'
 
@@ -42,7 +44,7 @@ export default function AIWorkPilot() {
   const [reportDraft, setReportDraft] = useState('')
   const [copied, setCopied] = useState(false)
   const [feedback, setFeedback] = useState('')
-  const visible = projects.filter(p => filter === 'all' || p.workspaceStatus === filter)
+  const visible = projects.filter(p => filter === 'all' || projectStatus(p) === filter)
   async function run(fn) {
     setBusy(true); setError('')
     try { await fn(); await refreshAIWork(); return true } catch (e) { setError(e.message || '操作失敗'); return false }
