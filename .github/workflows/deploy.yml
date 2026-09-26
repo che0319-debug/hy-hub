@@ -38,6 +38,8 @@ jobs:
       - name: Build
         env:
           VITE_API_BASE: ${{ secrets.VITE_API_BASE }}
+          VITE_AI_WORK_TEST_ENABLED: ${{ vars.VITE_AI_WORK_TEST_ENABLED }}
+          VITE_AI_WORK_TEST_BASE: ${{ vars.VITE_AI_WORK_TEST_BASE }}
         run: npm run build
 
 
