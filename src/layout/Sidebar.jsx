@@ -8,6 +8,7 @@ const navItems = [
   { to: '/',           label: '首頁',     icon: Home },
   { to: '/helpers',    label: '我的小幫手', icon: Bot },
   { to: '/ai-work', label: 'AI Work 區', icon: ClipboardList },
+  { to: '/ai-work-test', label: 'AI Work Test', icon: ClipboardList },
   { to: '/goals',      label: '人生目標',  icon: Target },
   { to: '/strategy',   label: '戰略盤',   icon: Target },
 ]
@@ -50,6 +51,7 @@ export default function Sidebar({ open, pilot = false }) {
         {navItems.map(({ to, label, icon: Icon }) => (
           <NavItem key={to} to={to} label={label} Icon={Icon} />
         ))}
+
       </nav>
 
       <div className="mt-4 mb-1 px-3 text-xs text-slate-400 font-medium tracking-wider">── Bot 團隊 ──</div>
@@ -68,3 +70,4 @@ export default function Sidebar({ open, pilot = false }) {
     </aside>
   )
 }
+

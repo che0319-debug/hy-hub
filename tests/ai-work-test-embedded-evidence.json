@@ -1,0 +1,13 @@
+{
+  "passed": true,
+  "checks": [
+    "real React Test component embeds cross-site native login",
+    "partitioned Secure HttpOnly session cookie",
+    "delegated frontend approval atomically commits one action and revision",
+    "outer page stays in same tab",
+    "reload restores session without another approval",
+    "unapproved frame ancestor blocked"
+  ],
+  "storage": "synthetic CAS store",
+  "production": false
+}

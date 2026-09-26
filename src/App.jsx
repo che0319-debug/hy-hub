@@ -16,16 +16,20 @@ export default function App({ onMobileVersion }) {
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const location = useLocation()
   const pilotRoute = location.pathname.startsWith('/ai-work')
+  const testRoute = location.pathname === '/ai-work-test' || location.pathname.startsWith('/ai-work-test/')
 
   useEffect(() => {
     setSidebarOpen(false)
   }, [location])
 
   useEffect(() => {
+    if (testRoute) { setSessions([]); return }
+    let active = true
     fetchDispatchSessions()
-      .then(data => setSessions(data))
+      .then(data => { if (active) setSessions(data) })
       .catch(err => console.warn('[App] fetchDispatchSessions failed:', err))
-  }, [])
+    return () => { active = false }
+  }, [testRoute])
 
   function addSession(session) {
     setSessions(prev => [...prev, session])
@@ -71,3 +75,4 @@ export default function App({ onMobileVersion }) {
     </SessionContext.Provider>
   )
 }
+
