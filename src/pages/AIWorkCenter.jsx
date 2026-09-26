@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { ArrowLeft, CheckCircle2, ExternalLink, FileText, Pencil, Plus, RefreshCw, Save, Send, Trash2, X } from 'lucide-react'
-import { approveWorkspaceMilestone, approveWorkspacePlan, archiveWorkspaceProject, createWorkspacePlanRevision, createWorkspaceProject, fetchWorkspace, requestWorkspacePlanAnalysis, saveWorkspacePlan, submitWorkFeedback, updateWorkspaceResponsibleBot } from '../lifeOSApi'
+import { approveWorkspaceMilestone, approveWorkspacePlan, archiveWorkspaceProject, createWorkspacePlanRevision, createWorkspaceProject, fetchWorkspace, requestWorkspacePlanAnalysis, saveWorkspacePlan, sendAIWorkPilotEvent, submitWorkFeedback, updateWorkspaceResponsibleBot } from '../lifeOSApi'
 import { workspaceStatus } from '../workspaceStatus'
 
 let workspaceCache = null
@@ -244,23 +244,51 @@ export default function AIWorkCenter() {
   }
 
   async function submitFeedback() {
-    const workId = selected?.latestWork?.id
+    const action = selected?.humanAction
+    const workId = action?.workId || selected?.latestWork?.id || selected?.latestWorkId
     if (!workId || !feedback.trim()) return
     setBusy(true); setError(''); setNotice('')
     try {
-      const key = `workspace-feedback-${workId}-${crypto.randomUUID()}`
-      await submitWorkFeedback(workId, feedback.trim(), key)
-      setFeedback(''); await load(); setNotice('意見已送出，已建立同一專案 Milestone 的修訂工作。')
+      if (action?.actionId) {
+        const event = action.kind === 'clarification' ? 'answer' : 'request_revision'
+        await sendAIWorkPilotEvent(selected.id, event, {
+          workId: action.workId,
+          actionId: action.actionId,
+          content: feedback.trim(),
+        })
+        setNotice(action.kind === 'clarification'
+          ? '補充資料已正式寫入此 AI Work，將沿用原工作接續。'
+          : '修改意見已正式寫入此 AI Work，將沿用原工作修訂。')
+      } else {
+        const key = `workspace-feedback-${workId}-${crypto.randomUUID()}`
+        await submitWorkFeedback(workId, feedback.trim(), key)
+        setNotice('意見已送出。')
+      }
+      setFeedback(''); await load()
     } catch (err) { setError(err.message || '意見送出失敗') }
     finally { setBusy(false) }
   }
 
   async function acceptMilestone() {
-    const workId = selected?.latestWork?.id
-    if (!selected || !current || !workId) return
+    const action = selected?.humanAction
+    const workId = action?.workId || selected?.latestWork?.id || selected?.latestWorkId
+    if (!selected || !workId) return
     setBusy(true); setError(''); setNotice('')
     try {
-      await approveWorkspaceMilestone(selected.id, current.id, workId)
+      if (action?.actionId && action.kind === 'result') {
+        await sendAIWorkPilotEvent(selected.id, 'approve_result', {
+          workId: action.workId,
+          actionId: action.actionId,
+        })
+      } else if (action?.actionId && action.kind === 'delivery') {
+        await sendAIWorkPilotEvent(selected.id, 'acknowledge_result', {
+          workId: action.workId,
+          actionId: action.actionId,
+        })
+      } else {
+        if (!current) return
+        await approveWorkspaceMilestone(selected.id, current.id, workId)
+      }
       await load(); setNotice('已同意驗收，本 Milestone 已完成。')
     } catch (err) { setError(err.message || '驗收失敗') }
     finally { setBusy(false) }
@@ -299,6 +327,9 @@ export default function AIWorkCenter() {
   const deliverable = (selected.latestDeliverables || [])[0]
   const latestResultSummary = selected.latestResultSummary
   const canReview = ['confirmation', 'review'].includes(selected.workspaceStatus) && latestResultIsCurrent && selected.latestWork?.milestoneId === selected.currentMilestoneId && selected.latestWork?.status === 'succeeded' && (selected.latestWork?.deliverables || []).length > 0
+  const formalAction = selected.humanAction
+  const needsFormalInput = formalAction?.kind === 'clarification'
+  const canSubmitRevision = ['result', 'delivery', 'plan'].includes(formalAction?.kind) || canReview
   const overview = projectRow(selected)
   return <div className="mx-auto max-w-5xl">
     <button onClick={back} className="mb-5 flex items-center gap-2 text-sm text-slate-500"><ArrowLeft size={16}/>返回工作區</button>
@@ -309,7 +340,7 @@ export default function AIWorkCenter() {
       {selected.driveProvisioningStatus && <section className="rounded-2xl border bg-white p-6"><h2 className="font-semibold text-slate-900">Google Drive 與參考資料</h2>{selected.driveProvisioningStatus === 'ready' ? <div className="mt-3 flex flex-wrap gap-5 text-sm"><a href={selected.driveFolderUrl} target="_blank" rel="noopener noreferrer" className="text-blue-700 underline">開啟專案資料夾</a><a href={selected.referenceFolderUrl} target="_blank" rel="noopener noreferrer" className="text-blue-700 underline">開啟 01_參考資料</a></div> : <div className="mt-3 text-sm text-amber-800"><p>專案已建立。GPT 領取工作後，將使用已授權的 Google Drive 建立專案資料夾與 01_參考資料，並把連結寫回這裡。其他子資料夾按實際產出需要建立。</p></div>}</section>}
       <section className="rounded-2xl border bg-white p-6"><h2 className="font-semibold text-slate-900">目前進度</h2><div className="mt-4 space-y-2">{milestones.map(item => <div key={item.id} className={`rounded-xl border p-4 ${item.id === selected.currentMilestoneId ? 'border-blue-400 bg-blue-50/40' : 'bg-white'}`}><div className="flex justify-between gap-3"><b>{item.id}　{item.title}</b><span className="text-xs text-slate-500">{item.status === 'completed' ? '✓ 完成' : item.id === selected.currentMilestoneId ? '目前' : '待執行'}</span></div></div>)}</div><p className="mt-5 text-sm text-slate-600"><b>目前狀況：</b>{overview.current}</p><p className="mt-2 text-sm text-slate-600"><b>下一步：</b>{overview.next}</p></section>
       <section className="rounded-2xl border bg-white p-6"><h2 className="font-semibold text-slate-900">最新成果{selected.latestResultMilestoneId ? ` · ${selected.latestResultMilestoneId}` : ''}{selected.latestResultPlanVersion ? ` · Plan v${selected.latestResultPlanVersion}` : ''}</h2>{deliverable ? <><button type="button" onClick={() => setReportOpen(value => !value)} className="mt-4 flex items-center gap-2 text-left text-blue-700 underline"><FileText size={16}/>{deliverable.title || deliverable.name || '檢視成果'}（{reportOpen ? '收合' : '展開'}）</button>{reportOpen && <div className="mt-5 border-t pt-5"><p className="text-sm text-slate-600">{latestResultSummary || '成果內容載入中，請按「同步」更新。'}</p></div>}</> : latestResultSummary ? <p className="mt-3 whitespace-pre-wrap text-sm text-slate-600">{latestResultSummary}</p> : <p className="mt-3 text-sm text-slate-400">尚未產生可開啟 Deliverable。</p>}</section>
-      {canReview && <section className="rounded-2xl border bg-white p-6"><h2 className="font-semibold text-slate-900">驗收／修改意見 · {current?.id}</h2><textarea value={feedback} onChange={e => setFeedback(e.target.value)} placeholder="若成果需要修改，請輸入對本 Milestone 的要求" className="mt-4 min-h-28 w-full rounded-xl border p-3 text-sm"/><div className="mt-3 flex flex-wrap gap-2"><button onClick={submitFeedback} disabled={busy || !feedback.trim()} className="flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm text-white disabled:opacity-40"><Send size={15}/>送出修改意見</button><button onClick={acceptMilestone} disabled={busy} className="flex items-center gap-2 rounded-lg bg-emerald-600 px-4 py-2 text-sm text-white disabled:opacity-40"><CheckCircle2 size={15}/>同意驗收</button></div></section>}
+      {(needsFormalInput || canSubmitRevision) && <section className="rounded-2xl border bg-white p-6"><h2 className="font-semibold text-slate-900">{needsFormalInput ? '意見回覆／補充資料' : `驗收／修改意見 · ${current?.id || formalAction?.milestoneId || ''}`}</h2>{needsFormalInput && <div className="mt-3 rounded-xl bg-amber-50 p-4 text-sm text-amber-900"><b>需要你處理</b>{(formalAction?.questions || []).map((question, index) => <p key={index} className="mt-2">{question}</p>)}</div>}<textarea value={feedback} onChange={e => setFeedback(e.target.value)} placeholder={needsFormalInput ? '請在這裡正式回覆／補充；只有此處提交的內容會進入 AI Work。' : '若成果需要修改，請輸入對本 Milestone 的要求'} className="mt-4 min-h-28 w-full rounded-xl border p-3 text-sm"/><div className="mt-3 flex flex-wrap gap-2"><button onClick={submitFeedback} disabled={busy || !feedback.trim()} className="flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm text-white disabled:opacity-40"><Send size={15}/>{needsFormalInput ? '送出資料並繼續' : '送出修改意見'}</button>{!needsFormalInput && (formalAction?.kind === 'result' || formalAction?.kind === 'delivery' || canReview) && <button onClick={acceptMilestone} disabled={busy} className="flex items-center gap-2 rounded-lg bg-emerald-600 px-4 py-2 text-sm text-white disabled:opacity-40"><CheckCircle2 size={15}/>同意驗收</button>}</div></section>}
     </div> : <div className="mt-6 rounded-2xl border bg-white">
       <div className="flex flex-wrap items-center justify-between gap-3 border-b p-4"><div><b>專案規劃書 v{plan.version || '1.0'}</b><span className="ml-3 text-xs text-slate-400">{plan.approvalStatus === 'approved' ? '已核准' : '草稿'}</span></div><div className="flex gap-2"><button onClick={() => setMode(mode === 'edit' ? 'preview' : 'edit')} className="flex items-center gap-2 rounded-lg border px-3 py-2 text-sm"><Pencil size={15}/>{mode === 'edit' ? '預覽' : '編輯'}</button>{mode === 'edit' && <button onClick={saveDraft} disabled={busy} className="flex items-center gap-2 rounded-lg bg-slate-900 px-3 py-2 text-sm text-white"><Save size={15}/>儲存草稿</button>}{plan.approvalStatus !== 'approved' && mode !== 'edit' && !selected.planAnalysis?.candidate && <button onClick={analyzePlan} disabled={busy || ['queued','claimed','running','in_progress'].includes(selected.planAnalysis?.status)} className="flex items-center gap-2 rounded-lg bg-blue-600 px-3 py-2 text-sm text-white disabled:opacity-50">AI 解析規劃書</button>}</div></div>
       <div className="p-6">{mode === 'edit' ? <textarea value={draft} onChange={e => setDraft(e.target.value)} spellCheck="false" className="min-h-[620px] w-full resize-y rounded-xl border bg-slate-950 p-5 font-mono text-sm leading-7 text-slate-100 outline-none focus:border-blue-500"/> : <MarkdownPreview value={draft}/>}</div>
