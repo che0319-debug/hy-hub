@@ -92,7 +92,7 @@ function projectRow(project) {
   const result = hasResult ? `${project.latestResultMilestoneId ? `${project.latestResultMilestoneId} · ` : ''}${project.latestResultPlanVersion ? `v${project.latestResultPlanVersion} · ` : ''}${resultSummary || deliverable.name || '開啟成果'}` : '尚無成果'
   const analysisPending = ['queued', 'claimed', 'running', 'in_progress'].includes(project.planAnalysis?.status)
   const resultForCurrentMilestone = (!project.currentMilestoneId || project.latestResultMilestoneId === project.currentMilestoneId) && (!project.latestResultPlanVersion || String(project.latestResultPlanVersion) === String(plan.version))
-  const awaitingReview = ['confirmation', 'review'].includes(project.workspaceStatus) && resultForCurrentMilestone && latest?.milestoneId === project.currentMilestoneId && latest?.status === 'succeeded' && (latest.deliverables || []).length > 0
+  const awaitingReview = workspaceStatus(project).key === 'confirmation' && resultForCurrentMilestone && latest?.milestoneId === project.currentMilestoneId && latest?.status === 'succeeded' && (latest.deliverables || []).length > 0
   let current = '等待建立規劃書'
   let next = '編輯並確認規劃書'
 
@@ -326,7 +326,7 @@ export default function AIWorkCenter() {
   const latestResultIsCurrent = selected.currentMilestoneId && selected.latestResultMilestoneId === selected.currentMilestoneId && (!selected.latestResultPlanVersion || String(selected.latestResultPlanVersion) === String(plan.version))
   const deliverable = (selected.latestDeliverables || [])[0]
   const latestResultSummary = selected.latestResultSummary
-  const canReview = ['confirmation', 'review'].includes(selected.workspaceStatus) && latestResultIsCurrent && selected.latestWork?.milestoneId === selected.currentMilestoneId && selected.latestWork?.status === 'succeeded' && (selected.latestWork?.deliverables || []).length > 0
+  const canReview = workspaceStatus(selected).key === 'confirmation' && latestResultIsCurrent && selected.latestWork?.milestoneId === selected.currentMilestoneId && selected.latestWork?.status === 'succeeded' && (selected.latestWork?.deliverables || []).length > 0
   const formalAction = selected.humanAction
   const needsFormalInput = formalAction?.kind === 'clarification'
   const canSubmitRevision = ['result', 'delivery', 'plan'].includes(formalAction?.kind) || canReview
