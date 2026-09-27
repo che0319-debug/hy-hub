@@ -6,10 +6,12 @@ import {
   getAccessToken,
   loginWithPassword,
   validateSession,
+  ensureAccessToken,
+  tokenSecondsRemaining,
 } from '../auth'
 
 export default function AuthGate({ children }) {
-  const [state, setState] = useState(getAccessToken() ? 'checking' : 'login')
+  const [state, setState] = useState('checking')
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
   const [showPassword, setShowPassword] = useState(false)
@@ -32,6 +34,19 @@ export default function AuthGate({ children }) {
         clearAccessToken()
         setState('login')
       })
+  }, [state])
+
+  useEffect(() => {
+    if (state !== 'ready') return
+    const timer = window.setInterval(async () => {
+      if (tokenSecondsRemaining() > 600) return
+      const ok = await ensureAccessToken(600)
+      if (!ok && tokenSecondsRemaining() <= 0) {
+        clearAccessToken()
+        window.dispatchEvent(new Event(AUTH_EXPIRED_EVENT))
+      }
+    }, 60_000)
+    return () => window.clearInterval(timer)
   }, [state])
 
   async function submit(event) {
