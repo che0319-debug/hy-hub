@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { authHeaders, expireSession } from '../auth'
+import { authHeaders, ensureAccessToken, expireSession } from '../auth'
 
 const API_BASE = (import.meta.env.VITE_API_BASE || '').replace(/\/$/, '')
 
@@ -9,14 +9,20 @@ export default function AIWorkV3({ maintenance = false }) {
   const [error, setError] = useState('')
   const form = useRef(null)
   const submitted = useRef('')
+  const [frameLoaded, setFrameLoaded] = useState(false)
+  const retries = useRef(0)
 
   useEffect(() => {
     let active = true
-    setTicket(''); setError(''); submitted.current = ''
-    fetch(`${API_BASE}/api/ai-work-v3/session`, {
+    setTicket(''); setError(''); setFrameLoaded(false); submitted.current = ''
+    ensureAccessToken().then(ok => {
+      if (!ok) { if (active) expireSession(); return null }
+      return fetch(`${API_BASE}/api/ai-work-v3/session`, {
       method: 'POST', headers: { ...authHeaders(), 'Content-Type': 'application/json' },
       body: '{}', cache: 'no-store',
+      })
     }).then(async response => {
+      if (!response) return
       if (response.status === 401) { if (active) expireSession(); return }
       const result = await response.json().catch(() => ({}))
       if (!response.ok || !result.ticket) throw new Error('AI Work 連線未完成，請重新連線；尚未執行或核准工作。')
@@ -32,19 +38,44 @@ export default function AIWorkV3({ maintenance = false }) {
     }
   }, [ticket])
 
+  useEffect(() => {
+    if (!ticket || frameLoaded) return
+    const timer = window.setTimeout(() => {
+      if (retries.current < 1) {
+        retries.current += 1
+        setAttempt(value => value + 1)
+      } else {
+        setError('AI Work 畫面未載入，請按重新連線；本次沒有執行或核准工作。')
+      }
+    }, 12000)
+    return () => window.clearTimeout(timer)
+  }, [ticket, frameLoaded])
+
+  function frameLoad(event) {
+    if (!submitted.current) return
+    try {
+      if (event.currentTarget.contentWindow?.location.href === 'about:blank') return
+    } catch {
+      // The V3 page is on the separate, expected API origin.
+    }
+    setFrameLoaded(true)
+    retries.current = 0
+  }
+
   return <section className="flex h-full min-h-0 flex-col bg-white" aria-labelledby="ai-work-v3-title">
     <header className="flex min-h-16 shrink-0 flex-wrap items-center justify-between gap-2 border-b px-4 py-2 pl-14 md:pl-6">
       <h1 id="ai-work-v3-title" className="font-semibold">AI Work</h1>
       {maintenance && ticket && <a className="min-h-11 rounded-md border px-3 py-2" href={`${API_BASE}/ai-work-v3/ui/legacy-reset`} target="ai-work-v3-frame">檢查舊案清除清單</a>}
-      <button type="button" className="min-h-11 rounded-md border px-3" onClick={() => setAttempt(value => value + 1)}>重新連線</button>
+      <button type="button" className="min-h-11 rounded-md border px-3" onClick={() => { retries.current = 0; setAttempt(value => value + 1) }}>重新連線</button>
     </header>
     {error && <p role="alert" className="m-4 rounded-lg bg-amber-50 p-4 text-amber-900">{error}</p>}
     {!ticket && !error && <p role="status" className="p-4">確認 HY Life OS 登入…</p>}
+    {ticket && !frameLoaded && !error && <p role="status" className="p-4">正在載入 AI Work 專案清單…</p>}
     <form ref={form} method="post" action={`${API_BASE}/ai-work-v3/ui/hy-login`} target="ai-work-v3-frame" hidden>
       <input name="ticket" type="hidden" value={ticket} readOnly />
     </form>
     <iframe key={attempt} name="ai-work-v3-frame" title="AI Work 操作區"
       className="min-h-0 w-full flex-1 border-0 bg-white" src="about:blank"
-      sandbox="allow-forms allow-same-origin allow-downloads allow-popups allow-popups-to-escape-sandbox" referrerPolicy="no-referrer" />
+      sandbox="allow-forms allow-same-origin allow-downloads allow-popups allow-popups-to-escape-sandbox" referrerPolicy="no-referrer" onLoad={frameLoad} />
   </section>
 }
