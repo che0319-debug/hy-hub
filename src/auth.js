@@ -42,9 +42,39 @@ export function isAuthFailure(status) {
   return status === 401 || status === 403
 }
 
+export function tokenSecondsRemaining(token = getAccessToken()) {
+  if (!token) return 0
+  try {
+    const payload = token.split('.')[0].replace(/-/g, '+').replace(/_/g, '/')
+    const expiry = JSON.parse(atob(payload)).exp
+    return Number.isFinite(expiry) ? expiry - Math.floor(Date.now() / 1000) : 0
+  } catch { return 0 }
+}
+
+let refreshInFlight = null
+export function refreshAccessToken() {
+  if (!refreshInFlight) {
+    refreshInFlight = fetch(`${API_BASE}/api/auth/refresh`, {
+      method: 'POST', credentials: 'include', cache: 'no-store',
+    }).then(async response => {
+      const data = await response.json().catch(() => ({}))
+      if (!response.ok || !data.accessToken) return false
+      setAccessToken(data.accessToken)
+      return true
+    }).catch(() => false).finally(() => { refreshInFlight = null })
+  }
+  return refreshInFlight
+}
+
+export async function ensureAccessToken(minSeconds = 120) {
+  if (tokenSecondsRemaining() > minSeconds) return true
+  return refreshAccessToken()
+}
+
 export async function loginWithPassword(password) {
   const res = await fetch(`${API_BASE}/api/auth/login`, {
     method: 'POST',
+    credentials: 'include',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ password }),
     cache: 'no-store',
@@ -61,14 +91,13 @@ export async function loginWithPassword(password) {
 
 export async function validateSession() {
   const token = getAccessToken()
-  if (!token) return false
-  const res = await fetch(`${API_BASE}/api/auth/session`, {
-    headers: { Authorization: `Bearer ${token}` },
-    cache: 'no-store',
-  })
-  if (!res.ok) {
-    clearAccessToken()
-    return false
+  if (token && tokenSecondsRemaining(token) > 120) {
+    const res = await fetch(`${API_BASE}/api/auth/session`, {
+      headers: { Authorization: `Bearer ${token}` }, cache: 'no-store',
+    })
+    if (res.ok) return true
   }
-  return true
+  const restored = await refreshAccessToken()
+  if (!restored) clearAccessToken()
+  return restored
 }
