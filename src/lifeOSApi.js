@@ -231,7 +231,7 @@ export async function approveWorkspaceMilestone(projectId, milestoneId, workId) 
 }
 
 export async function fetchAIWorkPilot() {
-  return parseResponse(await fetch(`${API_BASE}/api/life-os/v1/ai-work`, { headers: { ...authHeaders() }, cache: 'no-store' }), 'fetchAIWorkPilot')
+  return parseResponse(await fetch(`${API_BASE}/api/ai-work-v3/summary`, { headers: { ...authHeaders() }, cache: 'no-store' }), 'fetchAIWorkPilot')
 }
 
 export async function createAIWorkPilotProject(payload) {
@@ -251,3 +251,4 @@ export async function promoteAIWork(payload) {
     method: 'POST', headers: { ...authHeaders(), 'Content-Type': 'application/json' }, body: JSON.stringify(payload),
   }), 'promoteAIWork')
 }
+
