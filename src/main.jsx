@@ -6,8 +6,8 @@ import './mobile/mobile-v2.css'
 import App from './App'
 import Home from './pages/Home'
 import Helpers from './pages/Helpers'
-import AIWorkPilot from './pages/AIWorkPilot'
-import AIWorkTest from './pages/AIWorkTest'
+import AIWorkV3 from './pages/AIWorkV3'
+import AIWorkEntry from './pages/AIWorkEntry'
 import LineHY from './pages/LineHY'
 import LineXiaoyin from './pages/LineXiaoyin'
 import Line950157 from './pages/Line950157'
@@ -34,8 +34,9 @@ function DesktopRoutes({ onMobileVersion }) {
         <Route path="helpers" element={<Helpers />} />
         <Route path="memory" element={<Navigate to="/helpers" replace />} />
         <Route path="workspace/*" element={<LegacyAIWorkRedirect />} />
-        <Route path="ai-work" element={<AIWorkPilot />} />
-        <Route path="ai-work-test/*" element={<AIWorkTest />} />
+        <Route path="ai-work" element={<AIWorkEntry />} />
+        <Route path="ai-work-v3-ready" element={<AIWorkV3 maintenance />} />
+        <Route path="ai-work-test/*" element={<Navigate to="/ai-work" replace />} />
         <Route path="research" element={<Navigate to="/ai-work" replace />} />
         <Route path="dispatch" element={<Navigate to="/ai-work" replace />} />
         <Route path="line/hy" element={<LineHY />} />
@@ -91,5 +92,6 @@ createRoot(document.getElementById('root')).render(
     </AuthGate>
   </StrictMode>
 )
+
 
 

@@ -16,7 +16,7 @@ export default function App({ onMobileVersion }) {
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const location = useLocation()
   const pilotRoute = location.pathname.startsWith('/ai-work')
-  const testRoute = location.pathname === '/ai-work-test' || location.pathname.startsWith('/ai-work-test/')
+  const testRoute = location.pathname === '/ai-work' || location.pathname === '/ai-work-v3-ready' || location.pathname === '/ai-work-test' || location.pathname.startsWith('/ai-work-test/')
 
   useEffect(() => {
     setSidebarOpen(false)

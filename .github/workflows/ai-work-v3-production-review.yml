@@ -1,0 +1,19 @@
+name: AI Work V3 frontend review
+on:
+  pull_request:
+    paths: ['src/**', '.github/workflows/ai-work-v3-production-review.yml']
+permissions:
+  contents: read
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+      - run: npm ci
+      - run: npm run build
+        env:
+          VITE_API_BASE: https://hy-agent-v2.onrender.com
