@@ -132,7 +132,7 @@ export default function AuthGate({ children }) {
         </form>
 
         <p className="mt-5 text-center text-xs text-slate-500">
-          工作階段只保留在目前的瀏覽器分頁。
+          登入後可在此瀏覽器保留最多 30 天；到期須重新登入。
         </p>
       </section>
     </main>
