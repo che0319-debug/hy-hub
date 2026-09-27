@@ -68,7 +68,7 @@ export default function App({ onMobileVersion }) {
           />
         )}
         <Sidebar open={sidebarOpen} pilot={pilotRoute} />
-        <main className={pilotRoute ? "pilot-main ml-0 md:ml-[216px] p-5 md:p-8 min-h-screen" : "ml-0 md:ml-[200px] pt-12 p-6 min-h-screen"}>
+        <main className={testRoute ? "ml-0 md:ml-[216px] h-[100dvh] overflow-hidden" : pilotRoute ? "pilot-main ml-0 md:ml-[216px] p-5 md:p-8 min-h-screen" : "ml-0 md:ml-[200px] pt-12 p-6 min-h-screen"}>
           <Outlet />
         </main>
       </div>
