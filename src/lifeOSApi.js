@@ -1,4 +1,4 @@
-import { authHeaders } from './auth'
+import { authHeaders, expireSession } from './auth'
 
 const API_BASE = import.meta.env.VITE_API_BASE || ''
 
@@ -231,7 +231,9 @@ export async function approveWorkspaceMilestone(projectId, milestoneId, workId) 
 }
 
 export async function fetchAIWorkPilot() {
-  return parseResponse(await fetch(`${API_BASE}/api/ai-work-v3/summary`, { headers: { ...authHeaders() }, cache: 'no-store' }), 'fetchAIWorkPilot')
+  const response = await fetch(`${API_BASE}/api/ai-work-v3/summary`, { headers: { ...authHeaders() }, cache: 'no-store' })
+  if (response.status === 401 || response.status === 403) expireSession()
+  return parseResponse(response, 'fetchAIWorkPilot')
 }
 
 export async function createAIWorkPilotProject(payload) {
@@ -251,4 +253,3 @@ export async function promoteAIWork(payload) {
     method: 'POST', headers: { ...authHeaders(), 'Content-Type': 'application/json' }, body: JSON.stringify(payload),
   }), 'promoteAIWork')
 }
-
