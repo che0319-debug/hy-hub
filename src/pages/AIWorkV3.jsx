@@ -1,11 +1,14 @@
 import { useEffect, useState } from 'react'
 import { authHeaders, ensureAccessToken, expireSession } from '../auth'
+import AIWorkSummary from '../components/AIWorkSummary'
+import './ai-work-pilot.css'
 
 const API_BASE = (import.meta.env.VITE_API_BASE || '').replace(/\/$/, '')
 
 export default function AIWorkV3({ maintenance = false }) {
   const [section, setSection] = useState('projects')
   const [projectTab, setProjectTab] = useState('goal')
+  const [projectFilter, setProjectFilter] = useState('all')
   const [inboxFilter, setInboxFilter] = useState('OPEN')
   const [inbox, setInbox] = useState([])
   const [openCount, setOpenCount] = useState(0)
@@ -215,18 +218,18 @@ export default function AIWorkV3({ maintenance = false }) {
     finally { setSubmitting('') }
   }
 
-  return <section className="flex h-full min-h-0 flex-col bg-white" aria-labelledby="ai-work-v3-title">
-    <header className="flex min-h-16 shrink-0 flex-wrap items-center justify-between gap-2 border-b px-4 py-2 pl-14 md:pl-6">
-      <h1 id="ai-work-v3-title" className="font-semibold">AI Work</h1>
-      <nav className="flex gap-2" aria-label="AI Work">
+  return <section className="pilot-page flex h-full min-h-0 flex-col" aria-labelledby="ai-work-v3-title">
+    <header className="pilot-heading shrink-0 flex-wrap px-4 pt-4 pl-14 md:px-6">
+      <div><h1 id="ai-work-v3-title">AI Work 區</h1><p>專案目標、執行進展與實際成果</p></div>
+      <nav className="pilot-filters" aria-label="AI Work">
         <button type="button" aria-current={section === 'projects' ? 'page' : undefined}
-          className={`min-h-11 rounded-md px-3 ${section === 'projects' ? 'bg-slate-900 text-white' : 'border'}`}
+          aria-pressed={section === 'projects'}
           onClick={() => { setSection('projects'); loadProjects() }}>專案</button>
         <button type="button" aria-current={section === 'inbox' ? 'page' : undefined}
-          className={`min-h-11 rounded-md px-3 ${section === 'inbox' ? 'bg-slate-900 text-white' : 'border'}`}
-          onClick={() => { setSection('inbox'); loadInbox(inboxFilter) }}>待確認 {openCount ? ` ${openCount}` : ''}</button>
+          aria-pressed={section === 'inbox'}
+          onClick={() => { setSection('inbox'); loadInbox(inboxFilter) }}>Inbox／待補與確認 {openCount ? ` ${openCount}` : ''}</button>
         <button type="button" aria-current={section === 'history' ? 'page' : undefined}
-          className={`min-h-11 rounded-md px-3 ${section === 'history' ? 'bg-slate-900 text-white' : 'border'}`}
+          aria-pressed={section === 'history'}
           onClick={() => { setSection('history'); loadHistory() }}>工作紀錄</button>
       </nav>
       {maintenance && <span className="text-xs text-slate-500">維護模式</span>}
@@ -236,20 +239,20 @@ export default function AIWorkV3({ maintenance = false }) {
         {inboxError && <p role="alert" className="rounded-lg bg-amber-50 p-4 text-amber-900">{inboxError}</p>}
         {!packageReady && <p role="status" className="rounded-lg border bg-white p-5">專案資料暫時無法讀取，請重新整理。</p>}
         {packageReady && (projectDetail ? <>
-          <button type="button" className="text-blue-700 underline" onClick={() => setProjectDetail(null)}>← AI Work</button>
+          <button type="button" className="pilot-back" onClick={() => setProjectDetail(null)}>← 返回 AI Work 區</button>
           <div className="rounded-xl border bg-white p-5">
-            <div className="flex flex-wrap items-start justify-between gap-3">
-              <h2 className="text-2xl font-bold text-slate-900">{projectDetail.title}</h2>
+            <div className="pilot-inner-head">
+              <h2>{projectDetail.title}</h2>
               <p className="text-sm">負責 {projectDetail.owner_bot}　{projectDetail.phase} {projectDetail.milestone_id || ''}　
-                <span className="rounded bg-amber-100 px-2 py-1">{statusText(projectDetail.status)}</span></p>
+                <span className="pilot-badge" data-status={projectDetail.status}>{statusText(projectDetail.status)}</span></p>
             </div>
             <p className="mt-3 text-sm text-slate-600">目前：{currentSituation(projectDetail)}　｜　下一步：{nextStep(projectDetail)}</p>
             {projectDetail.actions?.some(a => a.status === 'OPEN') && <button type="button" className="mt-4 w-full rounded-lg bg-amber-50 p-4 text-left text-amber-900" onClick={() => { setSection('inbox'); loadInbox('OPEN') }}>
               待你確認：{projectDetail.actions.filter(a => a.status === 'OPEN').length} 項　查看待確認 →
             </button>}
-            <nav className="mt-5 flex flex-wrap border-b" aria-label="專案分頁">
-              {[['goal','專案目標'],['spec','開發規格'],['log','開發日誌'],['folders','資料夾']].map(([key,label]) =>
-                <button key={key} type="button" className={`min-h-11 px-5 ${projectTab === key ? 'border-b-2 border-blue-600 font-semibold text-blue-700' : 'text-slate-600'}`} onClick={() => setProjectTab(key)}>{label}</button>)}
+            <nav className="pilot-tabs flex flex-wrap border-b" aria-label="專案分頁">
+              {[['goal','目標'],['spec','開發規格與進度'],['packages','工作包'],['log','開發日誌'],['results','成果'],['folders','資料夾／參考資料']].map(([key,label]) =>
+                <button key={key} type="button" className={projectTab === key ? 'border-b-2 border-blue-600 text-blue-700' : 'text-slate-500'} onClick={() => setProjectTab(key)}>{label}</button>)}
             </nav>
             {projectTab === 'goal' && <section className="space-y-3 py-5"><h3 className="text-lg font-semibold">專案目標</h3><p className="whitespace-pre-wrap">{projectDetail.goal}</p>{projectDetail.description && <p className="text-sm text-slate-600">{projectDetail.description}</p>}
               {projectDetail.plan_state === 'DRAFT' ? (goalDraft ? <form onSubmit={submitGoal} className="space-y-3 rounded-lg border p-4">
@@ -267,13 +270,20 @@ export default function AIWorkV3({ maintenance = false }) {
               {projectDetail.plan_history?.length > 0 && <details className="rounded-lg border p-4"><summary className="cursor-pointer font-semibold">先前草案紀錄（{projectDetail.plan_history.length}）</summary>
                 {projectDetail.plan_history.map((item,i) => <article key={i} className="mt-3 border-t pt-3"><p className="text-sm text-slate-600">{item.reason} · {new Date(item.archived_at * 1000).toLocaleString('zh-TW')}</p><p>{item.result?.summary}</p></article>)}
               </details>}
-              <h3 className="text-lg font-semibold">工作包</h3>
+            </section>}
+            {projectTab === 'packages' && <section className="space-y-4 py-5"><h3 className="text-lg font-semibold">工作包</h3>
               <div className="space-y-3">{projectDetail.packages.map(item => <article key={item.id} className="rounded-lg border p-4">
                 <p className="text-xs text-slate-500">{item.milestone_id || '規劃期'} · {item.executor} · {item.status}</p>
                 <h4 className="mt-1 font-semibold">{item.task}</h4>
                 {item.result?.summary && <p className="mt-2 whitespace-pre-wrap">{item.result.summary}</p>}
                 {item.result?.reason && <p className="mt-2">{item.result.reason}</p>}
               </article>)}</div>
+            </section>}
+            {projectTab === 'results' && <section className="space-y-4 py-5"><h3 className="text-lg font-semibold">成果</h3>
+              {projectDetail.packages.filter(item => item.result?.status === 'COMPLETED').map(item => <article key={item.id} className="pilot-result-summary"><h4 className="font-semibold">{item.task}</h4><p className="whitespace-pre-wrap">{item.result.summary}</p>
+                {item.result.outputs?.map((output, i) => <p key={i} className="mt-2 whitespace-pre-wrap">{typeof output === 'string' ? output : JSON.stringify(output)}</p>)}</article>)}
+              {projectDetail.files?.map(file => <p key={file.file_id}><a className="pilot-folder" href={`https://drive.google.com/file/d/${encodeURIComponent(file.file_id)}/view`} target="_blank" rel="noreferrer">{file.filename}</a></p>)}
+              {!projectDetail.packages.some(item => item.result?.status === 'COMPLETED') && !projectDetail.files?.length && <p>尚無交付成果。</p>}
             </section>}
             {projectTab === 'log' && <section className="space-y-3 py-5"><h3 className="text-lg font-semibold">工作紀錄</h3>
               <form onSubmit={submitNote} className="rounded-lg border p-4"><label className="block font-semibold">新增工作日誌<textarea required maxLength={10000} value={noteDraft} onChange={e => setNoteDraft(e.target.value)} className="mt-2 block min-h-24 w-full rounded border p-3" /></label><button disabled={!!submitting} className="mt-3 min-h-11 rounded bg-slate-900 px-4 text-white disabled:opacity-50">寫入日誌</button></form>
@@ -296,11 +306,10 @@ export default function AIWorkV3({ maintenance = false }) {
               </form>
             </details>
           </div>
-          <div className="grid grid-cols-2 gap-2 md:grid-cols-5">{[['ai_pending','待 AI 處理'],['ai_running','進行中'],['confirmation','等待確認'],['completed','完成'],['all','全部專案']].map(([key,label]) =>
-            <div key={key} className="rounded-lg border bg-white p-3"><strong>{key === 'all' ? projects.length : projects.filter(p => p.status === key).length}</strong><p className="text-sm">{label}</p></div>)}</div>
-          <div className="overflow-x-auto rounded-xl border bg-white"><table className="w-full min-w-[800px] text-left text-sm"><thead className="bg-slate-50"><tr>{['專案／Phase','負責 Bot','狀態','目前狀況','下一步'].map(x => <th key={x} className="p-4">{x}</th>)}</tr></thead>
-            <tbody>{projects.map(item => <tr key={item.id} className="border-t align-top"><td className="p-4"><button type="button" className="font-semibold text-blue-700 underline" onClick={() => openProject(item.id)}>{item.title}</button><p className="mt-1 text-slate-500">{item.phase} {item.milestone_id || ''}</p></td><td className="p-4">{item.owner_bot}</td><td className="p-4">{statusText(item.status)}</td><td className="p-4">{currentSituation(item)}</td><td className="p-4">{nextStep(item)}</td></tr>)}</tbody>
-          </table>{projects.length === 0 && <p className="p-5">目前沒有專案。</p>}</div>
+          <AIWorkSummary summary={{...Object.fromEntries(['ai_pending','ai_running','confirmation','completed'].map(status => [status,projects.filter(p => p.status === status).length])),all:projects.length}} onOpen={setProjectFilter} activeFilter={projectFilter} />
+          <div className="pilot-list"><div className="pilot-list-content"><div className="pilot-columns pilot-grid"><span>專案名稱／目標</span><span>負責 Bot</span><span>狀態</span><span>目前狀況</span><span>下一步</span><span>階段</span></div>
+            {projects.filter(p => projectFilter === 'all' || p.status === projectFilter).map(item => <button type="button" key={item.id} className="pilot-row pilot-grid" data-needs-review={item.status === 'confirmation'} onClick={() => openProject(item.id)}><span className="pilot-project"><span className="pilot-thumb">📁</span><span><b>{item.title}</b><small className="pilot-goal-summary">{item.goal}</small></span></span><span className="pilot-owner">{item.owner_bot}</span><span><span className="pilot-badge" data-status={item.status}>{statusText(item.status)}</span></span><span className="pilot-current">{currentSituation(item)}</span><span className="pilot-next">{nextStep(item)}</span><span className="pilot-phase">{item.phase} {item.milestone_id || ''}</span></button>)}
+            {!projects.length && <p className="pilot-empty">目前沒有專案。</p>}</div></div>
         </>)}
       </div>
     </div>}
