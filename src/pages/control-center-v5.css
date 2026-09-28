@@ -91,8 +91,7 @@
 .cc5-log li>div{display:flex;flex-direction:column;gap:3px;min-width:0}
 .cc5-clamp{display:-webkit-box;-webkit-line-clamp:4;-webkit-box-orient:vertical;overflow:hidden}
 .cc5-actor{align-self:flex-start;padding:1px 8px;border-radius:6px;font-size:12px;font-weight:500;background:#e3ecf8;color:#1c4e8a}
-.cc5-actor[data-actor=HY]{background:var(--ink);color:#fff}
-.cc5-actor[data-actor="Grok Bot"]{background:#e1efea;color:var(--accent)}
+.cc5-actor[data-actor=人工]{background:#e1efea;color:var(--accent)}
 .cc5-actor[data-actor=系統]{background:var(--soft);color:#4a4741}
 @media(max-width:767px){.cc5 h1{font-size:22px}}
 .cc5-ul,.cc5-md ul{list-style:disc}

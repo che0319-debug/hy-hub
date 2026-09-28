@@ -33,7 +33,6 @@ const ACTION_TYPE = {
   CHOICE: '選方案',
   EXTERNAL_ACTION: '對外行動',
 }
-const ACTORS = { owner: 'HY', hy: 'HY', grok: 'Grok Bot', grok_bot: 'Grok Bot', system: '系統' }
 const EXECUTORS = { GPT_CHAT: 'GPT', CHATGPT_WORK: 'ChatGPT Work', CODEX: 'Codex' }
 const TABS = [['overview', '概況'], ['inbox', '待確認'], ['plan', '規劃書'], ['outputs', '產出'], ['log', '工作紀錄']]
 const FILTERS = [['all', '全部'], ['open', '待確認'], ['active', '進行中'], ['completed', '完成']]
@@ -371,16 +370,16 @@ function WorkLog({ project }) {
     }
     for (const a of project.actions || []) {
       if (a.created_at) list.push({ at: a.created_at, actor: '系統', kind: 'system', text: `建立待確認：${a.title}`, detail: ACTION_TYPE[a.action_type] || a.action_type })
-      if (a.resolved_at) list.push({ at: a.resolved_at, actor: ACTORS[a.resolved_by] || a.resolved_by || 'HY', kind: 'human', text: `處理待確認：${a.title}`, detail: typeof a.answer === 'string' ? firstLine(a.answer) : a.answer?.decision || '' })
+      if (a.resolved_at) list.push({ at: a.resolved_at, actor: '人工', kind: 'human', text: `處理待確認：${a.title}`, detail: typeof a.answer === 'string' ? firstLine(a.answer) : a.answer?.decision || '' })
     }
-    for (const n of project.notes || []) list.push({ at: n.created_at, actor: ACTORS[n.author] || n.author, kind: 'human', text: n.content, detail: '工作日誌' })
+    for (const n of project.notes || []) list.push({ at: n.created_at, actor: '人工', kind: 'human', text: n.content, detail: '工作日誌' })
     return list.sort((a, b) => b.at - a.at)
   }, [project])
   const shown = entries.filter(e => who === 'all' || e.kind === who)
   const groups = shown.reduce((acc, e) => { const k = dayKey(e.at); (acc[k] ||= []).push(e); return acc }, {})
   return <div className="cc5-stack">
     <div role="group" aria-label="篩選紀錄" className="cc5-chips">
-      {[['all', '全部'], ['ai', 'AI'], ['human', '人／Bot'], ['system', '系統']].map(([k, l]) => <button key={k} type="button" aria-pressed={who === k} onClick={() => setWho(k)}>{l}</button>)}
+      {[['all', '全部'], ['ai', 'AI'], ['human', '人工'], ['system', '系統']].map(([k, l]) => <button key={k} type="button" aria-pressed={who === k} onClick={() => setWho(k)}>{l}</button>)}
     </div>
     {!shown.length && <p className="cc5-empty">沒有紀錄。</p>}
     {Object.entries(groups).map(([day, list]) => <section key={day}>
