@@ -231,9 +231,12 @@ export async function approveWorkspaceMilestone(projectId, milestoneId, workId) 
 }
 
 export async function fetchAIWorkPilot() {
-  const response = await fetch(`${API_BASE}/api/ai-work-v3/summary`, { headers: { ...authHeaders() }, cache: 'no-store' })
+  const response = await fetch(`${API_BASE}/api/ai-work-packages/projects`, { headers: { ...authHeaders() }, cache: 'no-store' })
   if (response.status === 401 || response.status === 403) expireSession()
-  return parseResponse(response, 'fetchAIWorkPilot')
+  const projects = await parseResponse(response, 'fetchAIWorkPilot')
+  const summary = Object.fromEntries(['ai_pending', 'ai_running', 'confirmation', 'completed']
+    .map(status => [status, projects.filter(project => project.status === status).length]))
+  return { projects, summary: { ...summary, all: projects.length } }
 }
 
 export async function createAIWorkPilotProject(payload) {
