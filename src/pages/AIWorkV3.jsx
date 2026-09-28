@@ -335,7 +335,7 @@ export default function AIWorkV3({ maintenance = false }) {
           <p className="mt-2">{item.question}</p>
           <p className="mt-2 text-sm text-slate-600">原因：{item.reason}</p>
           <p className="mt-1 text-sm text-slate-600">指派：{item.assigned_to} · {item.authority_mode === 'OWNER_ONLY' ? '僅本人' : '可代理'} · {item.status === 'OPEN' ? '待處理' : '已處理'}</p>
-          {item.plan && <details className="mt-3 rounded-lg bg-slate-50 p-3"><summary className="cursor-pointer">查看規劃書 DRAFT</summary><pre className="mt-3 overflow-auto whitespace-pre-wrap text-xs">{JSON.stringify(item.plan, null, 2)}</pre></details>}
+          {item.plan && <details className="mt-3 rounded-lg bg-slate-50 p-3"><summary className="cursor-pointer font-semibold">查看規劃書 DRAFT</summary><div className="mt-4"><PlanView plan={item.plan} /></div></details>}
           {item.status === 'OPEN' && (item.action_type === 'PLAN_APPROVAL' ?
             <div className="mt-4 space-y-2"><label className="block">修改意見<textarea className="mt-1 block min-h-20 w-full rounded border p-3" value={revisionFeedback[item.action_id] || ''} onChange={e => setRevisionFeedback(v => ({...v,[item.action_id]:e.target.value}))} /></label><div className="flex gap-2"><button type="button" disabled={!!submitting || !item.plan}
               className="min-h-11 rounded-md bg-slate-900 px-4 text-white disabled:opacity-50"
