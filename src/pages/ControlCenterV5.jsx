@@ -29,7 +29,8 @@ const PACKAGE_STATUS = {
 const ACTION_TYPE = {
   PLAN_APPROVAL: '核准規劃書',
   MILESTONE_REVIEW: 'Milestone 驗收',
-  NEED_INPUT: '補資料',
+  SUPPLEMENT: '補資料',
+  CAPABILITY_GAP: '能力不足',
   CHOICE: '選方案',
   EXTERNAL_ACTION: '對外行動',
 }
