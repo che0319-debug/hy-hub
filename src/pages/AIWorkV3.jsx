@@ -264,6 +264,9 @@ export default function AIWorkV3({ maintenance = false }) {
               <h3 className="text-lg font-semibold">執行規劃書 · {projectDetail.plan_state === 'APPROVED' ? 'APPROVED' : 'DRAFT'}</h3>
               {projectDetail.packages.some(p => p.type === 'PROJECT_PLANNING' && p.status !== 'COMPLETED' && p.result?.plan) && <p className="rounded bg-amber-50 p-3 text-amber-900">以下為保留的前版草案；規劃工作包正在依修訂意見重新處理，尚不可核准此版本。</p>}
               {planFor(projectDetail) ? <PlanView plan={planFor(projectDetail)} /> : <p>規劃工作包尚未交件。</p>}
+              {projectDetail.plan_history?.length > 0 && <details className="rounded-lg border p-4"><summary className="cursor-pointer font-semibold">先前草案紀錄（{projectDetail.plan_history.length}）</summary>
+                {projectDetail.plan_history.map((item,i) => <article key={i} className="mt-3 border-t pt-3"><p className="text-sm text-slate-600">{item.reason} · {new Date(item.archived_at * 1000).toLocaleString('zh-TW')}</p><p>{item.result?.summary}</p></article>)}
+              </details>}
               <h3 className="text-lg font-semibold">工作包</h3>
               <div className="space-y-3">{projectDetail.packages.map(item => <article key={item.id} className="rounded-lg border p-4">
                 <p className="text-xs text-slate-500">{item.milestone_id || '規劃期'} · {item.executor} · {item.status}</p>
