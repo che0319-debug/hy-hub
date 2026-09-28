@@ -20,6 +20,7 @@ export default function AIWorkV3({ maintenance = false }) {
   const [submitting, setSubmitting] = useState('')
   const [referenceDraft, setReferenceDraft] = useState({ title: '', url: '' })
   const [projectUpload, setProjectUpload] = useState(null)
+  const [noteDraft, setNoteDraft] = useState('')
 
   async function loadInbox(filter = inboxFilter) {
     try {
@@ -125,6 +126,23 @@ export default function AIWorkV3({ maintenance = false }) {
     finally { setSubmitting('') }
   }
 
+  async function submitNote(event) {
+    event.preventDefault()
+    if (!projectDetail) return
+    setSubmitting('note')
+    try {
+      const response = await fetch(`${API_BASE}/api/ai-work-packages/projects/${encodeURIComponent(projectDetail.id)}/notes`, {
+        method: 'POST', headers: { ...authHeaders(), 'Content-Type': 'application/json' },
+        body: JSON.stringify({ content:noteDraft }),
+      })
+      if (!response.ok) throw new Error((await response.json().catch(() => ({}))).detail || '工作日誌寫入失敗。')
+      setNoteDraft('')
+      await openProject(projectDetail.id)
+      setProjectTab('log')
+    } catch (reason) { setInboxError(reason.message) }
+    finally { setSubmitting('') }
+  }
+
   useEffect(() => {
     loadInbox('OPEN')
     loadProjects()
@@ -226,6 +244,8 @@ export default function AIWorkV3({ maintenance = false }) {
               </article>)}</div>
             </section>}
             {projectTab === 'log' && <section className="space-y-3 py-5"><h3 className="text-lg font-semibold">工作紀錄</h3>
+              <form onSubmit={submitNote} className="rounded-lg border p-4"><label className="block font-semibold">新增工作日誌<textarea required maxLength={10000} value={noteDraft} onChange={e => setNoteDraft(e.target.value)} className="mt-2 block min-h-24 w-full rounded border p-3" /></label><button disabled={!!submitting} className="mt-3 min-h-11 rounded bg-slate-900 px-4 text-white disabled:opacity-50">寫入日誌</button></form>
+              {projectDetail.notes?.map(note => <article key={note.id} className="rounded-lg border p-4"><p className="text-xs text-slate-500">{note.author} · {new Date(note.created_at * 1000).toLocaleString('zh-TW')}</p><p className="mt-2 whitespace-pre-wrap">{note.content}</p></article>)}
               {projectDetail.packages.map(item => <article key={item.id} className="border-b py-3"><b>{item.task}</b><p className="text-sm text-slate-600">{item.milestone_id || '規劃期'} · {item.status} · 第 {item.attempt} 次執行</p>{item.result?.summary && <p>{item.result.summary}</p>}</article>)}
             </section>}
             {projectTab === 'folders' && <FolderView project={projectDetail} draft={referenceDraft} setDraft={setReferenceDraft} onSubmit={submitReference} file={projectUpload} setFile={setProjectUpload} onUpload={uploadProjectFile} submitting={!!submitting} />}
