@@ -15,6 +15,7 @@ export default function AIWorkV3({ maintenance = false }) {
   const [newProject, setNewProject] = useState({ title: '', goal: '', description: '', owner_bot: 'hy' })
   const [inboxError, setInboxError] = useState('')
   const [answer, setAnswer] = useState({})
+  const [files, setFiles] = useState({})
   const [submitting, setSubmitting] = useState('')
   const [attempt, setAttempt] = useState(0)
   const [ticket, setTicket] = useState('')
@@ -101,12 +102,30 @@ export default function AIWorkV3({ maintenance = false }) {
   async function submitAction(item, value) {
     setSubmitting(item.action_id)
     try {
+      const attachments = []
+      for (const file of files[item.action_id] || []) {
+        if (file.size > 8 * 1024 * 1024) throw new Error('單一附件上限為 8 MB。')
+        const bytes = new Uint8Array(await file.arrayBuffer())
+        let binary = ''
+        for (let offset = 0; offset < bytes.length; offset += 32768) {
+          binary += String.fromCharCode(...bytes.subarray(offset, offset + 32768))
+        }
+        const upload = await fetch(`${API_BASE}/api/ai-work-packages/inbox/${encodeURIComponent(item.action_id)}/attachments`, {
+          method: 'POST', headers: { ...authHeaders(), 'Content-Type': 'application/json' },
+          body: JSON.stringify({ request_key: crypto.randomUUID(), filename: file.name,
+            mime_type: file.type || 'application/octet-stream', data_base64: btoa(binary) }),
+        })
+        if (!upload.ok) throw new Error((await upload.json().catch(() => ({}))).detail || '附件上傳失敗。')
+        attachments.push((await upload.json()).file_id)
+      }
       const response = await fetch(`${API_BASE}/api/ai-work-packages/inbox/${encodeURIComponent(item.action_id)}/resolve`, {
         method: 'POST', headers: { ...authHeaders(), 'Content-Type': 'application/json' },
-        body: JSON.stringify({ answer: value, ...(value === 'APPROVED' && item.plan ? { plan: item.plan } : {}) }),
+        body: JSON.stringify({ answer: value, attachments,
+          ...(value === 'APPROVED' && item.plan ? { plan: item.plan } : {}) }),
       })
       if (!response.ok) throw new Error((await response.json().catch(() => ({}))).detail || '提交失敗，請重試。')
       setAnswer(previous => ({ ...previous, [item.action_id]: '' }))
+      setFiles(previous => ({ ...previous, [item.action_id]: [] }))
       await loadInbox(inboxFilter)
       if (inboxFilter !== 'OPEN') {
         const response = await fetch(`${API_BASE}/api/ai-work-packages/inbox?status=OPEN`, {
@@ -270,6 +289,8 @@ export default function AIWorkV3({ maintenance = false }) {
               <label htmlFor={`answer-${item.action_id}`}>回答</label>
               <textarea id={`answer-${item.action_id}`} required className="min-h-24 rounded-md border p-3"
                 value={answer[item.action_id] || ''} onChange={event => setAnswer(previous => ({ ...previous, [item.action_id]: event.target.value }))} />
+              <label>附件<input type="file" multiple className="mt-1 block" onChange={event =>
+                setFiles(previous => ({ ...previous, [item.action_id]: Array.from(event.target.files || []) }))} /></label>
               <button type="submit" disabled={!!submitting} className="min-h-11 self-start rounded-md bg-slate-900 px-4 text-white disabled:opacity-50">提交</button>
             </form>)}
         </article>)}
