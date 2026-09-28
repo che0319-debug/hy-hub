@@ -6,6 +6,7 @@ const KAWAYU_ID = 'v3prod-project-9a9433e8-013a-4bd8-836f-5fc69698182b'
 
 export default function AIWorkV3({ maintenance = false }) {
   const [section, setSection] = useState('projects')
+  const [projectView, setProjectView] = useState('original')
   const [inboxFilter, setInboxFilter] = useState('OPEN')
   const [inbox, setInbox] = useState([])
   const [openCount, setOpenCount] = useState(0)
@@ -227,14 +228,22 @@ export default function AIWorkV3({ maintenance = false }) {
           className={`min-h-11 rounded-md px-3 ${section === 'history' ? 'bg-slate-900 text-white' : 'border'}`}
           onClick={() => { setSection('history'); loadHistory() }}>工作紀錄</button>
       </nav>
-      {!projects.some(project => project.id === KAWAYU_ID) &&
+      {projectView === 'packages' && !projects.some(project => project.id === KAWAYU_ID) &&
         <button type="button" disabled={migrating} className="min-h-11 rounded-md border px-3 disabled:opacity-50"
           onClick={migrateKawayu}>{migrating ? '移入中…' : '移入川嶼到新架構'}</button>}
       {maintenance && ticket && <a className="min-h-11 rounded-md border px-3 py-2" href={`${API_BASE}/ai-work-v3/ui/legacy-reset`} target="ai-work-v3-frame">檢查舊案清除清單</a>}
       <button type="button" className="min-h-11 rounded-md border px-3" onClick={() => { retries.current = 0; setAttempt(value => value + 1) }}>重新連線</button>
     </header>
+    {section === 'projects' && <div className="flex shrink-0 gap-2 border-b bg-white px-4 py-2 md:px-6">
+      <button type="button" aria-pressed={projectView === 'original'}
+        className={`min-h-10 rounded-md px-3 ${projectView === 'original' ? 'bg-slate-900 text-white' : 'border'}`}
+        onClick={() => setProjectView('original')}>原專案畫面與資料夾</button>
+      <button type="button" aria-pressed={projectView === 'packages'}
+        className={`min-h-10 rounded-md px-3 ${projectView === 'packages' ? 'bg-slate-900 text-white' : 'border'}`}
+        onClick={() => { setProjectView('packages'); loadProjects() }}>新工作包</button>
+    </div>}
     {inboxError && section === 'projects' && !packageReady && <p role="alert" className="m-4 rounded-lg bg-amber-50 p-4 text-amber-900">{inboxError}</p>}
-    {section === 'projects' && packageReady && <div className="min-h-0 flex-1 overflow-auto bg-slate-50 p-4 md:p-6">
+    {section === 'projects' && projectView === 'packages' && packageReady && <div className="min-h-0 flex-1 overflow-auto bg-slate-50 p-4 md:p-6">
       <div className="mx-auto max-w-4xl space-y-4">
         {inboxError && <p role="alert" className="rounded-lg bg-amber-50 p-4 text-amber-900">{inboxError}</p>}
         {projectDetail ? <>
@@ -271,9 +280,9 @@ export default function AIWorkV3({ maintenance = false }) {
         </>}
       </div>
     </div>}
-    {section === 'projects' && !packageReady && error && <p role="alert" className="m-4 rounded-lg bg-amber-50 p-4 text-amber-900">{error}</p>}
-    {section === 'projects' && !packageReady && !ticket && !error && <p role="status" className="p-4">確認 HY Life OS 登入…</p>}
-    {section === 'projects' && !packageReady && ticket && !frameLoaded && !error && <p role="status" className="p-4">正在載入 AI Work 專案清單…</p>}
+    {section === 'projects' && projectView === 'original' && error && <p role="alert" className="m-4 rounded-lg bg-amber-50 p-4 text-amber-900">{error}</p>}
+    {section === 'projects' && projectView === 'original' && !ticket && !error && <p role="status" className="p-4">確認 HY Life OS 登入…</p>}
+    {section === 'projects' && projectView === 'original' && ticket && !frameLoaded && !error && <p role="status" className="p-4">正在載入 AI Work 專案清單…</p>}
     {section === 'history' && <div className="min-h-0 flex-1 overflow-auto bg-slate-50 p-4 md:p-6">
       <div className="mx-auto max-w-4xl space-y-3">
         {inboxError && <p role="alert" className="rounded-lg bg-amber-50 p-4 text-amber-900">{inboxError}</p>}
@@ -330,7 +339,7 @@ export default function AIWorkV3({ maintenance = false }) {
       <input name="ticket" type="hidden" value={ticket} readOnly />
     </form>
     <iframe key={attempt} name="ai-work-v3-frame" title="AI Work 操作區"
-      className={`min-h-0 w-full flex-1 border-0 bg-white ${section !== 'projects' || packageReady ? 'hidden' : ''}`} src="about:blank"
+      className={`min-h-0 w-full flex-1 border-0 bg-white ${section !== 'projects' || projectView !== 'original' ? 'hidden' : ''}`} src="about:blank"
       sandbox="allow-forms allow-same-origin allow-downloads allow-popups allow-popups-to-escape-sandbox" referrerPolicy="no-referrer" onLoad={frameLoad} />
   </section>
 }
