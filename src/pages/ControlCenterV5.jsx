@@ -232,7 +232,8 @@ function milestoneRows(project, plan) {
 function Overview({ project, plan, openCount, goInbox }) {
   const s = situation(project, openCount)
   const rows = milestoneRows(project, plan)
-  const missing = plan?.missing_inputs || []
+  // Missing inputs live in the inbox as project-level 補資料 items; they never block AI work.
+  const missing = (project.actions || []).filter(a => !a.work_package_id && a.action_type === 'SUPPLEMENT')
   return <div className="cc5-stack">
     <section className="cc5-panel">
       <h2 className="cc5-label">Goal</h2>
@@ -256,8 +257,13 @@ function Overview({ project, plan, openCount, goInbox }) {
       </div>)}
     </section>
     {missing.length > 0 && <section className="cc5-panel">
-      <h2 className="cc5-h">待補資料</h2>
-      <ul className="cc5-ul">{missing.map((x, i) => <li key={i}>{typeof x === 'string' ? x : JSON.stringify(x)}</li>)}</ul>
+      <div className="cc5-row"><h2 className="cc5-h">待補資料</h2>
+        <span className="cc5-small">{missing.filter(a => a.status === 'OPEN').length} 項待補・不影響 AI 推進</span></div>
+      {missing.map(a => <div key={a.action_id} className="cc5-row">
+        <span className="cc5-line">{a.title}</span>
+        <Pill tone={a.status === 'OPEN' ? 'amber' : 'green'}>{a.status === 'OPEN' ? '待補' : '已補'}</Pill>
+      </div>)}
+      {missing.some(a => a.status === 'OPEN') && <button type="button" className="cc5-link" onClick={goInbox}>到待確認補資料 ›</button>}
     </section>}
   </div>
 }
