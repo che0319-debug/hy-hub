@@ -1,12 +1,11 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { authHeaders, ensureAccessToken, expireSession } from '../auth'
 
 const API_BASE = (import.meta.env.VITE_API_BASE || '').replace(/\/$/, '')
-const KAWAYU_ID = 'v3prod-project-9a9433e8-013a-4bd8-836f-5fc69698182b'
 
 export default function AIWorkV3({ maintenance = false }) {
   const [section, setSection] = useState('projects')
-  const [projectView, setProjectView] = useState('original')
+  const [projectTab, setProjectTab] = useState('goal')
   const [inboxFilter, setInboxFilter] = useState('OPEN')
   const [inbox, setInbox] = useState([])
   const [openCount, setOpenCount] = useState(0)
@@ -14,19 +13,11 @@ export default function AIWorkV3({ maintenance = false }) {
   const [projects, setProjects] = useState([])
   const [projectDetail, setProjectDetail] = useState(null)
   const [packageReady, setPackageReady] = useState(false)
-  const [migrating, setMigrating] = useState(false)
   const [newProject, setNewProject] = useState({ title: '', goal: '', description: '', owner_bot: 'hy' })
   const [inboxError, setInboxError] = useState('')
   const [answer, setAnswer] = useState({})
   const [files, setFiles] = useState({})
   const [submitting, setSubmitting] = useState('')
-  const [attempt, setAttempt] = useState(0)
-  const [ticket, setTicket] = useState('')
-  const [error, setError] = useState('')
-  const form = useRef(null)
-  const submitted = useRef('')
-  const [frameLoaded, setFrameLoaded] = useState(false)
-  const retries = useRef(0)
 
   async function loadInbox(filter = inboxFilter) {
     try {
@@ -73,6 +64,7 @@ export default function AIWorkV3({ maintenance = false }) {
       })
       if (!response.ok) throw new Error('專案資料暫時無法讀取。')
       setProjectDetail(await response.json())
+      setProjectTab('goal')
       setInboxError('')
     } catch (reason) { setInboxError(reason.message) }
   }
@@ -88,30 +80,6 @@ export default function AIWorkV3({ maintenance = false }) {
       setNewProject({ title: '', goal: '', description: '', owner_bot: 'hy' })
       await loadProjects()
     } catch (reason) { setInboxError(reason.message) }
-  }
-
-  async function migrateKawayu() {
-    setMigrating(true)
-    setInboxError('')
-    try {
-      const ok = await ensureAccessToken()
-      if (!ok) { expireSession(); return }
-      const initialized = await fetch(`${API_BASE}/api/ai-work-packages/initialize`, {
-        method: 'POST', headers: authHeaders(),
-      })
-      if (!initialized.ok && initialized.status !== 409) {
-        throw new Error((await initialized.json().catch(() => ({}))).detail || '工作包資料初始化失敗。')
-      }
-      const migrated = await fetch(`${API_BASE}/api/ai-work-packages/migrate-v3/${KAWAYU_ID}`, {
-        method: 'POST', headers: authHeaders(),
-      })
-      if (!migrated.ok) {
-        throw new Error((await migrated.json().catch(() => ({}))).detail || '川嶼專案移入失敗。')
-      }
-      await loadProjects()
-      await loadInbox('OPEN')
-    } catch (reason) { setInboxError(reason.message) }
-    finally { setMigrating(false) }
   }
 
   useEffect(() => {
@@ -154,6 +122,8 @@ export default function AIWorkV3({ maintenance = false }) {
       setAnswer(previous => ({ ...previous, [item.action_id]: '' }))
       setFiles(previous => ({ ...previous, [item.action_id]: [] }))
       await loadInbox(inboxFilter)
+      await loadProjects()
+      if (projectDetail?.id === item.project_id) await openProject(item.project_id)
       if (inboxFilter !== 'OPEN') {
         const response = await fetch(`${API_BASE}/api/ai-work-packages/inbox?status=OPEN`, {
           headers: authHeaders(), cache: 'no-store',
@@ -162,56 +132,6 @@ export default function AIWorkV3({ maintenance = false }) {
       }
     } catch (reason) { setInboxError(reason.message) }
     finally { setSubmitting('') }
-  }
-
-  useEffect(() => {
-    let active = true
-    setTicket(''); setError(''); setFrameLoaded(false); submitted.current = ''
-    ensureAccessToken().then(ok => {
-      if (!ok) { if (active) expireSession(); return null }
-      return fetch(`${API_BASE}/api/ai-work-v3/session`, {
-      method: 'POST', headers: { ...authHeaders(), 'Content-Type': 'application/json' },
-      body: '{}', cache: 'no-store',
-      })
-    }).then(async response => {
-      if (!response) return
-      if (response.status === 401) { if (active) expireSession(); return }
-      const result = await response.json().catch(() => ({}))
-      if (!response.ok || !result.ticket) throw new Error('AI Work 連線未完成，請重新連線；尚未執行或核准工作。')
-      if (active) setTicket(result.ticket)
-    }).catch(reason => { if (active) setError(reason.message) })
-    return () => { active = false }
-  }, [attempt])
-
-  useEffect(() => {
-    if (ticket && submitted.current !== ticket && form.current) {
-      submitted.current = ticket
-      form.current.submit()
-    }
-  }, [ticket])
-
-  useEffect(() => {
-    if (!ticket || frameLoaded) return
-    const timer = window.setTimeout(() => {
-      if (retries.current < 1) {
-        retries.current += 1
-        setAttempt(value => value + 1)
-      } else {
-        setError('AI Work 畫面未載入，請按重新連線；本次沒有執行或核准工作。')
-      }
-    }, 12000)
-    return () => window.clearTimeout(timer)
-  }, [ticket, frameLoaded])
-
-  function frameLoad(event) {
-    if (!submitted.current) return
-    try {
-      if (event.currentTarget.contentWindow?.location.href === 'about:blank') return
-    } catch {
-      // The V3 page is on the separate, expected API origin.
-    }
-    setFrameLoaded(true)
-    retries.current = 0
   }
 
   return <section className="flex h-full min-h-0 flex-col bg-white" aria-labelledby="ai-work-v3-title">
@@ -228,61 +148,67 @@ export default function AIWorkV3({ maintenance = false }) {
           className={`min-h-11 rounded-md px-3 ${section === 'history' ? 'bg-slate-900 text-white' : 'border'}`}
           onClick={() => { setSection('history'); loadHistory() }}>工作紀錄</button>
       </nav>
-      {projectView === 'packages' && !projects.some(project => project.id === KAWAYU_ID) &&
-        <button type="button" disabled={migrating} className="min-h-11 rounded-md border px-3 disabled:opacity-50"
-          onClick={migrateKawayu}>{migrating ? '移入中…' : '移入川嶼到新架構'}</button>}
-      {maintenance && ticket && <a className="min-h-11 rounded-md border px-3 py-2" href={`${API_BASE}/ai-work-v3/ui/legacy-reset`} target="ai-work-v3-frame">檢查舊案清除清單</a>}
-      <button type="button" className="min-h-11 rounded-md border px-3" onClick={() => { retries.current = 0; setAttempt(value => value + 1) }}>重新連線</button>
+      {maintenance && <span className="text-xs text-slate-500">維護模式</span>}
     </header>
-    {section === 'projects' && <div className="flex shrink-0 gap-2 border-b bg-white px-4 py-2 md:px-6">
-      <button type="button" aria-pressed={projectView === 'original'}
-        className={`min-h-10 rounded-md px-3 ${projectView === 'original' ? 'bg-slate-900 text-white' : 'border'}`}
-        onClick={() => setProjectView('original')}>原專案畫面與資料夾</button>
-      <button type="button" aria-pressed={projectView === 'packages'}
-        className={`min-h-10 rounded-md px-3 ${projectView === 'packages' ? 'bg-slate-900 text-white' : 'border'}`}
-        onClick={() => { setProjectView('packages'); loadProjects() }}>新工作包</button>
-    </div>}
-    {inboxError && section === 'projects' && !packageReady && <p role="alert" className="m-4 rounded-lg bg-amber-50 p-4 text-amber-900">{inboxError}</p>}
-    {section === 'projects' && projectView === 'packages' && packageReady && <div className="min-h-0 flex-1 overflow-auto bg-slate-50 p-4 md:p-6">
-      <div className="mx-auto max-w-4xl space-y-4">
+    {section === 'projects' && <div className="min-h-0 flex-1 overflow-auto bg-slate-50 p-4 md:p-6">
+      <div className="mx-auto max-w-6xl space-y-4">
         {inboxError && <p role="alert" className="rounded-lg bg-amber-50 p-4 text-amber-900">{inboxError}</p>}
-        {projectDetail ? <>
-          <button type="button" className="min-h-11 rounded-md border bg-white px-4" onClick={() => setProjectDetail(null)}>← 所有專案</button>
-          <section className="rounded-xl border bg-white p-5">
-            <h2 className="text-xl font-semibold">{projectDetail.title}</h2>
-            <p className="mt-2 whitespace-pre-wrap">{projectDetail.goal}</p>
-            <p className="mt-3 text-sm text-slate-600">{projectDetail.phase} · {projectDetail.milestone_id || '規劃中'} · {projectDetail.status} · 負責 Bot：{projectDetail.owner_bot}</p>
-          </section>
-          {projectDetail.packages.map(item => <article key={item.id} className="rounded-xl border bg-white p-5">
-            <p className="text-sm text-slate-600">{item.milestone_id || '規劃期'} · {item.executor} · {item.status}</p>
-            <h3 className="mt-2 font-semibold">{item.task}</h3>
-            {item.result?.summary && <p className="mt-2">{item.result.summary}</p>}
-            {item.result?.reason && <p className="mt-2">{item.result.reason}</p>}
-          </article>)}
+        {!packageReady && <p role="status" className="rounded-lg border bg-white p-5">專案資料暫時無法讀取，請重新整理。</p>}
+        {packageReady && (projectDetail ? <>
+          <button type="button" className="text-blue-700 underline" onClick={() => setProjectDetail(null)}>← AI Work</button>
+          <div className="rounded-xl border bg-white p-5">
+            <div className="flex flex-wrap items-start justify-between gap-3">
+              <h2 className="text-2xl font-bold text-slate-900">{projectDetail.title}</h2>
+              <p className="text-sm">負責 {projectDetail.owner_bot}　{projectDetail.phase} {projectDetail.milestone_id || ''}　
+                <span className="rounded bg-amber-100 px-2 py-1">{statusText(projectDetail.status)}</span></p>
+            </div>
+            <p className="mt-3 text-sm text-slate-600">目前：{currentSituation(projectDetail)}　｜　下一步：{nextStep(projectDetail)}</p>
+            {projectDetail.actions?.some(a => a.status === 'OPEN') && <button type="button" className="mt-4 w-full rounded-lg bg-amber-50 p-4 text-left text-amber-900" onClick={() => { setSection('inbox'); loadInbox('OPEN') }}>
+              待你確認：{projectDetail.actions.filter(a => a.status === 'OPEN').length} 項　查看待確認 →
+            </button>}
+            <nav className="mt-5 flex flex-wrap border-b" aria-label="專案分頁">
+              {[['goal','專案目標'],['spec','開發規格'],['log','開發日誌'],['folders','資料夾']].map(([key,label]) =>
+                <button key={key} type="button" className={`min-h-11 px-5 ${projectTab === key ? 'border-b-2 border-blue-600 font-semibold text-blue-700' : 'text-slate-600'}`} onClick={() => setProjectTab(key)}>{label}</button>)}
+            </nav>
+            {projectTab === 'goal' && <section className="space-y-3 py-5"><h3 className="text-lg font-semibold">專案目標</h3><p className="whitespace-pre-wrap">{projectDetail.goal}</p>{projectDetail.description && <p className="text-sm text-slate-600">{projectDetail.description}</p>}</section>}
+            {projectTab === 'spec' && <section className="space-y-5 py-5">
+              <h3 className="text-lg font-semibold">執行規劃書 · {projectDetail.plan_state === 'APPROVED' ? 'APPROVED' : 'DRAFT'}</h3>
+              {planFor(projectDetail) ? <PlanView plan={planFor(projectDetail)} /> : <p>規劃工作包尚未交件。</p>}
+              <h3 className="text-lg font-semibold">工作包</h3>
+              <div className="space-y-3">{projectDetail.packages.map(item => <article key={item.id} className="rounded-lg border p-4">
+                <p className="text-xs text-slate-500">{item.milestone_id || '規劃期'} · {item.executor} · {item.status}</p>
+                <h4 className="mt-1 font-semibold">{item.task}</h4>
+                {item.result?.summary && <p className="mt-2 whitespace-pre-wrap">{item.result.summary}</p>}
+                {item.result?.reason && <p className="mt-2">{item.result.reason}</p>}
+              </article>)}</div>
+            </section>}
+            {projectTab === 'log' && <section className="space-y-3 py-5"><h3 className="text-lg font-semibold">工作紀錄</h3>
+              {projectDetail.packages.map(item => <article key={item.id} className="border-b py-3"><b>{item.task}</b><p className="text-sm text-slate-600">{item.milestone_id || '規劃期'} · {item.status} · 第 {item.attempt} 次執行</p>{item.result?.summary && <p>{item.result.summary}</p>}</article>)}
+            </section>}
+            {projectTab === 'folders' && <FolderView project={projectDetail} />}
+          </div>
         </> : <>
-          <details className="rounded-xl border bg-white p-5"><summary className="cursor-pointer font-semibold">＋ 新增專案</summary>
-            <form className="mt-4 flex flex-col gap-3" onSubmit={submitProject}>
-              <label>名稱<input required maxLength={200} className="mt-1 block w-full rounded-md border p-3" value={newProject.title} onChange={event => setNewProject(p => ({ ...p, title: event.target.value }))} /></label>
-              <label>目標<textarea required className="mt-1 block min-h-28 w-full rounded-md border p-3" value={newProject.goal} onChange={event => setNewProject(p => ({ ...p, goal: event.target.value }))} /></label>
-              <label>說明<textarea className="mt-1 block min-h-20 w-full rounded-md border p-3" value={newProject.description} onChange={event => setNewProject(p => ({ ...p, description: event.target.value }))} /></label>
-              <label>負責 Bot<select className="mt-1 block w-full rounded-md border p-3" value={newProject.owner_bot} onChange={event => setNewProject(p => ({ ...p, owner_bot: event.target.value }))}>
-                <option value="hy">HY</option><option value="950157">950157</option><option value="sam">Sam</option><option value="family">小櫻</option>
-              </select></label>
-              <button type="submit" className="min-h-11 self-start rounded-md bg-slate-900 px-4 text-white">建立專案並排入規劃工作包</button>
-            </form>
-          </details>
-          {projects.map(item => <button key={item.id} type="button" onClick={() => openProject(item.id)}
-            className="block w-full rounded-xl border bg-white p-5 text-left shadow-sm">
-            <span className="font-semibold">{item.title}</span>
-            <span className="ml-3 text-sm text-slate-600">{item.phase} · {item.milestone_id || '規劃中'} · {item.status} · {item.owner_bot}</span>
-          </button>)}
-          {projects.length === 0 && <p className="rounded-xl border bg-white p-5">目前沒有新架構專案。</p>}
-        </>}
+          <div className="rounded-xl border bg-white p-5">
+            <details><summary className="cursor-pointer font-semibold">＋ 新增專案</summary>
+              <form className="mt-4 flex flex-col gap-3" onSubmit={submitProject}>
+                <label>名稱<input required maxLength={200} className="mt-1 block w-full rounded-md border p-3" value={newProject.title} onChange={event => setNewProject(p => ({ ...p, title: event.target.value }))} /></label>
+                <label>目標<textarea required className="mt-1 block min-h-28 w-full rounded-md border p-3" value={newProject.goal} onChange={event => setNewProject(p => ({ ...p, goal: event.target.value }))} /></label>
+                <label>說明<textarea className="mt-1 block min-h-20 w-full rounded-md border p-3" value={newProject.description} onChange={event => setNewProject(p => ({ ...p, description: event.target.value }))} /></label>
+                <label>負責 Bot<select className="mt-1 block w-full rounded-md border p-3" value={newProject.owner_bot} onChange={event => setNewProject(p => ({ ...p, owner_bot: event.target.value }))}>
+                  <option value="hy">HY</option><option value="950157">950157</option><option value="sam">Sam</option><option value="family">小櫻</option>
+                </select></label>
+                <button type="submit" className="min-h-11 self-start rounded-md bg-slate-900 px-4 text-white">建立專案</button>
+              </form>
+            </details>
+          </div>
+          <div className="grid grid-cols-2 gap-2 md:grid-cols-5">{[['ai_pending','待 AI 處理'],['ai_running','進行中'],['confirmation','等待確認'],['completed','完成'],['all','全部專案']].map(([key,label]) =>
+            <div key={key} className="rounded-lg border bg-white p-3"><strong>{key === 'all' ? projects.length : projects.filter(p => p.status === key).length}</strong><p className="text-sm">{label}</p></div>)}</div>
+          <div className="overflow-x-auto rounded-xl border bg-white"><table className="w-full min-w-[800px] text-left text-sm"><thead className="bg-slate-50"><tr>{['專案／Phase','負責 Bot','狀態','目前狀況','下一步'].map(x => <th key={x} className="p-4">{x}</th>)}</tr></thead>
+            <tbody>{projects.map(item => <tr key={item.id} className="border-t align-top"><td className="p-4"><button type="button" className="font-semibold text-blue-700 underline" onClick={() => openProject(item.id)}>{item.title}</button><p className="mt-1 text-slate-500">{item.phase} {item.milestone_id || ''}</p></td><td className="p-4">{item.owner_bot}</td><td className="p-4">{statusText(item.status)}</td><td className="p-4">{currentSituation(item)}</td><td className="p-4">{nextStep(item)}</td></tr>)}</tbody>
+          </table>{projects.length === 0 && <p className="p-5">目前沒有專案。</p>}</div>
+        </>)}
       </div>
     </div>}
-    {section === 'projects' && projectView === 'original' && error && <p role="alert" className="m-4 rounded-lg bg-amber-50 p-4 text-amber-900">{error}</p>}
-    {section === 'projects' && projectView === 'original' && !ticket && !error && <p role="status" className="p-4">確認 HY Life OS 登入…</p>}
-    {section === 'projects' && projectView === 'original' && ticket && !frameLoaded && !error && <p role="status" className="p-4">正在載入 AI Work 專案清單…</p>}
     {section === 'history' && <div className="min-h-0 flex-1 overflow-auto bg-slate-50 p-4 md:p-6">
       <div className="mx-auto max-w-4xl space-y-3">
         {inboxError && <p role="alert" className="rounded-lg bg-amber-50 p-4 text-amber-900">{inboxError}</p>}
@@ -335,11 +261,44 @@ export default function AIWorkV3({ maintenance = false }) {
         </article>)}
       </div>
     </div>}
-    <form ref={form} method="post" action={`${API_BASE}/ai-work-v3/ui/hy-login`} target="ai-work-v3-frame" hidden>
-      <input name="ticket" type="hidden" value={ticket} readOnly />
-    </form>
-    <iframe key={attempt} name="ai-work-v3-frame" title="AI Work 操作區"
-      className={`min-h-0 w-full flex-1 border-0 bg-white ${section !== 'projects' || projectView !== 'original' ? 'hidden' : ''}`} src="about:blank"
-      sandbox="allow-forms allow-same-origin allow-downloads allow-popups allow-popups-to-escape-sandbox" referrerPolicy="no-referrer" onLoad={frameLoad} />
+  </section>
+}
+
+const statusText = status => ({ ai_pending: '待 AI 處理', ai_running: '進行中', confirmation: '等待確認', completed: '完成' }[status] || status)
+const currentSituation = project => project.status === 'confirmation' ? '有成果或資料待確認' :
+  project.status === 'ai_running' ? '工作包執行中' : project.status === 'completed' ? '所有里程碑已完成' : '工作包等待 AI 領取'
+const nextStep = project => project.status === 'confirmation' ? '到待確認處理事項' :
+  project.status === 'completed' ? '查看成果' : '依工作包佇列執行'
+const planFor = project => project.plan || project.packages?.find(p => p.type === 'PROJECT_PLANNING')?.result?.plan
+
+function PlanView({ plan }) {
+  return <div className="space-y-4 text-sm">
+    <p>{plan.goal}</p>
+    {plan.scope?.length > 0 && <div><h4 className="font-semibold">執行範圍</h4><ul className="list-disc pl-6">{plan.scope.map((x, i) => <li key={i}>{x}</li>)}</ul></div>}
+    {plan.milestones?.map(m => <article key={m.id} className="rounded-lg border p-4"><h4 className="font-semibold">{m.id}｜{m.name}</h4>
+      <p className="mt-2">成果</p><ul className="list-disc pl-6">{m.deliverables?.map((x, i) => <li key={i}>{x}</li>)}</ul>
+      <p className="mt-2">驗收</p><ul className="list-disc pl-6">{m.acceptance_criteria?.map((x, i) => <li key={i}>{x}</li>)}</ul>
+      <p className="mt-2 text-slate-600">依賴：{m.dependencies?.join('、') || '無'}</p></article>)}
+    {plan.missing_inputs?.length > 0 && <div><h4 className="font-semibold">待補資料</h4><ul className="list-disc pl-6">{plan.missing_inputs.map((x, i) => <li key={i}>{x}</li>)}</ul></div>}
+    {plan.risks?.length > 0 && <div><h4 className="font-semibold">風險</h4><ul className="list-disc pl-6">{plan.risks.map((x, i) => <li key={i}>{x}</li>)}</ul></div>}
+  </div>
+}
+
+function FolderView({ project }) {
+  const reported = project.references?.find(r => r.type === 'v3_input')?.data?.drive_upload_location_report
+  const folderId = project.folder?.folder_id || reported?.folder_id
+  const legacyRefs = project.references?.filter(r => r.type === 'v3_reference' && r.data?.url) || []
+  return <section className="space-y-6 py-5">
+    <h3 className="text-lg font-semibold">資料夾</h3>
+    <div className="rounded-lg border p-4"><h4 className="font-semibold">一、專案位置</h4>
+      {folderId ? <a className="mt-3 inline-block text-blue-700 underline" href={`https://drive.google.com/drive/folders/${encodeURIComponent(folderId)}`} target="_blank" rel="noreferrer">本案 Google Drive 資料夾</a> : <p className="mt-3">尚無已登錄的專案資料夾。</p>}
+      {folderId && !project.folder?.verified && <p className="mt-2 text-sm text-amber-800">操作者回報位置，尚未經 HY 後端讀回驗證。</p>}
+    </div>
+    <div className="rounded-lg border p-4"><h4 className="font-semibold">二、參考資料</h4>
+      {legacyRefs.length ? legacyRefs.map((r,i) => <p key={i} className="mt-2"><a href={r.data.url} target="_blank" rel="noreferrer" className="text-blue-700 underline">{r.data.title || r.data.url}</a></p>) : <p className="mt-2 text-slate-600">尚未登錄參考檔案。</p>}
+    </div>
+    <div className="rounded-lg border p-4"><h4 className="font-semibold">三、交付成果</h4>
+      {project.files?.length ? project.files.map(file => <p key={file.file_id} className="mt-2"><a href={`https://drive.google.com/file/d/${encodeURIComponent(file.file_id)}/view`} target="_blank" rel="noreferrer" className="text-blue-700 underline">{file.filename}</a> · v{file.revision} · {file.source}</p>) : <p className="mt-2 text-slate-600">新工作包尚無登錄成果檔案。</p>}
+    </div>
   </section>
 }
