@@ -349,9 +349,11 @@ function PlanTab({ project, plan }) {
 
 function Outputs({ project }) {
   const done = (project.packages || []).filter(p => isWorkPackage(p) && p.result?.status === 'COMPLETED')
-  const folderId = project.folder?.folder_id
+  // Same fallback as V3: the operator-reported folder until HY has verified one.
+  const reported = project.references?.find(r => r.type === 'v3_input')?.data?.drive_upload_location_report
+  const folderId = project.folder?.folder_id || reported?.folder_id
   return <div className="cc5-stack">
-    {!folderId && project.folder_error && <p className="cc5-alert">Drive 資料夾無法連結：{project.folder_error}</p>}
+    {!project.folder && project.folder_error && <p className="cc5-small">HY 尚未驗證此資料夾（{project.folder_error}）</p>}
     {folderId && <a className="cc5-btn cc5-block" href={`https://drive.google.com/drive/folders/${encodeURIComponent(folderId)}`} target="_blank" rel="noreferrer">開啟專案的 Drive 資料夾</a>}
     {project.files?.length > 0 && <section className="cc5-panel">
       <h2 className="cc5-h">檔案</h2>
