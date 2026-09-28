@@ -230,29 +230,11 @@ export async function approveWorkspaceMilestone(projectId, milestoneId, workId) 
   return parseResponse(response, 'approveWorkspaceMilestone')
 }
 
-export async function fetchAIWorkPilot() {
+export async function fetchAIWorkProjects() {
   const response = await fetch(`${API_BASE}/api/ai-work-packages/projects`, { headers: { ...authHeaders() }, cache: 'no-store' })
   if (response.status === 401 || response.status === 403) expireSession()
-  const projects = await parseResponse(response, 'fetchAIWorkPilot')
+  const projects = await parseResponse(response, 'fetchAIWorkProjects')
   const summary = Object.fromEntries(['ai_pending', 'ai_running', 'confirmation', 'completed']
     .map(status => [status, projects.filter(project => project.status === status).length]))
   return { projects, summary: { ...summary, all: projects.length } }
-}
-
-export async function createAIWorkPilotProject(payload) {
-  return parseResponse(await fetch(`${API_BASE}/api/life-os/v1/ai-work/projects`, {
-    method: 'POST', headers: { ...authHeaders(), 'Content-Type': 'application/json' }, body: JSON.stringify(payload),
-  }), 'createAIWorkPilotProject')
-}
-
-export async function sendAIWorkPilotEvent(id, event, payload = {}) {
-  return parseResponse(await fetch(`${API_BASE}/api/life-os/v1/ai-work/projects/${encodeURIComponent(id)}/events/${encodeURIComponent(event)}`, {
-    method: 'POST', headers: { ...authHeaders(), 'Content-Type': 'application/json' }, body: JSON.stringify(payload),
-  }), 'sendAIWorkPilotEvent')
-}
-
-export async function promoteAIWork(payload) {
-  return parseResponse(await fetch(`${API_BASE}/api/life-os/v1/ai-work/promote`, {
-    method: 'POST', headers: { ...authHeaders(), 'Content-Type': 'application/json' }, body: JSON.stringify(payload),
-  }), 'promoteAIWork')
 }

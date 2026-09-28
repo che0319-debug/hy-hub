@@ -1,5 +1,5 @@
 import { useEffect, useSyncExternalStore } from 'react'
-import { fetchAIWorkPilot } from './lifeOSApi'
+import { fetchAIWorkProjects } from './lifeOSApi'
 
 let snapshot = { projects: [], summary: null, migrationRequired: false, migrationCandidates: [], error: '', loaded: false }
 let sequence = 0
@@ -10,7 +10,7 @@ const getSnapshot = () => snapshot
 export async function refreshAIWork() {
   const request = ++sequence
   try {
-    const data = await fetchAIWorkPilot()
+    const data = await fetchAIWorkProjects()
     if (request === sequence) snapshot = { ...data, error: '', loaded: true }
   } catch (error) {
     if (request === sequence) snapshot = { ...snapshot, error: error.message || 'AI Work 讀取失敗' }
