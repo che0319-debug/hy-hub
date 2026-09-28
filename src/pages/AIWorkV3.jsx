@@ -19,6 +19,7 @@ export default function AIWorkV3({ maintenance = false }) {
   const [files, setFiles] = useState({})
   const [submitting, setSubmitting] = useState('')
   const [referenceDraft, setReferenceDraft] = useState({ title: '', url: '' })
+  const [projectUpload, setProjectUpload] = useState(null)
 
   async function loadInbox(filter = inboxFilter) {
     try {
@@ -94,6 +95,30 @@ export default function AIWorkV3({ maintenance = false }) {
       })
       if (!response.ok) throw new Error((await response.json().catch(() => ({}))).detail || '參考連結登錄失敗。')
       setReferenceDraft({ title: '', url: '' })
+      await openProject(projectDetail.id)
+      setProjectTab('folders')
+    } catch (reason) { setInboxError(reason.message) }
+    finally { setSubmitting('') }
+  }
+
+  async function uploadProjectFile(event) {
+    event.preventDefault()
+    if (!projectDetail || !projectUpload) return
+    setSubmitting('project-file')
+    try {
+      if (projectUpload.size > 8 * 1024 * 1024) throw new Error('單一附件上限為 8 MB。')
+      const bytes = new Uint8Array(await projectUpload.arrayBuffer())
+      let binary = ''
+      for (let offset = 0; offset < bytes.length; offset += 32768) {
+        binary += String.fromCharCode(...bytes.subarray(offset, offset + 32768))
+      }
+      const response = await fetch(`${API_BASE}/api/ai-work-packages/projects/${encodeURIComponent(projectDetail.id)}/files`, {
+        method: 'POST', headers: { ...authHeaders(), 'Content-Type': 'application/json' },
+        body: JSON.stringify({ request_key:crypto.randomUUID(), filename:projectUpload.name,
+          mime_type:projectUpload.type || 'application/octet-stream', data_base64:btoa(binary) }),
+      })
+      if (!response.ok) throw new Error((await response.json().catch(() => ({}))).detail || '檔案上傳失敗。')
+      setProjectUpload(null)
       await openProject(projectDetail.id)
       setProjectTab('folders')
     } catch (reason) { setInboxError(reason.message) }
@@ -203,7 +228,7 @@ export default function AIWorkV3({ maintenance = false }) {
             {projectTab === 'log' && <section className="space-y-3 py-5"><h3 className="text-lg font-semibold">工作紀錄</h3>
               {projectDetail.packages.map(item => <article key={item.id} className="border-b py-3"><b>{item.task}</b><p className="text-sm text-slate-600">{item.milestone_id || '規劃期'} · {item.status} · 第 {item.attempt} 次執行</p>{item.result?.summary && <p>{item.result.summary}</p>}</article>)}
             </section>}
-            {projectTab === 'folders' && <FolderView project={projectDetail} draft={referenceDraft} setDraft={setReferenceDraft} onSubmit={submitReference} submitting={!!submitting} />}
+            {projectTab === 'folders' && <FolderView project={projectDetail} draft={referenceDraft} setDraft={setReferenceDraft} onSubmit={submitReference} file={projectUpload} setFile={setProjectUpload} onUpload={uploadProjectFile} submitting={!!submitting} />}
           </div>
         </> : <>
           <div className="rounded-xl border bg-white p-5">
@@ -302,7 +327,7 @@ function PlanView({ plan }) {
   </div>
 }
 
-function FolderView({ project, draft, setDraft, onSubmit, submitting }) {
+function FolderView({ project, draft, setDraft, onSubmit, file, setFile, onUpload, submitting }) {
   const reported = project.references?.find(r => r.type === 'v3_input')?.data?.drive_upload_location_report
   const folderId = project.folder?.folder_id || reported?.folder_id
   const links = project.references?.filter(r => r.data?.url) || []
@@ -322,6 +347,10 @@ function FolderView({ project, draft, setDraft, onSubmit, submitting }) {
     </div>
     <div className="rounded-lg border p-4"><h4 className="font-semibold">三、交付成果</h4>
       {project.files?.length ? project.files.map(file => <p key={file.file_id} className="mt-2"><a href={`https://drive.google.com/file/d/${encodeURIComponent(file.file_id)}/view`} target="_blank" rel="noreferrer" className="text-blue-700 underline">{file.filename}</a> · v{file.revision} · {file.source}</p>) : <p className="mt-2 text-slate-600">新工作包尚無登錄成果檔案。</p>}
+      <form className="mt-4 flex flex-wrap items-center gap-2" onSubmit={onUpload}>
+        <label>上傳專案檔案<input type="file" className="mt-1 block" onChange={e => setFile(e.target.files?.[0] || null)} /></label>
+        <button disabled={!file || submitting} className="min-h-11 rounded border px-3 disabled:opacity-50">上傳至本案 Drive</button>
+      </form>
     </div>
   </section>
 }
