@@ -21,6 +21,8 @@ export default function AIWorkV3({ maintenance = false }) {
   const [referenceDraft, setReferenceDraft] = useState({ title: '', url: '' })
   const [projectUpload, setProjectUpload] = useState(null)
   const [noteDraft, setNoteDraft] = useState('')
+  const [goalDraft, setGoalDraft] = useState(null)
+  const [revisionFeedback, setRevisionFeedback] = useState({})
 
   async function loadInbox(filter = inboxFilter) {
     try {
@@ -143,6 +145,24 @@ export default function AIWorkV3({ maintenance = false }) {
     finally { setSubmitting('') }
   }
 
+  async function submitGoal(event) {
+    event.preventDefault()
+    if (!projectDetail || !goalDraft) return
+    setSubmitting('goal')
+    try {
+      const response = await fetch(`${API_BASE}/api/ai-work-packages/projects/${encodeURIComponent(projectDetail.id)}/goal`, {
+        method: 'PUT', headers: { ...authHeaders(), 'Content-Type': 'application/json' },
+        body: JSON.stringify(goalDraft),
+      })
+      if (!response.ok) throw new Error((await response.json().catch(() => ({}))).detail || '專案目標修訂失敗。')
+      setGoalDraft(null)
+      await openProject(projectDetail.id)
+      await loadInbox('OPEN')
+      await loadProjects()
+    } catch (reason) { setInboxError(reason.message) }
+    finally { setSubmitting('') }
+  }
+
   useEffect(() => {
     loadInbox('OPEN')
     loadProjects()
@@ -176,7 +196,7 @@ export default function AIWorkV3({ maintenance = false }) {
       }
       const response = await fetch(`${API_BASE}/api/ai-work-packages/inbox/${encodeURIComponent(item.action_id)}/resolve`, {
         method: 'POST', headers: { ...authHeaders(), 'Content-Type': 'application/json' },
-        body: JSON.stringify({ answer: value, attachments,
+        body: JSON.stringify({ answer: value === 'REVISE' ? { decision:'REVISE', feedback:revisionFeedback[item.action_id]?.trim() || '' } : value, attachments,
           ...(value === 'APPROVED' && item.plan ? { plan: item.plan } : {}) }),
       })
       if (!response.ok) throw new Error((await response.json().catch(() => ({}))).detail || '提交失敗，請重試。')
@@ -231,9 +251,18 @@ export default function AIWorkV3({ maintenance = false }) {
               {[['goal','專案目標'],['spec','開發規格'],['log','開發日誌'],['folders','資料夾']].map(([key,label]) =>
                 <button key={key} type="button" className={`min-h-11 px-5 ${projectTab === key ? 'border-b-2 border-blue-600 font-semibold text-blue-700' : 'text-slate-600'}`} onClick={() => setProjectTab(key)}>{label}</button>)}
             </nav>
-            {projectTab === 'goal' && <section className="space-y-3 py-5"><h3 className="text-lg font-semibold">專案目標</h3><p className="whitespace-pre-wrap">{projectDetail.goal}</p>{projectDetail.description && <p className="text-sm text-slate-600">{projectDetail.description}</p>}</section>}
+            {projectTab === 'goal' && <section className="space-y-3 py-5"><h3 className="text-lg font-semibold">專案目標</h3><p className="whitespace-pre-wrap">{projectDetail.goal}</p>{projectDetail.description && <p className="text-sm text-slate-600">{projectDetail.description}</p>}
+              {projectDetail.plan_state === 'DRAFT' ? (goalDraft ? <form onSubmit={submitGoal} className="space-y-3 rounded-lg border p-4">
+                <label className="block">目標<textarea required maxLength={30000} className="mt-1 block min-h-36 w-full rounded border p-3" value={goalDraft.goal} onChange={e => setGoalDraft(v => ({...v,goal:e.target.value}))} /></label>
+                <label className="block">說明<textarea maxLength={10000} className="mt-1 block min-h-20 w-full rounded border p-3" value={goalDraft.description} onChange={e => setGoalDraft(v => ({...v,description:e.target.value}))} /></label>
+                <p className="text-sm text-slate-600">儲存後 HY 會保留既有成果，並讓同一規劃工作包依新目標重出草案。</p>
+                <button disabled={!!submitting} className="min-h-11 rounded bg-slate-900 px-4 text-white">儲存目標</button>
+                <button type="button" className="ml-2 min-h-11 rounded border px-4" onClick={() => setGoalDraft(null)}>取消</button>
+              </form> : <button type="button" className="min-h-11 rounded border px-4" onClick={() => setGoalDraft({goal:projectDetail.goal,description:projectDetail.description || ''})}>編輯專案目標</button>) : <p className="text-sm text-slate-600">已核准計畫的規格變更需重新規劃與確認。</p>}
+            </section>}
             {projectTab === 'spec' && <section className="space-y-5 py-5">
               <h3 className="text-lg font-semibold">執行規劃書 · {projectDetail.plan_state === 'APPROVED' ? 'APPROVED' : 'DRAFT'}</h3>
+              {projectDetail.packages.some(p => p.type === 'PROJECT_PLANNING' && p.status !== 'COMPLETED' && p.result?.plan) && <p className="rounded bg-amber-50 p-3 text-amber-900">以下為保留的前版草案；規劃工作包正在依修訂意見重新處理，尚不可核准此版本。</p>}
               {planFor(projectDetail) ? <PlanView plan={planFor(projectDetail)} /> : <p>規劃工作包尚未交件。</p>}
               <h3 className="text-lg font-semibold">工作包</h3>
               <div className="space-y-3">{projectDetail.packages.map(item => <article key={item.id} className="rounded-lg border p-4">
@@ -308,11 +337,11 @@ export default function AIWorkV3({ maintenance = false }) {
           <p className="mt-1 text-sm text-slate-600">指派：{item.assigned_to} · {item.authority_mode === 'OWNER_ONLY' ? '僅本人' : '可代理'} · {item.status === 'OPEN' ? '待處理' : '已處理'}</p>
           {item.plan && <details className="mt-3 rounded-lg bg-slate-50 p-3"><summary className="cursor-pointer">查看規劃書 DRAFT</summary><pre className="mt-3 overflow-auto whitespace-pre-wrap text-xs">{JSON.stringify(item.plan, null, 2)}</pre></details>}
           {item.status === 'OPEN' && (item.action_type === 'PLAN_APPROVAL' ?
-            <div className="mt-4 flex gap-2"><button type="button" disabled={!!submitting || !item.plan}
+            <div className="mt-4 space-y-2"><label className="block">修改意見<textarea className="mt-1 block min-h-20 w-full rounded border p-3" value={revisionFeedback[item.action_id] || ''} onChange={e => setRevisionFeedback(v => ({...v,[item.action_id]:e.target.value}))} /></label><div className="flex gap-2"><button type="button" disabled={!!submitting || !item.plan}
               className="min-h-11 rounded-md bg-slate-900 px-4 text-white disabled:opacity-50"
               onClick={() => submitAction(item, 'APPROVED')}>核准規劃</button>
-              <button type="button" disabled={!!submitting} className="min-h-11 rounded-md border px-4"
-                onClick={() => submitAction(item, 'REVISE')}>要求修改</button></div> :
+              <button type="button" disabled={!!submitting || !revisionFeedback[item.action_id]?.trim()} className="min-h-11 rounded-md border px-4 disabled:opacity-50"
+                onClick={() => submitAction(item, 'REVISE')}>要求修改</button></div></div> :
             <form className="mt-4 flex flex-col gap-2" onSubmit={event => { event.preventDefault(); submitAction(item, answer[item.action_id]) }}>
               <label htmlFor={`answer-${item.action_id}`}>回答</label>
               <textarea id={`answer-${item.action_id}`} required className="min-h-24 rounded-md border p-3"
