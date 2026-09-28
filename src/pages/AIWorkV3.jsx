@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { authHeaders, ensureAccessToken, expireSession } from '../auth'
 
 const API_BASE = (import.meta.env.VITE_API_BASE || '').replace(/\/$/, '')
+const KAWAYU_ID = 'v3prod-project-9a9433e8-013a-4bd8-836f-5fc69698182b'
 
 export default function AIWorkV3({ maintenance = false }) {
   const [section, setSection] = useState('projects')
@@ -12,6 +13,7 @@ export default function AIWorkV3({ maintenance = false }) {
   const [projects, setProjects] = useState([])
   const [projectDetail, setProjectDetail] = useState(null)
   const [packageReady, setPackageReady] = useState(false)
+  const [migrating, setMigrating] = useState(false)
   const [newProject, setNewProject] = useState({ title: '', goal: '', description: '', owner_bot: 'hy' })
   const [inboxError, setInboxError] = useState('')
   const [answer, setAnswer] = useState({})
@@ -85,6 +87,30 @@ export default function AIWorkV3({ maintenance = false }) {
       setNewProject({ title: '', goal: '', description: '', owner_bot: 'hy' })
       await loadProjects()
     } catch (reason) { setInboxError(reason.message) }
+  }
+
+  async function migrateKawayu() {
+    setMigrating(true)
+    setInboxError('')
+    try {
+      const ok = await ensureAccessToken()
+      if (!ok) { expireSession(); return }
+      const initialized = await fetch(`${API_BASE}/api/ai-work-packages/initialize`, {
+        method: 'POST', headers: authHeaders(),
+      })
+      if (!initialized.ok && initialized.status !== 409) {
+        throw new Error((await initialized.json().catch(() => ({}))).detail || '工作包資料初始化失敗。')
+      }
+      const migrated = await fetch(`${API_BASE}/api/ai-work-packages/migrate-v3/${KAWAYU_ID}`, {
+        method: 'POST', headers: authHeaders(),
+      })
+      if (!migrated.ok) {
+        throw new Error((await migrated.json().catch(() => ({}))).detail || '川嶼專案移入失敗。')
+      }
+      await loadProjects()
+      await loadInbox('OPEN')
+    } catch (reason) { setInboxError(reason.message) }
+    finally { setMigrating(false) }
   }
 
   useEffect(() => {
@@ -201,9 +227,13 @@ export default function AIWorkV3({ maintenance = false }) {
           className={`min-h-11 rounded-md px-3 ${section === 'history' ? 'bg-slate-900 text-white' : 'border'}`}
           onClick={() => { setSection('history'); loadHistory() }}>工作紀錄</button>
       </nav>
+      {!projects.some(project => project.id === KAWAYU_ID) &&
+        <button type="button" disabled={migrating} className="min-h-11 rounded-md border px-3 disabled:opacity-50"
+          onClick={migrateKawayu}>{migrating ? '移入中…' : '移入川嶼到新架構'}</button>}
       {maintenance && ticket && <a className="min-h-11 rounded-md border px-3 py-2" href={`${API_BASE}/ai-work-v3/ui/legacy-reset`} target="ai-work-v3-frame">檢查舊案清除清單</a>}
       <button type="button" className="min-h-11 rounded-md border px-3" onClick={() => { retries.current = 0; setAttempt(value => value + 1) }}>重新連線</button>
     </header>
+    {inboxError && section === 'projects' && !packageReady && <p role="alert" className="m-4 rounded-lg bg-amber-50 p-4 text-amber-900">{inboxError}</p>}
     {section === 'projects' && packageReady && <div className="min-h-0 flex-1 overflow-auto bg-slate-50 p-4 md:p-6">
       <div className="mx-auto max-w-4xl space-y-4">
         {inboxError && <p role="alert" className="rounded-lg bg-amber-50 p-4 text-amber-900">{inboxError}</p>}
