@@ -18,6 +18,7 @@ export default function AIWorkV3({ maintenance = false }) {
   const [answer, setAnswer] = useState({})
   const [files, setFiles] = useState({})
   const [submitting, setSubmitting] = useState('')
+  const [referenceDraft, setReferenceDraft] = useState({ title: '', url: '' })
 
   async function loadInbox(filter = inboxFilter) {
     try {
@@ -80,6 +81,23 @@ export default function AIWorkV3({ maintenance = false }) {
       setNewProject({ title: '', goal: '', description: '', owner_bot: 'hy' })
       await loadProjects()
     } catch (reason) { setInboxError(reason.message) }
+  }
+
+  async function submitReference(event) {
+    event.preventDefault()
+    if (!projectDetail) return
+    setSubmitting('reference')
+    try {
+      const response = await fetch(`${API_BASE}/api/ai-work-packages/projects/${encodeURIComponent(projectDetail.id)}/references`, {
+        method: 'POST', headers: { ...authHeaders(), 'Content-Type': 'application/json' },
+        body: JSON.stringify(referenceDraft),
+      })
+      if (!response.ok) throw new Error((await response.json().catch(() => ({}))).detail || '參考連結登錄失敗。')
+      setReferenceDraft({ title: '', url: '' })
+      await openProject(projectDetail.id)
+      setProjectTab('folders')
+    } catch (reason) { setInboxError(reason.message) }
+    finally { setSubmitting('') }
   }
 
   useEffect(() => {
@@ -185,7 +203,7 @@ export default function AIWorkV3({ maintenance = false }) {
             {projectTab === 'log' && <section className="space-y-3 py-5"><h3 className="text-lg font-semibold">工作紀錄</h3>
               {projectDetail.packages.map(item => <article key={item.id} className="border-b py-3"><b>{item.task}</b><p className="text-sm text-slate-600">{item.milestone_id || '規劃期'} · {item.status} · 第 {item.attempt} 次執行</p>{item.result?.summary && <p>{item.result.summary}</p>}</article>)}
             </section>}
-            {projectTab === 'folders' && <FolderView project={projectDetail} />}
+            {projectTab === 'folders' && <FolderView project={projectDetail} draft={referenceDraft} setDraft={setReferenceDraft} onSubmit={submitReference} submitting={!!submitting} />}
           </div>
         </> : <>
           <div className="rounded-xl border bg-white p-5">
@@ -284,10 +302,10 @@ function PlanView({ plan }) {
   </div>
 }
 
-function FolderView({ project }) {
+function FolderView({ project, draft, setDraft, onSubmit, submitting }) {
   const reported = project.references?.find(r => r.type === 'v3_input')?.data?.drive_upload_location_report
   const folderId = project.folder?.folder_id || reported?.folder_id
-  const legacyRefs = project.references?.filter(r => r.type === 'v3_reference' && r.data?.url) || []
+  const links = project.references?.filter(r => r.data?.url) || []
   return <section className="space-y-6 py-5">
     <h3 className="text-lg font-semibold">資料夾</h3>
     <div className="rounded-lg border p-4"><h4 className="font-semibold">一、專案位置</h4>
@@ -295,7 +313,12 @@ function FolderView({ project }) {
       {folderId && !project.folder?.verified && <p className="mt-2 text-sm text-amber-800">操作者回報位置，尚未經 HY 後端讀回驗證。</p>}
     </div>
     <div className="rounded-lg border p-4"><h4 className="font-semibold">二、參考資料</h4>
-      {legacyRefs.length ? legacyRefs.map((r,i) => <p key={i} className="mt-2"><a href={r.data.url} target="_blank" rel="noreferrer" className="text-blue-700 underline">{r.data.title || r.data.url}</a></p>) : <p className="mt-2 text-slate-600">尚未登錄參考檔案。</p>}
+      {links.length ? links.map((r,i) => <p key={i} className="mt-2"><a href={r.data.url} target="_blank" rel="noreferrer" className="text-blue-700 underline">{r.data.title || r.data.url}</a></p>) : <p className="mt-2 text-slate-600">尚未登錄參考連結。</p>}
+      <form className="mt-4 flex flex-wrap gap-2" onSubmit={onSubmit}>
+        <input aria-label="參考資料名稱" placeholder="名稱" value={draft.title} onChange={e => setDraft(v => ({ ...v, title:e.target.value }))} className="min-h-11 rounded border p-2" />
+        <input aria-label="參考資料網址" required type="url" pattern="https://.*" placeholder="https://…" value={draft.url} onChange={e => setDraft(v => ({ ...v, url:e.target.value }))} className="min-h-11 min-w-64 flex-1 rounded border p-2" />
+        <button disabled={submitting} type="submit" className="min-h-11 rounded border px-3 disabled:opacity-50">＋ 新增參考連結</button>
+      </form>
     </div>
     <div className="rounded-lg border p-4"><h4 className="font-semibold">三、交付成果</h4>
       {project.files?.length ? project.files.map(file => <p key={file.file_id} className="mt-2"><a href={`https://drive.google.com/file/d/${encodeURIComponent(file.file_id)}/view`} target="_blank" rel="noreferrer" className="text-blue-700 underline">{file.filename}</a> · v{file.revision} · {file.source}</p>) : <p className="mt-2 text-slate-600">新工作包尚無登錄成果檔案。</p>}
