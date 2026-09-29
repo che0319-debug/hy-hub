@@ -115,7 +115,8 @@ export default function ControlCenterV5() {
   if (project?.id) {
     return <section className="cc5" aria-labelledby="cc5-project-title">
       <ProjectView project={project} tab={tab} setTab={setTab} openItems={inbox.filter(i => i.project_id === project.id)}
-        onBack={() => { setOpenId(null); setTab('overview') }} onChanged={() => reloadProject(project.id)} error={error} setError={setError} />
+        onBack={() => { setOpenId(null); setTab('overview') }} onChanged={() => reloadProject(project.id)} error={error} setError={setError}
+        onDeleted={() => { setOpenId(null); setTab('overview'); loadAll() }} />
     </section>
   }
 
@@ -172,7 +173,7 @@ export default function ControlCenterV5() {
   </section>
 }
 
-function ProjectView({ project, tab, setTab, openItems, onBack, onChanged, error, setError }) {
+function ProjectView({ project, tab, setTab, openItems, onBack, onChanged, error, setError, onDeleted }) {
   const status = PROJECT_STATUS[project.status] || { label: project.status, tone: 'gray' }
   const plan = planOf(project)
   return <>
@@ -189,8 +190,15 @@ function ProjectView({ project, tab, setTab, openItems, onBack, onChanged, error
     {error && <p role="alert" className="cc5-alert">{error}</p>}
     {!project.packages && <p className="cc5-empty" role="status">讀取中…</p>}
     {project.packages && <>
-      {tab === 'overview' && <Overview project={project} plan={plan} openCount={openItems.length} goInbox={() => setTab('inbox')} />}
-      {tab === 'inbox' && <Inbox items={openItems} onChanged={onChanged} setError={setError} />}
+      {tab === 'overview' && <>
+        <SuggestionBox project={project} onChanged={onChanged} setError={setError} />
+        <Overview project={project} plan={plan} openCount={openItems.length} goInbox={() => setTab('inbox')} />
+        <DeleteZone project={project} onDeleted={onDeleted} />
+      </>}
+      {tab === 'inbox' && <>
+        <SuggestionBox project={project} onChanged={onChanged} setError={setError} />
+        <Inbox items={openItems} onChanged={onChanged} setError={setError} />
+      </>}
       {tab === 'plan' && <PlanTab project={project} plan={plan} />}
       {tab === 'outputs' && <Outputs project={project} />}
       {tab === 'log' && <WorkLog project={project} />}
@@ -364,6 +372,10 @@ function WorkLog({ project }) {
       if (a.resolved_at) list.push({ at: a.resolved_at, actor: '人工', kind: 'human', text: `處理待確認：${a.title}`, detail: typeof a.answer === 'string' ? firstLine(a.answer) : a.answer?.decision || '' })
     }
     for (const n of project.notes || []) list.push({ at: n.created_at, actor: '人工', kind: 'human', text: n.content, detail: '工作日誌' })
+    for (const g of project.suggestions || []) {
+      list.push({ at: g.created_at, actor: '人工', kind: 'human', text: g.content, detail: '我的建議' })
+      if (g.read_at) list.push({ at: g.read_at, actor: 'AI', kind: 'ai', text: `已讀取建議：${firstLine(g.content)}`, detail: '隨工作包交件' })
+    }
     return list.sort((a, b) => b.at - a.at)
   }, [project])
   const shown = entries.filter(e => who === 'all' || e.kind === who)
@@ -381,4 +393,92 @@ function WorkLog({ project }) {
       </li>)}</ol>
     </section>)}
   </div>
+}
+
+// 我的建議：隨時可填；下一個領件的工作包會一起讀取，交件後自動從這裡消失（紀錄留在工作紀錄）。
+function SuggestionBox({ project, onChanged, setError }) {
+  const [text, setText] = useState('')
+  const [busy, setBusy] = useState(false)
+  const unread = (project.suggestions || []).filter(s => s.state !== 'READ')
+  const pid = encodeURIComponent(project.id)
+
+  async function submit(e) {
+    e.preventDefault()
+    if (!text.trim()) return
+    setBusy(true)
+    try {
+      await request(`/projects/${pid}/suggestions`, { method: 'POST', body: JSON.stringify({ content: text.trim() }) })
+      setText('')
+      await onChanged()
+    } catch (reason) { setError(reason.message) }
+    finally { setBusy(false) }
+  }
+
+  async function withdraw(id) {
+    setBusy(true)
+    try {
+      await request(`/projects/${pid}/suggestions/${encodeURIComponent(id)}`, { method: 'DELETE' })
+      await onChanged()
+    } catch (reason) { setError(reason.message) }
+    finally { setBusy(false) }
+  }
+
+  return <section className="cc5-panel cc5-suggest" aria-labelledby={`cc5-suggest-${project.id}`}>
+    <div className="cc5-row"><h2 className="cc5-h" id={`cc5-suggest-${project.id}`}>我的建議</h2>
+      <span className="cc5-small">AI 下次領件時一起讀取，讀完自動清空</span></div>
+    {unread.map(s => <div key={s.id} className="cc5-suggest-item">
+      <p className="cc5-pre">{s.content}</p>
+      <div className="cc5-row">
+        <Pill tone={s.state === 'READING' ? 'blue' : 'amber'}>{s.state === 'READING' ? 'AI 讀取中' : '等待 AI 讀取'}</Pill>
+        {s.state === 'PENDING' && <button type="button" className="cc5-link" disabled={busy} onClick={() => withdraw(s.id)}>撤回</button>}
+      </div>
+    </div>)}
+    <form className="cc5-form" onSubmit={submit}>
+      <label className="cc5-field" htmlFor={`cc5-suggest-text-${project.id}`}>寫下方向、修正或規劃書要調整的地方</label>
+      <textarea id={`cc5-suggest-text-${project.id}`} maxLength={10000} value={text} onChange={e => setText(e.target.value)} />
+      <button type="submit" className="cc5-primary" disabled={busy || !text.trim()}>送出建議</button>
+    </form>
+  </section>
+}
+
+// 永久刪除：僅 HY。先把專案資料與 Drive 資料夾備份到「_已刪除專案備份」，成功後才刪除。
+function DeleteZone({ project, onDeleted }) {
+  const [open, setOpen] = useState(false)
+  const [confirm, setConfirm] = useState('')
+  const [busy, setBusy] = useState(false)
+  const [message, setMessage] = useState('')
+  const running = (project.packages || []).some(p => p.status === 'RUNNING')
+
+  async function remove() {
+    setBusy(true); setMessage('')
+    try {
+      await request(`/projects/${encodeURIComponent(project.id)}`, { method: 'DELETE', body: JSON.stringify({ confirm_title: confirm }) })
+      onDeleted()
+    } catch (reason) {
+      const code = reason.message || ''
+      setMessage(code.includes('RUNNING') ? '有工作包正在執行，請等它交件後再刪除。'
+        : code.includes('CONFIRMATION') ? '專案名稱不一致。'
+        : code.startsWith('DRIVE') || code.includes('BACKUP') ? `Drive 備份失敗（${code}），專案未刪除。`
+        : `刪除失敗（${code}），專案未刪除。`)
+    } finally { setBusy(false) }
+  }
+
+  if (!open) return <div className="cc5-danger-row">
+    <button type="button" className="cc5-btn cc5-danger" onClick={() => setOpen(true)}>刪除專案</button>
+  </div>
+  return <section className="cc5-panel cc5-danger-panel" role="alertdialog" aria-labelledby="cc5-del-title" aria-describedby="cc5-del-desc">
+    <h2 className="cc5-h" id="cc5-del-title">永久刪除「{project.title}」？</h2>
+    <div id="cc5-del-desc" className="cc5-stack-tight">
+      <p>刪除後，這個專案的規劃書、工作包、待確認、建議與工作紀錄都會從 HY Life OS 移除，<b>無法復原</b>。</p>
+      <p>刪除前會自動備份：專案所有資料匯出成 JSON 放進專案的 Drive 資料夾，整個資料夾（含所有產出檔案）移到 AI Work／<b>_已刪除專案備份</b>，Drive 上不刪任何檔案。備份失敗就不會刪除。</p>
+      {running && <p className="cc5-warn">目前有工作包執行中，需等交件後才能刪除。</p>}
+    </div>
+    <label className="cc5-field">輸入專案名稱「{project.title}」確認
+      <input className="cc5-input" value={confirm} onChange={e => setConfirm(e.target.value)} autoComplete="off" /></label>
+    {message && <p role="alert" className="cc5-warn">{message}</p>}
+    <div className="cc5-two">
+      <button type="button" className="cc5-btn" disabled={busy} onClick={() => { setOpen(false); setConfirm(''); setMessage('') }}>取消</button>
+      <button type="button" className="cc5-btn cc5-danger-solid" disabled={busy || running || confirm.trim() !== project.title.trim()} onClick={remove}>{busy ? '備份並刪除中…' : '永久刪除'}</button>
+    </div>
+  </section>
 }
