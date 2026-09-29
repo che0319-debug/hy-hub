@@ -82,6 +82,7 @@ export default function ControlCenterV5() {
   const setFilter = key => setSearchParams(key === 'all' ? {} : { filter: key }, { replace: true })
   const [openId, setOpenId] = useState(null)
   const [tab, setTab] = useState('overview')
+  const [creating, setCreating] = useState(false)
 
   const loadAll = useCallback(async () => {
     try {
@@ -129,10 +130,14 @@ export default function ControlCenterV5() {
   return <section className="cc5" aria-labelledby="cc5-title">
     <header className="cc5-head">
       <div><span className="cc5-kicker">HY Life OS</span><h1 id="cc5-title">AI Work 控制中心</h1></div>
-      <button type="button" className="cc5-btn" onClick={loadAll}>重新整理</button>
+      <div className="cc5-head-actions">
+        <button type="button" className="cc5-btn" onClick={loadAll}>重新整理</button>
+        <button type="button" className="cc5-primary" aria-expanded={creating} onClick={() => setCreating(v => !v)}>＋ 新增專案</button>
+      </div>
     </header>
 
     {error && <p role="alert" className="cc5-alert">{error}</p>}
+    {creating && <NewProject onCancel={() => setCreating(false)} onCreated={async id => { setCreating(false); await loadAll(); setOpenId(id); setTab('overview') }} />}
 
     <div className="cc5-summary">
       <button type="button" className="cc5-card cc5-card-amber" onClick={() => setFilter('open')}>
@@ -481,4 +486,39 @@ function DeleteZone({ project, onDeleted }) {
       <button type="button" className="cc5-btn cc5-danger-solid" disabled={busy || running || confirm.trim() !== project.title.trim()} onClick={remove}>{busy ? '備份並刪除中…' : '永久刪除'}</button>
     </div>
   </section>
+}
+
+// 新增專案：沿用既有 POST /projects（與 V3 相同），建立後系統自動產生規劃工作包。
+const OWNERS = [['hy', 'HY'], ['950157', '950157'], ['sam', 'Sam'], ['family', '小因']]
+function NewProject({ onCancel, onCreated }) {
+  const [form, setForm] = useState({ title: '', goal: '', description: '', owner_bot: 'hy' })
+  const [busy, setBusy] = useState(false)
+  const [message, setMessage] = useState('')
+  const set = key => e => setForm(f => ({ ...f, [key]: e.target.value }))
+
+  async function submit(e) {
+    e.preventDefault()
+    setBusy(true); setMessage('')
+    const id = `project-${crypto.randomUUID()}`
+    try {
+      await request('/projects', { method: 'POST', body: JSON.stringify({ ...form, title: form.title.trim(), goal: form.goal.trim(), project_id: id, references: [] }) })
+      await onCreated(id)
+    } catch (reason) { setMessage(`建立失敗（${reason.message}）`) }
+    finally { setBusy(false) }
+  }
+
+  return <form className="cc5-panel cc5-form" onSubmit={submit} aria-labelledby="cc5-new-title">
+    <h2 className="cc5-h" id="cc5-new-title">新增專案</h2>
+    <label className="cc5-field">名稱<input className="cc5-input" required maxLength={200} value={form.title} onChange={set('title')} /></label>
+    <label className="cc5-field">目標<textarea required maxLength={30000} value={form.goal} onChange={set('goal')} placeholder="想達成什麼、成功的樣子、限制條件" /></label>
+    <label className="cc5-field">說明（選填）<textarea maxLength={10000} value={form.description} onChange={set('description')} /></label>
+    <label className="cc5-field">負責 Bot<select className="cc5-input" value={form.owner_bot} onChange={set('owner_bot')}>
+      {OWNERS.map(([v, l]) => <option key={v} value={v}>{l}</option>)}</select></label>
+    <p className="cc5-small">建立後 AI 會先產出規劃書，送到「待確認」等你核准。</p>
+    {message && <p role="alert" className="cc5-warn">{message}</p>}
+    <div className="cc5-two">
+      <button type="button" className="cc5-btn" disabled={busy} onClick={onCancel}>取消</button>
+      <button type="submit" className="cc5-primary" disabled={busy || !form.title.trim() || !form.goal.trim()}>{busy ? '建立中…' : '建立專案'}</button>
+    </div>
+  </form>
 }

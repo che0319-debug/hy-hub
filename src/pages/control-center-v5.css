@@ -111,3 +111,4 @@
 .cc5-danger-solid:disabled,.cc5 button:disabled{opacity:.5;cursor:not-allowed}
 .cc5-warn{color:#b42318;font-size:14px}
 .cc5-input{min-height:44px;padding:0 12px;border:1px solid #c9c5bb;border-radius:10px;font:inherit;font-size:15px;color:var(--ink);background:#fff}
+.cc5-head-actions{display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end}
