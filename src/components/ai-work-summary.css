@@ -13,3 +13,11 @@
 @media(max-width:1100px){.ai-work-stat{padding:14px 10px;gap:8px}.ai-work-stat-icon{width:34px;height:34px}}
 @media(max-width:1000px){.ai-work-summary{grid-template-columns:repeat(3,minmax(0,1fr))}}
 @media(max-width:640px){.ai-work-summary{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.ai-work-stat{padding:12px;min-height:80px}.ai-work-stat-icon{width:30px;height:30px}.ai-work-stat-copy>span{font-size:13px}.ai-work-stat:last-child{grid-column:1/-1}.ai-work-stat:last-child .ai-work-stat-copy{flex-direction:row;align-items:center;gap:12px}}
+/* 首頁 v5 口徑卡片（AIWorkHomeSummary） */
+.ai-work-stat[data-status="v5-running"]{--stat-color:#1d4ed8;--stat-bg:#edf4ff}
+.ai-work-stat[data-status="v5-completed"]{--stat-color:#047857;--stat-bg:#e9f8f1}
+.ai-work-stat[data-status="v5-open"][data-alert="true"]{--stat-color:#7a4700;--stat-bg:#fbebd3;background:#fbf4e6;border-color:#ebd9b4}
+.ai-work-stat-sub{font-size:12px;line-height:1.4;color:#64748b;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ai-work-summary-error{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:16px;border:1px solid #fecaca;border-radius:12px;background:#fef2f2;color:#b91c1c;font-size:14px}
+.ai-work-summary-error button{display:inline-flex;align-items:center;gap:6px;padding:6px 12px;border:1px solid #fca5a5;border-radius:8px;background:#fff;color:#b91c1c;font-size:13px}
+.ai-work-summary-error button:hover{background:#fff5f5}

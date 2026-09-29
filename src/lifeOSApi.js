@@ -1,4 +1,4 @@
-import { authHeaders, expireSession } from './auth'
+import { authHeaders } from './auth'
 
 const API_BASE = import.meta.env.VITE_API_BASE || ''
 
@@ -228,13 +228,4 @@ export async function approveWorkspaceMilestone(projectId, milestoneId, workId) 
     body: JSON.stringify({ workId }),
   })
   return parseResponse(response, 'approveWorkspaceMilestone')
-}
-
-export async function fetchAIWorkProjects() {
-  const response = await fetch(`${API_BASE}/api/ai-work-packages/projects`, { headers: { ...authHeaders() }, cache: 'no-store' })
-  if (response.status === 401 || response.status === 403) expireSession()
-  const projects = await parseResponse(response, 'fetchAIWorkProjects')
-  const summary = Object.fromEntries(['ai_pending', 'ai_running', 'confirmation', 'completed']
-    .map(status => [status, projects.filter(project => project.status === status).length]))
-  return { projects, summary: { ...summary, all: projects.length } }
 }

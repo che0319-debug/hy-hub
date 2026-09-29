@@ -6,8 +6,8 @@ import { useSessionContext } from '../App'
 import PixelCity from '../mobile/PixelCity'
 import { fetchTodaySchedule, fetchAllMilestones, fetchMobileState, fetchWeeklyChange, postWeeklyChange, fetchLifeOSContext } from '../api'
 import { fetchDailyOS } from '../lifeOSApi'
-import { useAIWork } from '../aiWorkStore'
-import AIWorkSummary from '../components/AIWorkSummary'
+import { useAIWork, refreshAIWork } from '../aiWorkStore'
+import AIWorkHomeSummary from '../components/AIWorkHomeSummary'
 
 let homeDataCache = null
 let weeklyChangeCache
@@ -390,7 +390,12 @@ export default function Home() {
       {view === 'data' ? (
         <div>
           <WeeklyChangeCard />
-          <section className="mb-4"><h2 className="mb-3 text-sm font-semibold text-slate-600">AI Work 區</h2><AIWorkSummary summary={aiWork.summary} onOpen={() => navigate('/ai-work')}/>{aiWork.error && <p role="alert" className="mt-2 text-sm text-red-600">{aiWork.error}</p>}</section>
+          <section className="mb-4">
+            <h2 className="mb-3 text-sm font-semibold text-slate-600">AI Work</h2>
+            <AIWorkHomeSummary summary={aiWork.summary} error={aiWork.error}
+              onOpen={filter => navigate(filter === 'all' ? '/ai-work-v5' : `/ai-work-v5?filter=${filter}`)}
+              onRetry={refreshAIWork} />
+          </section>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <TodoSection />
             <ScheduleSection />
@@ -413,7 +418,7 @@ export default function Home() {
             state={worldState}
             variant="desktop"
             onOpenDistrict={handleBotClick}
-            onOpenWork={() => navigate('/dispatch')}
+            onOpenWork={() => navigate('/ai-work-v5')}
           />
         </div>
       )}

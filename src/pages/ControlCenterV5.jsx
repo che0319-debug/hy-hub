@@ -1,16 +1,14 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
-import { authHeaders, ensureAccessToken, expireSession } from '../auth'
+import { useSearchParams } from 'react-router-dom'
+import { request, loadControlCenter, openCountByProject, summarizeControlCenter, normalizeFilter } from '../aiWorkV5Data'
 import './control-center-v5.css'
 
 // AI Work 控制中心（v5 介面，第一版）
 // 兩層式：專案總表 → 單一專案（概況／待確認／規劃書／產出／工作紀錄）。
-// 資料全部來自既有 /api/ai-work-packages；v5 新增的後端能力（Codex 額度、事件紀錄、事實庫）
-// 接通前不顯示，也不以假資料代替。
-
-const API_BASE = (import.meta.env.VITE_API_BASE || '').replace(/\/$/, '')
-const API = `${API_BASE}/api/ai-work-packages`
+// 資料全部來自既有 /api/ai-work-packages（讀取與統計共用 aiWorkV5Data，首頁卡片同源）；
+// v5 新增的後端能力（Codex 額度、事件紀錄、事實庫）接通前不顯示，也不以假資料代替。
 
 const PROJECT_STATUS = {
   ai_pending: { label: '待 AI 處理', tone: 'gray' },
@@ -37,21 +35,6 @@ const ACTION_TYPE = {
 const EXECUTORS = { GPT_CHAT: 'GPT', CHATGPT_WORK: 'ChatGPT Work', CODEX: 'Codex' }
 const TABS = [['overview', '概況'], ['inbox', '待確認'], ['plan', '規劃書'], ['outputs', '產出'], ['log', '工作紀錄']]
 const FILTERS = [['all', '全部'], ['open', '待確認'], ['active', '進行中'], ['completed', '完成']]
-
-async function request(path, options = {}) {
-  const ok = await ensureAccessToken()
-  if (!ok) { expireSession(); throw new Error('登入已過期，請重新登入。') }
-  const response = await fetch(`${API}${path}`, {
-    cache: 'no-store', ...options,
-    headers: { ...authHeaders(), ...(options.body ? { 'Content-Type': 'application/json' } : {}), ...(options.headers || {}) },
-  })
-  if (response.status === 401) { expireSession(); throw new Error('登入已過期，請重新登入。') }
-  if (!response.ok) {
-    const detail = (await response.json().catch(() => ({}))).detail
-    throw new Error(typeof detail === 'string' ? detail : `伺服器回應 ${response.status}`)
-  }
-  return response.json()
-}
 
 const isWorkPackage = p => p.type !== 'PROJECT_PLANNING' && p.type !== 'REVISION'
 const planOf = project => project?.plan || project?.packages?.find(p => p.type === 'PROJECT_PLANNING')?.result?.plan || null
@@ -94,17 +77,18 @@ export default function ControlCenterV5() {
   const [inbox, setInbox] = useState([])
   const [loaded, setLoaded] = useState(false)
   const [error, setError] = useState('')
-  const [filter, setFilter] = useState('all')
+  const [searchParams, setSearchParams] = useSearchParams()
+  const filter = normalizeFilter(searchParams.get('filter'))
+  const setFilter = key => setSearchParams(key === 'all' ? {} : { filter: key }, { replace: true })
   const [openId, setOpenId] = useState(null)
   const [tab, setTab] = useState('overview')
 
   const loadAll = useCallback(async () => {
     try {
-      const [list, open] = await Promise.all([request('/projects'), request('/inbox?status=OPEN')])
-      setProjects(list)
-      setInbox(open)
-      const results = await Promise.allSettled(list.map(p => request(`/projects/${encodeURIComponent(p.id)}`)))
-      setDetails(Object.fromEntries(results.map((r, i) => [list[i].id, r.status === 'fulfilled' ? r.value : null])))
+      const data = await loadControlCenter()
+      setProjects(data.projects)
+      setInbox(data.inbox)
+      setDetails(data.details)
       setError('')
     } catch (reason) { setError(reason.message) }
     finally { setLoaded(true) }
@@ -125,7 +109,7 @@ export default function ControlCenterV5() {
     return () => window.clearInterval(timer)
   }, [loadAll])
 
-  const openByProject = useMemo(() => inbox.reduce((acc, item) => ({ ...acc, [item.project_id]: (acc[item.project_id] || 0) + 1 }), {}), [inbox])
+  const openByProject = useMemo(() => openCountByProject(inbox), [inbox])
   const project = openId ? { ...projects.find(p => p.id === openId), ...(details[openId] || {}) } : null
 
   if (project?.id) {
@@ -135,10 +119,7 @@ export default function ControlCenterV5() {
     </section>
   }
 
-  const openTotal = inbox.length
-  const queue = Object.values(details).flatMap(d => d?.packages || [])
-  const running = queue.filter(p => p.status === 'RUNNING').length
-  const waiting = queue.filter(p => p.status === 'READY').length
+  const { openTotal, openProjects, running, waiting } = summarizeControlCenter({ projects, inbox, details })
   const rank = p => (openByProject[p.id] ? 0 : p.status === 'completed' ? 2 : 1)
   const visible = projects
     .filter(p => filter === 'all' || (filter === 'open' ? openByProject[p.id] : filter === 'completed' ? p.status === 'completed' : p.status !== 'completed'))
@@ -156,7 +137,7 @@ export default function ControlCenterV5() {
       <button type="button" className="cc5-card cc5-card-amber" onClick={() => setFilter('open')}>
         <span className="cc5-label">待確認</span>
         <strong>{openTotal}</strong>
-        <span className="cc5-muted">分布在 {Object.keys(openByProject).length} 個專案</span>
+        <span className="cc5-muted">分布在 {openProjects} 個專案</span>
       </button>
       <div className="cc5-card">
         <span className="cc5-label">執行佇列</span>
