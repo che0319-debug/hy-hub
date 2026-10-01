@@ -29,6 +29,8 @@ const ACTION_TYPE = {
   MILESTONE_REVIEW: 'Milestone 驗收',
   SUPPLEMENT: '補資料',
   CAPABILITY_GAP: '能力不足',
+  SPEC_CHANGE_APPROVAL: '規格變更確認',
+  SPEC_CHANGE_DECISION: '規格變更結果',
   CHOICE: '選方案',
   EXTERNAL_ACTION: '對外行動',
 }
@@ -36,7 +38,10 @@ const EXECUTORS = { GPT_CHAT: 'GPT', CHATGPT_WORK: 'ChatGPT Work', CODEX: 'Codex
 const TABS = [['overview', '概況'], ['inbox', '待確認'], ['plan', '規劃書'], ['outputs', '產出'], ['log', '工作紀錄']]
 const FILTERS = [['all', '全部'], ['open', '待確認'], ['active', '進行中'], ['completed', '完成']]
 
-const isWorkPackage = p => p.type !== 'PROJECT_PLANNING' && p.type !== 'REVISION'
+// 停泊：規格變更核准後，舊範圍的工作包保留結果但不再執行（milestone_id 以 PARKED: 開頭）
+const isParked = p => String(p.milestone_id || '').startsWith('PARKED:')
+const isWorkPackage = p => !['PROJECT_PLANNING', 'REVISION', 'SPEC_CHANGE_PLANNING'].includes(p.type) && !isParked(p)
+const canChangeSpec = project => project?.plan_state === 'APPROVED' && project?.phase === '執行期' && !!project?.milestone_id
 const planOf = project => project?.plan || project?.packages?.find(p => p.type === 'PROJECT_PLANNING')?.result?.plan || null
 const time = seconds => seconds ? new Date(seconds * 1000).toLocaleString('zh-TW', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit', hour12: false }) : ''
 const dayKey = seconds => seconds ? new Date(seconds * 1000).toLocaleDateString('zh-TW', { month: 'long', day: 'numeric', weekday: 'short' }) : '時間不明'
@@ -52,6 +57,10 @@ function situation(project, openCount) {
   const running = packages.find(p => p.status === 'RUNNING')
   const ready = packages.find(p => p.status === 'READY')
   if (project?.status === 'completed') return { now: '所有 Milestone 已完成', next: '查看產出' }
+  if (project?.spec_change_pending) {
+    const drafting = packages.find(p => p.id === project.spec_change_pending && p.status !== 'COMPLETED')
+    return { now: '規格變更進行中，其他工作暫停', next: drafting ? 'AI 起草新規劃中' : '到「待確認」核准規格變更' }
+  }
   if (running) return { now: `執行中：${firstLine(running.task)}`, next: openCount ? `處理 ${openCount} 項待確認` : '等待執行結果' }
   if (openCount) return { now: `有 ${openCount} 項待你確認`, next: '到「待確認」處理' }
   if (ready) return { now: `排隊中：${firstLine(ready.task)}`, next: '等待 AI 領取' }
@@ -198,6 +207,7 @@ function ProjectView({ project, tab, setTab, openItems, onBack, onChanged, error
       {tab === 'overview' && <>
         <SuggestionBox project={project} onChanged={onChanged} setError={setError} />
         <Overview project={project} plan={plan} openCount={openItems.length} goInbox={() => setTab('inbox')} />
+        <SpecChangeBox project={project} onChanged={onChanged} setError={setError} goInbox={() => setTab('inbox')} />
         <DeleteZone project={project} onDeleted={onDeleted} />
       </>}
       {tab === 'inbox' && <>
@@ -270,9 +280,13 @@ function Inbox({ items, onChanged, setError }) {
   async function resolve(item, value) {
     setBusy(item.action_id)
     try {
+      const note = (feedback[item.action_id] || '').trim()
       const body = value === 'REVISE'
-        ? { answer: { decision: 'REVISE', feedback: (feedback[item.action_id] || '').trim() }, attachments: [] }
-        : { answer: value, attachments: [], ...(value === 'APPROVED' && item.plan ? { plan: item.plan } : {}) }
+        ? { answer: { decision: 'REVISE', feedback: note }, attachments: [] }
+        : value === 'REJECTED'
+          ? { answer: { decision: 'REJECTED', reason: note }, attachments: [] }
+          : { answer: value === 'APPROVED' && note && item.action_type === 'SPEC_CHANGE_APPROVAL' ? `APPROVED\n${note}` : value,
+              attachments: [], ...(value === 'APPROVED' && item.plan ? { plan: item.plan } : {}) }
       await request(`/inbox/${encodeURIComponent(item.action_id)}/resolve`, { method: 'POST', body: JSON.stringify(body) })
       setAnswer(v => ({ ...v, [item.action_id]: '' }))
       setFeedback(v => ({ ...v, [item.action_id]: '' }))
@@ -286,6 +300,7 @@ function Inbox({ items, onChanged, setError }) {
     <p className="cc5-muted">待確認不會擋住沒有依賴的工作包。</p>
     {items.map(item => {
       const approval = item.action_type === 'PLAN_APPROVAL' || item.action_type === 'MILESTONE_REVIEW'
+      const spec = item.action_type === 'SPEC_CHANGE_APPROVAL'
       return <article key={item.action_id} className="cc5-panel">
         <div className="cc5-tags">
           <span className="cc5-tag">{ACTION_TYPE[item.action_type] || item.action_type}</span>
@@ -293,10 +308,20 @@ function Inbox({ items, onChanged, setError }) {
           <span className="cc5-small">{time(item.created_at)}</span>
         </div>
         <h2 className="cc5-q">{item.title}</h2>
-        {item.question && item.question !== item.title && <p className="cc5-pre">{item.question}</p>}
+        {item.question && item.question !== item.title && <p className="cc5-pre">{spec ? item.question.split('\n\n回覆 APPROVED')[0] : item.question}</p>}
         {item.reason && <p className="cc5-muted cc5-pre">{item.reason}</p>}
         {item.plan && <details className="cc5-sub"><summary>查看規劃書草稿</summary><PlanBody plan={item.plan} /></details>}
-        {approval ? <>
+        {spec ? <>
+          {item.spec_change && <details className="cc5-sub" open><summary>查看新規劃段落</summary><SpecDraft draft={item.spec_change} /></details>}
+          <p className="cc5-small">只有你能核准。核准後舊範圍的工作包會停泊（保留結果、不再執行），新工作包立即開始。</p>
+          <label className="cc5-field">意見（要求修改、駁回時必填；核准時可附註）
+            <textarea value={feedback[item.action_id] || ''} onChange={e => setFeedback(v => ({ ...v, [item.action_id]: e.target.value }))} /></label>
+          <div className="cc5-three">
+            <button type="button" className="cc5-primary" disabled={!!busy || !item.spec_change} onClick={() => resolve(item, 'APPROVED')}>核准生效</button>
+            <button type="button" className="cc5-btn" disabled={!!busy || !(feedback[item.action_id] || '').trim()} onClick={() => resolve(item, 'REVISE')}>要求修改</button>
+            <button type="button" className="cc5-btn" disabled={!!busy || !(feedback[item.action_id] || '').trim()} onClick={() => resolve(item, 'REJECTED')}>駁回</button>
+          </div>
+        </> : approval ? <>
           <label className="cc5-field">修改意見（要求修改時必填）
             <textarea value={feedback[item.action_id] || ''} onChange={e => setFeedback(v => ({ ...v, [item.action_id]: e.target.value }))} /></label>
           <div className="cc5-two">
@@ -337,6 +362,7 @@ function PlanTab({ project, plan }) {
       {m.list.length > 0 && <><h3 className="cc5-label">工作包</h3>
         <ul className="cc5-wp">{m.list.map(p => { const st = PACKAGE_STATUS[p.status] || { label: p.status, tone: 'gray' }; return <li key={p.id}><span>{firstLine(p.task)}</span><Pill tone={st.tone}>{st.label}</Pill></li> })}</ul></>}
     </details>)}
+    <ParkedPackages project={project} />
     {plan.risks?.length > 0 && <section className="cc5-panel"><h2 className="cc5-h">風險</h2><ul className="cc5-ul">{plan.risks.map((x, i) => <li key={i}>{x}</li>)}</ul></section>}
   </div>
 }
@@ -401,6 +427,64 @@ function WorkLog({ project }) {
 }
 
 // 我的建議：隨時可填；下一個領件的工作包會一起讀取，交件後自動從這裡消失（紀錄留在工作紀錄）。
+function SpecDraft({ draft }) {
+  return <div className="cc5-stack cc5-plan">
+    {draft.summary_of_changes && <p className="cc5-pre">{draft.summary_of_changes}</p>}
+    {draft.plan_updates?.goal && <div><h3 className="cc5-label">新目標</h3><p className="cc5-pre">{draft.plan_updates.goal}</p></div>}
+    {(draft.milestones || []).map(m => <div key={m.id}>
+      <h3 className="cc5-label">{m.id} {m.name || ''}</h3>
+      <ul className="cc5-ul">{(m.packages || []).map(p => <li key={p.key}>{firstLine(p.task)}</li>)}</ul>
+    </div>)}
+  </div>
+}
+
+function ParkedPackages({ project }) {
+  const parked = (project.packages || []).filter(isParked)
+  if (!parked.length) return null
+  return <details className="cc5-panel">
+    <summary className="cc5-row"><span><b>已停泊</b> <span className="cc5-muted">規格變更前的範圍</span></span><span className="cc5-small">{parked.length} 個工作包</span></summary>
+    <p className="cc5-small">保留原本結果與紀錄，不會再執行。</p>
+    <ul className="cc5-wp">{parked.map(p => <li key={p.id}><span>{firstLine(p.task)}<small className="cc5-muted"> {p.milestone_id.replace('PARKED:', '')}</small></span><Pill tone="gray">停泊</Pill></li>)}</ul>
+  </details>
+}
+
+// 修改範圍／目標：一兩句話送出 → AI 起草新段落 → 待確認裡由 HY 核准才生效
+function SpecChangeBox({ project, onChanged, setError, goInbox }) {
+  const [text, setText] = useState('')
+  const [busy, setBusy] = useState(false)
+  if (!canChangeSpec(project)) return null
+  const pending = project.spec_change_pending
+  const drafting = pending && (project.packages || []).some(p => p.id === pending && p.status !== 'COMPLETED')
+
+  async function submit(e) {
+    e.preventDefault()
+    if (!text.trim()) return
+    setBusy(true)
+    try {
+      await request(`/projects/${encodeURIComponent(project.id)}/spec-change-requests`, { method: 'POST', body: JSON.stringify({ request: text.trim() }) })
+      setText('')
+      await onChanged()
+    } catch (reason) { setError(reason.message) }
+    finally { setBusy(false) }
+  }
+
+  if (pending) return <section className="cc5-panel">
+    <div className="cc5-row"><h2 className="cc5-h">規格變更</h2><Pill tone="amber">{drafting ? 'AI 起草中' : '等你核准'}</Pill></div>
+    <p className="cc5-muted">{drafting ? 'AI 正在依你的改題起草新段落；期間其他工作暫停。' : '新段落已起草完成，核准後才會生效。'}</p>
+    {!drafting && <button type="button" className="cc5-link" onClick={goInbox}>去待確認核准 ›</button>}
+  </section>
+
+  return <details className="cc5-panel">
+    <summary className="cc5-row"><h2 className="cc5-h">修改範圍／目標</h2><span className="cc5-small">已核准的規劃書要改方向時用</span></summary>
+    <form className="cc5-form" onSubmit={submit}>
+      <label className="cc5-field" htmlFor={`cc5-spec-${project.id}`}>用一兩句話說明要改成什麼（例：本階段改為上市前準備，營收追蹤延到營運後）</label>
+      <textarea id={`cc5-spec-${project.id}`} maxLength={10000} value={text} onChange={e => setText(e.target.value)} />
+      <p className="cc5-small">送出後 AI 會起草 {project.milestone_id} 起的新段落；已完成的 Milestone 不變。起草期間其他工作暫停，你核准後才生效。</p>
+      <button type="submit" className="cc5-primary" disabled={busy || !text.trim()}>送出改題</button>
+    </form>
+  </details>
+}
+
 function SuggestionBox({ project, onChanged, setError }) {
   const [text, setText] = useState('')
   const [busy, setBusy] = useState(false)
