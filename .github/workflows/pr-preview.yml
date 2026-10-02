@@ -1,0 +1,37 @@
+name: PR build & preview
+# Runs for every PR that can change what GitHub Pages serves, including the
+# static dashboards under public/. AI Work's code review reads this result
+# (a failing run blocks submit and merge) and the built site is kept as an
+# artifact so a reviewer can download and open the exact preview.
+on:
+  pull_request:
+    paths:
+      - 'src/**'
+      - 'public/**'
+      - 'tests/**'
+      - 'index.html'
+      - 'package.json'
+      - 'package-lock.json'
+      - 'vite.config.js'
+      - '.github/workflows/pr-preview.yml'
+permissions:
+  contents: read
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+      - run: npm ci
+      - run: node --test tests/command-center.test.mjs
+      - run: npm run build
+        env:
+          VITE_API_BASE: https://hy-agent-v2.onrender.com
+      - uses: actions/upload-artifact@v4
+        with:
+          name: preview-pr-${{ github.event.pull_request.number }}
+          path: dist
+          retention-days: 14

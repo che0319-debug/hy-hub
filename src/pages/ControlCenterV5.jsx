@@ -30,6 +30,7 @@ const ACTION_TYPE = {
   SUPPLEMENT: '補資料',
   CAPABILITY_GAP: '能力不足',
   SPEC_CHANGE_APPROVAL: '規格變更確認',
+  CODE_REVIEW: '程式審核',
   SPEC_CHANGE_DECISION: '規格變更結果',
   CHOICE: '選方案',
   EXTERNAL_ACTION: '對外行動',
@@ -46,6 +47,25 @@ const planOf = project => project?.plan || project?.packages?.find(p => p.type =
 const time = seconds => seconds ? new Date(seconds * 1000).toLocaleString('zh-TW', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit', hour12: false }) : ''
 const dayKey = seconds => seconds ? new Date(seconds * 1000).toLocaleDateString('zh-TW', { month: 'long', day: 'numeric', weekday: 'short' }) : '時間不明'
 const firstLine = text => String(text || '').split('\n')[0]
+const TIER = { L1: 'L1 低風險', L2: 'L2 一般程式', L3: 'L3 平台核心' }
+const CHECKS = { success: 'CI 通過', pending: 'CI 執行中', none: '無 CI', failure: 'CI 失敗' }
+
+function CodeReviewFacts({ review }) {
+  if (!review) return null
+  const merged = review.merge?.merged
+  return <div className="cc5-stack">
+    <div className="cc5-tags">
+      <Pill tone={review.tier === 'L3' ? 'red' : review.tier === 'L2' ? 'amber' : 'green'}>{TIER[review.tier] || review.tier}</Pill>
+      <Pill tone={review.checks === 'failure' ? 'red' : review.checks === 'success' ? 'green' : 'gray'}>{CHECKS[review.checks] || review.checks}</Pill>
+      {merged && <Pill tone="green">已 merge</Pill>}
+    </div>
+    <a className="cc5-btn cc5-block" href={review.url} target="_blank" rel="noreferrer">開啟 PR：{review.repo}#{review.pull_request}</a>
+    <details className="cc5-sub"><summary>變更檔案（{review.files?.length || 0}）</summary>
+      <ul className="cc5-ul">{(review.files || []).map(f => <li key={f}><code>{f}</code></li>)}</ul></details>
+    {review.deploy && <p className="cc5-small">部署：{review.deploy}</p>}
+    {merged && review.merge.merge_commit_sha && <p className="cc5-small">merge commit {String(review.merge.merge_commit_sha).slice(0, 7)}{review.approved_by ? `・核准：${review.approved_by}` : ''}</p>}
+  </div>
+}
 
 function progressOf(project) {
   const work = (project?.packages || []).filter(isWorkPackage)
@@ -281,7 +301,11 @@ function Inbox({ items, onChanged, setError }) {
     setBusy(item.action_id)
     try {
       const note = (feedback[item.action_id] || '').trim()
-      const body = value === 'REVISE'
+      const body = value === 'RETURN'
+        ? { answer: note, attachments: [] }
+        : value === 'APPROVED' && note && item.action_type === 'CODE_REVIEW'
+          ? { answer: `APPROVED\n${note}`, attachments: [] }
+        : value === 'REVISE'
         ? { answer: { decision: 'REVISE', feedback: note }, attachments: [] }
         : value === 'REJECTED'
           ? { answer: { decision: 'REJECTED', reason: note }, attachments: [] }
@@ -301,6 +325,7 @@ function Inbox({ items, onChanged, setError }) {
     {items.map(item => {
       const approval = item.action_type === 'PLAN_APPROVAL' || item.action_type === 'MILESTONE_REVIEW'
       const spec = item.action_type === 'SPEC_CHANGE_APPROVAL'
+      const code = item.action_type === 'CODE_REVIEW'
       return <article key={item.action_id} className="cc5-panel">
         <div className="cc5-tags">
           <span className="cc5-tag">{ACTION_TYPE[item.action_type] || item.action_type}</span>
@@ -309,9 +334,18 @@ function Inbox({ items, onChanged, setError }) {
         </div>
         <h2 className="cc5-q">{item.title}</h2>
         {item.question && item.question !== item.title && <p className="cc5-pre">{spec ? item.question.split('\n\n回覆 APPROVED')[0] : item.question}</p>}
-        {item.reason && <p className="cc5-muted cc5-pre">{item.reason}</p>}
+        {item.reason && <p className="cc5-muted cc5-pre">{code ? firstLine(item.reason) : item.reason}</p>}
         {item.plan && <details className="cc5-sub"><summary>查看規劃書草稿</summary><PlanBody plan={item.plan} /></details>}
-        {spec ? <>
+        {code ? <>
+          <CodeReviewFacts review={item.code_review} />
+          <p className="cc5-small">核准後由 HY Life OS 以審核當下的版本 merge，並自動部署。你或 Grok Bot 都可以核准。</p>
+          <label className="cc5-field">意見（退回時必填；核准時可附註）
+            <textarea value={feedback[item.action_id] || ''} onChange={e => setFeedback(v => ({ ...v, [item.action_id]: e.target.value }))} /></label>
+          <div className="cc5-two">
+            <button type="button" className="cc5-primary" disabled={!!busy || !item.code_review || item.code_review.checks === 'failure'} onClick={() => resolve(item, 'APPROVED')}>核准並部署</button>
+            <button type="button" className="cc5-btn" disabled={!!busy || !(feedback[item.action_id] || '').trim()} onClick={() => resolve(item, 'RETURN')}>退回修改</button>
+          </div>
+        </> : spec ? <>
           {item.spec_change && <details className="cc5-sub" open><summary>查看新規劃段落</summary><SpecDraft draft={item.spec_change} /></details>}
           <p className="cc5-small">只有你能核准。核准後舊範圍的工作包會停泊（保留結果、不再執行），新工作包立即開始。</p>
           <label className="cc5-field">意見（要求修改、駁回時必填；核准時可附註）
@@ -381,8 +415,9 @@ function Outputs({ project }) {
         <span><b>{file.filename}</b><small>v{file.revision}・{file.source}</small></span><span aria-hidden="true">›</span></a>)}
     </section>}
     {done.map(p => <details key={p.id} className="cc5-panel">
-      <summary className="cc5-row"><span><b>{firstLine(p.task)}</b><small className="cc5-muted"> {p.milestone_id}</small></span><Pill tone="green">完成</Pill></summary>
+      <summary className="cc5-row"><span><b>{firstLine(p.task)}</b><small className="cc5-muted"> {p.milestone_id}</small></span>{p.result.code_review && p.status !== 'COMPLETED' ? <Pill tone="amber">待程式審核</Pill> : <Pill tone="green">完成</Pill>}</summary>
       {p.result.summary && <p className="cc5-pre">{p.result.summary}</p>}
+      {p.result.code_review && <CodeReviewFacts review={p.result.code_review} />}
       {p.result.outputs?.map((o, i) => <div key={i} className="cc5-md cc5-output"><ReactMarkdown remarkPlugins={[remarkGfm]} skipHtml>{typeof o === 'string' ? o : '```json\n' + JSON.stringify(o, null, 2) + '\n```'}</ReactMarkdown></div>)}
     </details>)}
     {!done.length && !project.files?.length && <p className="cc5-empty">尚無交付成果。</p>}
