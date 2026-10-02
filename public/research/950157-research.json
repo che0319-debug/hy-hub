@@ -1,0 +1,52 @@
+{
+  "version": "v0",
+  "title": "技術主軸情報｜研究分頁",
+  "updated_at": "2026-10-02",
+  "weekly_priority": {
+    "axis_id": "tactile",
+    "week_of": "2026-09-28",
+    "reason": "待補：由 M2 本週優先判讀回填（需引用 2026-09-28 週報種子）"
+  },
+  "axes": [
+    {
+      "id": "tactile",
+      "name": "觸覺回饋",
+      "status": "待補",
+      "key_progress": "待補",
+      "signals": [],
+      "gap": "待補",
+      "sources": [],
+      "updated_at": "2026-10-02"
+    },
+    {
+      "id": "eskin",
+      "name": "電子皮膚",
+      "status": "待補",
+      "key_progress": "待補",
+      "signals": [],
+      "gap": "待補",
+      "sources": [],
+      "updated_at": "2026-10-02"
+    },
+    {
+      "id": "panel",
+      "name": "面板級封裝",
+      "status": "待補",
+      "key_progress": "待補",
+      "signals": [],
+      "gap": "待補",
+      "sources": [],
+      "updated_at": "2026-10-02"
+    }
+  ],
+  "references": [
+    {
+      "title": "專案資料夾｜技術主軸情報",
+      "url": "https://drive.google.com/drive/folders/17CmzaOV01VjsDwrs3rP-9WzurxBrmqEb"
+    },
+    {
+      "title": "01_參考資料（週報原文／來源清單／一頁現況）",
+      "url": "https://drive.google.com/drive/folders/1no4paKh_-4dY8nIrj0nGcxajIbWIWZ8w"
+    }
+  ]
+}
