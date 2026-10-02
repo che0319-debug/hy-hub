@@ -3,6 +3,7 @@ import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import { useSearchParams } from 'react-router-dom'
 import { request, loadControlCenter, openCountByProject, summarizeControlCenter, normalizeFilter } from '../aiWorkV5Data'
+import { reviewDeliverables, driveFileUrl } from '../lib/reviewDeliverables'
 import './control-center-v5.css'
 
 // AI Work 控制中心（v5 介面，第一版）
@@ -232,7 +233,7 @@ function ProjectView({ project, tab, setTab, openItems, onBack, onChanged, error
       </>}
       {tab === 'inbox' && <>
         <SuggestionBox project={project} onChanged={onChanged} setError={setError} />
-        <Inbox items={openItems} onChanged={onChanged} setError={setError} />
+        <Inbox items={openItems} project={project} onChanged={onChanged} setError={setError} />
       </>}
       {tab === 'plan' && <PlanTab project={project} plan={plan} />}
       {tab === 'outputs' && <Outputs project={project} />}
@@ -292,7 +293,7 @@ function Overview({ project, plan, openCount, goInbox }) {
   </div>
 }
 
-function Inbox({ items, onChanged, setError }) {
+function Inbox({ items, project, onChanged, setError }) {
   const [answer, setAnswer] = useState({})
   const [feedback, setFeedback] = useState({})
   const [busy, setBusy] = useState('')
@@ -336,6 +337,7 @@ function Inbox({ items, onChanged, setError }) {
         {item.question && item.question !== item.title && <p className="cc5-pre">{spec ? item.question.split('\n\n回覆 APPROVED')[0] : item.question}</p>}
         {item.reason && <p className="cc5-muted cc5-pre">{code ? firstLine(item.reason) : item.reason}</p>}
         {item.plan && <details className="cc5-sub"><summary>查看規劃書草稿</summary><PlanBody plan={item.plan} /></details>}
+        {approval && <ReviewDeliverables list={reviewDeliverables(project, item)} />}
         {code ? <>
           <CodeReviewFacts review={item.code_review} />
           <p className="cc5-small">核准後由 HY Life OS 以審核當下的版本 merge，並自動部署。你或 Grok Bot 都可以核准。</p>
@@ -372,6 +374,23 @@ function Inbox({ items, onChanged, setError }) {
   </div>
 }
 
+// 驗收卡直接附上要驗收的成果：檔案連結在最上面，摘要與產出說明可展開。
+function ReviewDeliverables({ list }) {
+  if (!list.length) return null
+  return <section className="cc5-stack">
+    <h3 className="cc5-label">要驗收的成果</h3>
+    {list.map(d => <div key={d.id} className="cc5-sub">
+      {list.length > 1 && <p><b>{firstLine(d.task)}</b></p>}
+      {d.files.map(f => <a key={f.file_id} className="cc5-file" href={driveFileUrl(f.file_id)} target="_blank" rel="noreferrer">
+        <span><b>{f.filename}</b></span><span aria-hidden="true">›</span></a>)}
+      {d.summary && <p className="cc5-pre">{d.summary}</p>}
+      {d.outputs.length > 0 && <details><summary className="cc5-small">產出說明（{d.outputs.length}）</summary>
+        {d.outputs.map((o, i) => <div key={i} className="cc5-md cc5-output"><ReactMarkdown remarkPlugins={[remarkGfm]} skipHtml>{typeof o === 'string' ? o : '```json\n' + JSON.stringify(o, null, 2) + '\n```'}</ReactMarkdown></div>)}
+      </details>}
+    </div>)}
+  </section>
+}
+
 function PlanBody({ plan }) {
   return <div className="cc5-stack cc5-plan">
     {plan.goal && <p>{plan.goal}</p>}
@@ -402,7 +421,8 @@ function PlanTab({ project, plan }) {
 }
 
 function Outputs({ project }) {
-  const done = (project.packages || []).filter(p => isWorkPackage(p) && p.result?.status === 'COMPLETED')
+  // 修改成果（REVISION，含依 HY 建議處理）也是交付，一併列出；規劃類不列。
+  const done = (project.packages || []).filter(p => (isWorkPackage(p) || (p.type === 'REVISION' && !isParked(p))) && p.result?.status === 'COMPLETED')
   // Same fallback as V3: the operator-reported folder until HY has verified one.
   const reported = project.references?.find(r => r.type === 'v3_input')?.data?.drive_upload_location_report
   const folderId = project.folder?.folder_id || reported?.folder_id
