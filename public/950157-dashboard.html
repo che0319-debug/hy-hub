@@ -325,6 +325,27 @@ header { background:var(--header-bg); padding:0 24px; display:flex; align-items:
   .board-wrap { scroll-snap-type:x mandatory; -webkit-overflow-scrolling:touch; padding:12px; }
   .column { scroll-snap-align:start; min-width:85vw; width:85vw; }
 }
+/* ══════════════ RESEARCH v0 ══════════════ */
+#tab-research.active { overflow-y:auto; }
+.research-wrap { padding:20px 24px 48px; max-width:900px; }
+.research-meta { font-size:12px; color:var(--text-muted); margin-bottom:12px; }
+.research-priority { background:var(--blue-light); border:1px solid var(--border); border-left:4px solid var(--brand-color); border-radius:var(--radius); padding:14px 16px; margin-bottom:16px; }
+.research-priority-label { font-size:11px; font-weight:700; color:var(--brand-color); letter-spacing:.04em; }
+.research-priority-axis { font-size:18px; font-weight:700; color:var(--text); margin:4px 0; }
+.research-priority-reason { font-size:13px; color:var(--text-muted); line-height:1.6; }
+.research-axis { background:var(--card-bg); border:1px solid var(--border); border-radius:var(--radius); padding:16px 18px; margin-bottom:12px; box-shadow:var(--shadow-sm); }
+.research-axis.is-priority { border-color:var(--brand-color); }
+.research-axis-head { display:flex; align-items:center; gap:8px; margin-bottom:10px; padding-bottom:8px; border-bottom:1px solid var(--border); }
+.research-axis-name { font-size:15px; font-weight:700; color:var(--text); flex:1; }
+.research-badge { font-size:11px; font-weight:700; color:#fff; background:var(--brand-color); border-radius:10px; padding:2px 8px; }
+.research-axis-date { font-size:11px; color:var(--text-muted); }
+.research-field { font-size:13px; line-height:1.6; margin-bottom:6px; color:var(--text); }
+.research-field b { color:var(--text-muted); font-weight:600; margin-right:6px; }
+.research-field ul { margin:2px 0 0 18px; }
+.research-pending { color:var(--text-dim); }
+.research-src a, .research-refs a { color:var(--blue); text-decoration:underline; word-break:break-all; }
+.research-refs { list-style:none; display:flex; flex-direction:column; gap:8px; font-size:13px; }
+@media (max-width:767px) { .research-wrap { padding:14px 12px 40px; } .tabs { padding:0 8px; overflow-x:auto; } }
 </style>
 </head>
 <body>
@@ -344,6 +365,7 @@ header { background:var(--header-bg); padding:0 24px; display:flex; align-items:
 <div class="tabs">
   <div class="tab active" data-tab="progress">📊 進度追蹤</div>
   <div class="tab" data-tab="weekly">📅 週覆盤</div>
+  <div class="tab" data-tab="research">🔬 研究</div>
 </div>
 
 <!-- 進度追蹤 -->
@@ -367,6 +389,11 @@ header { background:var(--header-bg); padding:0 24px; display:flex; align-items:
     </div>
     <div id="weeklyContent"><div class="weekly-loading">選擇週次以載入資料…</div></div>
   </div>
+</div>
+
+<!-- 研究 v0 -->
+<div class="tab-content" id="tab-research">
+  <div class="research-wrap" id="researchContent"><div class="weekly-loading">載入中…</div></div>
 </div>
 
 <!-- Milestone Modal -->
@@ -957,6 +984,79 @@ document.querySelector('[data-tab="weekly"]').addEventListener('click', function
     loadWeeklyList(null);
   }
 });
+
+// ── 研究分頁 v0（唯讀，資料：research/950157-research.json）──
+var researchLoaded = false;
+function rEsc(v) {
+  return String(v == null ? '' : v).replace(/[&<>"']/g, function(c) {
+    return { '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[c];
+  });
+}
+function rSafeUrl(u) { return /^https?:\/\//i.test(String(u || '')) ? rEsc(u) : ''; }
+function rText(v) {
+  var t = String(v == null ? '' : v).trim();
+  return (!t || t.indexOf('待補') === 0) ? '<span class="research-pending">' + rEsc(t || '待補') + '</span>' : rEsc(t);
+}
+function rSources(list) {
+  if (!list || !list.length) return '<span class="research-pending">待補</span>';
+  return '<ul>' + list.map(function(s) {
+    var url = rSafeUrl(s.url);
+    var label = rEsc(s.title || s.url || '來源') + (s.date ? '（' + rEsc(s.date) + '）' : '');
+    return '<li>' + (url ? '<a href="' + url + '" target="_blank" rel="noopener">' + label + '</a>' : label) + '</li>';
+  }).join('') + '</ul>';
+}
+function renderResearch(d) {
+  var axes = d.axes || [];
+  var pri = d.weekly_priority || {};
+  var priAxis = axes.filter(function(a) { return a.id === pri.axis_id; })[0];
+  var html = '<div class="research-meta">最後更新：' + rEsc(d.updated_at || '—') + '　·　Phase 1 僅累積情報，不追落地</div>';
+  html += '<div class="research-priority"><div class="research-priority-label">本週優先' + (pri.week_of ? '｜' + rEsc(pri.week_of) + ' 週' : '') + '</div>'
+       +  '<div class="research-priority-axis">' + rEsc(priAxis ? priAxis.name : '待補') + '</div>'
+       +  '<div class="research-priority-reason">' + rText(pri.reason) + '</div></div>';
+  axes.forEach(function(a) {
+    var isPri = a.id === pri.axis_id;
+    var signals = (a.signals && a.signals.length)
+      ? '<ul>' + a.signals.map(function(x) { return '<li>' + rEsc(x) + '</li>'; }).join('') + '</ul>'
+      : '<span class="research-pending">待補</span>';
+    html += '<div class="research-axis' + (isPri ? ' is-priority' : '') + '">'
+         +  '<div class="research-axis-head"><span class="research-axis-name">' + rEsc(a.name) + '</span>'
+         +  (isPri ? '<span class="research-badge">本週優先</span>' : '')
+         +  '<span class="research-axis-date">' + rEsc(a.updated_at || '') + '</span></div>'
+         +  '<div class="research-field"><b>現況</b>' + rText(a.status) + '</div>'
+         +  '<div class="research-field"><b>關鍵進展</b>' + rText(a.key_progress) + '</div>'
+         +  '<div class="research-field"><b>訊號</b>' + signals + '</div>'
+         +  '<div class="research-field"><b>Gap</b>' + rText(a.gap) + '</div>'
+         +  '<div class="research-field research-src"><b>來源</b>' + rSources(a.sources) + '</div>'
+         +  '</div>';
+  });
+  var refs = d.references || [];
+  if (refs.length) {
+    html += '<div class="section-card"><div class="section-title">📁 參考資料</div><ul class="research-refs">'
+         +  refs.map(function(r) {
+              var url = rSafeUrl(r.url);
+              return '<li>' + (url ? '<a href="' + url + '" target="_blank" rel="noopener">' + rEsc(r.title) + '</a>' : rEsc(r.title)) + '</li>';
+            }).join('') + '</ul></div>';
+  }
+  document.getElementById('researchContent').innerHTML = html;
+}
+function loadResearch() {
+  if (researchLoaded) return;
+  fetch('research/950157-research.json', { cache: 'no-store' })
+    .then(function(r) { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
+    .then(function(d) { researchLoaded = true; renderResearch(d); })
+    .catch(function(e) {
+      document.getElementById('researchContent').innerHTML = '<div class="weekly-loading">研究資料載入失敗（' + rEsc(e.message) + '）</div>';
+    });
+}
+document.querySelector('[data-tab="research"]').addEventListener('click', loadResearch);
+(function() {
+  if (new URLSearchParams(window.location.search).get('tab') !== 'research') return;
+  document.querySelectorAll('.tab').forEach(function(t) { t.classList.remove('active'); });
+  document.querySelectorAll('.tab-content').forEach(function(c) { c.classList.remove('active'); });
+  document.querySelector('[data-tab="research"]').classList.add('active');
+  document.getElementById('tab-research').classList.add('active');
+  loadResearch();
+})();
 
 </script>
 </body>
