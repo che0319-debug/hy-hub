@@ -1,11 +1,13 @@
 <!DOCTYPE html>
-<html lang="zh-TW">
+<html lang="zh-TW" data-bot="sam">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Sam 事業助理</title>
 <link href="https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=Noto+Sans+TC:wght@400;500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="hy-ui/hy-ui.css">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Sortable/1.15.2/Sortable.min.js"></script>
+<script src="sam-business-board.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <style>
 :root {
@@ -570,6 +572,78 @@ input[type="date"] { color-scheme: light; }
 /* Sam business map */
 .map-wrap{padding:24px;max-width:1600px;margin:0 auto}.map-heading{display:flex;align-items:center;justify-content:space-between;gap:16px;margin-bottom:18px}.map-heading h2{font-size:23px;letter-spacing:-.7px;margin:0 0 6px;color:#16382d}.map-heading p{font-size:12px;color:#74837d;margin:0;line-height:1.8}.map-count{color:#35614f;font-size:12px;white-space:nowrap;background:#edf5f0;border:1px solid #dceae1;border-radius:24px;padding:9px 14px}.map-toolbar{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:12px}.map-filters{display:flex;gap:6px;flex-wrap:wrap;margin:14px 0}.map-filters .filter{display:inline-flex;align-items:center;gap:5px;background:#fff;border:1px solid #e1e8e3;border-radius:20px;padding:7px 11px;font-size:11px;color:#6c7871;cursor:pointer}.map-filters .filter:has(input:checked){background:#eef6f1;border-color:#bed4c5;color:#285b3d}.map-filters input{accent-color:#39754d}.map-viewport{position:relative;border:1px solid #dce5df;border-radius:18px;background:#fff;overflow:hidden;box-shadow:0 6px 28px #17392c07}.map-stage{position:relative;height:clamp(460px,68vh,800px);overflow:auto;overscroll-behavior:contain;touch-action:pan-x pan-y;background-color:#fff;background-image:radial-gradient(#dce5df .8px,transparent .8px);background-size:22px 22px;scrollbar-width:thin}.map-space{position:relative}.map-world{position:absolute;top:0;left:0;transform-origin:0 0}.map-world svg{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;overflow:visible}.map-edge{fill:none;stroke:#a9bcb0;stroke-width:1.7}.map-edge.pending{stroke-dasharray:5 5;stroke:#bda879}.map-edge-label{font-size:10px;fill:#667d70;text-anchor:middle;paint-order:stroke;stroke:#fff;stroke-width:6px;stroke-linejoin:round}.map-node{position:absolute;left:0;top:0;width:188px;box-sizing:border-box;background:#fff;border:1px solid #dce6df;border-top:3px solid var(--node-accent,#799b89);border-radius:13px;padding:13px 14px 11px;box-shadow:0 3px 12px #183d2d0c;cursor:grab;user-select:none;touch-action:none;outline:none;transition:box-shadow .15s,border-color .15s}.map-node:hover,.map-node:focus-visible{border-color:#86af96;box-shadow:0 7px 22px #183d2d1a}.map-node.dragging{cursor:grabbing;z-index:5;will-change:transform;box-shadow:0 12px 28px #183d2d25;transition:none}.map-node.root{background:#173d2c;color:#fff;border-color:#173d2c;border-top-color:#78ac88}.map-node.root .map-node-meta{color:#bccebf}.map-node.root .map-tag{background:#ffffff18;color:#e4f2e8}.map-node.selected{border-color:#337449;box-shadow:0 0 0 3px #33744925}.map-node.inactive{opacity:.65}.map-node-topline{display:flex;justify-content:space-between;align-items:center;gap:6px}.map-node-kicker{font-size:9px;letter-spacing:1px;color:var(--node-accent,#799b89);text-transform:uppercase}.map-node.root .map-node-kicker{color:#9bc2a6}.map-node-edit{font-size:11px;color:#8aa292}.map-node-title{font-weight:700;font-size:14px;margin:7px 0 5px;line-height:1.4;overflow-wrap:anywhere}.map-node-meta{font-size:11px;color:#77877d;line-height:1.6;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;min-height:17px}.map-tag{display:inline-block;border-radius:5px;padding:3px 6px;margin:8px 3px 0 0;background:#f0f5f1;color:#5c7567;font-size:9px}.map-mapstatus{font-size:10px;color:#8b7754}.map-bottom{display:flex;justify-content:space-between;gap:10px;padding:11px 15px;border-top:1px solid #edf1ee;background:#fff}.map-help{color:#7c8b82;font-size:11px;line-height:1.8}.map-zoom{display:flex;align-items:center;gap:5px;flex-shrink:0}.map-zoom button{width:30px;height:28px;border:1px solid #dce5df;background:#fff;border-radius:7px;color:#395c48;cursor:pointer}.map-zoom output{font-size:11px;min-width:38px;text-align:center;color:#6c7d71}.map-mode-banner{display:none;padding:10px 13px;border-radius:9px;background:#eef6f0;color:#386747;font-size:12px;margin-bottom:12px}.map-mode-banner.active{display:flex;justify-content:space-between;align-items:center;gap:12px}.map-mode-banner button{border:0;background:transparent;color:#356444;cursor:pointer;text-decoration:underline}.map-empty{padding:40px;text-align:center;color:var(--text-muted)}.map-dialog{width:760px;max-width:calc(100vw - 24px);max-height:90dvh;padding:0;border:1px solid #dbe5de;border-radius:18px;box-shadow:0 24px 90px #18332935;color:var(--text);overflow:auto}.map-dialog::backdrop{background:#11251c66;backdrop-filter:blur(3px)}.map-dialog-header{position:sticky;top:0;background:#fff;padding:20px 24px 16px;border-bottom:1px solid #e8eee9;display:flex;align-items:center;gap:12px;z-index:2}.map-dialog-header h3{margin:0;font-size:18px;flex:1}.map-dialog-body{padding:20px 24px}.map-form-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px}.map-field{display:flex;flex-direction:column;gap:7px;font-size:12px;color:#526c5b}.map-field.wide{grid-column:1/-1}.map-field input,.map-field select,.map-field textarea{width:100%;box-sizing:border-box;border:1px solid #d8e2db;border-radius:8px;padding:10px 11px;background:#fff;color:#253c2d;font:inherit;font-size:13px;outline:none}.map-field input:focus,.map-field select:focus,.map-field textarea:focus{border-color:#699e7b;box-shadow:0 0 0 3px #699e7b15}.map-field textarea{resize:vertical;min-height:76px;line-height:1.7}.map-field input[type=checkbox]{width:auto;accent-color:#39754d}.map-tag-options{display:flex;gap:8px;flex-wrap:wrap}.map-tag-options label{display:flex;align-items:center;gap:5px;border:1px solid #e0e7e2;border-radius:7px;padding:8px 10px}.map-form-section{grid-column:1/-1;font-size:12px;font-weight:700;letter-spacing:1px;color:#537b62;border-top:1px solid #e5ece7;padding-top:18px;margin-top:4px}.map-dialog-footer{position:sticky;bottom:0;display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;background:#fff;padding:15px 24px;border-top:1px solid #e8eee9;z-index:2}.map-dialog-footer small{color:#7e8e82;font-size:11px}.map-rel-row{display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid #eff3f0;font-size:12px;color:#54685a}.map-rel-row span{flex:1}.map-rel-row button{background:#fff;border:1px solid #e3ded9;color:#987155;padding:5px 9px;border-radius:6px;cursor:pointer}.map-unsaved{color:#a5782d!important}.map-empty small{display:block;margin-top:8px}
 @media(max-width:767px){.map-wrap{padding:14px 10px}.map-heading{align-items:flex-start}.map-heading h2{font-size:20px}.map-heading p{max-width:235px}.map-count{padding:7px 9px;font-size:10px}.map-toolbar .btn{font-size:11px;padding:8px 9px}.map-filters{gap:5px}.map-filters .filter{padding:6px 8px;font-size:10px}.map-stage{height:62dvh;min-height:400px}.map-bottom{align-items:center;padding:10px}.map-help{font-size:10px}.map-dialog{max-height:94dvh;max-width:calc(100vw - 14px);border-radius:14px}.map-dialog-header,.map-dialog-body,.map-dialog-footer{padding:16px}.map-form-grid{grid-template-columns:1fr;gap:14px}.map-field input,.map-field select,.map-field textarea{font-size:16px}.map-dialog-footer .btn{padding:10px 12px}}
+/* 事業版圖 V1（風格 A：只用 hy-ui.css token；以下為本頁版面與表格，hy-ui.css 沒有表格／表單元件） */
+#tab-map{background:var(--hy-bg)}
+.bb-main{font-family:'Noto Sans TC',system-ui,sans-serif;font-size:var(--hy-fs-body);line-height:1.6;color:var(--hy-ink)}
+.bb-main>*+*{margin-top:var(--hy-gap)}
+.bb-savebar{display:flex;align-items:center;gap:12px;flex-wrap:wrap;justify-content:flex-end}
+.bb-main .map-unsaved{color:var(--hy-you)!important;font-weight:500}
+.bb-section-head{display:flex;justify-content:space-between;align-items:baseline;gap:8px;margin-bottom:12px}
+.bb-toolbar{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:8px}
+.bb-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:16px}
+.bb-focus-text{font-size:var(--hy-fs-card);font-weight:500;margin-top:8px}
+.bb-focus-text.is-empty{color:var(--hy-muted);font-weight:400}
+.bb-src{font-size:var(--hy-fs-tiny);color:var(--hy-dim);margin-top:4px;overflow-wrap:anywhere}
+.bb-main .map-viewport{border:1px solid var(--hy-line);border-radius:var(--hy-r-card);box-shadow:none}
+.bb-main .map-stage{height:auto;min-height:0;overflow-x:auto;overflow-y:hidden;overscroll-behavior-x:contain;touch-action:pan-x pan-y}
+.bb-main .map-node.is-row-target{border-color:var(--hy-brand);box-shadow:0 0 0 3px var(--hy-sunken)}
+.bb-main .map-help{font-size:var(--hy-fs-tiny);color:var(--hy-muted)}
+.bb-main .map-filters .filter{min-height:36px;font-size:var(--hy-fs-tiny)}
+.bb-legend{display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-top:8px}
+.bb-filterbar{display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;margin-top:12px;padding:8px 12px;background:var(--hy-sunken);border-radius:var(--hy-r-sm);font-size:14px}
+.bb-tablewrap{margin-top:12px;max-height:72vh;overflow:auto;border:1px solid var(--hy-line);border-radius:var(--hy-r-sm)}
+.bb-table{width:100%;border-collapse:collapse;table-layout:fixed;min-width:1000px;font-size:14px}
+.bb-table th{position:sticky;top:0;z-index:1;background:var(--hy-sunken);color:var(--hy-muted);font-weight:500;font-size:var(--hy-fs-meta);text-align:left;padding:10px 12px;border-bottom:1px solid var(--hy-line)}
+.bb-table td{vertical-align:top;padding:12px;border-top:1px solid var(--hy-line);background:var(--hy-surface)}
+.bb-table th:first-child,.bb-table td:first-child{width:236px}
+.bb-table tr.needs-you td:first-child{box-shadow:inset 3px 0 0 var(--hy-you-line)}
+.bb-table tr.is-target td{background:var(--hy-wait-bg)}
+.bb-name{font-weight:700;font-size:var(--hy-fs-body)}
+.bb-origin{font-size:var(--hy-fs-tiny);color:var(--hy-muted);margin-top:2px}
+.bb-tags{display:flex;gap:6px;flex-wrap:wrap;margin-top:6px}
+.bb-rowactions{display:flex;gap:6px;flex-wrap:wrap;margin-top:10px}
+.bb-rowactions .hy-btn{padding:0 12px;font-size:var(--hy-fs-meta)}
+.bb-cell-text{white-space:pre-wrap;overflow-wrap:anywhere}
+.bb-cell-text.is-empty{color:var(--hy-dim)}
+.bb-table td.bb-unknowns{display:none}
+.bb-cell-meta{display:flex;align-items:center;gap:4px 8px;flex-wrap:wrap;margin-top:6px}.bb-cell-meta .bb-src{margin-top:0}
+.bb-excluded{margin-top:12px;font-size:var(--hy-fs-meta);color:var(--hy-muted)}
+.bb-excluded .hy-list li{align-items:center}
+.bb-dialog{width:720px;max-width:calc(100vw - 24px);max-height:92dvh;padding:0;border:1px solid var(--hy-line);border-radius:var(--hy-r-card);color:var(--hy-ink);font-family:'Noto Sans TC',system-ui,sans-serif;font-size:var(--hy-fs-body);overflow:auto}
+.bb-dialog::backdrop{background:color-mix(in srgb,var(--hy-header) 45%,transparent)}
+.bb-dialog-head{position:sticky;top:0;z-index:2;background:var(--hy-surface);display:flex;justify-content:space-between;align-items:center;gap:8px;padding:16px 20px;border-bottom:1px solid var(--hy-line)}
+.bb-dialog-body{padding:16px 20px;display:flex;flex-direction:column;gap:16px}
+.bb-dialog-foot{position:sticky;bottom:0;background:var(--hy-surface);display:flex;justify-content:flex-end;gap:8px;flex-wrap:wrap;padding:12px 20px;border-top:1px solid var(--hy-line)}
+.bb-fieldset{border:1px solid var(--hy-line);border-radius:var(--hy-r-sm);padding:12px 14px;margin:0;display:grid;grid-template-columns:1fr 180px;gap:10px 12px}
+.bb-fieldset legend{font-weight:700;font-size:14px;padding:0 4px}
+.bb-field{display:flex;flex-direction:column;gap:4px;font-size:var(--hy-fs-meta);color:var(--hy-muted)}
+.bb-field.wide{grid-column:1/-1}
+.bb-field input,.bb-field select,.bb-field textarea{font:inherit;font-size:var(--hy-fs-body);color:var(--hy-ink);min-height:var(--hy-tap);padding:8px 10px;border:1px solid var(--hy-line);border-radius:var(--hy-r-sm);background:var(--hy-surface);width:100%}
+.bb-field textarea{min-height:72px;resize:vertical}
+.bb-check{display:flex;align-items:center;gap:8px;min-height:var(--hy-tap);font-size:14px}
+.bb-check input{width:20px;height:20px;accent-color:var(--hy-brand)}
+.bb-error{white-space:pre-wrap}
+@media (max-width:640px){
+  .bb-savebar{justify-content:flex-start}
+  .bb-tablewrap{max-height:none;overflow:visible;border:0}
+  .bb-table{min-width:0;table-layout:auto}
+  .bb-table thead{display:none}
+  .bb-table,.bb-table tbody,.bb-table tr,.bb-table td{display:block;width:100%}
+  .bb-table th:first-child,.bb-table td:first-child{width:auto}
+  .bb-table tr{background:var(--hy-surface);border:1px solid var(--hy-line);border-radius:var(--hy-r-card);margin-bottom:12px;overflow:hidden}
+  .bb-table tr.needs-you{border-color:var(--hy-you-line);box-shadow:inset 3px 0 0 var(--hy-you-line)}
+  .bb-table tr.needs-you td:first-child{box-shadow:none}
+  .bb-table td{border-top:1px solid var(--hy-line);padding:10px 14px}
+  .bb-table td:first-child{border-top:0}
+  .bb-table td[data-label]::before{content:attr(data-label);display:block;font-size:var(--hy-fs-tiny);color:var(--hy-muted);margin-bottom:2px}
+  .bb-table td.is-unknown{display:none}
+  .bb-table td.bb-unknowns{display:block;font-size:var(--hy-fs-meta);color:var(--hy-muted)}
+  .bb-fieldset{grid-template-columns:1fr}
+  header .logo-sub,header .last-updated{display:none}
+  header .btn{white-space:nowrap}
+  .bb-dialog{max-width:calc(100vw - 12px)}
+  .bb-main .map-bottom{flex-direction:column;align-items:flex-start}
+}
 .strategy-suggestion-text { font-size:13px; color:var(--text-muted); line-height:1.7; }
 @media (max-width:767px) {
   .board-wrap { scroll-snap-type:x mandatory; -webkit-overflow-scrolling:touch; padding:12px; }
@@ -606,22 +680,40 @@ input[type="date"] { color-scheme: light; }
   </div>
 </div>
 
-<!-- TAB 2: BUSINESS MAP -->
+<!-- TAB 2: BUSINESS MAP（事業版圖 V1：本週焦點 → 原尺寸關聯圖 → 五欄表） -->
 <div class="tab-content" id="tab-map">
-  <div class="map-wrap">
-    <div class="map-heading"><div><h2>事業版圖</h2><p>從既有資源出發，讓每一次連結都有新的可能。</p></div><span class="map-count" id="mapCount">資源關係圖譜</span></div>
-    <div class="map-toolbar">
-      <button class="btn btn-blue" onclick="addMapNode()">＋ 新增節點</button>
-      <button class="btn btn-outline" id="mapLinkButton" onclick="linkSelectedNodes()">↗ 建立關係</button>
-      <button class="btn btn-outline" onclick="unlinkSelectedNodes()">管理關係</button>
-      <button class="btn btn-outline" onclick="fitBusinessMap()">適合畫面</button>
-      <span class="map-help" id="mapSaveState">點選卡片即可編輯完整資料</span>
+  <main class="hy hy-main bb-main">
+    <div class="hy-pagehead">
+      <div><h1 class="hy-title">事業版圖</h1><p class="hy-lede" id="bbReviewLine">上次覆盤：載入中…</p></div>
+      <div class="bb-savebar"><div class="hy-summary" id="bbSummary"></div><span class="hy-note" id="mapSaveState">點圖上的節點，看它在下方表格的那一列</span><button class="hy-btn is-primary" onclick="saveData()">儲存</button></div>
     </div>
-    <div class="map-mode-banner" id="mapModeBanner"><span id="mapModeText"></span><button onclick="cancelMapLink()">取消連線</button></div>
-    <div class="map-filters" id="mapFilters" aria-label="節點標籤篩選"></div>
-    <div class="map-viewport"><div class="map-stage" id="mapStage" aria-label="可拖曳事業關係圖"><div class="map-empty">載入事業版圖中…</div></div><div class="map-bottom"><span class="map-help">點卡片編輯 · 拖曳卡片移動 · 空白處滑動瀏覽<br>虛線代表未確認關係，隱藏標籤不會刪除資料</span><div class="map-zoom"><button onclick="zoomBusinessMap(-.15)" aria-label="縮小">−</button><output id="mapZoomLabel">100%</output><button onclick="zoomBusinessMap(.15)" aria-label="放大">＋</button></div></div></div>
-  </div>
+
+    <section class="hy-card is-focus" id="bbFocus" aria-labelledby="bbFocusTitle"><p class="hy-note">載入本週焦點中…</p></section>
+
+    <section class="bb-section" aria-labelledby="bbMapTitle">
+      <div class="bb-section-head"><h2 class="hy-card-title" id="bbMapTitle">關聯圖</h2><span class="hy-note" id="mapCount">資源關係圖譜</span></div>
+      <div class="bb-toolbar">
+        <button class="hy-btn" onclick="addMapNode()">新增節點</button>
+        <button class="hy-btn" id="mapLinkButton" onclick="linkSelectedNodes()">建立關係</button>
+        <button class="hy-btn" onclick="unlinkSelectedNodes()">管理關係</button>
+        <button class="hy-btn" onclick="resetBusinessMapZoom()">回到原尺寸</button>
+      </div>
+      <div class="map-mode-banner" id="mapModeBanner"><span id="mapModeText"></span><button onclick="cancelMapLink()">取消連線</button></div>
+      <div class="map-filters" id="mapFilters" aria-label="節點標籤篩選"></div>
+      <div class="map-viewport"><div class="map-stage" id="mapStage" aria-label="事業關係圖：點節點看表格列，拖曳可移動"><div class="map-empty">載入事業版圖中…</div></div><div class="map-bottom"><span class="map-help">點節點：看下方對應列 · 雙擊或按列上的「編輯節點」：編輯節點資料 · 拖曳：移動<br>虛線代表未確認關係；圖以原尺寸顯示，寬度超出時左右滑動</span><div class="map-zoom"><button onclick="zoomBusinessMap(-.15)" aria-label="縮小">−</button><output id="mapZoomLabel">100%</output><button onclick="zoomBusinessMap(.15)" aria-label="放大">＋</button></div></div></div>
+    </section>
+
+    <section class="hy-card bb-section bb-table-card" id="bbTableCard" aria-labelledby="bbTableTitle">
+      <div class="hy-card-head"><h2 class="hy-card-title" id="bbTableTitle">五欄表</h2><button class="hy-btn" onclick="addBoardRow()">新增列</button></div>
+      <p class="hy-note bb-legend"><span class="hy-pill" data-s="wait">事實</span> 有來源的既有事實　<span class="hy-pill" data-s="you">Sam 建議</span> 待你確認　<span class="hy-pill" data-s="done">HY 已確認</span>　沒有來源的寫「待補」</p>
+      <div id="bbFilterBar"></div>
+      <div class="bb-tablewrap" id="bbTableWrap"><div class="hy-empty">載入中…</div></div>
+      <div id="bbExcluded"></div>
+    </section>
+  </main>
 </div>
+<dialog class="bb-dialog hy" id="bbRowDialog" aria-labelledby="bbRowDialogTitle"></dialog>
+<dialog class="bb-dialog hy" id="bbFocusDialog" aria-labelledby="bbFocusDialogTitle"></dialog>
 <dialog class="map-dialog" id="mapNodeDialog" aria-labelledby="mapNodeDialogTitle"></dialog>
 <dialog class="map-dialog" id="mapRelationDialog" aria-labelledby="mapRelationDialogTitle"></dialog>
 
@@ -1334,7 +1426,7 @@ const MAP_TYPES=['直屬企業','相關企業','投資企業','生產資源','�
 let mapSelected=[];
 let mapVisibleTypes=new Set(MAP_TYPES);
 let mapKnownTypes=new Set(MAP_TYPES);
-let mapLinkMode=false, mapZoom=window.innerWidth<768?.7:1, mapDirty=false, mapRevision=0;
+let mapLinkMode=false, mapZoom=1, mapDirty=false, mapRevision=0;
 let mapNodeElements=new Map(), mapEdgeElements=[], mapWorldSize={width:1400,height:900};
 let mapEditingId=null, mapReturnFocus=null;
 function escapeHtml(v){return String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
@@ -1349,7 +1441,7 @@ function mapTags(n){return Array.isArray(n.tags)&&n.tags.length?n.tags:['其他'
 function mapCoord(v,fallback=20){return Number.isFinite(Number(v))?Math.max(0,Number(v)):fallback}
 function markMapDirty(){
   mapDirty=true;mapRevision++;businessGraph().updated_at=new Date().toISOString();
-  const state=document.getElementById('mapSaveState');state.textContent='有未儲存變更 · 請按右上角「儲存」';state.classList.add('map-unsaved');
+  const state=document.getElementById('mapSaveState');state.textContent='有未儲存變更，按「儲存」同步到系統';state.classList.add('map-unsaved');
 }
 function renderBusinessMap(){
   if(!data) return;
@@ -1364,14 +1456,15 @@ function renderBusinessMap(){
   const edges=graph.relationships.filter(e=>ids.has(e.from)&&ids.has(e.to));
   const accents={'直屬企業':'#39754d','相關企業':'#65896f','投資企業':'#9d8248','生產資源':'#518c97','合作夥伴':'#8c7ba5','人脈':'#a27a71','潛在客戶':'#a49165'};
   const scroll={x:stage.scrollLeft,y:stage.scrollTop};
-  stage.innerHTML=`<div class="map-space"><div class="map-world"><svg aria-hidden="true"><defs><marker id="mapArrow" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="5" markerHeight="5" orient="auto-start-reverse"><path d="M 0 0 L 8 4 L 0 8 z" fill="#a9bcb0"/></marker></defs>${edges.map((e,i)=>`<g data-edge="${i}"><path class="map-edge ${e.confirmed!==true?'pending':''}" marker-end="url(#mapArrow)"/><text class="map-edge-label">${escapeHtml(e.type||'合作')}${e.confirmed!==true?' · 待確認':''}</text></g>`).join('')}</svg>${visible.map(n=>`<div class="map-node ${n.id==='sam'?'root':''} ${mapSelected.includes(n.id)?'selected':''} ${n.status==='inactive'||n.status==='archived'?'inactive':''}" role="button" tabindex="0" aria-label="編輯 ${escapeHtml(n.name)}" data-id="${escapeHtml(n.id)}" style="transform:translate3d(${mapCoord(n.x)}px,${mapCoord(n.y)}px,0);--node-accent:${accents[mapTags(n)[0]]||'#799b89'}"><div class="map-node-topline"><span class="map-node-kicker">${n.id==='sam'?'BUSINESS DEVELOPMENT':escapeHtml(n.region||n.industry||mapTags(n)[0])}</span><span class="map-node-edit" aria-hidden="true">↗</span></div><div class="map-node-title">${escapeHtml(n.name)}</div><div class="map-node-meta">${escapeHtml(n.relationship_to_hy||n.industry||'點選補充資源資訊')}</div><div>${mapTags(n).map(t=>`<span class="map-tag">${escapeHtml(t)}</span>`).join('')}</div>${n.status&&n.status!=='active'?`<div class="map-mapstatus">${escapeHtml(({inactive:'已失效',paused:'暫停推進',archived:'已封存',potential:'潛在資源'})[n.status]||n.status)}</div>`:''}</div>`).join('')}</div></div>`;
+  stage.innerHTML=`<div class="map-space"><div class="map-world"><svg aria-hidden="true"><defs><marker id="mapArrow" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="5" markerHeight="5" orient="auto-start-reverse"><path d="M 0 0 L 8 4 L 0 8 z" fill="#a9bcb0"/></marker></defs>${edges.map((e,i)=>`<g data-edge="${i}"><path class="map-edge ${e.confirmed!==true?'pending':''}" marker-end="url(#mapArrow)"/><text class="map-edge-label">${escapeHtml(e.type||'合作')}${e.confirmed!==true?' · 待確認':''}</text></g>`).join('')}</svg>${visible.map(n=>`<div class="map-node ${n.id==='sam'?'root':''} ${mapSelected.includes(n.id)?'selected':''} ${bbTargetNode===n.id?'is-row-target':''} ${n.status==='inactive'||n.status==='archived'?'inactive':''}" role="button" tabindex="0" aria-label="${n.id==='sam'?'編輯':'查看表格列：'} ${escapeHtml(n.name)}" data-id="${escapeHtml(n.id)}" style="transform:translate3d(${mapCoord(n.x)}px,${mapCoord(n.y)}px,0);--node-accent:${accents[mapTags(n)[0]]||'#799b89'}"><div class="map-node-topline"><span class="map-node-kicker">${n.id==='sam'?'BUSINESS DEVELOPMENT':escapeHtml(n.region||n.industry||mapTags(n)[0])}</span><span class="map-node-edit" aria-hidden="true">↗</span></div><div class="map-node-title">${escapeHtml(n.name)}</div><div class="map-node-meta">${escapeHtml(n.relationship_to_hy||n.industry||'點選補充資源資訊')}</div><div>${mapTags(n).map(t=>`<span class="map-tag">${escapeHtml(t)}</span>`).join('')}</div>${n.status&&n.status!=='active'?`<div class="map-mapstatus">${escapeHtml(({inactive:'已失效',paused:'暫停推進',archived:'已封存',potential:'潛在資源'})[n.status]||n.status)}</div>`:''}</div>`).join('')}</div></div>`;
   mapNodeElements=new Map([...stage.querySelectorAll('.map-node')].map(el=>[el.dataset.id,el]));
   mapEdgeElements=edges.map((edge,i)=>{const group=stage.querySelector(`[data-edge="${i}"]`);return{edge,path:group.querySelector('path'),label:group.querySelector('text')}});
-  mapNodeElements.forEach(el=>{enableNodeDrag(el);el.onclick=()=>{if(el._suppressMapClick)return;activateMapNode(el.dataset.id)};el.onkeydown=e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();activateMapNode(el.dataset.id)}}});
-  mapWorldSize={width:Math.max(1400,...visible.map(n=>mapCoord(n.x)+260)),height:Math.max(900,...visible.map(n=>mapCoord(n.y)+220))};
+  mapNodeElements.forEach(el=>{enableNodeDrag(el);el.onclick=()=>{if(el._suppressMapClick)return;activateMapNode(el.dataset.id)};el.ondblclick=()=>{if(!mapLinkMode&&!el._suppressMapClick)openMapNodeEditor(el.dataset.id)};el.onkeydown=e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();activateMapNode(el.dataset.id)}}});
+  mapWorldSize={width:Math.max(1400,...visible.map(n=>mapCoord(n.x)+260)),height:Math.max(560,...visible.map(n=>mapCoord(n.y)+220))};
   updateMapScale();updateMapEdges();stage.scrollLeft=scroll.x;stage.scrollTop=scroll.y;
   document.getElementById('mapCount').textContent=`${visible.length} / ${graph.nodes.length} 節點 · ${edges.length} 關係`;
   updateMapLinkBanner();
+  renderBusinessBoard();
   stage.onpointerdown=e=>{
     if(e.pointerType!=='mouse'||e.button!==0||e.target.closest('.map-node'))return;
     const x=e.clientX,y=e.clientY,left=stage.scrollLeft,top=stage.scrollTop;stage.setPointerCapture(e.pointerId);stage.style.cursor='grabbing';
@@ -1424,7 +1517,7 @@ function enableNodeDrag(el){
   el.onpointerup=finish;el.onpointercancel=finish;el.onlostpointercapture=finish;
 }
 function activateMapNode(id){
-  if(!mapLinkMode){openMapNodeEditor(id);return}
+  if(!mapLinkMode){if(id==='sam'){openMapNodeEditor(id);return}selectBoardNode(id);return}
   mapSelected=mapSelected.includes(id)?mapSelected.filter(x=>x!==id):[...mapSelected.slice(-1),id];
   mapNodeElements.forEach((el,key)=>el.classList.toggle('selected',mapSelected.includes(key)));updateMapLinkBanner();if(mapSelected.length===2)openMapRelationEditor();
 }
@@ -1478,6 +1571,144 @@ function unlinkSelectedNodes(){
   dialog.querySelector('button').onclick=()=>dialog.close();renderMapRelationshipList(dialog.querySelector('#mapAllRelations'));dialog.showModal();
 }
 window.addEventListener('beforeunload',e=>{if(mapDirty){e.preventDefault();e.returnValue=''}});
+// ── 事業版圖 V1：本週焦點＋圖驅動五欄表（資料邏輯在 sam-business-board.js） ──
+const BB=window.SamBusinessBoard;
+const BB_PILL={fact:'wait',suggestion:'you',confirmed:'done'};
+const BB_QUARTER_DEFAULT={text:'川嶼',kind:'fact',source:'AI Work 專案「事業版圖 V1」目標：本季主推對齊川嶼'};
+let bbTargetNode=null, bbEditingRowId=null;
+function bbBoard(){return BB.ensureBoard(data.business_ops)}
+function bbRows(){return BB.boardRows(businessGraph(),bbBoard())}
+function bbDate(iso){if(!iso)return '';const d=new Date(iso);if(isNaN(d))return iso.slice(0,16);return d.toLocaleString('zh-TW',{timeZone:'Asia/Taipei',year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',hour12:false})}
+function markBoardDirty(){
+  mapDirty=true;mapRevision++;bbBoard().updated_at=new Date().toISOString();
+  const state=document.getElementById('mapSaveState');state.textContent='有未儲存變更，按「儲存」同步到系統';state.classList.add('map-unsaved');
+}
+function bbKindTag(cell){
+  if(!cell||cell.kind==='unknown')return '';
+  const when=cell.kind==='confirmed'&&cell.confirmed_at?`<span class="bb-src">確認於 ${escapeHtml(bbDate(cell.confirmed_at))}</span>`:'';
+  const src=cell.source?`<span class="bb-src">來源：${escapeHtml(cell.source)}</span>`:(cell.kind==='fact'?'<span class="bb-src">來源：待補</span>':'');
+  return `<div class="bb-cell-meta"><span class="hy-pill" data-s="${BB_PILL[cell.kind]}">${escapeHtml(BB.KINDS[cell.kind])}</span>${src}${when}</div>`;
+}
+function bbCellHtml(cell){
+  const empty=!cell||cell.kind==='unknown'||!cell.text;
+  return `<div class="bb-cell-text ${empty?'is-empty':''}">${empty?'待補':escapeHtml(cell.text)}</div>${bbKindTag(cell)}`;
+}
+function renderBusinessBoard(){
+  if(!data||!data.business_ops)return;
+  const board=bbBoard(),rows=bbRows(),c=BB.counts(rows);
+  // 頁首摘要與覆盤時間
+  document.getElementById('bbReviewLine').textContent=board.last_review_at?`上次覆盤：${bbDate(board.last_review_at)}`:'上次覆盤：尚未記錄';
+  document.getElementById('bbSummary').innerHTML=(c.suggestion?`<span class="hy-pill" data-s="you">待你確認 ${c.suggestion}</span>`:'')+`<span class="hy-pill" data-s="wait">待補 ${c.unknown}</span><span class="hy-pill" data-s="wait">${c.rows} 列</span>`;
+  // 本週焦點
+  const wf=board.week_focus,qf=board.quarter_focus.text?board.quarter_focus:BB_QUARTER_DEFAULT,wfEmpty=!wf.text;
+  const focusRows=rows.filter(r=>r.focus);
+  document.getElementById('bbFocus').className='hy-card is-focus';
+  document.getElementById('bbFocus').innerHTML=`<div class="hy-card-head"><h2 class="hy-card-title" id="bbFocusTitle">本週焦點</h2>${wfEmpty?'<span class="hy-pill" data-s="you">待你設定</span>':`<span class="hy-pill" data-s="${BB_PILL[wf.kind]}">${escapeHtml(BB.KINDS[wf.kind])}</span>`}</div>
+    <p class="bb-focus-text ${wfEmpty?'is-empty':''}">${wfEmpty?'待補：本週焦點還沒設定。按「編輯焦點」寫下這週最重要的一件事。':escapeHtml(wf.text)}</p>${wf.source?`<p class="bb-src">來源：${escapeHtml(wf.source)}</p>`:''}
+    <dl class="hy-kv"><dt>本季主推</dt><dd>${escapeHtml(qf.text)} <span class="hy-pill" data-s="${BB_PILL[qf.kind]||'wait'}">${escapeHtml(BB.KINDS[qf.kind])}</span><div class="bb-src">${qf.source?'來源：'+escapeHtml(qf.source)+'。':''}只對齊方向，不代表營運 GO，也不改川嶼專案的狀態。</div></dd>
+    <dt>焦點列</dt><dd>${focusRows.length?focusRows.map(r=>escapeHtml(r.name)).join('、'):'<span class="hy-note">還沒有。編輯表格列時勾選「本週焦點」，那列會排到最上面。</span>'}</dd>
+    <dt>上次覆盤</dt><dd>${board.last_review_at?escapeHtml(bbDate(board.last_review_at)):'尚未記錄'}</dd></dl>
+    <div class="bb-actions"><button class="hy-btn" onclick="openBoardFocusEditor()">編輯焦點</button><button class="hy-btn" onclick="recordBoardReview()">記錄本週覆盤</button></div>`;
+  // 篩選列（由圖節點驅動）
+  const nodes=new Map(businessGraph().nodes.map(n=>[n.id,n]));
+  if(bbTargetNode&&!nodes.has(bbTargetNode))bbTargetNode=null;
+  const shown=bbTargetNode?rows.filter(r=>r.node_id===bbTargetNode):rows;
+  const excludedTarget=bbTargetNode&&!shown.length&&board.excluded_node_ids.includes(bbTargetNode);
+  document.getElementById('bbFilterBar').innerHTML=bbTargetNode?`<div class="bb-filterbar"><span>只看圖節點「${escapeHtml(nodes.get(bbTargetNode)?.name||bbTargetNode)}」的列</span><button class="hy-btn" onclick="clearBoardNodeFilter()">顯示全部列</button></div>`:'';
+  // 表格
+  const wrap=document.getElementById('bbTableWrap');
+  if(!shown.length){
+    wrap.innerHTML=excludedTarget?`<div class="hy-empty">這個節點的列已從表格移除。<div class="bb-actions"><button class="hy-btn" onclick="restoreBoardNode('${escapeHtml(bbTargetNode)}')">恢復這一列</button></div></div>`:'<div class="hy-empty">還沒有表格列。先在關聯圖新增節點，或按「新增列」加一筆不在圖上的事業。</div>';
+  }else{
+    wrap.innerHTML=`<table class="bb-table"><thead><tr><th>事業</th>${BB.COLUMNS.map(col=>`<th>${col.label}</th>`).join('')}</tr></thead><tbody>${shown.map(r=>{
+      const sug=BB.COLUMNS.filter(col=>r.cells[col.key]?.kind==='suggestion').length;
+      const origin=r.from_graph?'圖節點':(r.orphan?'':'手動新增・非圖節點');
+      return `<tr class="${sug?'needs-you':''} ${bbTargetNode&&r.node_id===bbTargetNode?'is-target':''}" data-row="${escapeHtml(r.id)}"><td><div class="bb-name">${escapeHtml(r.name)}</div>${origin?`<div class="bb-origin">${origin}</div>`:''}<div class="bb-tags">${r.focus?'<span class="hy-pill" data-s="wait">本週焦點</span>':''}${r.orphan?'<span class="hy-pill" data-s="bad">圖節點已刪除</span>':''}${r.virtual?'<span class="hy-pill" data-s="wait">由圖帶入・未存檔</span>':''}</div>
+        <div class="bb-rowactions"><button class="hy-btn" data-act="edit">編輯</button>${sug?`<button class="hy-btn is-primary" data-act="confirm">確認 Sam 建議（${sug}）</button>`:''}${r.from_graph?'<button class="hy-btn" data-act="node">編輯節點</button>':''}<button class="hy-btn is-danger" data-act="delete">刪除</button></div></td>${BB.COLUMNS.map(col=>`<td data-label="${col.label}" class="${(r.cells[col.key]?.kind||'unknown')==='unknown'?'is-unknown':''}">${bbCellHtml(r.cells[col.key])}</td>`).join('')}${(()=>{const u=BB.COLUMNS.filter(col=>(r.cells[col.key]?.kind||'unknown')==='unknown').map(col=>col.label);return u.length?`<td class="bb-unknowns">待補：${u.join('、')}</td>`:''})()}</tr>`}).join('')}</tbody></table>`;
+    const byId=new Map(shown.map(r=>[r.id,r]));
+    wrap.querySelectorAll('tr[data-row] [data-act]').forEach(btn=>btn.onclick=()=>{const r=byId.get(btn.closest('tr').dataset.row);if(!r)return;({edit:()=>openBoardRowEditor(r.id),confirm:()=>confirmBoardRow(r),node:()=>openMapNodeEditor(r.node_id),delete:()=>deleteBoardRow(r)})[btn.dataset.act]()});
+  }
+  // 已移除的圖節點
+  const ex=board.excluded_node_ids.filter(id=>nodes.has(id));
+  document.getElementById('bbExcluded').innerHTML=ex.length?`<div class="bb-excluded">已從表格移除的圖節點（節點仍在圖上）：<ul class="hy-list">${ex.map(id=>`<li><span>${escapeHtml(nodes.get(id).name||id)}</span><button class="hy-btn" onclick="restoreBoardNode('${escapeHtml(id)}')">恢復</button></li>`).join('')}</ul></div>`:'';
+}
+function selectBoardNode(id){
+  bbTargetNode=bbTargetNode===id?null:id;
+  mapNodeElements.forEach((el,key)=>el.classList.toggle('is-row-target',key===bbTargetNode));
+  renderBusinessBoard();
+  if(bbTargetNode)document.getElementById('bbTableCard').scrollIntoView({behavior:'smooth',block:'nearest'});
+}
+function clearBoardNodeFilter(){bbTargetNode=null;mapNodeElements.forEach(el=>el.classList.remove('is-row-target'));renderBusinessBoard()}
+function restoreBoardNode(id){BB.restoreNodeRow(bbBoard(),id);markBoardDirty();renderBusinessBoard();showToast('已恢復這一列，按「儲存」同步','success')}
+function confirmBoardRow(r){
+  if(!confirm(`確認「${r.name}」這列的 Sam 建議？\n確認後標記會改成「HY 已確認」。`))return;
+  const n=BB.confirmSuggestions(bbBoard(),r);markBoardDirty();renderBusinessBoard();showToast(`已確認 ${n} 格，按「儲存」同步`,'success');
+}
+function deleteBoardRow(r){
+  const msg=r.from_graph?`從表格移除「${r.name}」這一列？\n圖上的節點不會被刪除，之後可以按「恢復」帶回。`:`刪除「${r.name}」這一列？`;
+  if(!confirm(msg))return;BB.removeRow(bbBoard(),r);markBoardDirty();renderBusinessBoard();showToast('已刪除，按「儲存」同步','success');
+}
+function addBoardRow(){
+  if(!dataLoaded)return showToast('請先載入資料','error');
+  bbEditingRowId=null;openBoardRowEditor(null);
+}
+function bbKindOptions(kind){return Object.entries(BB.KINDS).map(([k,t])=>`<option value="${k}" ${kind===k?'selected':''}>${t}</option>`).join('')}
+function bbCellFieldset(key,label,cell){
+  return `<fieldset class="bb-fieldset"><legend>${label}</legend><label class="bb-field wide">內容<textarea name="${key}_text" rows="2">${escapeHtml(cell?.kind==='unknown'?'':cell?.text||'')}</textarea></label><label class="bb-field">來源（事實必填）<input name="${key}_source" value="${escapeHtml(cell?.source||'')}" placeholder="例如：事業版圖節點「樂川」"></label><label class="bb-field">標記<select name="${key}_kind">${bbKindOptions(cell?.kind||'unknown')}</select></label></fieldset>`;
+}
+function openBoardRowEditor(rowId){
+  if(!dataLoaded)return showToast('請先載入資料','error');
+  const row=rowId?bbRows().find(r=>r.id===rowId):null;if(rowId&&!row)return;
+  bbEditingRowId=rowId;const dialog=document.getElementById('bbRowDialog');
+  dialog.innerHTML=`<form><div class="bb-dialog-head"><h2 class="hy-card-title" id="bbRowDialogTitle">${row?'編輯：'+escapeHtml(row.name):'新增列（不在關聯圖上的事業）'}</h2><button type="button" class="hy-btn" data-close aria-label="關閉">關閉</button></div>
+    <div class="bb-dialog-body">${row&&row.from_graph?`<p class="hy-note">對應圖節點「${escapeHtml(row.name)}」。名稱請在「編輯節點」修改。</p>`:`<label class="bb-field">名稱<input name="name" required maxlength="80" value="${escapeHtml(row?.name||'')}"></label>`}
+    <label class="bb-check"><input type="checkbox" name="focus" ${row?.focus?'checked':''}>本週焦點（排到表格最上面）</label>
+    <p class="hy-note">每格只選一種標記。「事實」一定要寫來源；你自己填寫、沒選標記的內容會記為「HY 已確認」；Sam 的提案請標「Sam 建議」。</p>
+    ${BB.COLUMNS.map(col=>bbCellFieldset(col.key,col.label,row?.cells[col.key])).join('')}
+    <div class="hy-alert is-bad bb-error" id="bbRowError" hidden></div></div>
+    <div class="bb-dialog-foot"><button type="button" class="hy-btn" data-close>取消</button><button type="submit" class="hy-btn is-primary">套用變更</button></div></form>`;
+  dialog.querySelectorAll('[data-close]').forEach(b=>b.onclick=()=>dialog.close());
+  dialog.querySelector('form').onsubmit=e=>{
+    e.preventDefault();const v=new FormData(e.currentTarget),board=bbBoard(),err=dialog.querySelector('#bbRowError');
+    const cells={};BB.COLUMNS.forEach(col=>{cells[col.key]={text:String(v.get(col.key+'_text')||''),kind:String(v.get(col.key+'_kind')||'unknown'),source:String(v.get(col.key+'_source')||'')}});
+    const patch={focus:v.has('focus'),cells};if(v.has('name'))patch.name=String(v.get('name')||'');
+    let target=row;
+    try{
+      for(const k of Object.keys(cells)){const c=Object.assign({},cells[k]);if(c.text.trim()&&c.kind==='unknown')c.kind='confirmed';const m=BB.validateCell(c);if(m)throw new Error(BB.COLUMNS.find(col=>col.key===k).label+'：'+m)}
+      if(!target){if(!String(patch.name||'').trim())throw new Error('請填名稱');const created=BB.addManualRow(board,patch.name);target=bbRows().find(r=>r.id===created.id)}
+      BB.updateRow(board,target,patch);
+    }catch(ex){err.textContent=ex.message;err.hidden=false;return}
+    markBoardDirty();dialog.close();renderBusinessBoard();showToast('已套用，按「儲存」同步到系統','success');
+  };
+  dialog.showModal();
+}
+function openBoardFocusEditor(){
+  if(!dataLoaded)return showToast('請先載入資料','error');
+  const board=bbBoard(),wf=board.week_focus,qf=board.quarter_focus.text?board.quarter_focus:BB_QUARTER_DEFAULT,dialog=document.getElementById('bbFocusDialog');
+  dialog.innerHTML=`<form><div class="bb-dialog-head"><h2 class="hy-card-title" id="bbFocusDialogTitle">編輯焦點</h2><button type="button" class="hy-btn" data-close aria-label="關閉">關閉</button></div>
+    <div class="bb-dialog-body">${bbCellFieldset('week','本週焦點',wf)}${bbCellFieldset('quarter','本季主推',qf)}<p class="hy-note">本季主推只對齊方向，不代表營運 GO，也不會改動川嶼專案。</p><div class="hy-alert is-bad bb-error" id="bbFocusError" hidden></div></div>
+    <div class="bb-dialog-foot"><button type="button" class="hy-btn" data-close>取消</button><button type="submit" class="hy-btn is-primary">套用變更</button></div></form>`;
+  dialog.querySelectorAll('[data-close]').forEach(b=>b.onclick=()=>dialog.close());
+  dialog.querySelector('form').onsubmit=e=>{
+    e.preventDefault();const v=new FormData(e.currentTarget),err=dialog.querySelector('#bbFocusError');
+    const get=k=>({text:String(v.get(k+'_text')||''),kind:String(v.get(k+'_kind')||'unknown'),source:String(v.get(k+'_source')||'')});
+    try{
+      const w=get('week'),q=get('quarter');
+      [w,q].forEach((c,i)=>{const t=Object.assign({},c);if(t.text.trim()&&t.kind==='unknown')t.kind='confirmed';const m=BB.validateCell(t);if(m)throw new Error((i?'本季主推':'本週焦點')+'：'+m)});
+      if(w.text!==(wf.text||'')||w.kind!==wf.kind||w.source!==(wf.source||''))BB.setFocus(board,'week_focus',w);
+      if(board.quarter_focus.text||q.text!==qf.text||q.kind!==qf.kind||q.source!==qf.source)BB.setFocus(board,'quarter_focus',q);
+    }catch(ex){err.textContent=ex.message;err.hidden=false;return}
+    markBoardDirty();dialog.close();renderBusinessBoard();showToast('已套用，按「儲存」同步到系統','success');
+  };
+  dialog.showModal();
+}
+function recordBoardReview(){
+  if(!dataLoaded)return showToast('請先載入資料','error');
+  if(!confirm('把現在記為「上次覆盤」時間？'))return;
+  BB.markReviewed(bbBoard());markBoardDirty();renderBusinessBoard();showToast('已記錄覆盤時間，按「儲存」同步','success');
+}
+function resetBusinessMapZoom(){const stage=document.getElementById('mapStage');mapZoom=1;updateMapScale();stage.scrollLeft=0;stage.scrollTop=0}
+
 
 // ── DATA ─────────────────────────────────────────
 async function loadData() {
@@ -1489,10 +1720,11 @@ async function loadData() {
     data = await progressRes.json();
     if (!data.business_ops) data.business_ops = { businesses: [], last_updated: '' };
     businessGraph();
+    SamBusinessBoard.ensureBoard(data.business_ops);
 
     dataLoaded = true;
     mapDirty=false;mapRevision++;
-    document.getElementById('mapSaveState').textContent='點選卡片即可編輯完整資料';
+    document.getElementById('mapSaveState').textContent='已載入正式資料';
     document.getElementById('mapSaveState').classList.remove('map-unsaved');
     document.getElementById('saveBtn').disabled = false;
     renderBoard();
@@ -1521,7 +1753,7 @@ async function saveData() {
     });
     const result = await progressRes.json();
     if (!progressRes.ok || !result.ok) throw new Error(result.error || 'write failed');
-    if(mapRevision===savingMapRevision){mapDirty=false;document.getElementById('mapSaveState').textContent='已儲存至系統 · 點選卡片可繼續編輯';document.getElementById('mapSaveState').classList.remove('map-unsaved')}
+    if(mapRevision===savingMapRevision){mapDirty=false;document.getElementById('mapSaveState').textContent='已儲存到系統';document.getElementById('mapSaveState').classList.remove('map-unsaved')}
     showToast('✅ 設定已儲存', 'success');
     btn.textContent = '✓ 已儲存';
     btn.classList.add('saved');
