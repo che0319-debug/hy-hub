@@ -6,7 +6,6 @@ import './mobile/mobile-v2.css'
 import App from './App'
 import Home from './pages/Home'
 import Helpers from './pages/Helpers'
-import AIWorkEntry from './pages/AIWorkEntry'
 import ControlCenterV5 from './pages/ControlCenterV5'
 import LineHY from './pages/LineHY'
 import LineXiaoyin from './pages/LineXiaoyin'
@@ -22,7 +21,7 @@ import MobileAppV2 from './mobile/MobileAppV2'
 
 function LegacyAIWorkRedirect() {
   const location = useLocation()
-  return <Navigate to={'/ai-work' + location.search} replace />
+  return <Navigate to={'/ai-work-v5' + location.search} replace />
 }
 
 function DesktopRoutes({ onMobileVersion }) {
@@ -34,12 +33,12 @@ function DesktopRoutes({ onMobileVersion }) {
         <Route path="helpers" element={<Helpers />} />
         <Route path="memory" element={<Navigate to="/helpers" replace />} />
         <Route path="workspace/*" element={<LegacyAIWorkRedirect />} />
-        <Route path="ai-work" element={<AIWorkEntry />} />
+        <Route path="ai-work" element={<Navigate to="/ai-work-v5" replace />} />
         <Route path="ai-work-v5" element={<ControlCenterV5 />} />
-        <Route path="ai-work-v3-ready" element={<Navigate to="/ai-work" replace />} />
-        <Route path="ai-work-test/*" element={<Navigate to="/ai-work" replace />} />
-        <Route path="research" element={<Navigate to="/ai-work" replace />} />
-        <Route path="dispatch" element={<Navigate to="/ai-work" replace />} />
+        <Route path="ai-work-v3-ready" element={<Navigate to="/ai-work-v5" replace />} />
+        <Route path="ai-work-test/*" element={<Navigate to="/ai-work-v5" replace />} />
+        <Route path="research" element={<Navigate to="/ai-work-v5" replace />} />
+        <Route path="dispatch" element={<Navigate to="/ai-work-v5" replace />} />
         <Route path="line/hy" element={<LineHY />} />
         <Route path="line/xiaoyin" element={<LineXiaoyin />} />
         <Route path="line/950157" element={<Line950157 />} />
