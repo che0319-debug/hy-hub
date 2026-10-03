@@ -1,0 +1,115 @@
+/* HY Life OS UI — 風格 A（2026-10-03 定案）
+ * 所有 Bot 看板與新頁面共用。規範見 /CLAUDE.md 與 .claude/skills/hy-ui/SKILL.md。
+ * 用法：<html data-bot="950157|family|personal|sam"> + <link rel="stylesheet" href="hy-ui/hy-ui.css">
+ * 只能用這裡的 token 與元件；需要新元件先在 PR 說明理由。
+ */
+:root{
+  /* Bot 代表色：只用在頁首標章、目前分頁、主要按鈕、重點卡的左邊線 */
+  --hy-brand:#1d4ed8;
+  /* 骨架 */
+  --hy-header:#0b1a33; --hy-bg:#f2f4f8; --hy-surface:#ffffff; --hy-sunken:#e8ecf2; --hy-line:#e2e6ee;
+  /* 文字 */
+  --hy-ink:#13213a; --hy-muted:#5a6782; --hy-dim:#8c96aa;
+  /* 狀態色（固定五種，意義全站一致） */
+  --hy-wait-bg:#eef1f5; --hy-wait:#4a5568;   /* 等待／追蹤中 */
+  --hy-ai-bg:#e6eefc;   --hy-ai:#1d4ed8;     /* AI 執行中 */
+  --hy-you-bg:#fdf1dc;  --hy-you:#8a5300; --hy-you-line:#e5a43a; /* 待你確認 */
+  --hy-done-bg:#e3f4ea; --hy-done:#11683f;   /* 完成 */
+  --hy-bad-bg:#fde7e4;  --hy-bad:#b42318;    /* 逾期／失敗／危險 */
+  /* 尺寸 */
+  --hy-r-card:12px; --hy-r-sm:8px; --hy-r-pill:999px;
+  --hy-fs-title:22px; --hy-fs-card:17px; --hy-fs-body:15px; --hy-fs-meta:13px; --hy-fs-tiny:12px;
+  --hy-gap:16px; --hy-tap:44px; --hy-max:1200px;
+}
+html[data-bot="950157"]{--hy-brand:#1d4ed8}
+html[data-bot="family"]{--hy-brand:#c0392b}
+html[data-bot="personal"]{--hy-brand:#16a34a}
+html[data-bot="sam"]{--hy-brand:#2d7a3e}
+
+.hy *,.hy *::before,.hy *::after{box-sizing:border-box}
+body.hy{margin:0;background:var(--hy-bg);color:var(--hy-ink);font-family:'Noto Sans TC',system-ui,sans-serif;
+  font-size:var(--hy-fs-body);line-height:1.6;font-variant-numeric:tabular-nums}
+.hy :is(button,a,[tabindex]):focus-visible{outline:3px solid var(--hy-brand);outline-offset:2px}
+.hy :where(h1,h2,h3,p,dl,dd){margin:0}  /* :where 不加權重，元件 margin 才不會被蓋掉 */
+
+/* 頁首 */
+.hy-header{background:var(--hy-header);height:56px;display:flex;align-items:center;gap:12px;padding:0 24px}
+.hy-badge{background:var(--hy-brand);color:#fff;font-family:'Syne','Noto Sans TC',sans-serif;font-weight:800;font-size:14px;padding:3px 10px;border-radius:4px;letter-spacing:.5px}
+.hy-header-sub{color:rgba(255,255,255,.6);font-size:var(--hy-fs-meta)}
+.hy-header-actions{margin-left:auto;display:flex;gap:8px;align-items:center}
+.hy-sync{color:rgba(255,255,255,.55);font-size:var(--hy-fs-tiny)}
+.hy-hbtn{min-height:36px;padding:0 14px;border-radius:var(--hy-r-sm);border:1px solid rgba(255,255,255,.16);background:rgba(255,255,255,.06);color:#fff;font:inherit;font-size:var(--hy-fs-meta);cursor:pointer}
+.hy-hbtn.is-primary{background:var(--hy-brand);border-color:var(--hy-brand)}
+
+/* 分頁 */
+.hy-tabs{background:#fff;border-bottom:1px solid var(--hy-line);display:flex;padding:0 24px;overflow-x:auto}
+.hy-tab{min-height:48px;padding:0 16px;display:flex;align-items:center;font:inherit;font-size:14px;color:var(--hy-muted);background:none;border:0;border-bottom:2px solid transparent;margin-bottom:-1px;cursor:pointer;white-space:nowrap;text-decoration:none}
+.hy-tab[aria-current="page"],.hy-tab.is-active{color:var(--hy-brand);border-bottom-color:var(--hy-brand);font-weight:700}
+
+/* 版面 */
+.hy-main{max-width:var(--hy-max);margin:0 auto;padding:24px}
+.hy-pagehead{display:flex;justify-content:space-between;align-items:flex-end;gap:12px;margin-bottom:var(--hy-gap)}
+.hy-title{font-size:var(--hy-fs-title);font-weight:700;line-height:1.3}
+.hy-lede{font-size:var(--hy-fs-meta);color:var(--hy-muted)}
+.hy-split{display:grid;grid-template-columns:2fr 1fr;gap:var(--hy-gap);align-items:start}
+.hy-stack{display:flex;flex-direction:column;gap:var(--hy-gap)}
+
+/* 卡片 */
+.hy-card{background:var(--hy-surface);border:1px solid var(--hy-line);border-radius:var(--hy-r-card);padding:16px 18px}
+.hy-card-head{display:flex;justify-content:space-between;align-items:center;gap:8px}
+.hy-card-title{font-size:var(--hy-fs-card);font-weight:700;line-height:1.4}
+.hy-card.is-focus{position:relative;overflow:hidden;padding:20px 24px}           /* 一頁最多一張 */
+.hy-card.is-focus::before{content:"";position:absolute;left:0;top:0;bottom:0;width:4px;background:var(--hy-brand)}
+.hy-card.is-focus .hy-card-title{font-size:20px}
+.hy-card.needs-you{border-color:#f2d39b;box-shadow:inset 3px 0 0 var(--hy-you-line)} /* 待你確認 */
+
+/* 欄位列表 */
+.hy-kv{display:grid;grid-template-columns:84px 1fr;gap:10px 16px;margin-top:16px}
+.hy-kv dt{color:var(--hy-muted);font-size:14px}
+.hy-kv dd ul{padding-left:18px;margin:0}
+
+/* 狀態膠囊 */
+.hy-pill{display:inline-flex;align-items:center;min-height:24px;padding:0 10px;border-radius:var(--hy-r-pill);font-size:var(--hy-fs-tiny);font-weight:500;white-space:nowrap}
+.hy-pill[data-s="wait"]{background:var(--hy-wait-bg);color:var(--hy-wait)}
+.hy-pill[data-s="ai"]{background:var(--hy-ai-bg);color:var(--hy-ai)}
+.hy-pill[data-s="you"]{background:var(--hy-you-bg);color:var(--hy-you)}
+.hy-pill[data-s="done"]{background:var(--hy-done-bg);color:var(--hy-done)}
+.hy-pill[data-s="bad"]{background:var(--hy-bad-bg);color:var(--hy-bad)}
+.hy-summary{display:flex;gap:8px;flex-wrap:wrap}
+
+/* 看板 */
+.hy-board{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:var(--hy-gap);align-items:start}
+.hy-col{background:var(--hy-sunken);border-radius:var(--hy-r-card);padding:12px}
+.hy-col-head{display:flex;justify-content:space-between;font-size:14px;font-weight:700;margin:2px 4px 10px}
+.hy-col-head span{color:var(--hy-muted);font-weight:500}
+.hy-col .hy-card{padding:12px 14px;margin-bottom:10px}
+.hy-meta{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-top:10px;font-size:var(--hy-fs-tiny);color:var(--hy-muted)}
+.hy-meta .is-late{color:var(--hy-bad);font-weight:500}
+
+/* 連結清單 */
+.hy-list a,.hy-list li{display:flex;justify-content:space-between;gap:8px;padding:8px 0;border-top:1px solid var(--hy-line);color:var(--hy-ink);text-decoration:none;font-size:14px;list-style:none}
+.hy-list{margin:8px 0 0;padding:0}
+
+/* 按鈕 */
+.hy-btn{min-height:var(--hy-tap);padding:0 16px;border-radius:var(--hy-r-sm);border:1px solid var(--hy-line);background:#fff;color:var(--hy-ink);font:inherit;font-size:14px;font-weight:500;cursor:pointer}
+.hy-btn.is-primary{background:var(--hy-brand);border-color:var(--hy-brand);color:#fff}
+.hy-btn.is-danger{color:var(--hy-bad);border-color:#f1c4bf}
+.hy-btn:disabled{opacity:.5;cursor:not-allowed}
+
+/* 提示與空狀態 */
+.hy-note{font-size:var(--hy-fs-meta);color:var(--hy-muted)}
+.hy-empty{background:var(--hy-surface);border:1px dashed var(--hy-line);border-radius:var(--hy-r-card);padding:20px;color:var(--hy-muted);font-size:14px}
+.hy-alert{background:var(--hy-you-bg);color:var(--hy-you);border-radius:var(--hy-r-card);padding:12px 14px;font-size:14px}
+.hy-alert.is-bad{background:var(--hy-bad-bg);color:var(--hy-bad)}
+
+/* 手機 */
+@media (max-width:640px){
+  .hy-header{padding:0 16px}.hy-header-sub,.hy-sync,.hy-hbtn:not(.is-primary){display:none}
+  .hy-tabs{padding:0 8px}.hy-main{padding:16px}
+  .hy-pagehead{flex-direction:column;align-items:flex-start;gap:4px}
+  .hy-split,.hy-board{grid-template-columns:1fr}
+  .hy-board .hy-col.is-needs-you{order:-1}
+  .hy-kv{grid-template-columns:1fr;gap:2px}.hy-kv dd{margin-bottom:10px}
+  .hy-card.is-focus{padding:18px 18px 18px 22px}
+}
+@media (prefers-reduced-motion:reduce){.hy *{transition:none!important;animation:none!important}}
