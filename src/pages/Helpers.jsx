@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import { fetchMemoryHealth } from '../api'
 import MemoryCenter from './MemoryCenter'
+import { freshness } from '../lib/memoryFreshness'
 
 const BOT_META = {
   hy:      { name: 'HY',     role: '個人核心・總管' },
@@ -11,40 +12,17 @@ const BOT_META = {
 }
 const BOT_ORDER = ['hy', '950157', 'family', 'sam']
 const AGENT_ROUTE_ID = { hy: 'hy', '950157': '950157', family: 'xiaoyin', sam: 'sam' }
-const TZ = 'Asia/Taipei'
-
-function taipeiDateStr(ts) {
-  return new Date(ts).toLocaleDateString('en-CA', { timeZone: TZ })
+// 綠＝今天／昨天；黑＝2–7 天；紅＝超過 7 天（長期記憶與短期記憶同一套規則）
+const LEVEL_STYLE = {
+  fresh: { color: 'text-green-600', icon: '✅' },
+  aging: { color: 'text-slate-900', icon: '' },
+  stale: { color: 'text-red-500', icon: '🔴' },
+  none:  { color: 'text-slate-400', icon: '' },
 }
 
-function relTime(isoStr) {
-  if (!isoStr) return null
-  const ts = new Date(isoStr).getTime()
-  if (isNaN(ts)) return null
-  const nowStr = taipeiDateStr(Date.now())
-  const tsStr  = taipeiDateStr(ts)
-  if (tsStr === nowStr) {
-    const hhmm = new Date(ts).toLocaleTimeString('zh-TW', { timeZone: TZ, hour: '2-digit', minute: '2-digit', hour12: false })
-    return `今天 ${hhmm}`
-  }
-  const yesterday = taipeiDateStr(Date.now() - 86400000)
-  if (tsStr === yesterday) return '昨天'
-  const days = Math.round((new Date(nowStr) - new Date(tsStr)) / 86400000)
-  return `${days} 天前`
-}
-
-function dailyHealth(isoStr) {
-  if (!isoStr) return { ok: null, label: '無資料' }
-  const diffMs = Date.now() - new Date(isoStr).getTime()
-  return {
-    ok: diffMs <= 36 * 3600000,
-    label: relTime(isoStr) || isoStr,
-  }
-}
-
-function HealthRow({ rowLabel, h }) {
-  const color = h.ok === null ? 'text-slate-400' : h.ok ? 'text-green-600' : 'text-red-500'
-  const icon  = h.ok === null ? '' : h.ok ? '✅' : '🔴'
+function HealthRow({ rowLabel, isoStr }) {
+  const h = freshness(isoStr)
+  const { color, icon } = LEVEL_STYLE[h.level]
   return (
     <div className="flex items-center gap-2 text-sm">
       <span className="text-xs text-slate-400 w-16 flex-shrink-0">{rowLabel}</span>
@@ -55,7 +33,6 @@ function HealthRow({ rowLabel, h }) {
 
 function BotCard({ botId, health }) {
   const meta    = BOT_META[botId]
-  const memory = dailyHealth(health?.memory_last)
   const agentId = AGENT_ROUTE_ID[botId]
   return (
     <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-5 flex flex-col gap-3">
@@ -72,7 +49,8 @@ function BotCard({ botId, health }) {
         </Link>
       </div>
       <div className="flex flex-col gap-1.5">
-        <HealthRow rowLabel="記憶更新" h={memory} />
+        <HealthRow rowLabel="長期記憶" isoStr={health?.memory_last} />
+        <HealthRow rowLabel="短期記憶" isoStr={health?.short_term_last} />
       </div>
     </div>
   )

@@ -4,3 +4,4 @@
 // workflow 修好後即可刪除本檔。
 import './review-deliverables.test.mjs'
 import './sam-business-board.test.mjs'
+import './memory-freshness.test.mjs'
