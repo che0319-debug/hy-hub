@@ -352,9 +352,10 @@ export default function Home() {
     setRefreshing(false)
   }
 
+  // 像素視圖才需要這三支 API；停在「資料」視圖時不載入，避免拖慢首頁。
   useEffect(() => {
-    if (!homeDataCache) loadWorld()
-  }, []) // eslint-disable-line react-hooks/exhaustive-deps
+    if (view === 'pixel' && !homeDataCache) loadWorld()
+  }, [view]) // eslint-disable-line react-hooks/exhaustive-deps
 
   function handleBotClick(botId) {
     const route = BOT_ROUTE[botId]
