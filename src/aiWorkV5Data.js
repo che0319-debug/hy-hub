@@ -29,6 +29,16 @@ export async function loadControlCenter() {
   return { projects, inbox, details }
 }
 
+// 首頁統計：後端 /summary 一次讀完；舊後端（尚無 /summary）時退回逐一讀取。
+export async function loadSummary() {
+  try {
+    return await request('/summary')
+  } catch (error) {
+    if (/登入已過期/.test(error.message)) throw error
+    return summarizeControlCenter(await loadControlCenter())
+  }
+}
+
 export const openCountByProject = inbox =>
   inbox.reduce((acc, item) => ({ ...acc, [item.project_id]: (acc[item.project_id] || 0) + 1 }), {})
 
