@@ -51,20 +51,22 @@ export default function AuthGate({ children }) {
 
   async function submit(event) {
     event.preventDefault()
-    if (!password) {
+    const trimmed = password.trim()
+    if (!trimmed) {
       setError('請輸入登入密碼')
       return
     }
     setState('submitting')
     setError('')
     try {
-      await loginWithPassword(password)
+      await loginWithPassword(trimmed)
       setPassword('')
       setState('ready')
     } catch (err) {
       if (err.status === 429) setError('嘗試次數過多，請稍後再試')
       else if (err.status === 503) setError('手機登入尚未完成設定')
-      else setError('密碼不正確')
+      else if (err.status === 401) setError('密碼不正確')
+      else setError('無法連線到伺服器，請稍後再試')
       setState('login')
     }
   }
