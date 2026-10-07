@@ -45,7 +45,7 @@ export const openCountByProject = inbox =>
 // 控制中心總表的統計口徑
 export function summarizeControlCenter({ projects = [], inbox = [], details = {} }) {
   const openByProject = openCountByProject(inbox)
-  const queue = Object.values(details).flatMap(d => d?.packages || [])
+  const queue = Object.values(details).flatMap(d => d?.packages || []).filter(p => p.type !== 'PROJECT_REPORT')
   return {
     openTotal: inbox.length,
     openProjects: Object.keys(openByProject).length,

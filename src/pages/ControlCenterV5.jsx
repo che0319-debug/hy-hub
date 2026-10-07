@@ -4,6 +4,8 @@ import remarkGfm from 'remark-gfm'
 import { useSearchParams } from 'react-router-dom'
 import { request, loadControlCenter, openCountByProject, summarizeControlCenter, normalizeFilter } from '../aiWorkV5Data'
 import { reviewDeliverables, driveFileUrl } from '../lib/reviewDeliverables'
+import { isReportPackage, isReportFile } from '../lib/projectReport'
+import ProjectReportCard, { ReportStrip } from '../components/ProjectReportCard'
 import './control-center-v5.css'
 
 // AI Work 控制中心（v5 介面，第一版）
@@ -42,7 +44,7 @@ const FILTERS = [['all', '全部'], ['open', '待確認'], ['active', '進行中
 
 // 停泊：規格變更核准後，舊範圍的工作包保留結果但不再執行（milestone_id 以 PARKED: 開頭）
 const isParked = p => String(p.milestone_id || '').startsWith('PARKED:')
-const isWorkPackage = p => !['PROJECT_PLANNING', 'REVISION', 'SPEC_CHANGE_PLANNING'].includes(p.type) && !isParked(p)
+const isWorkPackage = p => !['PROJECT_PLANNING', 'REVISION', 'SPEC_CHANGE_PLANNING', 'PROJECT_REPORT'].includes(p.type) && !isParked(p)
 const canChangeSpec = project => project?.plan_state === 'APPROVED' && project?.phase === '執行期' && !!project?.milestone_id
 const planOf = project => project?.plan || project?.packages?.find(p => p.type === 'PROJECT_PLANNING')?.result?.plan || null
 const time = seconds => seconds ? new Date(seconds * 1000).toLocaleString('zh-TW', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit', hour12: false }) : ''
@@ -74,7 +76,7 @@ function progressOf(project) {
 }
 
 function situation(project, openCount) {
-  const packages = project?.packages || []
+  const packages = (project?.packages || []).filter(p => !isReportPackage(p))   // 報告整理不算專案進度
   const running = packages.find(p => p.status === 'RUNNING')
   const ready = packages.find(p => p.status === 'READY')
   if (project?.status === 'completed') return { now: '所有 Milestone 已完成', next: '查看產出' }
@@ -227,7 +229,7 @@ function ProjectView({ project, tab, setTab, openItems, onBack, onChanged, error
     {project.packages && <>
       {tab === 'overview' && <>
         <SuggestionBox project={project} onChanged={onChanged} setError={setError} />
-        <Overview project={project} plan={plan} openCount={openItems.length} goInbox={() => setTab('inbox')} />
+        <Overview project={project} plan={plan} openCount={openItems.length} goInbox={() => setTab('inbox')} goOutputs={() => setTab('outputs')} />
         <SpecChangeBox project={project} onChanged={onChanged} setError={setError} goInbox={() => setTab('inbox')} />
         <DeleteZone project={project} onDeleted={onDeleted} />
       </>}
@@ -254,12 +256,13 @@ function milestoneRows(project, plan) {
   })
 }
 
-function Overview({ project, plan, openCount, goInbox }) {
+function Overview({ project, plan, openCount, goInbox, goOutputs }) {
   const s = situation(project, openCount)
   const rows = milestoneRows(project, plan)
   // Missing inputs live in the inbox as project-level 補資料 items; they never block AI work.
   const missing = (project.actions || []).filter(a => !a.work_package_id && a.action_type === 'SUPPLEMENT')
   return <div className="cc5-stack">
+    {project.plan_state === 'APPROVED' && <ReportStrip projectId={project.id} goOutputs={goOutputs} />}
     <section className="cc5-panel">
       <h2 className="cc5-label">Goal</h2>
       <details className="cc5-goal"><summary>{plan?.goal || firstLine(project.goal).replace(/^#+\s*/, '')}</summary>
@@ -426,12 +429,14 @@ function Outputs({ project }) {
   // Same fallback as V3: the operator-reported folder until HY has verified one.
   const reported = project.references?.find(r => r.type === 'v3_input')?.data?.drive_upload_location_report
   const folderId = project.folder?.folder_id || reported?.folder_id
+  const files = (project.files || []).filter(file => !isReportFile(file))   // 報告由置頂卡呈現
   return <div className="cc5-stack">
+    {project.plan_state === 'APPROVED' && <ProjectReportCard project={project} />}
     {!project.folder && project.folder_error && <p className="cc5-small">HY 尚未驗證此資料夾（{project.folder_error}）</p>}
     {folderId && <a className="cc5-btn cc5-block" href={`https://drive.google.com/drive/folders/${encodeURIComponent(folderId)}`} target="_blank" rel="noreferrer">開啟專案的 Drive 資料夾</a>}
-    {project.files?.length > 0 && <section className="cc5-panel">
+    {files.length > 0 && <section className="cc5-panel">
       <h2 className="cc5-h">檔案</h2>
-      {project.files.map(file => <a key={file.file_id} className="cc5-file" href={`https://drive.google.com/file/d/${encodeURIComponent(file.file_id)}/view`} target="_blank" rel="noreferrer">
+      {files.map(file => <a key={file.file_id} className="cc5-file" href={`https://drive.google.com/file/d/${encodeURIComponent(file.file_id)}/view`} target="_blank" rel="noreferrer">
         <span><b>{file.filename}</b><small>v{file.revision}・{file.source}</small></span><span aria-hidden="true">›</span></a>)}
     </section>}
     {done.map(p => <details key={p.id} className="cc5-panel">
@@ -440,7 +445,7 @@ function Outputs({ project }) {
       {p.result.code_review && <CodeReviewFacts review={p.result.code_review} />}
       {p.result.outputs?.map((o, i) => <div key={i} className="cc5-md cc5-output"><ReactMarkdown remarkPlugins={[remarkGfm]} skipHtml>{typeof o === 'string' ? o : '```json\n' + JSON.stringify(o, null, 2) + '\n```'}</ReactMarkdown></div>)}
     </details>)}
-    {!done.length && !project.files?.length && <p className="cc5-empty">尚無交付成果。</p>}
+    {!done.length && !files.length && <p className="cc5-empty">尚無交付成果。</p>}
   </div>
 }
 

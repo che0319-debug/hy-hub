@@ -1,0 +1,18 @@
+/* 專案報告卡：只使用 hy-ui 的 token（public/hy-ui/hy-ui.css） */
+.pr-card{display:flex;flex-direction:column;gap:10px;box-sizing:border-box}
+.pr-card *{box-sizing:border-box}
+.pr-rev{font-size:var(--hy-fs-meta,13px);font-weight:400;color:var(--hy-muted,#5a6782)}
+.pr-meta{margin:0;font-size:var(--hy-fs-meta,13px);color:var(--hy-muted,#5a6782)}
+.pr-hint{margin:0;font-size:var(--hy-fs-body,15px)}
+.pr-note{margin:0;font-size:14px;color:var(--hy-muted,#5a6782)}
+.pr-actions{display:flex;flex-wrap:wrap;gap:8px}
+.pr-actions .hy-btn{flex:1 1 140px}
+.pr-link{min-height:44px;padding:0;border:0;background:none;font:inherit;font-size:14px;font-weight:500;color:var(--hy-brand,#1d4ed8);cursor:pointer;text-decoration:underline}
+.pr-frame{width:100%;height:70vh;min-height:420px;border:1px solid var(--hy-line,#e2e6ee);border-radius:var(--hy-r-sm,8px);background:#fff}
+.pr-history summary{min-height:44px;display:flex;align-items:center;cursor:pointer;font-size:14px;color:var(--hy-muted,#5a6782)}
+.pr-history ul{list-style:none;margin:0;padding:0;display:flex;flex-direction:column}
+.pr-history li{display:flex;justify-content:space-between;align-items:center;gap:8px;min-height:44px;border-top:1px solid var(--hy-line,#e2e6ee);font-size:14px}
+.pr-history small{color:var(--hy-muted,#5a6782);font-size:var(--hy-fs-tiny,12px)}
+.pr-history a{color:var(--hy-brand,#1d4ed8);white-space:nowrap}
+.pr-strip{display:flex;justify-content:space-between;align-items:center;gap:8px;width:100%;min-height:48px;font:inherit;text-align:left;cursor:pointer;color:var(--hy-ink,#13213a)}
+@media (max-width:640px){.pr-frame{height:65vh}.pr-actions .hy-btn{flex-basis:100%}}
