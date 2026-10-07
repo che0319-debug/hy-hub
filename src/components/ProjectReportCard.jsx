@@ -52,6 +52,27 @@ export function ReportStrip({ projectId, goOutputs }) {
   </button>
 }
 
+// 全螢幕閱讀：報告 HTML 由 AI 產生，只放沙盒 iframe（無腳本、無同源權限）。
+function ReportReader({ title, html, onClose, onDownload }) {
+  useEffect(() => {
+    const onKey = event => { if (event.key === 'Escape') onClose() }
+    const previous = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+    window.addEventListener('keydown', onKey)
+    return () => { document.body.style.overflow = previous; window.removeEventListener('keydown', onKey) }
+  }, [onClose])
+  return <div className="pr-reader" role="dialog" aria-modal="true" aria-label={title}>
+    <div className="pr-reader-bar">
+      <b>{title}</b>
+      <span className="pr-reader-actions">
+        <button type="button" className="hy-btn" onClick={onDownload}>下載 HTML</button>
+        <button type="button" className="hy-btn is-primary" onClick={onClose}>關閉</button>
+      </span>
+    </div>
+    <iframe className="pr-reader-frame" title={title} srcDoc={html} sandbox="allow-popups allow-popups-to-escape-sandbox" referrerPolicy="no-referrer" />
+  </div>
+}
+
 export default function ProjectReportCard({ project }) {
   useHyUiStyles()
   const { info, error, reload } = useProjectReport(project.id)
@@ -66,7 +87,6 @@ export default function ProjectReportCard({ project }) {
   useEffect(() => { setHtml(null) }, [latestFile])
 
   async function open() {
-    if (html) { setHtml(null); return }
     setOpening(true)
     try {
       const data = await request(`/projects/${encodeURIComponent(project.id)}/report/html`)
@@ -108,12 +128,12 @@ export default function ProjectReportCard({ project }) {
     {view.hint && <p className="pr-hint">{view.hint}</p>}
     {error && <p role="alert" className="hy-alert is-bad">{error}</p>}
     <div className="pr-actions">
-      <button type="button" className="hy-btn is-primary" disabled={!view.canOpen || opening} onClick={open}>{opening ? '讀取中…' : html ? '收起報告' : '開啟報告'}</button>
+      <button type="button" className="hy-btn is-primary" disabled={!view.canOpen || opening} onClick={open}>{opening ? '讀取中…' : '開啟報告'}</button>
       <button type="button" className="hy-btn" disabled={!view.canRefresh || busy} onClick={() => refresh(false)}>{busy ? '送出中…' : '整理報告'}</button>
       <button type="button" className="hy-btn" disabled={!view.canOpen} onClick={download}>下載 HTML</button>
     </div>
     {note && <p role="status" className={note.tone === 'bad' ? 'hy-alert is-bad' : 'pr-note'}>{note.text}{note.canForce && <> <button type="button" className="pr-link" disabled={busy} onClick={() => refresh(true)}>仍要重新整理</button></>}</p>}
-    {html != null && <iframe className="pr-frame" title={view.title} srcDoc={html} sandbox="allow-popups allow-popups-to-escape-sandbox" referrerPolicy="no-referrer" />}
+    {html != null && <ReportReader title={`${project.title}・${view.title}${view.revision ? ` 第 ${view.revision} 版` : ''}`} html={html} onClose={() => setHtml(null)} onDownload={download} />}
     {history.length > 1 && <details className="pr-history">
       <summary>歷史版本（{history.length}）</summary>
       <ul>{history.map(item => <li key={item.file_id}>
