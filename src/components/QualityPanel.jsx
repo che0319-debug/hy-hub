@@ -66,4 +66,3 @@ export function QualityPanel({ project, onChanged }) {
     </article>
   </div>
 }
-
