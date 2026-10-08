@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import { request } from '../aiWorkV5Data'
 import { authHeaders, ensureAccessToken } from '../auth'
 import './quality-panel.css'
@@ -53,13 +53,6 @@ export function QualityPanel({ project, onChanged }) {
           }}>下載固定原件 · {a.logical_id}</button>)}
       </details>)}
     </article>
-    <article className="hy-card"><h2 className="hy-card-title">能力配置</h2>
-      {(project.plan?.milestones || []).flatMap(m => m.packages || []).filter(p => p.capability_config).map(p =>
-        <dl className="hy-kv" key={p.key}><dt>{p.task}</dt><dd>{p.capability_config.producer} · {p.capability_config.owner}<br />
-          方法：{p.capability_config.skills?.map(s => `${s.id} ${s.version}`).join('、') || '未指定'}<br />
-          工具：{p.capability_config.required_tools?.join('、') || '無額外工具'}<br />
-          品質參考：{p.capability_config.quality_references?.join('、')}</dd></dl>)}
-    </article>
     <article className="hy-card"><h2 className="hy-card-title">共同資料基準</h2>
       {!quality?.baseline && <p className="hy-empty">本專案尚未啟用資料基準。</p>}
       {quality?.baseline && <><p>版本 {quality.baseline.revision}</p>
@@ -72,30 +65,4 @@ export function QualityPanel({ project, onChanged }) {
         <dt>最後領取</dt><dd>{date(m.last_claim)}</dd><dt>最後交件</dt><dd>{date(m.last_receipt)}</dd></dl>)}
     </article>
   </div>
-}
-
-export function SkillLibrary() {
-  const [projects, setProjects] = useState([]), [projectId, setProjectId] = useState('')
-  const [skills, setSkills] = useState(null), [bots, setBots] = useState([]), [error, setError] = useState(''), [selected, setSelected] = useState(null)
-  useEffect(() => {
-    let active = true
-    Promise.all([request('/quality/skills'), request('/quality/bots'), request('/projects')]).then(([s, b, p]) => { if (active) { setSkills(s); setBots(b); setProjects(p) } }).catch(e => { if (active) setError(e.message) })
-    return () => { active = false }
-  }, [])
-  return <details className="hy quality-panel hy-card"><summary>共用方法庫 V1 與四 Bot 品質規格</summary>
-    {error && <p className="hy-alert" role="alert">{error}</p>}
-    {!skills && !error && <p>讀取中…</p>}
-    {skills?.length === 0 && <><p className="hy-empty">尚未匯入候選方法。</p><button className="hy-btn" onClick={async () => { try { await request('/quality/skills/seed', { method: 'POST' }); setSkills(await request('/quality/skills')) } catch (e) { setError(e.message) } }}>匯入五份候選方法</button></>}
-    {!!skills?.length && <label>正式確認所屬專案<select value={projectId} onChange={e => setProjectId(e.target.value)}><option value="">選擇專案</option>{projects.map(p => <option value={p.id} key={p.id}>{p.title}</option>)}</select></label>}
-    {(skills || []).map(s => <div className="hy-card" key={`${s.id}@${s.version}`}>
-      <h3 className="hy-card-title">{s.name} · {s.version}</h3><p>{s.description}</p>
-      <span className="hy-pill" data-s={s.state === 'PUBLISHED' ? 'done' : 'wait'}>{s.state === 'PUBLISHED' ? '已發布' : '候選'}</span>
-      <button className="hy-btn" disabled={!projectId} onClick={async () => { try { await request(`/projects/${encodeURIComponent(projectId)}/quality/skill-publish-request`, { method: 'POST', body: JSON.stringify({ id: s.id, version: s.version, content_hash: s.content_hash }) }); setError('已建立正式待確認；到原專案待確認頁核准。') } catch (e) { setError(e.message) } }}>提出方法發布確認</button>
-      <button className="hy-btn" onClick={async () => { try { setSelected(await request(`/quality/skills/${encodeURIComponent(s.id)}/${encodeURIComponent(s.version)}`)) } catch (e) { setError(e.message) } }}>查看固定方法與範例</button>
-    </div>)}
-    {selected && <article className="hy-card"><h3 className="hy-card-title">{selected.name}</h3><pre>{selected.markdown}</pre></article>}
-    <h3 className="hy-card-title">四 Bot 實際採用證據</h3>
-    {bots.map(b => <dl className="hy-kv" key={b.owner}><dt>{b.owner}</dt><dd>{b.policy_version ? `HY 已發布 ${b.policy_version}` : 'HY 尚未發布有效版'}<br />
-      {b.account_adoption ? `已登錄設定證據：${b.account_adoption.settings_location}；仍需核對實際輸出` : '帳號尚未設定／實測未驗證'}</dd></dl>)}
-  </details>
 }
