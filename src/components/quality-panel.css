@@ -1,0 +1,7 @@
+@import '../../public/hy-ui/hy-ui.css';
+.quality-panel{display:grid;gap:var(--hy-gap);color:var(--hy-ink);font-size:var(--hy-fs-body);line-height:1.6;min-width:0}
+.quality-panel pre{white-space:pre-wrap;overflow-wrap:anywhere;font-size:var(--hy-fs-meta);max-width:100%}
+.quality-panel code{overflow-wrap:anywhere}
+.quality-panel summary{min-height:var(--hy-tap);cursor:pointer;padding:8px 0}
+.quality-panel .hy-btn{min-height:var(--hy-tap);margin-top:8px}
+.quality-panel .hy-kv dd{overflow-wrap:anywhere}
