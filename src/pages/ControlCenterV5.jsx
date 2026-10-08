@@ -7,6 +7,7 @@ import { reviewDeliverables, driveFileUrl } from '../lib/reviewDeliverables'
 import { isReportPackage, isReportFile } from '../lib/projectReport'
 import ProjectReportCard, { ReportStrip } from '../components/ProjectReportCard'
 import './control-center-v5.css'
+import { QualityPanel, SkillLibrary } from '../components/QualityPanel'
 
 // AI Work 控制中心（v5 介面，第一版）
 // 兩層式：專案總表 → 單一專案（概況／待確認／規劃書／產出／工作紀錄）。
@@ -37,14 +38,20 @@ const ACTION_TYPE = {
   SPEC_CHANGE_DECISION: '規格變更結果',
   CHOICE: '選方案',
   EXTERNAL_ACTION: '對外行動',
+  CLOSURE_APPROVAL: '核准結案',
+  QUALITY_GAP: '審查待補',
+  QUALITY_POLICY_ENABLE: '啟用品質契約',
+  QUALITY_SKILL_PUBLISH: '發布方法',
+  QUALITY_SKILL_DISABLE: '停用方法',
+  QUALITY_CAPABILITY_REGISTER: '確認能力證據',
 }
-const EXECUTORS = { GPT_CHAT: 'GPT', CHATGPT_WORK: 'ChatGPT Work', CODEX: 'Codex' }
-const TABS = [['overview', '概況'], ['inbox', '待確認'], ['plan', '規劃書'], ['outputs', '產出'], ['log', '工作紀錄']]
+const EXECUTORS = { CLAUDE_REVIEW: 'Claude 獨立審查', GPT_CHAT: 'GPT', CHATGPT_WORK: 'ChatGPT Work', CODEX: 'Codex' }
+const TABS = [['overview', '概況'], ['inbox', '待確認'], ['plan', '規劃書'], ['outputs', '產出'], ['log', '工作紀錄'], ['quality', '品質與交接']]
 const FILTERS = [['all', '全部'], ['open', '待確認'], ['active', '進行中'], ['completed', '完成']]
 
 // 停泊：規格變更核准後，舊範圍的工作包保留結果但不再執行（milestone_id 以 PARKED: 開頭）
 const isParked = p => String(p.milestone_id || '').startsWith('PARKED:')
-const isWorkPackage = p => !['PROJECT_PLANNING', 'REVISION', 'SPEC_CHANGE_PLANNING', 'PROJECT_REPORT'].includes(p.type) && !isParked(p)
+const isWorkPackage = p => !['PROJECT_PLANNING', 'REVISION', 'SPEC_CHANGE_PLANNING', 'PROJECT_REPORT', 'QUALITY_REVIEW', 'CLOSURE_REPORT'].includes(p.type) && !isParked(p)
 const canChangeSpec = project => project?.plan_state === 'APPROVED' && project?.phase === '執行期' && !!project?.milestone_id
 const planOf = project => project?.plan || project?.packages?.find(p => p.type === 'PROJECT_PLANNING')?.result?.plan || null
 const time = seconds => seconds ? new Date(seconds * 1000).toLocaleString('zh-TW', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit', hour12: false }) : ''
@@ -169,6 +176,7 @@ export default function ControlCenterV5() {
     </header>
 
     {error && <p role="alert" className="cc5-alert">{error}</p>}
+    <SkillLibrary />
     {creating && <NewProject onCancel={() => setCreating(false)} onCreated={async id => { setCreating(false); await loadAll(); setOpenId(id); setTab('overview') }} />}
 
     <div className="cc5-summary">
@@ -227,6 +235,7 @@ function ProjectView({ project, tab, setTab, openItems, onBack, onChanged, error
     {error && <p role="alert" className="cc5-alert">{error}</p>}
     {!project.packages && <p className="cc5-empty" role="status">讀取中…</p>}
     {project.packages && <>
+      {tab === 'quality' && <QualityPanel project={project} onChanged={onChanged} />}
       {tab === 'overview' && <>
         <SuggestionBox project={project} onChanged={onChanged} setError={setError} />
         <Overview project={project} plan={plan} openCount={openItems.length} goInbox={() => setTab('inbox')} goOutputs={() => setTab('outputs')} />
@@ -305,7 +314,9 @@ function Inbox({ items, project, onChanged, setError }) {
     setBusy(item.action_id)
     try {
       const note = (feedback[item.action_id] || '').trim()
-      const body = value === 'RETURN'
+      const body = item.action_type === 'QUALITY_GAP'
+        ? { answer: { decision: value === 'REVISE' ? 'REVISE' : 'RECHECK', evidence: value === 'REVISE' ? note : value }, attachments: [] }
+        : value === 'RETURN'
         ? { answer: note, attachments: [] }
         : value === 'APPROVED' && note && item.action_type === 'CODE_REVIEW'
           ? { answer: `APPROVED\n${note}`, attachments: [] }
@@ -327,7 +338,7 @@ function Inbox({ items, project, onChanged, setError }) {
   return <div className="cc5-stack">
     <p className="cc5-muted">待確認不會擋住沒有依賴的工作包。</p>
     {items.map(item => {
-      const approval = item.action_type === 'PLAN_APPROVAL' || item.action_type === 'MILESTONE_REVIEW'
+      const approval = ['PLAN_APPROVAL', 'MILESTONE_REVIEW', 'CLOSURE_APPROVAL', 'QUALITY_POLICY_ENABLE', 'QUALITY_SKILL_PUBLISH', 'QUALITY_SKILL_DISABLE', 'QUALITY_CAPABILITY_REGISTER'].includes(item.action_type)
       const spec = item.action_type === 'SPEC_CHANGE_APPROVAL'
       const code = item.action_type === 'CODE_REVIEW'
       return <article key={item.action_id} className="cc5-panel">
@@ -338,6 +349,7 @@ function Inbox({ items, project, onChanged, setError }) {
         </div>
         <h2 className="cc5-q">{item.title}</h2>
         {item.question && item.question !== item.title && <p className="cc5-pre">{spec ? item.question.split('\n\n回覆 APPROVED')[0] : item.question}</p>}
+        {item.approval_allowed === false && <p className="cc5-muted">尚未通過同版本獨立審查，不能核准。</p>}
         {item.reason && <p className="cc5-muted cc5-pre">{code ? firstLine(item.reason) : item.reason}</p>}
         {item.plan && <details className="cc5-sub"><summary>查看規劃書草稿</summary><PlanBody plan={item.plan} /></details>}
         {approval && <ReviewDeliverables list={reviewDeliverables(project, item)} />}
@@ -356,7 +368,7 @@ function Inbox({ items, project, onChanged, setError }) {
           <label className="cc5-field">意見（要求修改、駁回時必填；核准時可附註）
             <textarea value={feedback[item.action_id] || ''} onChange={e => setFeedback(v => ({ ...v, [item.action_id]: e.target.value }))} /></label>
           <div className="cc5-three">
-            <button type="button" className="cc5-primary" disabled={!!busy || !item.spec_change} onClick={() => resolve(item, 'APPROVED')}>核准生效</button>
+            <button type="button" className="cc5-primary" disabled={!!busy || !item.spec_change || item.approval_allowed === false} onClick={() => resolve(item, 'APPROVED')}>核准生效</button>
             <button type="button" className="cc5-btn" disabled={!!busy || !(feedback[item.action_id] || '').trim()} onClick={() => resolve(item, 'REVISE')}>要求修改</button>
             <button type="button" className="cc5-btn" disabled={!!busy || !(feedback[item.action_id] || '').trim()} onClick={() => resolve(item, 'REJECTED')}>駁回</button>
           </div>
@@ -364,9 +376,14 @@ function Inbox({ items, project, onChanged, setError }) {
           <label className="cc5-field">修改意見（要求修改時必填）
             <textarea value={feedback[item.action_id] || ''} onChange={e => setFeedback(v => ({ ...v, [item.action_id]: e.target.value }))} /></label>
           <div className="cc5-two">
-            <button type="button" className="cc5-primary" disabled={!!busy || (item.action_type === 'PLAN_APPROVAL' && !item.plan)} onClick={() => resolve(item, 'APPROVED')}>核准</button>
+            <button type="button" className="cc5-primary" disabled={!!busy || item.approval_allowed === false || (item.action_type === 'PLAN_APPROVAL' && !item.plan)} onClick={() => resolve(item, 'APPROVED')}>核准</button>
             <button type="button" className="cc5-btn" disabled={!!busy || !(feedback[item.action_id] || '').trim()} onClick={() => resolve(item, 'REVISE')}>要求修改</button>
           </div>
+        </> : item.action_type === 'QUALITY_GAP' ? <>
+          <label className="cc5-field">新增證據與位置（請先上傳必要原件，再列出檔案、來源或已更新內容）
+            <textarea value={feedback[item.action_id] || ''} onChange={e => setFeedback(v => ({ ...v, [item.action_id]: e.target.value }))} /></label>
+          <div className="cc5-two"><button type="button" className="cc5-primary" disabled={!!busy || !(feedback[item.action_id] || '').trim()} onClick={() => resolve(item, feedback[item.action_id])}>補證據後複核</button>
+            <button type="button" className="cc5-btn" disabled={!!busy || !(feedback[item.action_id] || '').trim()} onClick={() => resolve(item, 'REVISE')}>交回原案修訂</button></div>
         </> : <form className="cc5-form" onSubmit={e => { e.preventDefault(); resolve(item, answer[item.action_id]) }}>
           <label className="cc5-field" htmlFor={`cc5-answer-${item.action_id}`}>你的回答</label>
           <textarea id={`cc5-answer-${item.action_id}`} required value={answer[item.action_id] || ''} onChange={e => setAnswer(v => ({ ...v, [item.action_id]: e.target.value }))} />
@@ -666,3 +683,4 @@ function NewProject({ onCancel, onCreated }) {
     </div>
   </form>
 }
+
