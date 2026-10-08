@@ -7,7 +7,7 @@ import { reviewDeliverables, driveFileUrl } from '../lib/reviewDeliverables'
 import { isReportPackage, isReportFile } from '../lib/projectReport'
 import ProjectReportCard, { ReportStrip } from '../components/ProjectReportCard'
 import './control-center-v5.css'
-import { QualityPanel, SkillLibrary } from '../components/QualityPanel'
+import { QualityPanel } from '../components/QualityPanel'
 
 // AI Work 控制中心（v5 介面，第一版）
 // 兩層式：專案總表 → 單一專案（概況／待確認／規劃書／產出／工作紀錄）。
@@ -46,7 +46,7 @@ const ACTION_TYPE = {
   QUALITY_CAPABILITY_REGISTER: '確認能力證據',
 }
 const EXECUTORS = { CLAUDE_REVIEW: 'Claude 獨立審查', GPT_CHAT: 'GPT', CHATGPT_WORK: 'ChatGPT Work', CODEX: 'Codex' }
-const TABS = [['overview', '概況'], ['inbox', '待確認'], ['plan', '規劃書'], ['outputs', '產出'], ['log', '工作紀錄'], ['quality', '品質與交接']]
+const TABS = [['overview', '概況'], ['inbox', '待確認'], ['plan', '專案規劃書'], ['ai-plan', 'AI 執行規劃書'], ['outputs', '產出'], ['log', '工作紀錄'], ['quality', '品質與交接']]
 const FILTERS = [['all', '全部'], ['open', '待確認'], ['active', '進行中'], ['completed', '完成']]
 
 // 停泊：規格變更核准後，舊範圍的工作包保留結果但不再執行（milestone_id 以 PARKED: 開頭）
@@ -176,7 +176,6 @@ export default function ControlCenterV5() {
     </header>
 
     {error && <p role="alert" className="cc5-alert">{error}</p>}
-    <SkillLibrary />
     {creating && <NewProject onCancel={() => setCreating(false)} onCreated={async id => { setCreating(false); await loadAll(); setOpenId(id); setTab('overview') }} />}
 
     <div className="cc5-summary">
@@ -247,6 +246,7 @@ function ProjectView({ project, tab, setTab, openItems, onBack, onChanged, error
         <Inbox items={openItems} project={project} onChanged={onChanged} setError={setError} />
       </>}
       {tab === 'plan' && <PlanTab project={project} plan={plan} />}
+      {tab === 'ai-plan' && <AIExecutionPlan plan={plan} />}
       {tab === 'outputs' && <Outputs project={project} />}
       {tab === 'log' && <WorkLog project={project} />}
     </>}
@@ -351,7 +351,8 @@ function Inbox({ items, project, onChanged, setError }) {
         {item.question && item.question !== item.title && <p className="cc5-pre">{spec ? item.question.split('\n\n回覆 APPROVED')[0] : item.question}</p>}
         {item.approval_allowed === false && <p className="cc5-muted">尚未通過同版本獨立審查，不能核准。</p>}
         {item.reason && <p className="cc5-muted cc5-pre">{code ? firstLine(item.reason) : item.reason}</p>}
-        {item.plan && <details className="cc5-sub"><summary>查看規劃書草稿</summary><PlanBody plan={item.plan} /></details>}
+        {item.plan && <AIExecutionPlan plan={item.plan} />}
+        {item.plan && <details className="cc5-sub"><summary>查看專案規劃書草稿</summary><PlanBody plan={item.plan} /></details>}
         {approval && <ReviewDeliverables list={reviewDeliverables(project, item)} />}
         {code ? <>
           <CodeReviewFacts review={item.code_review} />
@@ -413,6 +414,7 @@ function ReviewDeliverables({ list }) {
 
 function PlanBody({ plan }) {
   return <div className="cc5-stack cc5-plan">
+    {plan.project_plan_markdown && <ReactMarkdown remarkPlugins={[remarkGfm]} skipHtml>{plan.project_plan_markdown}</ReactMarkdown>}
     {plan.goal && <p>{plan.goal}</p>}
     {plan.scope?.length > 0 && <div><h3 className="cc5-label">範圍</h3><ul className="cc5-ul">{plan.scope.map((x, i) => <li key={i}>{x}</li>)}</ul></div>}
     {plan.risks?.length > 0 && <div><h3 className="cc5-label">風險</h3><ul className="cc5-ul">{plan.risks.map((x, i) => <li key={i}>{x}</li>)}</ul></div>}
@@ -424,20 +426,46 @@ function PlanTab({ project, plan }) {
   if (!plan) return <p className="cc5-empty">規劃工作包尚未交件。</p>
   return <div className="cc5-stack">
     <div className="cc5-panel cc5-row">
-      <div><b>規劃書{project.plan_revision ? ` v${project.plan_revision}` : ''}</b> <Pill tone={project.plan_state === 'APPROVED' ? 'green' : 'amber'}>{project.plan_state === 'APPROVED' ? '已核准' : '草稿'}</Pill></div>
+      <div><b>專案規劃書{project.plan_revision ? ` v${project.plan_revision}` : ''}</b> <Pill tone={project.plan_state === 'APPROVED' ? 'green' : 'amber'}>{project.plan_state === 'APPROVED' ? '已核准' : '草稿'}</Pill></div>
       {project.plan_history?.length > 0 && <span className="cc5-small">先前版本 {project.plan_history.length}</span>}
     </div>
-    <section className="cc5-panel"><PlanBody plan={{ goal: plan.goal, scope: plan.scope }} /></section>
+    <section className="cc5-panel"><PlanBody plan={{ goal: plan.goal, scope: plan.scope, project_plan_markdown: plan.project_plan_markdown }} /></section>
     {rows.map((m, index) => <details key={m.id} className="cc5-panel cc5-ms-detail" open={m.state === 'active' || (index === 0 && !rows.some(r => r.state === 'active'))}>
       <summary><span><b>{m.id}</b> {m.name}</span><span className="cc5-small">{m.state === 'done' ? '完成' : m.state === 'active' ? '進行中' : '未展開'}・WP {m.done}/{m.list.length}</span></summary>
       {m.meta.deliverables?.length > 0 && <><h3 className="cc5-label">成果</h3><ul className="cc5-ul">{m.meta.deliverables.map((x, i) => <li key={i}>{x}</li>)}</ul></>}
       {m.meta.acceptance_criteria?.length > 0 && <><h3 className="cc5-label">驗收標準</h3><ul className="cc5-ul">{m.meta.acceptance_criteria.map((x, i) => <li key={i}>{x}</li>)}</ul></>}
-      {m.list.length > 0 && <><h3 className="cc5-label">工作包</h3>
-        <ul className="cc5-wp">{m.list.map(p => { const st = PACKAGE_STATUS[p.status] || { label: p.status, tone: 'gray' }; return <li key={p.id}><span>{firstLine(p.task)}</span><Pill tone={st.tone}>{st.label}</Pill></li> })}</ul></>}
     </details>)}
     <ParkedPackages project={project} />
     {plan.risks?.length > 0 && <section className="cc5-panel"><h2 className="cc5-h">風險</h2><ul className="cc5-ul">{plan.risks.map((x, i) => <li key={i}>{x}</li>)}</ul></section>}
   </div>
+}
+
+
+function AIExecutionPlan({ plan }) {
+  if (!plan) return <p className="cc5-empty">AI 執行規劃書尚未交件。</p>
+  const list = value => Array.isArray(value) && value.length ? value.map(x => typeof x === 'string' ? x : JSON.stringify(x)).join('、') : '尚未提供'
+  return <section className="cc5-panel cc5-stack">
+    <h2 className="cc5-h">AI 執行規劃書</h2>
+    <p className="cc5-small">與專案規劃書一同送審與正式核准。品質要求由 Bot 整理，並引用專案 References／Drive 補充資料。</p>
+    {plan.ai_execution_plan_markdown && <div className="cc5-md"><ReactMarkdown remarkPlugins={[remarkGfm]} skipHtml>{plan.ai_execution_plan_markdown}</ReactMarkdown></div>}
+    {(plan.milestones || []).map(m => <div key={m.id} className="cc5-sub">
+      <h3 className="cc5-label">{m.id} · {m.name || m.id}</h3>
+      <p>獨立審查：{m.is_major === true ? '指定重大里程碑，成果交齊後送審' : m.is_major === false ? '一般里程碑' : '尚未指定'}</p>
+      {(m.packages || []).map(p => { const c = p.capability_config || {}; return <details key={p.key} open>
+        <summary>{p.task}</summary>
+        <dl className="hy-kv">
+          <dt>執行／整合負責</dt><dd>{EXECUTORS[p.executor || 'GPT_CHAT'] || p.executor}／{c.owner || '尚未提供'}</dd>
+          <dt>採用 Skill 與版本</dt><dd>{c.skills?.length ? c.skills.map(x => `${x.id} · ${x.version}`).join('、') : '尚未提供；由 AI 搜尋適用方法並說明選用理由'}</dd>
+          <dt>工具與資料能力</dt><dd>工具：{list(c.required_tools)}<br />資料：{list(c.required_data)}<br />實測證據：{list(c.capability_evidence)}</dd>
+          <dt>前置交接</dt><dd>{list(p.dependencies)}</dd>
+          <dt>交付成果</dt><dd>{list(p.expected_outputs)}</dd>
+          <dt>驗收與品質參考</dt><dd>驗收：{list(p.acceptance_criteria)}<br />參考：{list(c.quality_references)}</dd>
+          <dt>審查安排</dt><dd>{c.review_source || '尚未提供'}</dd>
+          <dt>假設與能力缺口</dt><dd>假設：{list(c.assumptions)}<br />缺口：{list(c.capability_gaps)}</dd>
+        </dl>
+      </details> })}
+    </div>)}
+  </section>
 }
 
 function Outputs({ project }) {
