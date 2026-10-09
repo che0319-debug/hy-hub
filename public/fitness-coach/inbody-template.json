@@ -1,0 +1,7 @@
+{
+  "measurements": [
+    { "measured_at": "2026-08-01", "weight_kg": 72.4, "skeletal_muscle_mass_kg": 32.1, "body_fat_percent": 18.5, "body_fat_mass_kg": 13.4, "bmi": 23.6, "visceral_fat_level": 6, "basal_metabolic_rate_kcal": 1610 },
+    { "measured_at": "2026-08-22", "weight_kg": 72.9, "skeletal_muscle_mass_kg": 32.5, "body_fat_percent": 18.2, "body_fat_mass_kg": 13.3, "bmi": 23.8, "visceral_fat_level": 6, "basal_metabolic_rate_kcal": 1622 },
+    { "measured_at": "2026-09-12", "weight_kg": 73.3, "skeletal_muscle_mass_kg": 32.9, "body_fat_percent": 17.9, "body_fat_mass_kg": 13.1, "bmi": 23.9, "visceral_fat_level": 5, "basal_metabolic_rate_kcal": 1634 }
+  ]
+}

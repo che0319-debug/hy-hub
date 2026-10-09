@@ -1,0 +1,16 @@
+{
+  "name": "我的健身教練",
+  "short_name": "健身教練",
+  "description": "目標菜單、動作教學、訓練紀錄與 InBody 追蹤；資料只存在這台裝置。",
+  "lang": "zh-Hant",
+  "start_url": "./#today",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#f2f4f8",
+  "theme_color": "#0b1a33",
+  "icons": [
+    { "src": "icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png" },
+    { "src": "icon.svg", "sizes": "any", "type": "image/svg+xml" }
+  ]
+}
