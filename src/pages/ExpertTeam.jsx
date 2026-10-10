@@ -1,65 +1,38 @@
 import { useState, useEffect } from 'react'
 import { authHeaders } from '../auth'
-import { Users, BrainCircuit, BookOpen, ShieldCheck, Search, Puzzle, ArrowLeft, Sparkles } from 'lucide-react'
+import './expert-team.css'
 
-const proposed = [{
-  id:'pi', name:'PI · Project Integrator', role:'專案整合專家',
-  skills:['需求探索','專案規劃','專家組織','動態執行','研究推導','品質整合','系統操作','能力缺口管理'],
-  icon:BrainCircuit, image:null, state:'規劃中'
-}]
-
-// Expert portraits are optional approved illustration assets, never photographs.
-// New experts default to a neutral symbolic icon until their visual identity is reviewed.
-function ExpertAvatar({ expert, large=false }) {
-  const Icon=expert.icon || Puzzle
-  return <div className={`flex items-center justify-center rounded-2xl border border-dashed border-slate-300 bg-slate-100 text-slate-500 ${large?'w-20 h-20':'w-14 h-14'}`} aria-label="專家意象圖，待設計">
-    <Icon size={large?38:27} strokeWidth={1.6}/>
-  </div>
+const base=import.meta.env.VITE_API_BASE || ''
+async function api(path,body) {
+  const res=await fetch(`${base}/api/ai-work-packages${path}`,{method:body?'POST':'GET',headers:{...authHeaders(),...(body?{'Content-Type':'application/json'}:{})},...(body?{body:JSON.stringify(body)}:{}),cache:'no-store'})
+  const data=await res.json()
+  if(!res.ok)throw new Error(data.detail||data.error||`HTTP ${res.status}`)
+  return data
 }
-
-export default function ExpertTeam() {
-  const [tab,setTab]=useState('experts')
-  const [selected,setSelected]=useState(null)
-  const [query,setQuery]=useState('')
-  const [published,setPublished]=useState([])
-  const [loading,setLoading]=useState(true)
-  const [loadError,setLoadError]=useState('')
-  useEffect(()=>{
-    let active=true
-    const base=import.meta.env.VITE_API_BASE || ''
-    fetch(`${base}/api/ai-work-packages/experts`,{headers:authHeaders(),cache:'no-store'})
-      .then(async res=>{if(!res.ok) throw new Error(`HTTP ${res.status}`);return res.json()})
-      .then(data=>{if(active){setPublished(Array.isArray(data.experts)?data.experts:[]);setLoading(false)}})
-      .catch(err=>{if(active){setLoadError(err.message);setLoading(false)}})
-    return ()=>{active=false}
-  },[])
-  const actual=published.map(e=>({...e,role:e.role||'專家',skills:(e.skills||[]).map(pin=>pin.id+' @ '+pin.version),icon:Puzzle,state:'已發布'}))
-  const allExperts=[...actual,...proposed.filter(p=>!actual.some(e=>e.id===p.id))]
-  const expert=allExperts.find(x=>x.id===selected)
-  return <div className="max-w-5xl mx-auto space-y-5">
-    <header className="flex items-center gap-3"><Users size={26} className="text-slate-500"/><div><h1 className="text-2xl font-bold">專家團</h1><p className="text-sm text-slate-500">跨 HY Life OS 共用的 Expert 與 Skill</p></div></header>
-    <div className="border border-dashed border-slate-300 rounded-xl bg-slate-50 p-4 text-sm text-slate-600">建置中示意：專家、Skill 及圖像均未正式發布。每位專家的意象圖於建立時個別討論，不使用真人照片。</div>
-    <nav className="flex gap-2 border-b border-slate-200" aria-label="專家團功能">
-      {[['experts','專家列表'],['skills','Skill 管理'],['requests','能力請求']].map(([id,label])=><button key={id} onClick={()=>{setTab(id);setSelected(null)}} className={`px-4 py-3 text-sm border-b-2 ${tab===id?'border-blue-600 text-blue-700 font-semibold':'border-transparent text-slate-500 hover:text-slate-700'}`}>{label}</button>)}
-    </nav>
-    {tab==='experts' && (expert ? <section className="bg-white rounded-xl border border-slate-200 p-5 space-y-4">
-      <button onClick={()=>setSelected(null)} className="flex items-center gap-1 text-sm text-blue-700"><ArrowLeft size={16}/>返回專家列表</button>
-      <div className="flex gap-4 items-center"><ExpertAvatar expert={expert} large/><div><h2 className="text-xl font-bold">{expert.name}</h2><p className="text-sm text-slate-500">{expert.role}</p><span className="text-xs text-slate-500">{expert.state === '已發布' ? '已發布 · 正式資料' : '候選規劃 · 未發布'}</span></div></div>
-      <h3 className="font-semibold">預計配置 Skill</h3><div className="flex flex-wrap gap-2">{expert.skills.map(s=><span key={s} className="bg-slate-100 text-slate-600 text-xs px-3 py-1 rounded-lg">{s}</span>)}</div>
-      <div className="rounded-lg border border-dashed border-slate-300 p-3 text-sm text-slate-600"><div className="flex items-center gap-2 font-medium"><Sparkles size={16}/>專家形象規劃</div><p className="mt-1">正式建立此專家時，再討論專屬擬人化插畫或抽象意象圖；目前只用中性符號占位，不產生真人照片。</p></div>
-    </section> : <>
-      <div className="flex items-center gap-2 border border-slate-200 rounded-lg bg-white px-3 py-2 max-w-md"><Search size={17} className="text-slate-400"/><input aria-label="搜尋專家" value={query} onChange={e=>setQuery(e.target.value)} placeholder="搜尋專家或能力…" className="w-full outline-none text-sm"/></div>
-      {loading && <p className="text-sm text-slate-500">讀取正式專家資料中…</p>}
-      {loadError && <p className="text-sm text-amber-700">正式專家資料尚不可用（{loadError}）；以下規劃卡片不是正式發布資料。</p>}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-        {allExperts.filter(e=>(e.name+e.role+e.skills.join(' ')).toLowerCase().includes(query.toLowerCase())).map(e=><button key={e.id} onClick={()=>setSelected(e.id)} className="text-left bg-white rounded-xl border border-dashed border-slate-300 p-4 hover:border-blue-400 focus-visible:outline-blue-500 space-y-3">
-          <div className="flex items-center gap-3"><ExpertAvatar expert={e}/><div><h2 className="font-semibold text-sm">{e.name}</h2><p className="text-xs text-slate-500">{e.role}</p></div></div>
-          <div className="flex flex-wrap gap-1">{e.skills.slice(0,3).map(s=><span key={s} className="bg-slate-100 rounded px-2 py-1 text-xs text-slate-600">{s}</span>)}<span className="text-xs text-slate-500">+{e.skills.length-3}</span></div>
-          <p className="text-xs text-slate-500">{e.state} · 圖像待確認</p>
-        </button>)}
-      </div>
-    </>)}
-    {tab==='skills' && <section className="bg-white rounded-xl border border-slate-200 p-5 space-y-2"><div className="flex items-center gap-2 font-semibold"><BookOpen size={20}/>Skill Registry</div><p className="text-sm text-slate-500">將串接既有 Skill Registry，顯示已發布 Skill、候選、版本與升級紀錄；不另建第二套資料庫。</p></section>}
-    {tab==='requests' && <section className="bg-white rounded-xl border border-slate-200 p-5 space-y-2"><div className="flex items-center gap-2 font-semibold"><ShieldCheck size={20}/>能力建置請求</div><p className="text-sm text-slate-500">未來顯示 PI 發現的 Expert、Skill、Tool、Engine 缺口，及候選建置與審查進度；目前尚未接入後端。</p></section>}
-  </div>
+function Avatar(){return <svg className="pi-avatar" viewBox="0 0 100 100" role="img" aria-label="PI 抽象導航者"><circle cx="50" cy="50" r="43" fill="var(--hy-ai-bg)" stroke="var(--hy-brand)"/><path d="M50 12 62 38 88 50 62 62 50 88 38 62 12 50 38 38Z" fill="var(--hy-surface)" stroke="var(--hy-brand)" strokeWidth="2"/><rect x="34" y="37" width="32" height="27" rx="12" fill="var(--hy-header)"/><circle cx="43" cy="49" r="3" fill="var(--hy-surface)"/><circle cx="57" cy="49" r="3" fill="var(--hy-surface)"/><path d="M43 57h14" stroke="var(--hy-surface)" strokeWidth="2"/></svg>}
+const stateLabel={PUBLISHED:'已發布',CANDIDATE:'待你確認',DISABLED:'已停用'}
+export default function ExpertTeam(){
+ const [data,setData]=useState(null),[projects,setProjects]=useState([]),[project,setProject]=useState(''),[version,setVersion]=useState('1.0.0'),[tab,setTab]=useState('experts'),[error,setError]=useState(''),[busy,setBusy]=useState(false),[detail,setDetail]=useState(null),[requests,setRequests]=useState([])
+ async function load(){const [d,p]=await Promise.all([api('/experts/pi/readiness'),api('/projects')]);setData(d);setProjects(p)}
+ useEffect(()=>{load().catch(e=>setError(e.message))},[])
+ async function act(fn){setBusy(true);setError('');try{await fn();await load()}catch(e){setError(e.message)}finally{setBusy(false)}}
+ const skills=(data?.skills||[]).filter(s=>s.version===version)
+ const pins=skills.map(({id,version,content_hash})=>({id,version,content_hash}))
+ const canExpert=skills.length===8&&skills.every(s=>s.state==='PUBLISHED')
+ return <div className="hy expert-team hy-stack">
+  <header className="hy-header"><span className="hy-badge">HY</span><span className="hy-header-sub">專家團</span></header>
+  <div className="hy-pagehead"><div><h1 className="hy-title">PI · 專案整合專家</h1><p className="hy-lede">研究、規劃與整合建議 · GPT Chat</p></div><button className="hy-btn" disabled={busy} onClick={()=>act(load)}>重新整理</button></div>
+  {error&&<div role="alert" className="hy-alert">讀取或操作失敗：{error}。請重新整理；登入失效時請重新登入。</div>}
+  {!data&&!error&&<p className="hy-empty">讀取版本與發布狀態中…</p>}
+  {data&&<section className={`hy-card is-focus ${data.actions.length?'needs-you':''}`}><div className="hy-card-head"><h2 className="hy-card-title">{data.ready?'PI 已可供正式 Lab 測試':'PI 正式發布尚未完成'}</h2><span className="hy-pill" data-s={data.ready?'done':'you'}>{data.ready?'已發布':'待你確認'}</span></div><p>先審閱並核准八個 Skill，再建立 PI Expert 發布申請。每一版本分別核准。</p>
+   <div className="pi-controls"><label>核准紀錄所屬專案<select value={project} onChange={e=>setProject(e.target.value)}><option value="">請選既有專案</option>{projects.map(p=><option key={p.id} value={p.id}>{p.title}</option>)}</select></label><label>建立候選版本<input value={version} onChange={e=>setVersion(e.target.value)} aria-label="候選版本"/></label></div>
+   <div className="pi-controls"><button className="hy-btn" disabled={busy||!project} onClick={()=>act(()=>api('/experts/pi/skill-publication-requests',{project_id:project,version}))}>登錄八個 Skill 並申請發布</button><button className="hy-btn" disabled={busy||!project||!canExpert} onClick={()=>act(()=>api('/experts/pi/expert-publication-request',{project_id:project,version,skills:pins}))}>建立 PI Expert 發布申請</button></div>
+   {data.actions.map(a=><div key={a.id} className="pi-action"><b>{a.title}</b><details><summary>審閱發布內容與版本</summary><pre>{JSON.stringify(a.payload,null,2)}</pre></details><div className="pi-controls"><button className="hy-btn" onClick={()=>act(async()=>{if(a.payload.skill){const s=a.payload.skill;setDetail(await api(`/experts/pi/skills/${s.id}/${s.version}/${s.content_hash}`))}else{const e=data.experts.find(e=>e.version===a.payload.expert.version);setDetail(e)}})}>查看完整內容</button><button className="hy-btn is-primary" disabled={busy} onClick={()=>act(()=>api(`/inbox/${a.id}/resolve`,{answer:'APPROVED'}))}>核准此版本發布</button><button className="hy-btn" disabled={busy} onClick={()=>act(()=>api(`/inbox/${a.id}/resolve`,{answer:'REJECTED'}))}>拒絕發布</button></div></div>)}
+  </section>}
+  <nav className="hy-tabs">{[['experts','專家版本'],['skills','Skill 版本'],['requests','能力缺口']].map(([id,label])=><button key={id} className="hy-tab" aria-current={tab===id?'page':undefined} onClick={()=>setTab(id)}>{label}</button>)}</nav>
+  {tab==='experts'&&<><section className="hy-card"><div className="pi-profile"><Avatar/><div><h2 className="hy-card-title">PI｜Project Integrator</h2><p>抽象導航者 · 研究、需求、能力評估、規劃、拆解、審查、協作、修訂</p><p className="hy-note">僅提出建議；正式流程由 HY Life OS 控制。</p></div></div></section>{!data?.experts.length&&<p className="hy-empty">尚未登錄 PI Expert。核准八個 Skill 後可建立候選。</p>}{data?.experts.map(e=><section className="hy-card" key={e.version}><div className="hy-card-head"><h3 className="hy-card-title">PI @ {e.version}</h3><span className="hy-pill" data-s={e.usable?'done':'you'}>{stateLabel[e.state]}{e.state==='PUBLISHED'&&!e.usable?' · 綁定需檢查':''}</span></div><p>能力：{(e.capabilities||[]).join('、')}</p><p className="hy-note">{e.content_hash}</p><ul>{e.skills.map(s=><li key={s.id}>{s.id} @ {s.version}<span className="hy-note"> · {s.content_hash.slice(0,12)}</span></li>)}</ul></section>)}</>}
+  {tab==='skills'&&<>{!data?.skills.length&&<p className="hy-empty">尚無 PI Skill 候選。請先登錄並申請發布。</p>}{data?.skills.map(s=><section className="hy-card" key={s.id+s.version}><div className="hy-card-head"><h3 className="hy-card-title">{s.name} @ {s.version}</h3><span className="hy-pill" data-s={s.state==='PUBLISHED'?'done':s.state==='DISABLED'?'bad':'you'}>{stateLabel[s.state]}</span></div><p>{s.description}</p><p className="hy-note">{s.id} · {s.content_hash}</p><button className="hy-btn" onClick={()=>act(async()=>setDetail(await api(`/experts/pi/skills/${s.id}/${s.version}/${s.content_hash}`)))}>查看 Skill 內容</button></section>)}</>}
+  {tab==='requests'&&<section className="hy-card"><h2 className="hy-card-title">專案能力缺口</h2><button className="hy-btn" disabled={!project||busy} onClick={()=>act(async()=>setRequests((await api(`/experts/capabilities/requests/${encodeURIComponent(project)}`)).requests))}>讀取所選專案缺口</button>{requests.length?requests.map(r=><p key={r.request_id}>{r.need} · {r.state}</p>):<p className="hy-empty">選擇專案後讀取；沒有已登錄請求時顯示空清單。</p>}</section>}
+  {detail&&<section className="hy-card"><div className="hy-card-head"><h2 className="hy-card-title">完整版本內容</h2><button className="hy-btn" onClick={()=>setDetail(null)}>關閉內容</button></div><pre className="pi-detail">{detail.markdown||JSON.stringify(detail,null,2)}</pre></section>}
+ </div>
 }
