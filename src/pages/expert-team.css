@@ -1,0 +1,12 @@
+@import url('../../public/hy-ui/hy-ui.css');
+.expert-team{color:var(--hy-ink);font-size:var(--hy-fs-body);max-width:1200px;margin:auto;font-family:'Noto Sans TC',system-ui,sans-serif}
+.pi-avatar{width:88px;height:88px;flex-shrink:0}
+.pi-profile,.pi-controls{display:flex;gap:16px;align-items:center;flex-wrap:wrap}
+.pi-controls{margin-top:16px}
+.pi-controls label{flex:1;min-width:180px}
+.pi-controls input,.pi-controls select{display:block;width:100%;min-height:44px;border:1px solid var(--hy-line);border-radius:var(--hy-r-sm);padding:8px;background:var(--hy-surface)}
+.pi-action{border-top:1px solid var(--hy-line);padding-top:16px;margin-top:16px}
+.expert-team .hy-btn{min-height:44px}
+.expert-team .hy-note{overflow-wrap:anywhere}
+.pi-detail,.pi-action pre{white-space:pre-wrap;overflow-wrap:anywhere;font-size:var(--hy-fs-meta)}
+@media(max-width:640px){.pi-profile{align-items:flex-start}.pi-controls{align-items:stretch}.pi-controls .hy-btn{width:100%}.expert-team .hy-pagehead{align-items:flex-start}.expert-team .hy-header{padding:0 16px}}

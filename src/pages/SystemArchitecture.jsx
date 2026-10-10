@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { authHeaders } from '../auth'
 import { Boxes, BrainCircuit, Workflow, ShieldCheck, Users, FileText, Gauge, Home, BriefcaseBusiness, Bot, BookOpen, Settings, Database, Link2, HardDrive, Github, LockKeyhole, ListTodo, ChevronRight, X, FlaskConical } from 'lucide-react'
 
@@ -58,19 +58,25 @@ export default function SystemArchitecture() {
   const [labError,setLabError] = useState('')
   const [labBusy,setLabBusy] = useState(false)
   const [pinJson,setPinJson] = useState('[{"id":"pi-discovery","version":"0.0.0-lab","content_hash":"sandbox-only-not-published"}]')
+  const [formal,setFormal]=useState(false)
+  const [formalExperts,setFormalExperts]=useState([])
+  const [expertVersion,setExpertVersion]=useState('')
+  useEffect(()=>{const base=import.meta.env.VITE_API_BASE || '';fetch(`${base}/api/ai-work-packages/experts/pi/readiness`,{headers:authHeaders(),cache:'no-store'}).then(async r=>{if(!r.ok)throw new Error('正式 Expert 讀取失敗');return r.json()}).then(d=>setFormalExperts(d.experts.filter(e=>e.usable))).catch(e=>setLabError(e.message))},[])
+  function labBody(){
+    const expert=formalExperts.find(e=>e.version===expertVersion)
+    if(formal&&!expert)throw new Error('請選擇已發布且綁定有效的 PI Expert')
+    const pins=formal?expert.skills:JSON.parse(pinJson)
+    return {context:{goal:testGoal,project_id:'pi-lab-isolated',expert_pin:formal?{id:'pi',version:expert.version,content_hash:expert.content_hash}:{id:'pi',version:'1.0.0'},capabilities:{},plan_revision:0,current_phase:'LAB',evidence:[]},skill_pins:pins}
+  }
   async function preparePiLab() {
     setLabError('')
     setLabPayload(null)
     setLabJob(null)
     setLabBusy(true)
     try {
-      const pins=JSON.parse(pinJson)
-      if (!Array.isArray(pins) || !pins.length) throw new Error('請提供測試 Skill pin（id、version、content_hash）')
-      const body={context:{goal:testGoal,project_id:'pi-lab-isolated',
-        expert_pin:{id:'pi',version:'1.0.0'},capabilities:{},
-        plan_revision:0,current_phase:'LAB',evidence:[]},skill_pins:pins}
+      const body=labBody()
       const base=import.meta.env.VITE_API_BASE || ''
-      const res=await fetch(`${base}/api/ai-work-packages/pi-lab/prepare`,{
+      const res=await fetch(`${base}/api/ai-work-packages/${formal?'pi-lab/formal/prepare':'pi-lab/prepare'}`,{
         method:'POST',headers:{...authHeaders(),'Content-Type':'application/json'},
         body:JSON.stringify(body)})
       const data=await res.json()
@@ -82,12 +88,9 @@ export default function SystemArchitecture() {
   async function createPiLabJob() {
     setLabBusy(true);setLabError('')
     try {
-      const pins=JSON.parse(pinJson)
       const base=import.meta.env.VITE_API_BASE || ''
-      const body={context:{goal:testGoal,project_id:'pi-lab-isolated',
-        expert_pin:{id:'pi',version:'1.0.0'},capabilities:{},
-        plan_revision:0,current_phase:'LAB',evidence:[]},skill_pins:pins}
-      const res=await fetch(`${base}/api/ai-work-packages/pi-lab/jobs`,{
+      const body=labBody()
+      const res=await fetch(`${base}/api/ai-work-packages/${formal?'pi-lab/formal/jobs':'pi-lab/jobs'}`,{
         method:'POST',headers:{...authHeaders(),'Content-Type':'application/json'},body:JSON.stringify(body)})
       const data=await res.json()
       if(!res.ok||!data.ok)throw new Error(data.detail||data.error||'建立失敗')
@@ -130,8 +133,8 @@ export default function SystemArchitecture() {
       <button onClick={()=>setView('tests')} className={view==='tests'?'px-4 py-3 border-b-2 border-blue-600 text-blue-700':'px-4 py-3 text-slate-500'}>引擎測試</button>
     </nav>
     {view==='tests' && <section className="bg-white border border-slate-200 rounded-xl p-4 space-y-4">
-      <div className="flex items-center gap-2"><FlaskConical size={20}/><h2 className="font-semibold">共用模組測試台</h2><span className="text-xs bg-slate-200 rounded px-2 py-1">尚未啟用</span></div>
-      <p className="text-sm text-slate-600">所有 Engine／Service 共用測試框架；測試資料與正式專案隔離，目前不會真正執行測試。</p>
+      <div className="flex items-center gap-2"><FlaskConical size={20}/><h2 className="font-semibold">共用模組測試台</h2><span className="text-xs bg-slate-200 rounded px-2 py-1">PI 獨立測試</span></div>
+      <p className="text-sm text-slate-600">PI 可獨立測試，其他模組待驗收。正式發布版本與沙盒分開選擇；測試工作由 GPT Chat 領取。</p>
       <label className="block text-sm">測試模組
         <select value={testModule} onChange={e=>setTestModule(e.target.value)} className="block mt-1 p-2 border rounded-lg w-full max-w-md">
           {layers.filter(l=>l.id==='engine'||l.id==='service').flatMap(l=>l.items.map(item=><option key={item[0]} value={item[0]}>{item[1]}</option>))}
@@ -140,7 +143,8 @@ export default function SystemArchitecture() {
       <label className="block text-sm">測試案例／Goal
         <textarea value={testGoal} onChange={e=>setTestGoal(e.target.value)} rows={3} className="block mt-1 p-3 border rounded-lg w-full"/>
       </label>
-      {testModule==='pi' && <label className="block text-sm">PI 測試 Skill pins（JSON，預設為沙盒占位，非正式 Skill）
+      {testModule==='pi' && <div className="space-y-3"><label><input type="checkbox" checked={formal} onChange={e=>{setFormal(e.target.checked);setLabPayload(null);setLabJob(null)}}/> 使用正式發布 PI Expert／Skills</label>{formal&&<select aria-label="正式 PI Expert 版本" value={expertVersion} onChange={e=>setExpertVersion(e.target.value)} className="p-3 border rounded-lg w-full"><option value="">選擇正式版本</option>{formalExperts.map(e=><option key={e.version} value={e.version}>PI @ {e.version}</option>)}</select>}{formal&&!formalExperts.length&&<p>尚無可用正式 PI Expert，請先於專家團完成 Skill 與 Expert 核准。</p>}</div>}
+      {testModule==='pi' && !formal && <label className="block text-sm">PI 測試 Skill pins（JSON，預設為沙盒占位，非正式 Skill）
         <textarea value={pinJson} onChange={e=>setPinJson(e.target.value)} rows={3} className="block mt-1 p-3 border rounded-lg w-full font-mono text-xs" />
       </label>}
       <div className="p-3 bg-slate-50 border border-dashed border-slate-300 rounded-lg text-sm">預計驗收：輸入輸出契約、權限、品質、失敗處理、版本比較與證據。測試工作獨立於正式專案。建立後請在已連接 HY Life OS MCP 的 GPT Chat 對話中要求「執行 PI Lab 待測工作」，由 GPT Chat 領取與提交；此頁只讀回結果，不會自動呼叫付費 API。</div>

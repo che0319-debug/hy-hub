@@ -81,7 +81,7 @@ function Experience() {
   }
 
   if (location.pathname === '/command-center') return <Navigate to="/ai-work" replace />
-  if (mobileWidth && mode !== 'desktop' && !['/workspace', '/ai-work', '/ai-work-test'].some(path => location.pathname.startsWith(path))) {
+  if (mobileWidth && mode !== 'desktop' && !['/workspace', '/ai-work', '/ai-work-test', '/expert-team', '/system-architecture'].some(path => location.pathname.startsWith(path))) {
     return <MobileAppV2 onDesktopVersion={() => choose('desktop')} />
   }
   return <DesktopRoutes onMobileVersion={mobileWidth ? () => choose('mobile') : null} />
