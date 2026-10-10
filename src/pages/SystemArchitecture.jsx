@@ -143,7 +143,7 @@ export default function SystemArchitecture() {
       {testModule==='pi' && <label className="block text-sm">PI 測試 Skill pins（JSON，預設為沙盒占位，非正式 Skill）
         <textarea value={pinJson} onChange={e=>setPinJson(e.target.value)} rows={3} className="block mt-1 p-3 border rounded-lg w-full font-mono text-xs" />
       </label>}
-      <div className="p-3 bg-slate-50 border border-dashed border-slate-300 rounded-lg text-sm">預計驗收：輸入輸出契約、權限、品質、失敗處理、版本比較與證據。測試工作獨立於正式專案。建立後等待 GPT Chat 執行者領取；不會自動呼叫付費 API。</div>
+      <div className="p-3 bg-slate-50 border border-dashed border-slate-300 rounded-lg text-sm">預計驗收：輸入輸出契約、權限、品質、失敗處理、版本比較與證據。測試工作獨立於正式專案。建立後請在已連接 HY Life OS MCP 的 GPT Chat 對話中要求「執行 PI Lab 待測工作」，由 GPT Chat 領取與提交；此頁只讀回結果，不會自動呼叫付費 API。</div>
       {testModule==='pi' ? <button type="button" disabled={labBusy||!testGoal.trim()} onClick={preparePiLab} className="bg-slate-700 text-white disabled:opacity-50 px-4 py-2 rounded-lg text-sm">{labBusy?'處理中…':'準備 PI 測試請求'}</button>
       : <button type="button" disabled className="bg-slate-200 text-slate-500 px-4 py-2 rounded-lg cursor-not-allowed">執行測試（待接入）</button>}
       {testModule==='pi' && <button type="button" disabled={labBusy||!labPayload} onClick={createPiLabJob} className="ml-2 border border-slate-400 px-4 py-2 rounded-lg text-sm disabled:opacity-50">建立隔離測試工作</button>}
