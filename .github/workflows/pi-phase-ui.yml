@@ -24,6 +24,7 @@ jobs:
       - name: Verify mobile and desktop PI workflows
         run: |
           npm run dev -- --host 127.0.0.1 --port 5173 --strictPort > /tmp/pi-vite.log 2>&1 &
+          node -e "(async()=>{for(let n=0;n<40;n++){try{const r=await fetch('http://127.0.0.1:5173/');if(r.ok)return}catch{}await new Promise(r=>setTimeout(r,250))}throw new Error('Vite startup timed out')})().catch(e=>{console.error(e);process.exit(1)})"
           node tests/pi-ui-smoke.cjs
       - uses: actions/upload-artifact@v4
         if: always()
