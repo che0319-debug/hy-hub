@@ -95,6 +95,18 @@ export default function SystemArchitecture() {
     } catch(err){setLabError(String(err.message||err))}
     finally{setLabBusy(false)}
   }
+  async function deletePiLabJob() {
+    if(!labJob?.request_id)return
+    setLabBusy(true);setLabError('')
+    try {
+      const base=import.meta.env.VITE_API_BASE || ''
+      const res=await fetch(`${base}/api/ai-work-packages/pi-lab/jobs/${encodeURIComponent(labJob.request_id)}`,{method:'DELETE',headers:authHeaders()})
+      const data=await res.json()
+      if(!res.ok||!data.ok)throw new Error(data.detail||data.error||'刪除失敗')
+      setLabJob(null)
+    }catch(err){setLabError(String(err.message||err))}
+    finally{setLabBusy(false)}
+  }
   async function refreshPiLabJob() {
     if(!labJob?.request_id)return
     setLabBusy(true);setLabError('')
@@ -135,7 +147,7 @@ export default function SystemArchitecture() {
       {testModule==='pi' ? <button type="button" disabled={labBusy||!testGoal.trim()} onClick={preparePiLab} className="bg-slate-700 text-white disabled:opacity-50 px-4 py-2 rounded-lg text-sm">{labBusy?'處理中…':'準備 PI 測試請求'}</button>
       : <button type="button" disabled className="bg-slate-200 text-slate-500 px-4 py-2 rounded-lg cursor-not-allowed">執行測試（待接入）</button>}
       {testModule==='pi' && <button type="button" disabled={labBusy||!labPayload} onClick={createPiLabJob} className="ml-2 border border-slate-400 px-4 py-2 rounded-lg text-sm disabled:opacity-50">建立隔離測試工作</button>}
-      {labJob && <div className="rounded-lg border p-3 space-y-2 text-sm"><div>測試 ID：{labJob.request_id}</div><div>狀態：{labJob.status}</div><button type="button" onClick={refreshPiLabJob} disabled={labBusy} className="text-blue-700 underline">重新讀取結果</button>{labJob.result && <pre className="overflow-auto max-h-80 bg-slate-100 p-3 text-xs">{JSON.stringify(labJob.result,null,2)}</pre>}</div>}
+      {labJob && <div className="rounded-lg border p-3 space-y-2 text-sm"><div>測試 ID：{labJob.request_id}</div><div>狀態：{labJob.status}</div><button type="button" onClick={refreshPiLabJob} disabled={labBusy} className="text-blue-700 underline">重新讀取結果</button><button type="button" onClick={deletePiLabJob} disabled={labBusy||labJob.status==='RUNNING'} className="ml-3 text-slate-600 underline disabled:opacity-50">刪除測試紀錄</button>{labJob.result && <pre className="overflow-auto max-h-80 bg-slate-100 p-3 text-xs">{JSON.stringify(labJob.result,null,2)}</pre>}</div>}
       {labError && <p role="alert" className="text-sm text-red-700">{labError}</p>}
       {testModule==='pi' && labPayload && <div className="space-y-2"><p className="font-medium text-sm">PI 測試請求（未執行模型）</p><pre className="overflow-auto max-h-80 p-3 rounded-lg bg-slate-100 text-xs">{JSON.stringify(labPayload,null,2)}</pre></div>}
     </section>}
