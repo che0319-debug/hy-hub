@@ -23,8 +23,18 @@ test('planning UI is gray and dashed; no unverified READY status', () => {
   assert.doesNotMatch(page, /setStatus|setReady|>READY<|>BUILDING</)
 })
 
-test('UI remains read-only without network writes or existing feature changes', () => {
-  assert.doesNotMatch(page, /fetch\(|axios|localStorage|POST|PUT|DELETE/)
+test('UI only calls the isolated PI Lab preparation API', () => {
+  assert.match(page, /pi-lab\/prepare/)
+  assert.match(page, /authHeaders\(\)/)
+  assert.doesNotMatch(page, /axios|localStorage|\/pi-lab\/execute|\/package_submit|\/publish/)
+  assert.match(page, /model_invoked|未執行模型/)
   assert.match(page, /基礎設施/)
   assert.match(page, /模組建設原則/)
+})
+
+test('PI Lab supports isolated job creation and readback without direct production dispatch', () => {
+  assert.match(page, /pi-lab\/jobs/)
+  assert.match(page, /createPiLabJob/)
+  assert.match(page, /refreshPiLabJob/)
+  assert.doesNotMatch(page, /package_chat_claim|package_submit|\/dispatch\/next/)
 })
