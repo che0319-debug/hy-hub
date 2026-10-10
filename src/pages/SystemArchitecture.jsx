@@ -57,7 +57,7 @@ export default function SystemArchitecture() {
   const [labJob,setLabJob] = useState(null)
   const [labError,setLabError] = useState('')
   const [labBusy,setLabBusy] = useState(false)
-  const [pinJson,setPinJson] = useState('[]')
+  const [pinJson,setPinJson] = useState('[{"id":"pi-discovery","version":"0.0.0-lab","content_hash":"sandbox-only-not-published"}]')
   async function preparePiLab() {
     setLabError('')
     setLabPayload(null)
@@ -65,7 +65,7 @@ export default function SystemArchitecture() {
     setLabBusy(true)
     try {
       const pins=JSON.parse(pinJson)
-      if (!Array.isArray(pins) || !pins.length) throw new Error('請先提供正式 Skill pin（id、version、content_hash）')
+      if (!Array.isArray(pins) || !pins.length) throw new Error('請提供測試 Skill pin（id、version、content_hash）')
       const body={context:{goal:testGoal,project_id:'pi-lab-isolated',
         expert_pin:{id:'pi',version:'1.0.0'},capabilities:{},
         plan_revision:0,current_phase:'LAB',evidence:[]},skill_pins:pins}
@@ -128,7 +128,7 @@ export default function SystemArchitecture() {
       <label className="block text-sm">測試案例／Goal
         <textarea value={testGoal} onChange={e=>setTestGoal(e.target.value)} rows={3} className="block mt-1 p-3 border rounded-lg w-full"/>
       </label>
-      {testModule==='pi' && <label className="block text-sm">已發布 Skill pins（JSON）
+      {testModule==='pi' && <label className="block text-sm">PI 測試 Skill pins（JSON，預設為沙盒占位，非正式 Skill）
         <textarea value={pinJson} onChange={e=>setPinJson(e.target.value)} rows={3} className="block mt-1 p-3 border rounded-lg w-full font-mono text-xs" />
       </label>}
       <div className="p-3 bg-slate-50 border border-dashed border-slate-300 rounded-lg text-sm">預計驗收：輸入輸出契約、權限、品質、失敗處理、版本比較與證據。測試工作獨立於正式專案。建立後等待 GPT Chat 執行者領取；不會自動呼叫付費 API。</div>
