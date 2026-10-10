@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { authHeaders } from '../auth'
 import { Boxes, BrainCircuit, Workflow, ShieldCheck, Users, FileText, Gauge, Home, BriefcaseBusiness, Bot, BookOpen, Settings, Database, Link2, HardDrive, Github, LockKeyhole, ListTodo, ChevronRight, X, FlaskConical } from 'lucide-react'
 
 /** Proposed architecture only. Never infer readiness from the existence of legacy code. */
@@ -52,6 +53,30 @@ export default function SystemArchitecture() {
   const [view, setView] = useState('architecture')
   const [testModule, setTestModule] = useState('pi')
   const [testGoal, setTestGoal] = useState('開發一個自用健身教練 App。')
+  const [labPayload,setLabPayload] = useState(null)
+  const [labError,setLabError] = useState('')
+  const [labBusy,setLabBusy] = useState(false)
+  const [pinJson,setPinJson] = useState('[]')
+  async function preparePiLab() {
+    setLabError('')
+    setLabPayload(null)
+    setLabBusy(true)
+    try {
+      const pins=JSON.parse(pinJson)
+      if (!Array.isArray(pins) || !pins.length) throw new Error('請先提供正式 Skill pin（id、version、content_hash）')
+      const body={context:{goal:testGoal,project_id:'pi-lab-isolated',
+        expert_pin:{id:'pi',version:'1.0.0'},capabilities:{},
+        plan_revision:0,current_phase:'LAB',evidence:[]},skill_pins:pins}
+      const base=import.meta.env.VITE_API_BASE || ''
+      const res=await fetch(`${base}/api/ai-work-packages/pi-lab/prepare`,{
+        method:'POST',headers:{...authHeaders(),'Content-Type':'application/json'},
+        body:JSON.stringify(body)})
+      const data=await res.json()
+      if (!res.ok || !data.ok) throw new Error(data.detail||data.error||'PI Lab API 未就緒')
+      setLabPayload(data.payload)
+    } catch(err) {setLabError(String(err.message||err))}
+    finally {setLabBusy(false)}
+  }
   const found = layers.flatMap(layer => layer.items.map(item => ({ layer, item }))).find(x => x.item[0] === selected)
   return <div className="max-w-6xl mx-auto space-y-5">
     <header className="flex items-start gap-3">
@@ -73,8 +98,14 @@ export default function SystemArchitecture() {
       <label className="block text-sm">測試案例／Goal
         <textarea value={testGoal} onChange={e=>setTestGoal(e.target.value)} rows={3} className="block mt-1 p-3 border rounded-lg w-full"/>
       </label>
-      <div className="p-3 bg-slate-50 border border-dashed border-slate-300 rounded-lg text-sm">預計驗收：輸入輸出契約、權限、品質、失敗處理、版本比較與證據。</div>
-      <button type="button" disabled className="bg-slate-200 text-slate-500 px-4 py-2 rounded-lg cursor-not-allowed">執行測試（待接入）</button>
+      {testModule==='pi' && <label className="block text-sm">已發布 Skill pins（JSON）
+        <textarea value={pinJson} onChange={e=>setPinJson(e.target.value)} rows={3} className="block mt-1 p-3 border rounded-lg w-full font-mono text-xs" />
+      </label>}
+      <div className="p-3 bg-slate-50 border border-dashed border-slate-300 rounded-lg text-sm">預計驗收：輸入輸出契約、權限、品質、失敗處理、版本比較與證據。此處只準備請求，不會呼叫 GPT Chat。</div>
+      {testModule==='pi' ? <button type="button" disabled={labBusy||!testGoal.trim()} onClick={preparePiLab} className="bg-slate-700 text-white disabled:opacity-50 px-4 py-2 rounded-lg text-sm">{labBusy?'處理中…':'準備 PI 測試請求'}</button>
+      : <button type="button" disabled className="bg-slate-200 text-slate-500 px-4 py-2 rounded-lg cursor-not-allowed">執行測試（待接入）</button>}
+      {labError && <p role="alert" className="text-sm text-red-700">{labError}</p>}
+      {testModule==='pi' && labPayload && <div className="space-y-2"><p className="font-medium text-sm">PI 測試請求（未執行模型）</p><pre className="overflow-auto max-h-80 p-3 rounded-lg bg-slate-100 text-xs">{JSON.stringify(labPayload,null,2)}</pre></div>}
     </section>}
     {view==='architecture' && <>
     <div className="bg-white border border-slate-200 rounded-xl p-4">
