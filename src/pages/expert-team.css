@@ -27,3 +27,12 @@
 @media(max-width:900px){.expert-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media(max-width:640px){.expert-grid,.skill-grid{grid-template-columns:minmax(0,1fr)}.expert-team .hy-tabs{padding:0}.expert-team .hy-tab{flex:1;justify-content:center;padding:0 8px}}
 .expert-team{padding-top:16px;padding-bottom:24px}
+.pi-phantom{width:104px;height:104px}
+.pi-create{align-self:flex-end}
+.candidate-form{border-top:1px solid var(--hy-line);padding-top:16px;margin-top:16px}
+.candidate-form input:not([type=checkbox]),.candidate-form textarea{display:block;width:100%;min-height:44px;border:1px solid var(--hy-line);border-radius:var(--hy-r-sm);padding:10px;background:var(--hy-surface);color:var(--hy-ink);font:inherit}
+.candidate-form textarea{resize:vertical}
+.candidate-form fieldset{border:1px solid var(--hy-line);border-radius:var(--hy-r-sm);min-width:0}
+.skill-choice{display:flex;align-items:center;gap:8px;min-height:44px;overflow-wrap:anywhere}
+.skill-choice input{width:20px;height:20px;flex-shrink:0}
+.skill-grid>article>.hy-btn{margin-top:12px}
