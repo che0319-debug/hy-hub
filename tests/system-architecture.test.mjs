@@ -31,3 +31,10 @@ test('UI only calls the isolated PI Lab preparation API', () => {
   assert.match(page, /基礎設施/)
   assert.match(page, /模組建設原則/)
 })
+
+test('PI Lab supports isolated job creation and readback without direct production dispatch', () => {
+  assert.match(page, /pi-lab\/jobs/)
+  assert.match(page, /createPiLabJob/)
+  assert.match(page, /refreshPiLabJob/)
+  assert.doesNotMatch(page, /package_chat_claim|package_submit|\/dispatch\/next/)
+})
