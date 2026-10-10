@@ -14,6 +14,7 @@ import LineFamily from './pages/LineFamily'
 import LineSam from './pages/LineSam'
 import Settings from './pages/Settings'
 import SystemArchitecture from './pages/SystemArchitecture'
+import ExpertTeam from './pages/ExpertTeam'
 import AgentConfig from './pages/AgentConfig'
 import Goals from './pages/Goals'
 import Strategy from './pages/Strategy'
@@ -49,6 +50,7 @@ function DesktopRoutes({ onMobileVersion }) {
         <Route path="goals" element={<Goals />} />
         <Route path="strategy" element={<Strategy />} />
         <Route path="system-architecture" element={<SystemArchitecture />} />
+        <Route path="expert-team" element={<ExpertTeam />} />
         <Route path="settings" element={<Settings />} />
       </Route>
     </Routes>
