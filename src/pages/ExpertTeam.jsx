@@ -17,7 +17,7 @@ function SkillContent({body}){
  return <div className="hy-stack"><p>{body.description}</p>{fields.map(([title,key])=>body[key]?.length?<section key={key}><h4>{title}</h4><ol>{body[key].map((text,i)=><li key={i}>{text}</li>)}</ol></section>:null)}{body.good_example&&<p><b>合格範例：</b>{body.good_example}</p>}{body.reject_example&&<p><b>不合格範例：</b>{body.reject_example}</p>}<details><summary>完整工作說明</summary><div style={{whiteSpace:'pre-wrap',overflowWrap:'anywhere'}}>{body.markdown?.replace(/^---[\s\S]*?---\n/,'').replace(/^#{1,6} /gm,'')}</div></details><details><summary>技術資訊</summary><p>識別：{body.id} · 版本：{body.version}</p><p className="hy-note">{body.content_hash}</p><p>維護者：{body.maintainer}</p><p>發布依據：{body.publication_basis}</p></details></div>
 }
 export default function ExpertTeam(){
- const [data,setData]=useState(null),[tab,setTab]=useState('experts'),[version,setVersion]=useState('2.0.0'),[error,setError]=useState(''),[busy,setBusy]=useState(false),[contents,setContents]=useState({}),[projects,setProjects]=useState([]),[project,setProject]=useState(''),[requests,setRequests]=useState([])
+ const [data,setData]=useState(null),[tab,setTab]=useState('experts'),[version,setVersion]=useState('2.1.0'),[error,setError]=useState(''),[busy,setBusy]=useState(false),[contents,setContents]=useState({}),[projects,setProjects]=useState([]),[project,setProject]=useState(''),[requests,setRequests]=useState([])
  async function load(){setData(await api('/experts/pi/readiness'))}
  useEffect(()=>{load().catch(e=>setError(e.message))},[])
  useEffect(()=>{if(tab==='requests')api('/projects').then(setProjects).catch(e=>setError(e.message))},[tab])
