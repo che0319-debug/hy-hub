@@ -26,7 +26,7 @@ jobs:
           node-version: '20'
           cache: npm
       - run: npm ci
-      - run: node --test tests/command-center.test.mjs
+      - run: node --test tests/command-center.test.mjs tests/system-architecture.test.mjs
       - run: npm run build
         env:
           VITE_API_BASE: https://hy-agent-v2.onrender.com
