@@ -54,12 +54,14 @@ export default function SystemArchitecture() {
   const [testModule, setTestModule] = useState('pi')
   const [testGoal, setTestGoal] = useState('開發一個自用健身教練 App。')
   const [labPayload,setLabPayload] = useState(null)
+  const [labJob,setLabJob] = useState(null)
   const [labError,setLabError] = useState('')
   const [labBusy,setLabBusy] = useState(false)
   const [pinJson,setPinJson] = useState('[]')
   async function preparePiLab() {
     setLabError('')
     setLabPayload(null)
+    setLabJob(null)
     setLabBusy(true)
     try {
       const pins=JSON.parse(pinJson)
@@ -76,6 +78,34 @@ export default function SystemArchitecture() {
       setLabPayload(data.payload)
     } catch(err) {setLabError(String(err.message||err))}
     finally {setLabBusy(false)}
+  }
+  async function createPiLabJob() {
+    setLabBusy(true);setLabError('')
+    try {
+      const pins=JSON.parse(pinJson)
+      const base=import.meta.env.VITE_API_BASE || ''
+      const body={context:{goal:testGoal,project_id:'pi-lab-isolated',
+        expert_pin:{id:'pi',version:'1.0.0'},capabilities:{},
+        plan_revision:0,current_phase:'LAB',evidence:[]},skill_pins:pins}
+      const res=await fetch(`${base}/api/ai-work-packages/pi-lab/jobs`,{
+        method:'POST',headers:{...authHeaders(),'Content-Type':'application/json'},body:JSON.stringify(body)})
+      const data=await res.json()
+      if(!res.ok||!data.ok)throw new Error(data.detail||data.error||'建立失敗')
+      setLabJob(data.job)
+    } catch(err){setLabError(String(err.message||err))}
+    finally{setLabBusy(false)}
+  }
+  async function refreshPiLabJob() {
+    if(!labJob?.request_id)return
+    setLabBusy(true);setLabError('')
+    try {
+      const base=import.meta.env.VITE_API_BASE || ''
+      const res=await fetch(`${base}/api/ai-work-packages/pi-lab/jobs/${encodeURIComponent(labJob.request_id)}`,{headers:authHeaders(),cache:'no-store'})
+      const data=await res.json()
+      if(!res.ok||!data.ok)throw new Error(data.detail||data.error||'查詢失敗')
+      setLabJob(data.job)
+    } catch(err){setLabError(String(err.message||err))}
+    finally{setLabBusy(false)}
   }
   const found = layers.flatMap(layer => layer.items.map(item => ({ layer, item }))).find(x => x.item[0] === selected)
   return <div className="max-w-6xl mx-auto space-y-5">
@@ -101,9 +131,11 @@ export default function SystemArchitecture() {
       {testModule==='pi' && <label className="block text-sm">已發布 Skill pins（JSON）
         <textarea value={pinJson} onChange={e=>setPinJson(e.target.value)} rows={3} className="block mt-1 p-3 border rounded-lg w-full font-mono text-xs" />
       </label>}
-      <div className="p-3 bg-slate-50 border border-dashed border-slate-300 rounded-lg text-sm">預計驗收：輸入輸出契約、權限、品質、失敗處理、版本比較與證據。此處只準備請求，不會呼叫 GPT Chat。</div>
+      <div className="p-3 bg-slate-50 border border-dashed border-slate-300 rounded-lg text-sm">預計驗收：輸入輸出契約、權限、品質、失敗處理、版本比較與證據。測試工作獨立於正式專案。建立後等待 GPT Chat 執行者領取；不會自動呼叫付費 API。</div>
       {testModule==='pi' ? <button type="button" disabled={labBusy||!testGoal.trim()} onClick={preparePiLab} className="bg-slate-700 text-white disabled:opacity-50 px-4 py-2 rounded-lg text-sm">{labBusy?'處理中…':'準備 PI 測試請求'}</button>
       : <button type="button" disabled className="bg-slate-200 text-slate-500 px-4 py-2 rounded-lg cursor-not-allowed">執行測試（待接入）</button>}
+      {testModule==='pi' && <button type="button" disabled={labBusy||!labPayload} onClick={createPiLabJob} className="ml-2 border border-slate-400 px-4 py-2 rounded-lg text-sm disabled:opacity-50">建立隔離測試工作</button>}
+      {labJob && <div className="rounded-lg border p-3 space-y-2 text-sm"><div>測試 ID：{labJob.request_id}</div><div>狀態：{labJob.status}</div><button type="button" onClick={refreshPiLabJob} disabled={labBusy} className="text-blue-700 underline">重新讀取結果</button>{labJob.result && <pre className="overflow-auto max-h-80 bg-slate-100 p-3 text-xs">{JSON.stringify(labJob.result,null,2)}</pre>}</div>}
       {labError && <p role="alert" className="text-sm text-red-700">{labError}</p>}
       {testModule==='pi' && labPayload && <div className="space-y-2"><p className="font-medium text-sm">PI 測試請求（未執行模型）</p><pre className="overflow-auto max-h-80 p-3 rounded-lg bg-slate-100 text-xs">{JSON.stringify(labPayload,null,2)}</pre></div>}
     </section>}
