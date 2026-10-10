@@ -1,7 +1,7 @@
 import { NavLink } from 'react-router-dom'
 import {
   Home, Bot,
-  MessageSquare, Settings, Target, LayoutDashboard, Boxes
+  MessageSquare, Settings, Target, LayoutDashboard, Boxes, Users
 } from 'lucide-react'
 
 const navItems = [
@@ -21,6 +21,7 @@ const botItems = [
 
 const otherItems = [
   { to: '/system-architecture', label: '系統架構', icon: Boxes },
+  { to: '/expert-team', label: '專家團', icon: Users },
   { to: '/settings', label: '設定', icon: Settings },
 ]
 
