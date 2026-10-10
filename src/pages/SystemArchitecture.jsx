@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Boxes, BrainCircuit, Workflow, ShieldCheck, Users, FileText, Gauge, Home, BriefcaseBusiness, Bot, BookOpen, Settings, Database, Link2, HardDrive, Github, LockKeyhole, ListTodo, ChevronRight, X } from 'lucide-react'
+import { Boxes, BrainCircuit, Workflow, ShieldCheck, Users, FileText, Gauge, Home, BriefcaseBusiness, Bot, BookOpen, Settings, Database, Link2, HardDrive, Github, LockKeyhole, ListTodo, ChevronRight, X, FlaskConical } from 'lucide-react'
 
 /** Proposed architecture only. Never infer readiness from the existence of legacy code. */
 const layers = [
@@ -49,12 +49,34 @@ function ModuleTile({ item, onSelect }) {
 
 export default function SystemArchitecture() {
   const [selected, setSelected] = useState(null)
+  const [view, setView] = useState('architecture')
+  const [testModule, setTestModule] = useState('pi')
+  const [testGoal, setTestGoal] = useState('開發一個自用健身教練 App。')
   const found = layers.flatMap(layer => layer.items.map(item => ({ layer, item }))).find(x => x.item[0] === selected)
   return <div className="max-w-6xl mx-auto space-y-5">
     <header className="flex items-start gap-3">
       <Boxes className="text-slate-600 shrink-0 mt-1" size={28}/>
       <div><h1 className="text-2xl font-bold text-slate-800">系統架構</h1><p className="text-sm text-slate-500 mt-1">HY Life OS 的模組建設地圖 · 架構規劃版</p></div>
     </header>
+    <nav className="flex gap-2 border-b border-slate-200" aria-label="系統架構功能">
+      <button onClick={()=>setView('architecture')} className={view==='architecture'?'px-4 py-3 border-b-2 border-blue-600 text-blue-700':'px-4 py-3 text-slate-500'}>架構總覽</button>
+      <button onClick={()=>setView('tests')} className={view==='tests'?'px-4 py-3 border-b-2 border-blue-600 text-blue-700':'px-4 py-3 text-slate-500'}>引擎測試</button>
+    </nav>
+    {view==='tests' && <section className="bg-white border border-slate-200 rounded-xl p-4 space-y-4">
+      <div className="flex items-center gap-2"><FlaskConical size={20}/><h2 className="font-semibold">共用模組測試台</h2><span className="text-xs bg-slate-200 rounded px-2 py-1">尚未啟用</span></div>
+      <p className="text-sm text-slate-600">所有 Engine／Service 共用測試框架；測試資料與正式專案隔離，目前不會真正執行測試。</p>
+      <label className="block text-sm">測試模組
+        <select value={testModule} onChange={e=>setTestModule(e.target.value)} className="block mt-1 p-2 border rounded-lg w-full max-w-md">
+          {layers.filter(l=>l.id==='engine'||l.id==='service').flatMap(l=>l.items.map(item=><option key={item[0]} value={item[0]}>{item[1]}</option>))}
+        </select>
+      </label>
+      <label className="block text-sm">測試案例／Goal
+        <textarea value={testGoal} onChange={e=>setTestGoal(e.target.value)} rows={3} className="block mt-1 p-3 border rounded-lg w-full"/>
+      </label>
+      <div className="p-3 bg-slate-50 border border-dashed border-slate-300 rounded-lg text-sm">預計驗收：輸入輸出契約、權限、品質、失敗處理、版本比較與證據。</div>
+      <button type="button" disabled className="bg-slate-200 text-slate-500 px-4 py-2 rounded-lg cursor-not-allowed">執行測試（待接入）</button>
+    </section>}
+    {view==='architecture' && <>
     <div className="bg-white border border-slate-200 rounded-xl p-4">
       <div className="flex flex-wrap items-center justify-between gap-2 mb-3"><h2 className="font-semibold text-slate-700">整體架構</h2><span className="text-xs text-slate-500">灰色虛線＝尚未完成新版模組驗收</span></div>
       <div className="space-y-2">
@@ -72,6 +94,7 @@ export default function SystemArchitecture() {
       <p className="text-sm text-slate-600 mt-2">先建立模組契約與驗收標準，再由 AI Office 等前台調用；能力不足時優先升級所屬模組，不在前台重建平行邏輯。</p>
       <p className="text-xs text-slate-500 mt-2">目前僅為規劃清冊；已存在的舊功能不代表新版模組 READY。未來由正式驗收紀錄決定彩色顯示，不依 AI 自行判定。</p>
     </div>
+    </>}
     {found && <div className="fixed inset-0 z-[70] bg-slate-900/40 flex items-center justify-center p-4" onClick={() => setSelected(null)}>
       <section role="dialog" aria-modal="true" aria-label={found.item[1]} onClick={e => e.stopPropagation()} className="bg-white w-full max-w-lg rounded-xl shadow-xl p-5 space-y-4">
         <div className="flex items-center justify-between"><h2 className="text-lg font-bold text-slate-800">{found.item[1]}</h2><button onClick={() => setSelected(null)} aria-label="關閉"><X size={20}/></button></div>
