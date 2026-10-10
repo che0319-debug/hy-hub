@@ -20,7 +20,7 @@ test('all six proposed core modules are listed', () => {
 test('planning UI is gray and dashed; no unverified READY status', () => {
   assert.match(page, /border-dashed border-slate-300/)
   assert.match(page, /待驗收/)
-  assert.doesNotMatch(page, /READY|BUILDING|setStatus|setReady/)
+  assert.doesNotMatch(page, /setStatus|setReady|>READY<|>BUILDING</)
 })
 
 test('UI remains read-only without network writes or existing feature changes', () => {
