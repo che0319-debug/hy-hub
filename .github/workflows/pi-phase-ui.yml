@@ -3,6 +3,7 @@ on:
   pull_request:
     paths:
       - 'src/pages/AIOfficeV1.jsx'
+      - 'src/pages/OfficeHome.jsx'
       - 'src/pages/ai-office-v1.css'
       - 'src/lib/aiOffice.mjs'
       - 'src/main.jsx'

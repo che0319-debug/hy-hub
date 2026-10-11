@@ -5,6 +5,7 @@ import ControlCenterV5, { Inbox, DeleteZone, SpecChangeBox } from './ControlCent
 import { request } from '../aiWorkV5Data'
 import { authHeaders, ensureAccessToken, expireSession } from '../auth'
 import { OFFICE_TABS, PROJECT_STATUS, PACKAGE_STATUS, progress, milestones, journal, safeUrl, driveFile } from '../lib/aiOffice.mjs'
+import OfficeHome from './OfficeHome'
 import './ai-office-v1.css'
 
 const base = (import.meta.env.VITE_API_BASE || '').replace(/\/$/, '')
@@ -25,7 +26,7 @@ function Empty({ children }) { return <p className="ao-empty">{children}</p> }
 function Markdown({ value }) { return value ? <ReactMarkdown remarkPlugins={[remarkGfm]} skipHtml components={{a: ({href,children}) => <Link href={href}>{children}</Link>}}>{value}</ReactMarkdown> : <Empty>正式文件尚未提供。</Empty> }
 
 export default function AIOfficeV1() {
-  return <div className="ao"><ControlCenterV5 title="AI Office" loadData={loadOffice} renderProject={({project,onBack,onDeleted}) => <OfficeProject key={project.id} id={project.id} onBack={onBack} onDeleted={onDeleted} />} /></div>
+  return <div className="ao"><ControlCenterV5 title="AI Office" loadData={loadOffice} renderHome={props=><OfficeHome {...props}/>} renderProject={({project,onBack,onDeleted}) => <OfficeProject key={project.id} id={project.id} onBack={onBack} onDeleted={onDeleted} />} /></div>
 }
 
 async function loadOffice() {

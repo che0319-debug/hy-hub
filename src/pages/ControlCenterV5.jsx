@@ -111,7 +111,7 @@ function Bar({ done, total }) {
   </div>
 }
 
-export default function ControlCenterV5({ renderProject, title = 'AI Work 控制中心', loadData = loadControlCenter } = {}) {
+export default function ControlCenterV5({ renderProject, renderHome, title = 'AI Work 控制中心', loadData = loadControlCenter } = {}) {
   const [projects, setProjects] = useState([])
   const [details, setDetails] = useState({})
   const [inbox, setInbox] = useState([])
@@ -167,6 +167,11 @@ export default function ControlCenterV5({ renderProject, title = 'AI Work 控制
   const visible = projects
     .filter(p => filter === 'all' || (filter === 'open' ? openByProject[p.id] : filter === 'completed' ? p.status === 'completed' : p.status !== 'completed'))
     .sort((a, b) => rank(a) - rank(b))
+
+  if (renderHome) return renderHome({projects,details,inbox,loaded,error,creating,onReload:loadAll,
+    onCreate:()=>setCreating(v=>!v),onSelect:id=>{setOpenId(id);setTab('overview')},
+    creation:creating && <NewProject onCancel={()=>setCreating(false)} onCreated={async id=>{setCreating(false);await loadAll();setOpenId(id);setTab('overview')}}/>,
+    registry:inbox.some(i=>i.action_type==='MODULE_ACCEPTANCE') && <section className="hy"><div className="hy-card needs-you"><h2 className="hy-card-title">系統模組待你驗收</h2><Inbox items={inbox.filter(i=>i.action_type==='MODULE_ACCEPTANCE')} project={null} onChanged={loadAll} setError={setError}/></div></section>})
 
   return <section className="cc5" aria-labelledby="cc5-title">
     <header className="cc5-head">
