@@ -8,6 +8,7 @@ on:
       - 'src/lib/aiOffice.mjs'
       - 'src/main.jsx'
       - 'tests/ai-office-ui.cjs'
+      - 'tests/ai-office-startup-ui.cjs'
       - 'tests/ai-office.test.mjs'
       - 'src/pages/ExpertTeam.jsx'
       - 'src/pages/expert-team.css'
@@ -41,6 +42,7 @@ jobs:
           node tests/pi-ui-smoke.cjs
           node tests/module-registry-ui.cjs
           node tests/ai-office-ui.cjs
+          node tests/ai-office-startup-ui.cjs
       - uses: actions/upload-artifact@v4
         if: always()
         with:
