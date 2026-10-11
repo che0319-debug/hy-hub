@@ -2,6 +2,12 @@ name: PI Phase UI acceptance
 on:
   pull_request:
     paths:
+      - 'src/pages/AIOfficeV1.jsx'
+      - 'src/pages/ai-office-v1.css'
+      - 'src/lib/aiOffice.mjs'
+      - 'src/main.jsx'
+      - 'tests/ai-office-ui.cjs'
+      - 'tests/ai-office.test.mjs'
       - 'src/pages/ExpertTeam.jsx'
       - 'src/pages/expert-team.css'
       - 'src/pages/SystemArchitecture.jsx'
@@ -33,8 +39,9 @@ jobs:
           node -e "(async()=>{for(let n=0;n<40;n++){try{const r=await fetch('http://127.0.0.1:5173/');if(r.ok)return}catch{}await new Promise(r=>setTimeout(r,250))}throw new Error('Vite startup timed out')})().catch(e=>{console.error(e);process.exit(1)})"
           node tests/pi-ui-smoke.cjs
           node tests/module-registry-ui.cjs
+          node tests/ai-office-ui.cjs
       - uses: actions/upload-artifact@v4
         if: always()
         with:
           name: pi-ui-390-1280
-          path: docs/quality/ui/*.png
+          path: docs/quality/ui/**/*.png
