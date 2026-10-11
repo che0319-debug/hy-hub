@@ -1,6 +1,6 @@
 import {useState} from 'react'
 import {FolderKanban, Plus, Search, RefreshCw, Workflow, FileCheck2, ArrowUpRight, MessageSquare} from 'lucide-react'
-import {progress, PROJECT_STATUS} from '../lib/aiOffice.mjs'
+import {progress, activityLabel} from '../lib/aiOffice.mjs'
 
 const filters=[['all','全部專案'],['active','進行中'],['open','待我處理'],['completed','已完成']]
 const date=value=>value?new Date(value*1000).toLocaleString('zh-TW',{hour12:false}):'尚未記錄更新時間'
@@ -28,8 +28,8 @@ export default function OfficeHome({projects,details,inbox,loaded,error,creating
       <span className="ao-icon-tile"><FolderKanban size={22}/></span>
       <span className="ao-project-title"><b>{p.title}</b><span className="ao-project-goal">{p.goal||'目標尚未記錄'}</span></span>
       <span className="ao-project-stage"><span>{p.phase} {p.milestone_id||''}</span><small>負責 {({hy:'HY',sam:'Sam',family:'小因','950157':'950157'})[p.owner_bot]||p.owner_bot}</small></span>
-      <span className="ao-home-progress"><span>{count?`工作包完成 ${count.done}／${count.total}`:'工作包詳情未讀取'}</span>{count?.total>0&&<span className="ao-progress-track" aria-label={`工作包完成 ${count.done}／${count.total}`}><span style={{width:`${count.done/count.total*100}%`}}/></span>}<small>計數，不代表正式驗收</small></span>
-      <span className="ao-pill">{PROJECT_STATUS[p.status]||p.status}</span>
+      <span className="ao-home-progress"><span>{count?`執行工作包完成 ${count.done}／${count.total}`:'工作包詳情未讀取'}</span>{count?.total>0&&<span className="ao-progress-track" aria-label={`執行工作包完成 ${count.done}／${count.total}`}><span style={{width:`${count.done/count.total*100}%`}}/></span>}<small>計數，不代表正式驗收</small></span>
+      <span className="ao-pill">{activityLabel(detail || p)}</span>
       <span className="ao-project-enter"><span>{open?`${open} 項待我處理`:'進入專案'} <ArrowUpRight size={16}/></span><small>{date(detail?.updated_at)}</small></span>
     </button>})}</div>
   </section>
