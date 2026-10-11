@@ -42,6 +42,7 @@ const ACTION_TYPE = {
   QUALITY_GAP: '審查待補',
   QUALITY_POLICY_ENABLE: '啟用品質契約',
   QUALITY_SKILL_PUBLISH: '發布方法',
+  MODULE_ACCEPTANCE: '模組正式驗收',
   QUALITY_SKILL_DISABLE: '停用方法',
   QUALITY_CAPABILITY_REGISTER: '確認能力證據',
 }
@@ -177,6 +178,11 @@ export default function ControlCenterV5() {
 
     {error && <p role="alert" className="cc5-alert">{error}</p>}
     {creating && <NewProject onCancel={() => setCreating(false)} onCreated={async id => { setCreating(false); await loadAll(); setOpenId(id); setTab('overview') }} />}
+    {inbox.some(item => item.action_type === 'MODULE_ACCEPTANCE') && <section className="hy">
+      <div className="hy-card needs-you"><h2 className="hy-card-title">系統模組待你驗收</h2>
+        <Inbox items={inbox.filter(item => item.action_type === 'MODULE_ACCEPTANCE')} project={null} onChanged={loadAll} setError={setError}/>
+      </div>
+    </section>}
 
     <div className="cc5-summary">
       <button type="button" className="cc5-card cc5-card-amber" onClick={() => setFilter('open')}>
@@ -314,7 +320,9 @@ function Inbox({ items, project, onChanged, setError }) {
     setBusy(item.action_id)
     try {
       const note = (feedback[item.action_id] || '').trim()
-      const body = item.action_type === 'QUALITY_GAP'
+      const body = item.action_type === 'MODULE_ACCEPTANCE'
+        ? { answer: { decision: value, feedback: note }, attachments: [] }
+        : item.action_type === 'QUALITY_GAP'
         ? { answer: { decision: value === 'REVISE' ? 'REVISE' : 'RECHECK', evidence: value === 'REVISE' ? note : value }, attachments: [] }
         : value === 'RETURN'
         ? { answer: note, attachments: [] }
@@ -349,12 +357,24 @@ function Inbox({ items, project, onChanged, setError }) {
         </div>
         <h2 className="cc5-q">{item.title}</h2>
         {item.question && item.question !== item.title && <p className="cc5-pre">{spec ? item.question.split('\n\n回覆 APPROVED')[0] : item.question}</p>}
-        {item.approval_allowed === false && <p className="cc5-muted">尚未通過同版本獨立審查，不能核准。</p>}
-        {item.reason && <p className="cc5-muted cc5-pre">{code ? firstLine(item.reason) : item.reason}</p>}
+        {item.approval_allowed === false && <p className="cc5-muted">{item.action_type === 'MODULE_ACCEPTANCE' ? '模組版本或證據已變更，請重新提交正式驗收請求。' : '尚未通過同版本獨立審查，不能核准。'}</p>}
+        {item.reason && item.action_type !== 'MODULE_ACCEPTANCE' && <p className="cc5-muted cc5-pre">{code ? firstLine(item.reason) : item.reason}</p>}
         {item.plan && <AIExecutionPlan plan={item.plan} />}
         {item.plan && <details className="cc5-sub"><summary>查看專案規劃書草稿</summary><PlanBody plan={item.plan} /></details>}
         {approval && <ReviewDeliverables list={reviewDeliverables(project, item)} />}
-        {code ? <>
+        {item.action_type === 'MODULE_ACCEPTANCE' ? <div className="hy">
+          <p>只有 HY 本人能核准此版本的正式驗收。核准不會合併、部署或改變專案狀態。</p>
+          {item.module_acceptance && <>
+            <p>{item.module_acceptance.module_name} · {item.module_acceptance.version}</p>
+            <p className="break-all">Commit：{item.module_acceptance.commit}</p>
+            <ul className="hy-list">{item.module_acceptance.evidence.map((e, i) => <li key={i}><a href={e.url} target="_blank" rel="noopener noreferrer">{e.kind}：{e.summary}</a></li>)}</ul>
+          </>}
+          <label>驗收意見<textarea className="w-full border rounded p-3" value={feedback[item.action_id] || ''} onChange={e => setFeedback(v => ({ ...v, [item.action_id]: e.target.value }))}/></label>
+          <div className="flex gap-3 mt-3">
+            <button type="button" className="hy-btn is-primary" disabled={!!busy || !item.module_acceptance || item.approval_allowed === false} onClick={() => resolve(item, 'APPROVED')}>核准模組驗收</button>
+            <button type="button" className="hy-btn" disabled={!!busy || item.approval_allowed === false} onClick={() => resolve(item, 'REJECTED')}>退回模組驗收</button>
+          </div>
+        </div> : code ? <>
           <CodeReviewFacts review={item.code_review} />
           <p className="cc5-small">核准後由 HY Life OS 以審核當下的版本 merge，並自動部署。你或 Grok Bot 都可以核准。</p>
           <label className="cc5-field">意見（退回時必填；核准時可附註）
