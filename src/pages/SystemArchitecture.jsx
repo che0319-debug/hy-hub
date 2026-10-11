@@ -62,7 +62,7 @@ function ModuleTile({ item, onSelect }) {
   return <button type="button" onClick={() => onSelect(id)} className="text-left rounded-xl border-2 border-dashed border-slate-300 bg-slate-50 hover:bg-slate-100 hover:border-slate-400 focus-visible:outline focus-visible:outline-2 focus-visible:outline-blue-600 p-3 min-h-[106px] transition-colors" aria-label={name + '：查看規劃詳情'}>
     <div className="flex items-center gap-2 text-slate-600"><Icon size={21}/><span className="font-semibold text-sm">{name}</span></div>
     <p className="text-xs text-slate-500 mt-2">{subtitle}</p>
-    <span className={`inline-flex mt-2 text-[11px] rounded px-2 py-0.5 \${statusStyles[info.status]}`}>{statusLabels[info.status]}</span>
+    <span className={`inline-flex mt-2 text-[11px] rounded px-2 py-0.5 ${statusStyles[info.status]}`}>{statusLabels[info.status]}</span>
   </button>
 }
 
