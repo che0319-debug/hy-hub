@@ -26,7 +26,24 @@ function Empty({ children }) { return <p className="ao-empty">{children}</p> }
 function Markdown({ value }) { return value ? <ReactMarkdown remarkPlugins={[remarkGfm]} skipHtml components={{a: ({href,children}) => <Link href={href}>{children}</Link>}}>{value}</ReactMarkdown> : <Empty>正式文件尚未提供。</Empty> }
 
 export default function AIOfficeV1() {
-  return <div className="ao"><ControlCenterV5 title="AI Office" loadData={loadOffice} renderHome={props=><OfficeHome {...props}/>} renderProject={({project,onBack,onDeleted}) => <OfficeProject key={project.id} id={project.id} onBack={onBack} onDeleted={onDeleted} />} /></div>
+  return <div className="ao"><ControlCenterV5 title="AI Office" loadData={loadOffice} renderCreation={props=><OfficeCreate {...props}/>} renderHome={props=><OfficeHome {...props}/>} renderProject={({project,onBack,onDeleted}) => <OfficeProject key={project.id} id={project.id} onBack={onBack} onDeleted={onDeleted} />} /></div>
+}
+
+function OfficeCreate({onCancel,onCreated}) {
+  const [form,setForm]=useState({title:'',goal:'',description:'',owner_bot:'hy'}),[error,setError]=useState(''),[busy,setBusy]=useState(false)
+  const projectId=useRef(`project-${crypto.randomUUID()}`)
+  const set=key=>e=>setForm(f=>({...f,[key]:e.target.value}))
+  async function submit(e){e.preventDefault();setBusy(true);setError('');try{const id=projectId.current;await office('/projects',{method:'POST',body:JSON.stringify({...form,title:form.title.trim(),goal:form.goal.trim(),project_id:id})});await onCreated(id)}catch(e){setError(e.message==='PI_NOT_READY'?'PI 尚未就緒，請稍後重試。':e.message)}finally{setBusy(false)}}
+  return <form className="cc5-panel cc5-form" onSubmit={submit} aria-label="新增專案">
+    <h2>新增專案</h2>
+    <label className="cc5-field">名稱<input required maxLength={200} value={form.title} onChange={set('title')}/></label>
+    <label className="cc5-field">目標<textarea required maxLength={30000} value={form.goal} onChange={set('goal')}/></label>
+    <label className="cc5-field">說明（選填）<textarea maxLength={10000} value={form.description} onChange={set('description')}/></label>
+    <label className="cc5-field">負責 Bot<select value={form.owner_bot} onChange={set('owner_bot')}>{[['hy','HY'],['950157','950157'],['sam','Sam'],['family','小因']].map(([id,name])=><option key={id} value={id}>{name}</option>)}</select></label>
+    <p className="ao-muted">PI 會先研究你的目標並展開規劃，完成後再交給你審閱。</p>
+    {error&&<p role="alert">{error}</p>}
+    <div className="cc5-two"><button type="button" disabled={busy} onClick={onCancel}>取消</button><button className="ao-primary" disabled={busy||!form.title.trim()||!form.goal.trim()}>{busy?'建立中…':'建立專案'}</button></div>
+  </form>
 }
 
 async function loadOffice() {
