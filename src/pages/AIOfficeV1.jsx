@@ -4,7 +4,7 @@ import remarkGfm from 'remark-gfm'
 import ControlCenterV5, { Inbox, DeleteZone, SpecChangeBox } from './ControlCenterV5'
 import { request } from '../aiWorkV5Data'
 import { authHeaders, ensureAccessToken, expireSession } from '../auth'
-import { OFFICE_TABS, PROJECT_STATUS, PACKAGE_STATUS, progress, milestones, journal, safeUrl, driveFile } from '../lib/aiOffice.mjs'
+import { OFFICE_TABS, activityLabel, PACKAGE_STATUS, progress, milestones, journal, safeUrl, driveFile } from '../lib/aiOffice.mjs'
 import OfficeHome from './OfficeHome'
 import './ai-office-v1.css'
 
@@ -68,7 +68,7 @@ function OfficeProject({ id, onBack, onDeleted }) {
   return <section className="ao ao-project">
     <button className="ao-back" onClick={onBack}>‹ 全部專案</button>
     <header className="ao-header"><div><p className="ao-eyebrow">AI Office · {plan?.project_type || '類型尚未記錄'}</p><h1>{project.title}</h1><p className="ao-goal">{project.goal}</p></div>
-      <div className="ao-header-meta"><span className="ao-pill">{PROJECT_STATUS[project.status] || project.status}</span><span>{project.phase} {project.milestone_id || ''}</span><small>最近紀錄 {when(project.updated_at)}</small><span>工作包完成 {count.done}／{count.total}（進度參考）</span></div>
+      <div className="ao-header-meta"><span className="ao-pill">{activityLabel(project)}</span><span>{project.phase} {project.milestone_id || ''}</span><small>最近紀錄 {when(project.updated_at)}</small><span>執行工作包完成 {count.done}／{count.total}（進度參考）</span></div>
     </header>
     <nav className="ao-tabs" aria-label="AI Office 專案分頁">{OFFICE_TABS.map(([key,label])=><button key={key} aria-current={tab===key?'page':undefined} onClick={()=>setTab(key)}>{label}{key==='meeting' && pending.length>0 && <span>{pending.length}</span>}</button>)}</nav>
     {error && <p role="alert">{error}</p>}

@@ -1,6 +1,19 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { OFFICE_TABS,progress,milestones,journal,safeUrl,driveFile } from '../src/lib/aiOffice.mjs'
+import { OFFICE_TABS,progress,milestones,journal,safeUrl,driveFile,activityLabel } from '../src/lib/aiOffice.mjs'
+
+test('activity uses canonical label and distinguishes Claude handoff with old API compatibility',()=>{
+ assert.equal(activityLabel({status:'ai_pending',activity:{label:'待 Claude 品質審查'}}),'待 Claude 品質審查')
+ const planning={type:'PROJECT_PLANNING',executor:'GPT_CHAT',status:'COMPLETED'}
+ const review={type:'QUALITY_REVIEW',executor:'CLAUDE_REVIEW',status:'READY'}
+ assert.equal(activityLabel({status:'ai_pending',packages:[planning,review]}),'待 Claude 品質審查')
+ assert.equal(activityLabel({status:'ai_pending',packages:[planning,{...review,status:'RUNNING'}]}),'Claude 品質審查中')
+ assert.equal(activityLabel({status:'confirmation',packages:[planning,{...review,status:'COMPLETED'}]}),'等待確認')
+ assert.equal(activityLabel({status:'ai_pending',packages:[{...review,context:{superseded:true}}]}),'待 AI 接手中')
+ assert.equal(activityLabel({status:'ai_pending',packages:[{...review,milestone_id:'PARKED:M1'}]}),'待 AI 接手中')
+ assert.equal(activityLabel({status:'ai_pending',packages:[{type:'PROJECT_PLANNING',executor:'GPT_CHAT',status:'READY'}]}),'待 AI 接手中')
+ assert.deepEqual(progress({packages:[planning,review]}),{done:0,total:0})
+})
 
 test('five approved pages, progress is a package count and excludes report bookkeeping',()=>{
  assert.deepEqual(OFFICE_TABS.map(x=>x[1]),['專案概況','PI 會議室','執行計畫','成果與審查','工作日誌'])

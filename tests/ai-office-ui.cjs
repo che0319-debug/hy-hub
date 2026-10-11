@@ -45,5 +45,24 @@ const {chromium}=require('playwright');const assert=require('node:assert/strict'
  await tab('工作日誌').click();assert(await page.getByText('正式回覆',{exact:true}).count());
  await page.getByRole('button',{name:'‹ 全部專案',exact:true}).click();failure=true;await page.locator('.cc5-project').click();await page.getByRole('alert').waitFor();assert.equal(await page.locator('.ao-dashboard').count(),0);failure=false;await page.getByRole('button',{name:'重試讀取'}).click();await page.getByRole('heading',{name:'專案概況',exact:true}).waitFor();
  await page.getByRole('button',{name:'‹ 全部專案',exact:true}).click();homeFailure=true;await page.getByRole('button',{name:'重新整理專案'}).click();await page.getByRole('alert').waitFor();assert.equal(await page.locator('.cc5-project').count(),0);assert.equal(await page.locator('.ao-stat strong').first().innerText(),'—');homeFailure=false;await page.getByRole('button',{name:'重試讀取'}).click();await page.locator('.cc5-project').waitFor();
+ // Issue 139: completed planning belongs to Claude's review lane, not an empty Chat queue.
+ project.phase='規劃期';project.milestone_id=null;project.plan_state='DRAFT';project.plan=null;project.actions=[];
+ project.packages=[{id:'planning',type:'PROJECT_PLANNING',executor:'GPT_CHAT',status:'COMPLETED',task:'規劃完成',dependencies:[],created_at:1791676800},{id:'review',type:'QUALITY_REVIEW',executor:'CLAUDE_REVIEW',status:'READY',task:'PLAN 品質審查',dependencies:[],created_at:1791677000}];
+ for(const width of [1280,390]){
+  await page.setViewportSize({width,height:900});
+  for(const [status,label] of [['READY','待 Claude 品質審查'],['RUNNING','Claude 品質審查中']]){
+   project.status=status==='RUNNING'?'ai_running':'ai_pending';project.packages[1].status=status;project.activity={label,packages:[project.packages[1]]};
+   await page.goto('http://127.0.0.1:5173/#/ai-work-v5');await page.reload();await page.locator('.ao-project-line').waitFor();
+   assert.equal(await page.locator('.ao-project-line .ao-pill').innerText(),label);
+   assert((await page.locator('.ao-project-line').innerText()).includes('執行工作包完成 0／0'));
+   assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth),false);
+   await page.screenshot({path:`docs/quality/ui/ai-office/139-${status}-home-${width}.png`,fullPage:true});
+   await page.locator('.ao-project-line').click();await page.locator('.ao-header-meta .ao-pill').waitFor();
+   assert.equal(await page.locator('.ao-header-meta .ao-pill').innerText(),label);
+   assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth),false);
+  }
+ }
+ delete project.activity;project.status='ai_pending';project.packages[1].status='READY';
+ await page.goto('http://127.0.0.1:5173/#/ai-work-v5');await page.reload();await page.locator('.ao-project-line').waitFor();assert.equal(await page.locator('.ao-project-line .ao-pill').innerText(),'待 Claude 品質審查');
  assert(!writes.some(w=>w.method==='PATCH'||w.method==='DELETE'));assert.deepEqual(errors,[]);await browser.close();console.log('AI Office 1280/390 homepage search/filter/create/error recovery and five pages, canonical data, attachments/Drive, action, split drag, preserved scroll, report versions, delete gate and error recovery passed.');
 })().catch(e=>{console.error(e);process.exit(1)});
