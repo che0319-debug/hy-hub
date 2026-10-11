@@ -39,12 +39,30 @@ const descriptions = {
   auth:'管理身分、權限與 HY／代理授權邊界。'
 }
 
+const moduleEvidence = {
+  pi: { status: 'implemented', version: 'V1', source: 'hy-agent-v2/ai_work_v4/pi_engine.py', note: '已建置；正式專案實戰驗收尚未完成' },
+  mission: { status: 'implemented', version: 'V1', source: 'hy-agent-v2/ai_work_v4/mission_engine.py', note: '已建置；正式專案實戰驗收尚未完成' },
+  quality: { status: 'implemented', version: 'V1', source: 'hy-agent-v2/ai_work_v4/quality_contract.py', note: 'PR #135 已合併；正式案例驗收尚未完成' },
+  mcp: { status: 'partial', source: 'hy-agent-v2/ai_work_v4/package_mcp.py', note: '已有正式 MCP 工具；完整模組驗收未登錄' },
+  queue: { status: 'partial', source: 'hy-agent-v2/ai_work_v4/mission_engine.py', note: '已有工作包佇列與執行鎖；完整模組驗收未登錄' },
+  expert: { status: 'partial', source: 'hy-agent-v2/ai_work_v4/expert_service.py', note: '已有 Expert/Skill 服務；完整模組驗收未登錄' },
+  drive: { status: 'partial', source: 'hy-agent-v2/ai_work_v4/package_drive.py', note: '已有 Drive 工具；完整模組驗收未登錄' },
+  auth: { status: 'partial', source: 'hy-agent-v2/core/auth.py', note: '已有身分驗證程式；完整權限驗收未登錄' },
+  github: { status: 'partial', source: 'hy-agent-v2/ai_work_v4/code_work.py', note: '已有 PR 工作流程；完整模組驗收未登錄' },
+  database: { status: 'partial', source: 'hy-agent-v2/ai_work_v4/package_store.py', note: '已有正式儲存程式；資料架構驗收未登錄' },
+  report: { status: 'partial', source: 'hy-agent-v2/ai_work_v4/project_report.py', note: '已有報告程式；持續更新 HTML 報告服務尚待驗證' },
+}
+const statusLabels = { implemented: '已建置・待實戰驗收', partial: '部分建置・待盤點', unknown: '尚未確認' }
+const statusStyles = { implemented: 'bg-blue-100 text-blue-800', partial: 'bg-amber-100 text-amber-800', unknown: 'bg-slate-200 text-slate-600' }
+function moduleInfo(id) { return moduleEvidence[id] || { status: 'unknown', note: '尚未取得足夠證據，不能認定為未建置或已驗收' } }
+
 function ModuleTile({ item, onSelect }) {
   const [id, name, subtitle, Icon] = item
+  const info = moduleInfo(id)
   return <button type="button" onClick={() => onSelect(id)} className="text-left rounded-xl border-2 border-dashed border-slate-300 bg-slate-50 hover:bg-slate-100 hover:border-slate-400 focus-visible:outline focus-visible:outline-2 focus-visible:outline-blue-600 p-3 min-h-[106px] transition-colors" aria-label={name + '：查看規劃詳情'}>
     <div className="flex items-center gap-2 text-slate-600"><Icon size={21}/><span className="font-semibold text-sm">{name}</span></div>
     <p className="text-xs text-slate-500 mt-2">{subtitle}</p>
-    <span className="inline-flex mt-2 text-[11px] text-slate-500 bg-slate-200 rounded px-2 py-0.5">待驗收</span>
+    <span className={`inline-flex mt-2 text-[11px] rounded px-2 py-0.5 ${statusStyles[info.status]}`}>{statusLabels[info.status]}</span>
   </button>
 }
 
@@ -157,7 +175,7 @@ export default function SystemArchitecture() {
     </section>}
     {view==='architecture' && <>
     <div className="bg-white border border-slate-200 rounded-xl p-4">
-      <div className="flex flex-wrap items-center justify-between gap-2 mb-3"><h2 className="font-semibold text-slate-700">整體架構</h2><span className="text-xs text-slate-500">灰色虛線＝尚未完成新版模組驗收</span></div>
+      <div className="flex flex-wrap items-center justify-between gap-2 mb-3"><h2 className="font-semibold text-slate-700">整體架構</h2><span className="text-xs text-slate-500">模組狀態依已查證程式證據顯示；不等同正式驗收</span></div>
       <div className="space-y-2">
         {layers.map((layer, i) => <div key={layer.id}>
           <section className="rounded-xl bg-slate-100/80 p-3 md:p-4" aria-label={layer.title}>
@@ -171,15 +189,15 @@ export default function SystemArchitecture() {
     <div className="bg-white border border-slate-200 rounded-xl p-4">
       <h2 className="font-semibold text-slate-700">模組建設原則</h2>
       <p className="text-sm text-slate-600 mt-2">先建立模組契約與驗收標準，再由 AI Office 等前台調用；能力不足時優先升級所屬模組，不在前台重建平行邏輯。</p>
-      <p className="text-xs text-slate-500 mt-2">目前僅為規劃清冊；已存在的舊功能不代表新版模組 READY。未來由正式驗收紀錄決定彩色顯示，不依 AI 自行判定。</p>
+      <p className="text-xs text-slate-500 mt-2">目前為程式證據盤點，不是正式 Registry 即時狀態；已存在程式不代表模組 READY。正式 PASS 只能由受權的驗收紀錄決定。</p>
     </div>
     </>}
     {found && <div className="fixed inset-0 z-[70] bg-slate-900/40 flex items-center justify-center p-4" onClick={() => setSelected(null)}>
       <section role="dialog" aria-modal="true" aria-label={found.item[1]} onClick={e => e.stopPropagation()} className="bg-white w-full max-w-lg rounded-xl shadow-xl p-5 space-y-4">
         <div className="flex items-center justify-between"><h2 className="text-lg font-bold text-slate-800">{found.item[1]}</h2><button onClick={() => setSelected(null)} aria-label="關閉"><X size={20}/></button></div>
-        <p className="text-xs text-slate-500">{found.layer.title} / {found.layer.subtitle} · 待驗收</p>
+        <p className="text-xs text-slate-500">{found.layer.title} / {found.layer.subtitle} · {statusLabels[moduleInfo(selected).status]}</p>
         <p className="text-sm text-slate-700">{descriptions[selected] || found.item[2]}</p>
-        <div className="rounded-lg bg-slate-50 border border-dashed border-slate-300 p-3 text-sm text-slate-600">正式版本：未登錄<br/>模組契約：待建立或確認<br/>驗收證據：尚未登錄<br/>GitHub 程式位置：待盤點</div>
+        <div className="rounded-lg bg-slate-50 border border-dashed border-slate-300 p-3 text-sm text-slate-600">版本：{moduleInfo(selected).version || "未核實"}<br/>狀態依據：{moduleInfo(selected).note}<br/>正式驗收證據：尚未登錄<br/>GitHub 程式位置：{moduleInfo(selected).source || "待盤點"}</div>
         <button className="text-sm text-blue-700 flex items-center gap-1" onClick={() => setSelected(null)}>返回架構圖 <ChevronRight size={15}/></button>
       </section>
     </div>}
