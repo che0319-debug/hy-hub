@@ -65,7 +65,7 @@ function OfficeProject({ id, onBack, onDeleted }) {
 
 function Overview({project,plan,pending,onMeeting,onExecution,onOutputs,reload,onDeleted,setError}) {
   const [editing,setEditing]=useState(false)
-  const ms=milestones(project), current=project.packages.filter(p=>['RUNNING','READY','WAITING','BLOCKED','FAILED'].includes(p.status) && p.type!=='PROJECT_REPORT')
+  const ms=milestones(project), current=project.packages.filter(p=>['RUNNING','READY','WAITING','BLOCKED','FAILED'].includes(p.status) && p.type!=='PROJECT_REPORT' && !String(p.milestone_id || '').startsWith('PARKED:'))
   const files=[...project.files].sort((a,b)=>b.created_at-a.created_at).slice(0,4)
   return <>
     <div className="ao-overview-actions"><button onClick={()=>setEditing(v=>!v)}>編輯</button>{project.permissions.delete ? <div className="cc5"><DeleteZone project={project} onDeleted={onDeleted}/></div> : <span className="ao-muted">刪除專案僅限 HY 本人</span>}</div>
