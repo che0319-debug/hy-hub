@@ -37,10 +37,12 @@ ControlCenterV5 保留預設行為，新增可選 project renderer、loader、ti
 
 本機驗證：後端 476 passed（5 項既有 deprecation warning）；前端 43 passed、Build 通過，三組 browser regression 通過。PLAN_APPROVAL／CODE_REVIEW 的核准契約不接受附件，本頁不提供會被忽略的附件提交；補充資料改由既有 suggestions 交接。CI 結果以 PR Checks 為準。
 
-## HY 審查修訂：首頁與配色
+## HY 最終首頁修訂：AI Work 列表架構與配色
 
-AI Office 入口新增 `OfficeHome.jsx` 專案總表：山景深藍主視覺、真實專案/工作包/待處理/完成數摘要、名稱與 Goal 搜尋、四種篩選、正式專案卡片及既有 NewProject 表單。專案詳情讀取不完整時不顯示完整工作包數；API 失敗不保留假狀態。共用 ControlCenterV5 只增加可選 renderHome，原預設行為不改；global Module Registry 驗收入口保留。
+AI Office 入口新增 `OfficeHome.jsx` 專案總表：簡潔頁首、單行真實專案/工作包/待處理/完成數摘要、名稱與 Goal 搜尋、四種篩選、逐列正式專案及既有 NewProject 表單。專案詳情讀取不完整時不顯示完整工作包數；API 失敗不保留假狀態。共用 ControlCenterV5 只增加可選 renderHome，原預設行為不改；global Module Registry 驗收入口保留。
 
 五頁沿用定案布局，增加深藍頁首、青綠/淡紫/暖橘內容色彩與輕微陰影，色彩不表示正式核准。首頁不複製專家團/知識庫或假今日完成資料。新增 `00-home-1280.png` 與 `00-home-390.png`，以及更新五頁截圖，全部為隔離工程 fixture。
 
 Browser 回歸新增首頁搜尋、篩選、NewProject 展開/取消、390/1280 響應式及進入專案；正式建立、刪除與核准仍使用既有契約。此次只更新 PR #79，不合併、不部署。
+
+首頁依 HY 最新定案移除山景/大主視覺與卡片網格，工作摘要為一條訊息列，專案一列一列全寬呈現。手機保留單列摘要的水平捲動與全寬專案列，列內資訊排版適應窄螢幕；專案內五頁不改。
