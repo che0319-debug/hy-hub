@@ -36,7 +36,7 @@ const {chromium}=require('playwright');const assert=require('node:assert/strict'
   await submit.click();await page.getByRole('heading',{name:'三引擎啟動確認',exact:true}).waitFor({timeout:5000}).catch(async e=>{console.log(await page.locator('body').innerText(),errors,writes);throw e});await page.getByText('等待 HY 核准 Quality',{exact:false}).waitFor();
   assert.equal(writes.filter(w=>w.url.endsWith('/api/ai-office/projects')).length,1);assert.equal(writes.filter(w=>w.url.includes('/resolve')).length,0);
   assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth),false);
-  await page.getByRole('button',{name:'查看 Quality 正式核准事項'}).click();const detail=page.locator('.ao-action-detail');await detail.getByRole('button',{name:'核准',exact:true}).waitFor();await detail.getByRole('button',{name:'核准',exact:true}).click();
+  await page.getByRole('button',{name:'查看 Quality 正式核准事項'}).click();const detail=page.locator('.ao-action-detail');await detail.getByText('本專案需先完成 Quality 啟動核准，AI 才會接手。').waitFor();await detail.getByRole('button',{name:'核准',exact:true}).waitFor();await detail.getByRole('button',{name:'核准',exact:true}).click();
   await page.getByRole('navigation',{name:'AI Office 專案分頁'}).getByRole('button',{name:'專案概況',exact:true}).click();await page.getByText('配置完成，尚待實戰驗證',{exact:false}).waitFor();
   await page.getByText('執行端可用性尚未驗證；配置及品質契約啟用不等於三引擎正式驗收。').waitFor();
   assert.equal(writes.filter(w=>w.url.includes('/resolve')).length,1);assert.equal(await page.locator('.ao-tabs button').count(),5);assert.deepEqual(errors,[]);await page.close();
