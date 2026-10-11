@@ -19,6 +19,7 @@ HY 打開系統架構時先了解整套系統「建置到哪裡、哪些缺口�
 - 390/1280 Chromium：18 張卡片、0 個偽造驗收、詳情、來源、正式案例待驗收、Escape、API 失敗清空、重試與 PI Lab。
 - isolated Inbox fixture：global 模組驗收卡可見，核准 POST 使用合法人類決策格式；不會觸發 merge/deploy。
 - 既有 PI Expert/Skill 與 PI Lab browser smoke 維持通過。
+- 首輪 GitHub UI CI 暴露既有 smoke 非同步等待不足：Skill 內容顯示後，ExpertTeam.act 仍等待 registry reload，busy 尚未清除。產品 ExpertTeam.jsx 未變更；原 smoke 在 200ms registry fixture 延遲下可重現失敗。補上 Playwright trial actionability 等待後，同樣延遲情境通過；仍保留原按鈕啟用斷言，未放寬發布保護。對照詳見 evidence/module-registry-v1/pi-smoke-comparison.txt。
 - 無手機橫向溢出、無 browser pageerror；按鈕沿用至少 44px。
 - 已檢視桌面／手機截圖。首次環境中文字型不完整，補妥測試環境字型後重新截圖及確認。
 
