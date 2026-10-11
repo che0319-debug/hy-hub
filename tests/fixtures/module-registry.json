@@ -68,7 +68,7 @@
     "module_name": "AI Office",
     "layer": "前台功能",
     "description": "AI Work 工作包專案管理入口",
-    "implementation_status": "IMPLEMENTED",
+    "implementation_status": "NEEDS_IMPROVEMENT",
     "acceptance_status": "NOT_REVIEWED",
     "version": "snapshot-8c9f92f",
     "commit": "8c9f92fde79ed6762223f022a49ef1182afa93ff",
@@ -116,18 +116,21 @@
     ],
     "acceptance_record": null,
     "completed_capabilities": [
-      "專案、Inbox、工作包、品質面板"
+      "既有 AI Work 控制中心：專案概況、工作包、Inbox、成果與品質面板"
     ],
     "missing_capabilities": [
-      "三引擎正式案例串接驗收"
+      "AI Office V1 的功能範圍與三引擎責任對應尚未定稿",
+      "完整需求、PI 規劃、Mission 執行、Quality 審查與 humanAction 流程尚未逐段核對",
+      "三引擎端到端正式案例與 AI Office 操作驗收尚未完成"
     ],
     "next_steps": [
-      "使用下一個 HY 核准正式專案驗證規劃、工作包、內審、獨立審查與結案全流程"
+      "延續現有控制中心盤點 API 與三引擎串接缺口",
+      "完成 AI Office V1 端到端操作流程，再由 HY 依正式案例驗收"
     ],
     "updated_at": 1791676800,
     "history": [],
     "inventory_note": "程式盤點，未查得模組版本專屬正式驗收紀錄；既有專案成果不等於系統模組驗收",
-    "record_hash": "0a4482bd8216792a141d10f163bb1300205304dc5df7d184521ad448b51e8d33"
+    "record_hash": "669e16826498860e537afcef3593a099515be3b8979655ee14e98d533fe41059"
   },
   {
     "module_id": "experts",
