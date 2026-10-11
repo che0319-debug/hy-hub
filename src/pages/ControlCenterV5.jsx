@@ -111,7 +111,7 @@ function Bar({ done, total }) {
   </div>
 }
 
-export default function ControlCenterV5() {
+export default function ControlCenterV5({ renderProject, renderHome, title = 'AI Work 控制中心', loadData = loadControlCenter } = {}) {
   const [projects, setProjects] = useState([])
   const [details, setDetails] = useState({})
   const [inbox, setInbox] = useState([])
@@ -126,14 +126,14 @@ export default function ControlCenterV5() {
 
   const loadAll = useCallback(async () => {
     try {
-      const data = await loadControlCenter()
+      const data = await loadData()
       setProjects(data.projects)
       setInbox(data.inbox)
       setDetails(data.details)
       setError('')
-    } catch (reason) { setError(reason.message) }
+    } catch (reason) { if (loadData !== loadControlCenter) { setProjects([]); setInbox([]); setDetails({}) }; setError(reason.message) }
     finally { setLoaded(true) }
-  }, [])
+  }, [loadData])
 
   const reloadProject = useCallback(async id => {
     try {
@@ -154,6 +154,7 @@ export default function ControlCenterV5() {
   const project = openId ? { ...projects.find(p => p.id === openId), ...(details[openId] || {}) } : null
 
   if (project?.id) {
+    if (renderProject) return renderProject({ project, onBack: () => { setOpenId(null); setTab('overview') }, onDeleted: () => { setOpenId(null); loadAll() } })
     return <section className="cc5" aria-labelledby="cc5-project-title">
       <ProjectView project={project} tab={tab} setTab={setTab} openItems={inbox.filter(i => i.project_id === project.id)}
         onBack={() => { setOpenId(null); setTab('overview') }} onChanged={() => reloadProject(project.id)} error={error} setError={setError}
@@ -167,9 +168,14 @@ export default function ControlCenterV5() {
     .filter(p => filter === 'all' || (filter === 'open' ? openByProject[p.id] : filter === 'completed' ? p.status === 'completed' : p.status !== 'completed'))
     .sort((a, b) => rank(a) - rank(b))
 
+  if (renderHome) return renderHome({projects,details,inbox,loaded,error,creating,onReload:loadAll,
+    onCreate:()=>setCreating(v=>!v),onSelect:id=>{setOpenId(id);setTab('overview')},
+    creation:creating && <NewProject onCancel={()=>setCreating(false)} onCreated={async id=>{setCreating(false);await loadAll();setOpenId(id);setTab('overview')}}/>,
+    registry:inbox.some(i=>i.action_type==='MODULE_ACCEPTANCE') && <section className="hy"><div className="hy-card needs-you"><h2 className="hy-card-title">系統模組待你驗收</h2><Inbox items={inbox.filter(i=>i.action_type==='MODULE_ACCEPTANCE')} project={null} onChanged={loadAll} setError={setError}/></div></section>})
+
   return <section className="cc5" aria-labelledby="cc5-title">
     <header className="cc5-head">
-      <div><span className="cc5-kicker">HY Life OS</span><h1 id="cc5-title">AI Work 控制中心</h1></div>
+      <div><span className="cc5-kicker">HY Life OS</span><h1 id="cc5-title">{title}</h1></div>
       <div className="cc5-head-actions">
         <button type="button" className="cc5-btn" onClick={loadAll}>重新整理</button>
         <button type="button" className="cc5-primary" aria-expanded={creating} onClick={() => setCreating(v => !v)}>＋ 新增專案</button>
@@ -311,7 +317,7 @@ function Overview({ project, plan, openCount, goInbox, goOutputs }) {
   </div>
 }
 
-function Inbox({ items, project, onChanged, setError }) {
+export function Inbox({ items, project, onChanged, setError, attachmentIds = {} }) {
   const [answer, setAnswer] = useState({})
   const [feedback, setFeedback] = useState({})
   const [busy, setBusy] = useState('')
@@ -334,6 +340,7 @@ function Inbox({ items, project, onChanged, setError }) {
           ? { answer: { decision: 'REJECTED', reason: note }, attachments: [] }
           : { answer: value === 'APPROVED' && note && item.action_type === 'SPEC_CHANGE_APPROVAL' ? `APPROVED\n${note}` : value,
               attachments: [], ...(value === 'APPROVED' && item.plan ? { plan: item.plan } : {}) }
+      body.attachments = attachmentIds[item.action_id] || []
       await request(`/inbox/${encodeURIComponent(item.action_id)}/resolve`, { method: 'POST', body: JSON.stringify(body) })
       setAnswer(v => ({ ...v, [item.action_id]: '' }))
       setFeedback(v => ({ ...v, [item.action_id]: '' }))
@@ -574,7 +581,7 @@ function ParkedPackages({ project }) {
 }
 
 // 修改範圍／目標：一兩句話送出 → AI 起草新段落 → 待確認裡由 HY 核准才生效
-function SpecChangeBox({ project, onChanged, setError, goInbox }) {
+export function SpecChangeBox({ project, onChanged, setError, goInbox }) {
   const [text, setText] = useState('')
   const [busy, setBusy] = useState(false)
   if (!canChangeSpec(project)) return null
@@ -656,7 +663,7 @@ function SuggestionBox({ project, onChanged, setError }) {
 }
 
 // 永久刪除：僅 HY。先把專案資料與 Drive 資料夾備份到「_已刪除專案備份」，成功後才刪除。
-function DeleteZone({ project, onDeleted }) {
+export function DeleteZone({ project, onDeleted }) {
   const [open, setOpen] = useState(false)
   const [confirm, setConfirm] = useState('')
   const [busy, setBusy] = useState(false)

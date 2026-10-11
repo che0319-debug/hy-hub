@@ -11,7 +11,7 @@ const modules=JSON.parse(readFileSync('tests/fixtures/module-registry.json','utf
   if(url.endsWith('/module-registry'))return route.fulfill({status:mode==='ok'?200:404,contentType:'application/json',body:JSON.stringify(mode==='ok'?{modules}:{detail:'Not Found'})});
   if(url.endsWith('/dispatch-sessions'))data=[];
   if(url.endsWith('/projects'))data=[];
-  if(url.includes('/inbox?'))data=mode==='inbox'?[{action_id:'fixture-module-only',project_id:null,action_type:'MODULE_ACCEPTANCE',title:'模組正式驗收',question:'Fixture only',authority_mode:'OWNER_ONLY',status:'OPEN',approval_allowed:true,module_acceptance:modules.find(m=>m.module_id==='pi-engine')}]:[];
+  if(url.includes('/inbox?') || url.endsWith('/api/ai-office/actions'))data=mode==='inbox'?[{action_id:'fixture-module-only',project_id:null,action_type:'MODULE_ACCEPTANCE',title:'模組正式驗收',question:'Fixture only',authority_mode:'OWNER_ONLY',status:'OPEN',approval_allowed:true,module_acceptance:modules.find(m=>m.module_id==='pi-engine')}]:[];
   if(url.endsWith('/inbox/fixture-module-only/resolve')){decisions.push(route.request().postDataJSON());mode='ok';data={resolved:true};}
   if(url.includes('pi/readiness'))data={skills:[],experts:[],ready:false};
   return route.fulfill({contentType:'application/json',body:JSON.stringify(data)});
