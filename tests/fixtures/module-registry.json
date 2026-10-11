@@ -1,0 +1,1242 @@
+[
+  {
+    "module_id": "home",
+    "module_name": "首頁",
+    "layer": "前台功能",
+    "description": "整合日常資訊與工作摘要",
+    "implementation_status": "IMPLEMENTED",
+    "acceptance_status": "NOT_REVIEWED",
+    "version": "snapshot-8c9f92f",
+    "commit": "8c9f92fde79ed6762223f022a49ef1182afa93ff",
+    "source_repository": "che0319-debug/hy-hub",
+    "source_paths": [
+      "src/pages/Home.jsx",
+      "src/components/AIWorkHomeSummary.jsx"
+    ],
+    "dependencies": [
+      "report-service",
+      "task-queue",
+      "auth"
+    ],
+    "evidence": [
+      {
+        "kind": "CODE",
+        "url": "https://github.com/che0319-debug/hy-hub/blob/8c9f92fde79ed6762223f022a49ef1182afa93ff/src/pages/Home.jsx",
+        "summary": "已核對程式能力：src/pages/Home.jsx",
+        "version": "snapshot-8c9f92f",
+        "commit": "8c9f92fde79ed6762223f022a49ef1182afa93ff"
+      },
+      {
+        "kind": "CODE",
+        "url": "https://github.com/che0319-debug/hy-hub/blob/8c9f92fde79ed6762223f022a49ef1182afa93ff/src/components/AIWorkHomeSummary.jsx",
+        "summary": "已核對程式能力：src/components/AIWorkHomeSummary.jsx",
+        "version": "snapshot-8c9f92f",
+        "commit": "8c9f92fde79ed6762223f022a49ef1182afa93ff"
+      },
+      {
+        "kind": "TEST",
+        "url": "https://github.com/che0319-debug/hy-hub/blob/8c9f92fde79ed6762223f022a49ef1182afa93ff/tests/command-center.test.mjs",
+        "summary": "測試程式存在；不代表正式案例驗收或此刻執行通過",
+        "version": "snapshot-8c9f92f",
+        "commit": "8c9f92fde79ed6762223f022a49ef1182afa93ff"
+      },
+      {
+        "kind": "CI",
+        "url": "https://github.com/che0319-debug/hy-hub/actions/runs/38098906434",
+        "summary": "此 commit 的 Pages build/deploy workflow 已成功；非正式模組驗收",
+        "version": "snapshot-8c9f92f",
+        "commit": "8c9f92fde79ed6762223f022a49ef1182afa93ff"
+      }
+    ],
+    "acceptance_record": null,
+    "completed_capabilities": [
+      "今日資訊、看板與 AI Work 摘要"
+    ],
+    "missing_capabilities": [
+      "正式使用者情境驗收紀錄待確認"
+    ],
+    "next_steps": [
+      "以真實日報及今日待辦核對首頁摘要與來源一致性，再提交版本綁定驗收證據"
+    ],
+    "updated_at": 1791676800,
+    "history": [],
+    "inventory_note": "程式盤點，未查得模組版本專屬正式驗收紀錄；既有專案成果不等於系統模組驗收",
+    "record_hash": "4ddf914436ec78cc24f18bbac71c6a0f8821ec113d9c5ba842a7f4baa25f3125"
+  },
+  {
+    "module_id": "ai-office",
+    "module_name": "AI Office",
+    "layer": "前台功能",
+    "description": "AI Work 工作包專案管理入口",
+    "implementation_status": "NEEDS_IMPROVEMENT",
+    "acceptance_status": "NOT_REVIEWED",
+    "version": "snapshot-8c9f92f",
+    "commit": "8c9f92fde79ed6762223f022a49ef1182afa93ff",
+    "source_repository": "che0319-debug/hy-hub",
+    "source_paths": [
+      "src/pages/ControlCenterV5.jsx",
+      "src/lifeOSApi.js"
+    ],
+    "dependencies": [
+      "mission-engine",
+      "quality-engine",
+      "pi-engine",
+      "report-service",
+      "auth"
+    ],
+    "evidence": [
+      {
+        "kind": "CODE",
+        "url": "https://github.com/che0319-debug/hy-hub/blob/8c9f92fde79ed6762223f022a49ef1182afa93ff/src/pages/ControlCenterV5.jsx",
+        "summary": "已核對程式能力：src/pages/ControlCenterV5.jsx",
+        "version": "snapshot-8c9f92f",
+        "commit": "8c9f92fde79ed6762223f022a49ef1182afa93ff"
+      },
+      {
+        "kind": "CODE",
+        "url": "https://github.com/che0319-debug/hy-hub/blob/8c9f92fde79ed6762223f022a49ef1182afa93ff/src/lifeOSApi.js",
+        "summary": "已核對程式能力：src/lifeOSApi.js",
+        "version": "snapshot-8c9f92f",
+        "commit": "8c9f92fde79ed6762223f022a49ef1182afa93ff"
+      },
+      {
+        "kind": "TEST",
+        "url": "https://github.com/che0319-debug/hy-hub/blob/8c9f92fde79ed6762223f022a49ef1182afa93ff/tests/command-center.test.mjs",
+        "summary": "測試程式存在；不代表正式案例驗收或此刻執行通過",
+        "version": "snapshot-8c9f92f",
+        "commit": "8c9f92fde79ed6762223f022a49ef1182afa93ff"
+      },
+      {
+        "kind": "CI",
+        "url": "https://github.com/che0319-debug/hy-hub/actions/runs/38098906434",
+        "summary": "此 commit 的 Pages build/deploy workflow 已成功；非正式模組驗收",
+        "version": "snapshot-8c9f92f",
+        "commit": "8c9f92fde79ed6762223f022a49ef1182afa93ff"
+      }
+    ],
+    "acceptance_record": null,
+    "completed_capabilities": [
+      "既有 AI Work 控制中心：專案概況、工作包、Inbox、成果與品質面板"
+    ],
+    "missing_capabilities": [
+      "AI Office V1 的功能範圍與三引擎責任對應尚未定稿",
+      "完整需求、PI 規劃、Mission 執行、Quality 審查與 humanAction 流程尚未逐段核對",
+      "三引擎端到端正式案例與 AI Office 操作驗收尚未完成"
+    ],
+    "next_steps": [
+      "延續現有控制中心盤點 API 與三引擎串接缺口",
+      "完成 AI Office V1 端到端操作流程，再由 HY 依正式案例驗收"
+    ],
+    "updated_at": 1791676800,
+    "history": [],
+    "inventory_note": "程式盤點，未查得模組版本專屬正式驗收紀錄；既有專案成果不等於系統模組驗收",
+    "record_hash": "669e16826498860e537afcef3593a099515be3b8979655ee14e98d533fe41059"
+  },
+  {
+    "module_id": "experts",
+    "module_name": "專家團",
+    "layer": "前台功能",
+    "description": "Expert 與 Skill 版本發布管理",
+    "implementation_status": "IMPLEMENTED",
+    "acceptance_status": "NOT_REVIEWED",
+    "version": "snapshot-8c9f92f",
+    "commit": "8c9f92fde79ed6762223f022a49ef1182afa93ff",
+    "source_repository": "che0319-debug/hy-hub",
+    "source_paths": [
+      "src/pages/ExpertTeam.jsx",
+      "src/pages/expert-team.css"
+    ],
+    "dependencies": [
+      "expert-service",
+      "pi-engine",
+      "auth"
+    ],
+    "evidence": [
+      {
+        "kind": "CODE",
+        "url": "https://github.com/che0319-debug/hy-hub/blob/8c9f92fde79ed6762223f022a49ef1182afa93ff/src/pages/ExpertTeam.jsx",
+        "summary": "已核對程式能力：src/pages/ExpertTeam.jsx",
+        "version": "snapshot-8c9f92f",
+        "commit": "8c9f92fde79ed6762223f022a49ef1182afa93ff"
+      },
+      {
+        "kind": "CODE",
+        "url": "https://github.com/che0319-debug/hy-hub/blob/8c9f92fde79ed6762223f022a49ef1182afa93ff/src/pages/expert-team.css",
+        "summary": "已核對程式能力：src/pages/expert-team.css",
+        "version": "snapshot-8c9f92f",
+        "commit": "8c9f92fde79ed6762223f022a49ef1182afa93ff"
+      },
+      {
+        "kind": "TEST",
+        "url": "https://github.com/che0319-debug/hy-hub/blob/8c9f92fde79ed6762223f022a49ef1182afa93ff/tests/pi-ui-smoke.cjs",
+        "summary": "測試程式存在；不代表正式案例驗收或此刻執行通過",
+        "version": "snapshot-8c9f92f",
+        "commit": "8c9f92fde79ed6762223f022a49ef1182afa93ff"
+      },
+      {
+        "kind": "CI",
+        "url": "https://github.com/che0319-debug/hy-hub/actions/runs/38098906434",
+        "summary": "此 commit 的 Pages build/deploy workflow 已成功；非正式模組驗收",
+        "version": "snapshot-8c9f92f",
+        "commit": "8c9f92fde79ed6762223f022a49ef1182afa93ff"
+      }
+    ],
+    "acceptance_record": null,
+    "completed_capabilities": [
+      "專家與 Skill 卡片、候選及 humanAction 發布"
+    ],
+    "missing_capabilities": [
+      "所有專家建立及版本管理情境正式驗收"
+    ],
+    "next_steps": [
+      "完成新增專家、候選 Skill、版本發布及刪除保護的正式情境驗收"
+    ],
+    "updated_at": 1791676800,
+    "history": [],
+    "inventory_note": "程式盤點，未查得模組版本專屬正式驗收紀錄；既有專案成果不等於系統模組驗收",
+    "record_hash": "7a44efb1ac507ae7457e39463dd5c46b291825f96e0d28c9340ebadb900c5428"
+  },
+  {
+    "module_id": "helpers",
+    "module_name": "小幫手",
+    "layer": "前台功能",
+    "description": "Bot 與記憶管理介面",
+    "implementation_status": "IMPLEMENTED",
+    "acceptance_status": "NOT_REVIEWED",
+    "version": "snapshot-8c9f92f",
+    "commit": "8c9f92fde79ed6762223f022a49ef1182afa93ff",
+    "source_repository": "che0319-debug/hy-hub",
+    "source_paths": [
+      "src/pages/Helpers.jsx",
+      "src/lib/memoryFreshness.js"
+    ],
+    "dependencies": [
+      "database",
+      "auth",
+      "report-service"
+    ],
+    "evidence": [
+      {
+        "kind": "CODE",
+        "url": "https://github.com/che0319-debug/hy-hub/blob/8c9f92fde79ed6762223f022a49ef1182afa93ff/src/pages/Helpers.jsx",
+        "summary": "已核對程式能力：src/pages/Helpers.jsx",
+        "version": "snapshot-8c9f92f",
+        "commit": "8c9f92fde79ed6762223f022a49ef1182afa93ff"
+      },
+      {
+        "kind": "CODE",
+        "url": "https://github.com/che0319-debug/hy-hub/blob/8c9f92fde79ed6762223f022a49ef1182afa93ff/src/lib/memoryFreshness.js",
+        "summary": "已核對程式能力：src/lib/memoryFreshness.js",
+        "version": "snapshot-8c9f92f",
+        "commit": "8c9f92fde79ed6762223f022a49ef1182afa93ff"
+      },
+      {
+        "kind": "TEST",
+        "url": "https://github.com/che0319-debug/hy-hub/blob/8c9f92fde79ed6762223f022a49ef1182afa93ff/tests/memory-freshness.test.mjs",
+        "summary": "測試程式存在；不代表正式案例驗收或此刻執行通過",
+        "version": "snapshot-8c9f92f",
+        "commit": "8c9f92fde79ed6762223f022a49ef1182afa93ff"
+      },
+      {
+        "kind": "CI",
+        "url": "https://github.com/che0319-debug/hy-hub/actions/runs/38098906434",
+        "summary": "此 commit 的 Pages build/deploy workflow 已成功；非正式模組驗收",
+        "version": "snapshot-8c9f92f",
+        "commit": "8c9f92fde79ed6762223f022a49ef1182afa93ff"
+      }
+    ],
+    "acceptance_record": null,
+    "completed_capabilities": [
+      "Bot 設定、記憶呈現與 freshness"
+    ],
+    "missing_capabilities": [
+      "跨 Bot 使用情境正式驗收"
+    ],
+    "next_steps": [
+      "核對各 Bot 設定及記憶更新、過期顯示與資料保存的正式使用情境"
+    ],
+    "updated_at": 1791676800,
+    "history": [],
+    "inventory_note": "程式盤點，未查得模組版本專屬正式驗收紀錄；既有專案成果不等於系統模組驗收",
+    "record_hash": "9804d13b63ffcb5d9e82c690bd815f0996b58ed9bba2dbbf0f7ad7d82d219bca"
+  },
+  {
+    "module_id": "knowledge",
+    "module_name": "知識庫",
+    "layer": "前台功能",
+    "description": "記憶與知識保存及檢索",
+    "implementation_status": "NEEDS_IMPROVEMENT",
+    "acceptance_status": "NOT_REVIEWED",
+    "version": "snapshot-8c9f92f",
+    "commit": "8c9f92fde79ed6762223f022a49ef1182afa93ff",
+    "source_repository": "che0319-debug/hy-hub",
+    "source_paths": [
+      "src/pages/MemoryCenter.jsx"
+    ],
+    "dependencies": [
+      "database",
+      "google-drive",
+      "auth"
+    ],
+    "evidence": [
+      {
+        "kind": "CODE",
+        "url": "https://github.com/che0319-debug/hy-hub/blob/8c9f92fde79ed6762223f022a49ef1182afa93ff/src/pages/MemoryCenter.jsx",
+        "summary": "已核對程式能力：src/pages/MemoryCenter.jsx",
+        "version": "snapshot-8c9f92f",
+        "commit": "8c9f92fde79ed6762223f022a49ef1182afa93ff"
+      },
+      {
+        "kind": "CI",
+        "url": "https://github.com/che0319-debug/hy-hub/actions/runs/38098906434",
+        "summary": "此 commit 的 Pages build/deploy workflow 已成功；非正式模組驗收",
+        "version": "snapshot-8c9f92f",
+        "commit": "8c9f92fde79ed6762223f022a49ef1182afa93ff"
+      }
+    ],
+    "acceptance_record": null,
+    "completed_capabilities": [
+      "記憶中心與資料讀取介面"
+    ],
+    "missing_capabilities": [
+      "統一知識庫定位、搜尋與來源治理需確認",
+      "未發現獨立知識庫正式驗收"
+    ],
+    "next_steps": [
+      "先定義知識庫 V1 的搜尋、分類與來源治理契約，確認 MemoryCenter 可重用範圍"
+    ],
+    "updated_at": 1791676800,
+    "history": [],
+    "inventory_note": "程式盤點，未查得模組版本專屬正式驗收紀錄；既有專案成果不等於系統模組驗收",
+    "record_hash": "e14fe84c1999e096cc917bd61d6e4ca792053f1912ee76133b14f178d3c04207"
+  },
+  {
+    "module_id": "settings",
+    "module_name": "設定",
+    "layer": "前台功能",
+    "description": "帳號及系統設定",
+    "implementation_status": "IMPLEMENTED",
+    "acceptance_status": "NOT_REVIEWED",
+    "version": "snapshot-8c9f92f",
+    "commit": "8c9f92fde79ed6762223f022a49ef1182afa93ff",
+    "source_repository": "che0319-debug/hy-hub",
+    "source_paths": [
+      "src/pages/Settings.jsx",
+      "src/components/AuthGate.jsx"
+    ],
+    "dependencies": [
+      "auth",
+      "database"
+    ],
+    "evidence": [
+      {
+        "kind": "CODE",
+        "url": "https://github.com/che0319-debug/hy-hub/blob/8c9f92fde79ed6762223f022a49ef1182afa93ff/src/pages/Settings.jsx",
+        "summary": "已核對程式能力：src/pages/Settings.jsx",
+        "version": "snapshot-8c9f92f",
+        "commit": "8c9f92fde79ed6762223f022a49ef1182afa93ff"
+      },
+      {
+        "kind": "CODE",
+        "url": "https://github.com/che0319-debug/hy-hub/blob/8c9f92fde79ed6762223f022a49ef1182afa93ff/src/components/AuthGate.jsx",
+        "summary": "已核對程式能力：src/components/AuthGate.jsx",
+        "version": "snapshot-8c9f92f",
+        "commit": "8c9f92fde79ed6762223f022a49ef1182afa93ff"
+      },
+      {
+        "kind": "CI",
+        "url": "https://github.com/che0319-debug/hy-hub/actions/runs/38098906434",
+        "summary": "此 commit 的 Pages build/deploy workflow 已成功；非正式模組驗收",
+        "version": "snapshot-8c9f92f",
+        "commit": "8c9f92fde79ed6762223f022a49ef1182afa93ff"
+      }
+    ],
+    "acceptance_record": null,
+    "completed_capabilities": [
+      "設定介面與登入入口"
+    ],
+    "missing_capabilities": [
+      "設定項目逐項正式驗收",
+      "獨立設定回歸覆蓋待補"
+    ],
+    "next_steps": [
+      "列出正式設定項目與儲存入口，補齊設定測試後由 HY 逐項驗收"
+    ],
+    "updated_at": 1791676800,
+    "history": [],
+    "inventory_note": "程式盤點，未查得模組版本專屬正式驗收紀錄；既有專案成果不等於系統模組驗收",
+    "record_hash": "0490b3c8002da28df37212bb98973c514c40581ad654dcfe8dfe6ba20617d9ca"
+  },
+  {
+    "module_id": "pi-engine",
+    "module_name": "PI Engine",
+    "layer": "核心引擎",
+    "description": "專案研究規劃、能力評估與內審整合",
+    "implementation_status": "IMPLEMENTED",
+    "acceptance_status": "PENDING_ACCEPTANCE",
+    "version": "V1",
+    "commit": "39efbdd7386719081a236c1ac2a3bfdb61959981",
+    "source_repository": "che0319-debug/hy-agent-v2",
+    "source_paths": [
+      "ai_work_v4/pi_engine.py",
+      "ai_work_v4/pi_runtime.py",
+      "ai_work_v4/pi_handoff.py",
+      "ai_work_v4/pi_lab_api.py"
+    ],
+    "dependencies": [
+      "expert-service",
+      "mission-engine",
+      "quality-engine",
+      "mcp"
+    ],
+    "evidence": [
+      {
+        "kind": "CODE",
+        "url": "https://github.com/che0319-debug/hy-agent-v2/blob/39efbdd7386719081a236c1ac2a3bfdb61959981/ai_work_v4/pi_engine.py",
+        "summary": "已核對程式能力：ai_work_v4/pi_engine.py",
+        "version": "V1",
+        "commit": "39efbdd7386719081a236c1ac2a3bfdb61959981"
+      },
+      {
+        "kind": "CODE",
+        "url": "https://github.com/che0319-debug/hy-agent-v2/blob/39efbdd7386719081a236c1ac2a3bfdb61959981/ai_work_v4/pi_runtime.py",
+        "summary": "已核對程式能力：ai_work_v4/pi_runtime.py",
+        "version": "V1",
+        "commit": "39efbdd7386719081a236c1ac2a3bfdb61959981"
+      },
+      {
+        "kind": "CODE",
+        "url": "https://github.com/che0319-debug/hy-agent-v2/blob/39efbdd7386719081a236c1ac2a3bfdb61959981/ai_work_v4/pi_handoff.py",
+        "summary": "已核對程式能力：ai_work_v4/pi_handoff.py",
+        "version": "V1",
+        "commit": "39efbdd7386719081a236c1ac2a3bfdb61959981"
+      },
+      {
+        "kind": "CODE",
+        "url": "https://github.com/che0319-debug/hy-agent-v2/blob/39efbdd7386719081a236c1ac2a3bfdb61959981/ai_work_v4/pi_lab_api.py",
+        "summary": "已核對程式能力：ai_work_v4/pi_lab_api.py",
+        "version": "V1",
+        "commit": "39efbdd7386719081a236c1ac2a3bfdb61959981"
+      },
+      {
+        "kind": "TEST",
+        "url": "https://github.com/che0319-debug/hy-agent-v2/blob/39efbdd7386719081a236c1ac2a3bfdb61959981/ai_work_v4/tests/test_pi_runtime.py",
+        "summary": "測試程式存在；不代表正式案例驗收或此刻執行通過",
+        "version": "V1",
+        "commit": "39efbdd7386719081a236c1ac2a3bfdb61959981"
+      },
+      {
+        "kind": "TEST",
+        "url": "https://github.com/che0319-debug/hy-agent-v2/blob/39efbdd7386719081a236c1ac2a3bfdb61959981/ai_work_v4/tests/test_pi_contract.py",
+        "summary": "測試程式存在；不代表正式案例驗收或此刻執行通過",
+        "version": "V1",
+        "commit": "39efbdd7386719081a236c1ac2a3bfdb61959981"
+      },
+      {
+        "kind": "CI",
+        "url": "https://github.com/che0319-debug/hy-agent-v2/actions/runs/38097665923",
+        "summary": "此 commit 的 AI Work V4 CI 已成功；僅證明工程檢查，不等於正式模組驗收",
+        "version": "V1",
+        "commit": "39efbdd7386719081a236c1ac2a3bfdb61959981"
+      }
+    ],
+    "acceptance_record": null,
+    "completed_capabilities": [
+      "全域 PI 與 Skill 釘選、PI Lab、規劃與成果內審"
+    ],
+    "missing_capabilities": [
+      "正式案例實戰驗收"
+    ],
+    "next_steps": [
+      "等待下一個正式案例，由已發布 PI 與 Skill 完成規劃及內審，保存版本釘選及實際成果"
+    ],
+    "updated_at": 1791676800,
+    "history": [],
+    "inventory_note": "程式盤點，未查得模組版本專屬正式驗收紀錄；既有專案成果不等於系統模組驗收",
+    "record_hash": "f69eaf7f39cadc11dd8ced41c99872edf63e8a3de14204a5c3797cb87d9ec606"
+  },
+  {
+    "module_id": "mission-engine",
+    "module_name": "Mission Engine",
+    "layer": "核心引擎",
+    "description": "確定性工作包生命週期與任務推進",
+    "implementation_status": "IMPLEMENTED",
+    "acceptance_status": "PENDING_ACCEPTANCE",
+    "version": "V1",
+    "commit": "39efbdd7386719081a236c1ac2a3bfdb61959981",
+    "source_repository": "che0319-debug/hy-agent-v2",
+    "source_paths": [
+      "ai_work_v4/mission_engine.py",
+      "ai_work_v4/package_api.py",
+      "ai_work_v4/package_scheduler.py"
+    ],
+    "dependencies": [
+      "task-queue",
+      "database",
+      "auth",
+      "mcp"
+    ],
+    "evidence": [
+      {
+        "kind": "CODE",
+        "url": "https://github.com/che0319-debug/hy-agent-v2/blob/39efbdd7386719081a236c1ac2a3bfdb61959981/ai_work_v4/mission_engine.py",
+        "summary": "已核對程式能力：ai_work_v4/mission_engine.py",
+        "version": "V1",
+        "commit": "39efbdd7386719081a236c1ac2a3bfdb61959981"
+      },
+      {
+        "kind": "CODE",
+        "url": "https://github.com/che0319-debug/hy-agent-v2/blob/39efbdd7386719081a236c1ac2a3bfdb61959981/ai_work_v4/package_api.py",
+        "summary": "已核對程式能力：ai_work_v4/package_api.py",
+        "version": "V1",
+        "commit": "39efbdd7386719081a236c1ac2a3bfdb61959981"
+      },
+      {
+        "kind": "CODE",
+        "url": "https://github.com/che0319-debug/hy-agent-v2/blob/39efbdd7386719081a236c1ac2a3bfdb61959981/ai_work_v4/package_scheduler.py",
+        "summary": "已核對程式能力：ai_work_v4/package_scheduler.py",
+        "version": "V1",
+        "commit": "39efbdd7386719081a236c1ac2a3bfdb61959981"
+      },
+      {
+        "kind": "TEST",
+        "url": "https://github.com/che0319-debug/hy-agent-v2/blob/39efbdd7386719081a236c1ac2a3bfdb61959981/ai_work_v4/tests/test_mission_engine.py",
+        "summary": "測試程式存在；不代表正式案例驗收或此刻執行通過",
+        "version": "V1",
+        "commit": "39efbdd7386719081a236c1ac2a3bfdb61959981"
+      },
+      {
+        "kind": "TEST",
+        "url": "https://github.com/che0319-debug/hy-agent-v2/blob/39efbdd7386719081a236c1ac2a3bfdb61959981/ai_work_v4/tests/test_mission_acceptance.py",
+        "summary": "測試程式存在；不代表正式案例驗收或此刻執行通過",
+        "version": "V1",
+        "commit": "39efbdd7386719081a236c1ac2a3bfdb61959981"
+      },
+      {
+        "kind": "CI",
+        "url": "https://github.com/che0319-debug/hy-agent-v2/actions/runs/38097665923",
+        "summary": "此 commit 的 AI Work V4 CI 已成功；僅證明工程檢查，不等於正式模組驗收",
+        "version": "V1",
+        "commit": "39efbdd7386719081a236c1ac2a3bfdb61959981"
+      }
+    ],
+    "acceptance_record": null,
+    "completed_capabilities": [
+      "規劃、任務相依、執行鎖、humanAction 與重試"
+    ],
+    "missing_capabilities": [
+      "正式案例實戰驗收"
+    ],
+    "next_steps": [
+      "等待下一個正式案例，保存派工、相依、鎖、重試、humanAction 與結案證據"
+    ],
+    "updated_at": 1791676800,
+    "history": [],
+    "inventory_note": "程式盤點，未查得模組版本專屬正式驗收紀錄；既有專案成果不等於系統模組驗收",
+    "record_hash": "ff7ab1d0e17918d4a28f9608e91b8f3c26acbf7c5190ee7dcfd6fb5bf37663c4"
+  },
+  {
+    "module_id": "quality-engine",
+    "module_name": "Quality Engine",
+    "layer": "核心引擎",
+    "description": "品質契約、審查閘門與結果稽核",
+    "implementation_status": "IMPLEMENTED",
+    "acceptance_status": "PENDING_ACCEPTANCE",
+    "version": "V1",
+    "commit": "39efbdd7386719081a236c1ac2a3bfdb61959981",
+    "source_repository": "che0319-debug/hy-agent-v2",
+    "source_paths": [
+      "ai_work_v4/quality.py",
+      "ai_work_v4/quality_contract.py",
+      "ai_work_v4/quality_mcp.py"
+    ],
+    "dependencies": [
+      "expert-service",
+      "database",
+      "auth",
+      "mcp"
+    ],
+    "evidence": [
+      {
+        "kind": "CODE",
+        "url": "https://github.com/che0319-debug/hy-agent-v2/blob/39efbdd7386719081a236c1ac2a3bfdb61959981/ai_work_v4/quality.py",
+        "summary": "已核對程式能力：ai_work_v4/quality.py",
+        "version": "V1",
+        "commit": "39efbdd7386719081a236c1ac2a3bfdb61959981"
+      },
+      {
+        "kind": "CODE",
+        "url": "https://github.com/che0319-debug/hy-agent-v2/blob/39efbdd7386719081a236c1ac2a3bfdb61959981/ai_work_v4/quality_contract.py",
+        "summary": "已核對程式能力：ai_work_v4/quality_contract.py",
+        "version": "V1",
+        "commit": "39efbdd7386719081a236c1ac2a3bfdb61959981"
+      },
+      {
+        "kind": "CODE",
+        "url": "https://github.com/che0319-debug/hy-agent-v2/blob/39efbdd7386719081a236c1ac2a3bfdb61959981/ai_work_v4/quality_mcp.py",
+        "summary": "已核對程式能力：ai_work_v4/quality_mcp.py",
+        "version": "V1",
+        "commit": "39efbdd7386719081a236c1ac2a3bfdb61959981"
+      },
+      {
+        "kind": "TEST",
+        "url": "https://github.com/che0319-debug/hy-agent-v2/blob/39efbdd7386719081a236c1ac2a3bfdb61959981/ai_work_v4/tests/test_quality_engine.py",
+        "summary": "測試程式存在；不代表正式案例驗收或此刻執行通過",
+        "version": "V1",
+        "commit": "39efbdd7386719081a236c1ac2a3bfdb61959981"
+      },
+      {
+        "kind": "TEST",
+        "url": "https://github.com/che0319-debug/hy-agent-v2/blob/39efbdd7386719081a236c1ac2a3bfdb61959981/ai_work_v4/tests/test_quality.py",
+        "summary": "測試程式存在；不代表正式案例驗收或此刻執行通過",
+        "version": "V1",
+        "commit": "39efbdd7386719081a236c1ac2a3bfdb61959981"
+      },
+      {
+        "kind": "PR",
+        "url": "https://github.com/che0319-debug/hy-agent-v2/pull/135",
+        "summary": "已合併的建置證據；非正式驗收",
+        "version": "V1",
+        "commit": "39efbdd7386719081a236c1ac2a3bfdb61959981"
+      },
+      {
+        "kind": "CI",
+        "url": "https://github.com/che0319-debug/hy-agent-v2/actions/runs/38097665923",
+        "summary": "此 commit 的 AI Work V4 CI 已成功；僅證明工程檢查，不等於正式模組驗收",
+        "version": "V1",
+        "commit": "39efbdd7386719081a236c1ac2a3bfdb61959981"
+      }
+    ],
+    "acceptance_record": null,
+    "completed_capabilities": [
+      "Policy、Skill 版本、契約、成果審查與阻擋"
+    ],
+    "missing_capabilities": [
+      "正式案例實戰驗收"
+    ],
+    "next_steps": [
+      "等待下一個正式案例，驗證品質契約、缺口阻擋、補件及同版本獨立審查後再請 HY 驗收"
+    ],
+    "updated_at": 1791676800,
+    "history": [],
+    "inventory_note": "程式盤點，未查得模組版本專屬正式驗收紀錄；既有專案成果不等於系統模組驗收",
+    "record_hash": "7db520f74fbe146d9dd60f6bd5f7c2ba529f2b2d7bca3e5fda86eefe6c905167"
+  },
+  {
+    "module_id": "expert-service",
+    "module_name": "Expert Service",
+    "layer": "共用服務",
+    "description": "專家版本與能力配置服務",
+    "implementation_status": "NEEDS_IMPROVEMENT",
+    "acceptance_status": "NOT_REVIEWED",
+    "version": "snapshot-39efbdd",
+    "commit": "39efbdd7386719081a236c1ac2a3bfdb61959981",
+    "source_repository": "che0319-debug/hy-agent-v2",
+    "source_paths": [
+      "ai_work_v4/expert_service.py",
+      "ai_work_v4/expert_api.py",
+      "ai_work_v4/skill_management.py"
+    ],
+    "dependencies": [
+      "quality-engine",
+      "database",
+      "auth"
+    ],
+    "evidence": [
+      {
+        "kind": "CODE",
+        "url": "https://github.com/che0319-debug/hy-agent-v2/blob/39efbdd7386719081a236c1ac2a3bfdb61959981/ai_work_v4/expert_service.py",
+        "summary": "已核對程式能力：ai_work_v4/expert_service.py",
+        "version": "snapshot-39efbdd",
+        "commit": "39efbdd7386719081a236c1ac2a3bfdb61959981"
+      },
+      {
+        "kind": "CODE",
+        "url": "https://github.com/che0319-debug/hy-agent-v2/blob/39efbdd7386719081a236c1ac2a3bfdb61959981/ai_work_v4/expert_api.py",
+        "summary": "已核對程式能力：ai_work_v4/expert_api.py",
+        "version": "snapshot-39efbdd",
+        "commit": "39efbdd7386719081a236c1ac2a3bfdb61959981"
+      },
+      {
+        "kind": "CODE",
+        "url": "https://github.com/che0319-debug/hy-agent-v2/blob/39efbdd7386719081a236c1ac2a3bfdb61959981/ai_work_v4/skill_management.py",
+        "summary": "已核對程式能力：ai_work_v4/skill_management.py",
+        "version": "snapshot-39efbdd",
+        "commit": "39efbdd7386719081a236c1ac2a3bfdb61959981"
+      },
+      {
+        "kind": "TEST",
+        "url": "https://github.com/che0319-debug/hy-agent-v2/blob/39efbdd7386719081a236c1ac2a3bfdb61959981/ai_work_v4/tests/test_expert_service.py",
+        "summary": "測試程式存在；不代表正式案例驗收或此刻執行通過",
+        "version": "snapshot-39efbdd",
+        "commit": "39efbdd7386719081a236c1ac2a3bfdb61959981"
+      },
+      {
+        "kind": "CI",
+        "url": "https://github.com/che0319-debug/hy-agent-v2/actions/runs/38097665923",
+        "summary": "此 commit 的 AI Work V4 CI 已成功；僅證明工程檢查，不等於正式模組驗收",
+        "version": "snapshot-39efbdd",
+        "commit": "39efbdd7386719081a236c1ac2a3bfdb61959981"
+      }
+    ],
+    "acceptance_record": null,
+    "completed_capabilities": [
+      "Expert Registry、版本發布 humanAction、能力提案"
+    ],
+    "missing_capabilities": [
+      "跨專案正式案例驗收",
+      "舊 capability snapshot 與最新架構狀態同步"
+    ],
+    "next_steps": [
+      "將舊 capability snapshot 改為依正式能力證據提供資訊，避免與 Module Registry 狀態混淆",
+      "補齊跨案 Expert/Skill 版本發布驗收"
+    ],
+    "updated_at": 1791676800,
+    "history": [],
+    "inventory_note": "程式盤點，未查得模組版本專屬正式驗收紀錄；既有專案成果不等於系統模組驗收",
+    "record_hash": "dda670d0a01f117cbab076765b0b82d3cbcb69cc8eec72b7009e59bfdc84dd13"
+  },
+  {
+    "module_id": "report-service",
+    "module_name": "Report Service",
+    "layer": "共用服務",
+    "description": "專案成果與日報整合",
+    "implementation_status": "NEEDS_IMPROVEMENT",
+    "acceptance_status": "NOT_REVIEWED",
+    "version": "snapshot-39efbdd",
+    "commit": "39efbdd7386719081a236c1ac2a3bfdb61959981",
+    "source_repository": "che0319-debug/hy-agent-v2",
+    "source_paths": [
+      "ai_work_v4/project_report.py",
+      "daily_report.py"
+    ],
+    "dependencies": [
+      "google-drive",
+      "database",
+      "auth"
+    ],
+    "evidence": [
+      {
+        "kind": "CODE",
+        "url": "https://github.com/che0319-debug/hy-agent-v2/blob/39efbdd7386719081a236c1ac2a3bfdb61959981/ai_work_v4/project_report.py",
+        "summary": "已核對程式能力：ai_work_v4/project_report.py",
+        "version": "snapshot-39efbdd",
+        "commit": "39efbdd7386719081a236c1ac2a3bfdb61959981"
+      },
+      {
+        "kind": "CODE",
+        "url": "https://github.com/che0319-debug/hy-agent-v2/blob/39efbdd7386719081a236c1ac2a3bfdb61959981/daily_report.py",
+        "summary": "已核對程式能力：daily_report.py",
+        "version": "snapshot-39efbdd",
+        "commit": "39efbdd7386719081a236c1ac2a3bfdb61959981"
+      },
+      {
+        "kind": "TEST",
+        "url": "https://github.com/che0319-debug/hy-agent-v2/blob/39efbdd7386719081a236c1ac2a3bfdb61959981/ai_work_v4/tests/test_project_report.py",
+        "summary": "測試程式存在；不代表正式案例驗收或此刻執行通過",
+        "version": "snapshot-39efbdd",
+        "commit": "39efbdd7386719081a236c1ac2a3bfdb61959981"
+      },
+      {
+        "kind": "CI",
+        "url": "https://github.com/che0319-debug/hy-agent-v2/actions/runs/38097665923",
+        "summary": "此 commit 的 AI Work V4 CI 已成功；僅證明工程檢查，不等於正式模組驗收",
+        "version": "snapshot-39efbdd",
+        "commit": "39efbdd7386719081a236c1ac2a3bfdb61959981"
+      }
+    ],
+    "acceptance_record": null,
+    "completed_capabilities": [
+      "專案報告組裝、Drive 讀取與 HTML 清理、日報產製"
+    ],
+    "missing_capabilities": [
+      "统一 Report Service 介面與跨 Bot 報告治理",
+      "服務層正式驗收"
+    ],
+    "next_steps": [
+      "整理既有專案報告與日報的共用讀取、產製及版本契約，再逐步統一服務入口"
+    ],
+    "updated_at": 1791676800,
+    "history": [],
+    "inventory_note": "程式盤點，未查得模組版本專屬正式驗收紀錄；既有專案成果不等於系統模組驗收",
+    "record_hash": "e7194b5d9a6d070171835bb3c820c1e73f61ece621244a6f64639fa1e7fdbe67"
+  },
+  {
+    "module_id": "resource-service",
+    "module_name": "Resource Service",
+    "layer": "共用服務",
+    "description": "能力與資源配額整合管理",
+    "implementation_status": "IN_PROGRESS",
+    "acceptance_status": "NOT_REVIEWED",
+    "version": "snapshot-39efbdd",
+    "commit": "39efbdd7386719081a236c1ac2a3bfdb61959981",
+    "source_repository": "che0319-debug/hy-agent-v2",
+    "source_paths": [
+      "ai_work_v4/capability_registry.py",
+      "ai_work_v4/expert_api.py"
+    ],
+    "dependencies": [
+      "database",
+      "github",
+      "google-drive"
+    ],
+    "evidence": [
+      {
+        "kind": "CODE",
+        "url": "https://github.com/che0319-debug/hy-agent-v2/blob/39efbdd7386719081a236c1ac2a3bfdb61959981/ai_work_v4/capability_registry.py",
+        "summary": "已核對程式能力：ai_work_v4/capability_registry.py",
+        "version": "snapshot-39efbdd",
+        "commit": "39efbdd7386719081a236c1ac2a3bfdb61959981"
+      },
+      {
+        "kind": "CODE",
+        "url": "https://github.com/che0319-debug/hy-agent-v2/blob/39efbdd7386719081a236c1ac2a3bfdb61959981/ai_work_v4/expert_api.py",
+        "summary": "已核對程式能力：ai_work_v4/expert_api.py",
+        "version": "snapshot-39efbdd",
+        "commit": "39efbdd7386719081a236c1ac2a3bfdb61959981"
+      },
+      {
+        "kind": "CI",
+        "url": "https://github.com/che0319-debug/hy-agent-v2/actions/runs/38097665923",
+        "summary": "此 commit 的 AI Work V4 CI 已成功；僅證明工程檢查，不等於正式模組驗收",
+        "version": "snapshot-39efbdd",
+        "commit": "39efbdd7386719081a236c1ac2a3bfdb61959981"
+      }
+    ],
+    "acceptance_record": null,
+    "completed_capabilities": [
+      "能力快照與能力需求登錄基礎"
+    ],
+    "missing_capabilities": [
+      "資源配額讀取、可用性探測與資源管理介面",
+      "尚無完整 Resource Service 實作及測試"
+    ],
+    "next_steps": [
+      "優先定義 Resource Service V1：工具可用性、訂閱執行者、配額來源與未知資訊處理",
+      "重用既有能力快照，禁止新增付費模型 API"
+    ],
+    "updated_at": 1791676800,
+    "history": [],
+    "inventory_note": "程式盤點，未查得模組版本專屬正式驗收紀錄；既有專案成果不等於系統模組驗收",
+    "record_hash": "2683b2177dd23a9d58e0f6c7173c86980bba27b6f62417a54d51653a958ce596"
+  },
+  {
+    "module_id": "mcp",
+    "module_name": "MCP",
+    "layer": "基礎設施",
+    "description": "訂閱制 AI 執行者工具入口",
+    "implementation_status": "IMPLEMENTED",
+    "acceptance_status": "NOT_REVIEWED",
+    "version": "snapshot-39efbdd",
+    "commit": "39efbdd7386719081a236c1ac2a3bfdb61959981",
+    "source_repository": "che0319-debug/hy-agent-v2",
+    "source_paths": [
+      "core/chatgpt_work_mcp_routes.py",
+      "ai_work_v4/package_mcp.py",
+      "ai_work_v4/quality_mcp.py"
+    ],
+    "dependencies": [
+      "auth",
+      "mission-engine",
+      "quality-engine"
+    ],
+    "evidence": [
+      {
+        "kind": "CODE",
+        "url": "https://github.com/che0319-debug/hy-agent-v2/blob/39efbdd7386719081a236c1ac2a3bfdb61959981/core/chatgpt_work_mcp_routes.py",
+        "summary": "已核對程式能力：core/chatgpt_work_mcp_routes.py",
+        "version": "snapshot-39efbdd",
+        "commit": "39efbdd7386719081a236c1ac2a3bfdb61959981"
+      },
+      {
+        "kind": "CODE",
+        "url": "https://github.com/che0319-debug/hy-agent-v2/blob/39efbdd7386719081a236c1ac2a3bfdb61959981/ai_work_v4/package_mcp.py",
+        "summary": "已核對程式能力：ai_work_v4/package_mcp.py",
+        "version": "snapshot-39efbdd",
+        "commit": "39efbdd7386719081a236c1ac2a3bfdb61959981"
+      },
+      {
+        "kind": "CODE",
+        "url": "https://github.com/che0319-debug/hy-agent-v2/blob/39efbdd7386719081a236c1ac2a3bfdb61959981/ai_work_v4/quality_mcp.py",
+        "summary": "已核對程式能力：ai_work_v4/quality_mcp.py",
+        "version": "snapshot-39efbdd",
+        "commit": "39efbdd7386719081a236c1ac2a3bfdb61959981"
+      },
+      {
+        "kind": "TEST",
+        "url": "https://github.com/che0319-debug/hy-agent-v2/blob/39efbdd7386719081a236c1ac2a3bfdb61959981/ai_work_v4/tests/test_mcp_discovery.py",
+        "summary": "測試程式存在；不代表正式案例驗收或此刻執行通過",
+        "version": "snapshot-39efbdd",
+        "commit": "39efbdd7386719081a236c1ac2a3bfdb61959981"
+      },
+      {
+        "kind": "TEST",
+        "url": "https://github.com/che0319-debug/hy-agent-v2/blob/39efbdd7386719081a236c1ac2a3bfdb61959981/ai_work_v4/tests/test_mcp.py",
+        "summary": "測試程式存在；不代表正式案例驗收或此刻執行通過",
+        "version": "snapshot-39efbdd",
+        "commit": "39efbdd7386719081a236c1ac2a3bfdb61959981"
+      },
+      {
+        "kind": "CI",
+        "url": "https://github.com/che0319-debug/hy-agent-v2/actions/runs/38097665923",
+        "summary": "此 commit 的 AI Work V4 CI 已成功；僅證明工程檢查，不等於正式模組驗收",
+        "version": "snapshot-39efbdd",
+        "commit": "39efbdd7386719081a236c1ac2a3bfdb61959981"
+      }
+    ],
+    "acceptance_record": null,
+    "completed_capabilities": [
+      "工具發現、工作包與品質工具、lane 權限"
+    ],
+    "missing_capabilities": [
+      "正式專案完整工具鏈情境驗收"
+    ],
+    "next_steps": [
+      "以正式案例驗證三引擎所需 MCP 工具發現、角色及 lane 拒絕情境"
+    ],
+    "updated_at": 1791676800,
+    "history": [],
+    "inventory_note": "程式盤點，未查得模組版本專屬正式驗收紀錄；既有專案成果不等於系統模組驗收",
+    "record_hash": "c10ca96b54bfd150d17aa7e78d490e5ac071e875db869a2c48481919774c43fe"
+  },
+  {
+    "module_id": "task-queue",
+    "module_name": "Task Queue",
+    "layer": "基礎設施",
+    "description": "既有工作包佇列與排程",
+    "implementation_status": "IMPLEMENTED",
+    "acceptance_status": "NOT_REVIEWED",
+    "version": "snapshot-39efbdd",
+    "commit": "39efbdd7386719081a236c1ac2a3bfdb61959981",
+    "source_repository": "che0319-debug/hy-agent-v2",
+    "source_paths": [
+      "ai_work_v4/mission_engine.py",
+      "ai_work_v4/package_scheduler.py"
+    ],
+    "dependencies": [
+      "database",
+      "auth"
+    ],
+    "evidence": [
+      {
+        "kind": "CODE",
+        "url": "https://github.com/che0319-debug/hy-agent-v2/blob/39efbdd7386719081a236c1ac2a3bfdb61959981/ai_work_v4/mission_engine.py",
+        "summary": "已核對程式能力：ai_work_v4/mission_engine.py",
+        "version": "snapshot-39efbdd",
+        "commit": "39efbdd7386719081a236c1ac2a3bfdb61959981"
+      },
+      {
+        "kind": "CODE",
+        "url": "https://github.com/che0319-debug/hy-agent-v2/blob/39efbdd7386719081a236c1ac2a3bfdb61959981/ai_work_v4/package_scheduler.py",
+        "summary": "已核對程式能力：ai_work_v4/package_scheduler.py",
+        "version": "snapshot-39efbdd",
+        "commit": "39efbdd7386719081a236c1ac2a3bfdb61959981"
+      },
+      {
+        "kind": "TEST",
+        "url": "https://github.com/che0319-debug/hy-agent-v2/blob/39efbdd7386719081a236c1ac2a3bfdb61959981/ai_work_v4/tests/test_scheduler.py",
+        "summary": "測試程式存在；不代表正式案例驗收或此刻執行通過",
+        "version": "snapshot-39efbdd",
+        "commit": "39efbdd7386719081a236c1ac2a3bfdb61959981"
+      },
+      {
+        "kind": "TEST",
+        "url": "https://github.com/che0319-debug/hy-agent-v2/blob/39efbdd7386719081a236c1ac2a3bfdb61959981/ai_work_v4/tests/test_engine.py",
+        "summary": "測試程式存在；不代表正式案例驗收或此刻執行通過",
+        "version": "snapshot-39efbdd",
+        "commit": "39efbdd7386719081a236c1ac2a3bfdb61959981"
+      },
+      {
+        "kind": "CI",
+        "url": "https://github.com/che0319-debug/hy-agent-v2/actions/runs/38097665923",
+        "summary": "此 commit 的 AI Work V4 CI 已成功；僅證明工程檢查，不等於正式模組驗收",
+        "version": "snapshot-39efbdd",
+        "commit": "39efbdd7386719081a236c1ac2a3bfdb61959981"
+      }
+    ],
+    "acceptance_record": null,
+    "completed_capabilities": [
+      "READY/WAITING 相依運算、鎖與 retry、既有排程"
+    ],
+    "missing_capabilities": [
+      "正式案例併發與長時執行驗收"
+    ],
+    "next_steps": [
+      "以實際工作包驗證併發認領、鎖到期、重試與重複提交，保存完整稽核"
+    ],
+    "updated_at": 1791676800,
+    "history": [],
+    "inventory_note": "程式盤點，未查得模組版本專屬正式驗收紀錄；既有專案成果不等於系統模組驗收",
+    "record_hash": "f8458f23972ec8337b9e7322f685599a2b5f8f47517cc15c695e11c8a5d0f425"
+  },
+  {
+    "module_id": "google-drive",
+    "module_name": "Google Drive",
+    "layer": "基礎設施",
+    "description": "專案資料夾與成果檔案服務",
+    "implementation_status": "IMPLEMENTED",
+    "acceptance_status": "NOT_REVIEWED",
+    "version": "snapshot-39efbdd",
+    "commit": "39efbdd7386719081a236c1ac2a3bfdb61959981",
+    "source_repository": "che0319-debug/hy-agent-v2",
+    "source_paths": [
+      "ai_work_v4/package_drive.py",
+      "ai_work_v4/drive_transport.py"
+    ],
+    "dependencies": [
+      "auth",
+      "database"
+    ],
+    "evidence": [
+      {
+        "kind": "CODE",
+        "url": "https://github.com/che0319-debug/hy-agent-v2/blob/39efbdd7386719081a236c1ac2a3bfdb61959981/ai_work_v4/package_drive.py",
+        "summary": "已核對程式能力：ai_work_v4/package_drive.py",
+        "version": "snapshot-39efbdd",
+        "commit": "39efbdd7386719081a236c1ac2a3bfdb61959981"
+      },
+      {
+        "kind": "CODE",
+        "url": "https://github.com/che0319-debug/hy-agent-v2/blob/39efbdd7386719081a236c1ac2a3bfdb61959981/ai_work_v4/drive_transport.py",
+        "summary": "已核對程式能力：ai_work_v4/drive_transport.py",
+        "version": "snapshot-39efbdd",
+        "commit": "39efbdd7386719081a236c1ac2a3bfdb61959981"
+      },
+      {
+        "kind": "TEST",
+        "url": "https://github.com/che0319-debug/hy-agent-v2/blob/39efbdd7386719081a236c1ac2a3bfdb61959981/ai_work_v4/tests/test_engine.py",
+        "summary": "測試程式存在；不代表正式案例驗收或此刻執行通過",
+        "version": "snapshot-39efbdd",
+        "commit": "39efbdd7386719081a236c1ac2a3bfdb61959981"
+      },
+      {
+        "kind": "CI",
+        "url": "https://github.com/che0319-debug/hy-agent-v2/actions/runs/38097665923",
+        "summary": "此 commit 的 AI Work V4 CI 已成功；僅證明工程檢查，不等於正式模組驗收",
+        "version": "snapshot-39efbdd",
+        "commit": "39efbdd7386719081a236c1ac2a3bfdb61959981"
+      }
+    ],
+    "acceptance_record": null,
+    "completed_capabilities": [
+      "建立與讀回資料夾、成果登錄、權限錯誤回報"
+    ],
+    "missing_capabilities": [
+      "系統模組版本綁定的正式驗收紀錄未登錄"
+    ],
+    "next_steps": [
+      "將實際建立、讀回、權限錯誤及檔案登錄證據綁定目前模組版本"
+    ],
+    "updated_at": 1791676800,
+    "history": [],
+    "inventory_note": "程式盤點，未查得模組版本專屬正式驗收紀錄；既有專案成果不等於系統模組驗收",
+    "record_hash": "e1abd25cdc20b636f9710e9283c632819b3af26e2d073d30a14fafc5dfe530ff"
+  },
+  {
+    "module_id": "github",
+    "module_name": "GitHub",
+    "layer": "基礎設施",
+    "description": "程式版本、PR 及共用資料存取",
+    "implementation_status": "IMPLEMENTED",
+    "acceptance_status": "NOT_REVIEWED",
+    "version": "snapshot-39efbdd",
+    "commit": "39efbdd7386719081a236c1ac2a3bfdb61959981",
+    "source_repository": "che0319-debug/hy-agent-v2",
+    "source_paths": [
+      "ai_work_v4/code_work.py",
+      "ai_work_v4/package_store.py",
+      "core/hydata_client.py"
+    ],
+    "dependencies": [
+      "auth"
+    ],
+    "evidence": [
+      {
+        "kind": "CODE",
+        "url": "https://github.com/che0319-debug/hy-agent-v2/blob/39efbdd7386719081a236c1ac2a3bfdb61959981/ai_work_v4/code_work.py",
+        "summary": "已核對程式能力：ai_work_v4/code_work.py",
+        "version": "snapshot-39efbdd",
+        "commit": "39efbdd7386719081a236c1ac2a3bfdb61959981"
+      },
+      {
+        "kind": "CODE",
+        "url": "https://github.com/che0319-debug/hy-agent-v2/blob/39efbdd7386719081a236c1ac2a3bfdb61959981/ai_work_v4/package_store.py",
+        "summary": "已核對程式能力：ai_work_v4/package_store.py",
+        "version": "snapshot-39efbdd",
+        "commit": "39efbdd7386719081a236c1ac2a3bfdb61959981"
+      },
+      {
+        "kind": "CODE",
+        "url": "https://github.com/che0319-debug/hy-agent-v2/blob/39efbdd7386719081a236c1ac2a3bfdb61959981/core/hydata_client.py",
+        "summary": "已核對程式能力：core/hydata_client.py",
+        "version": "snapshot-39efbdd",
+        "commit": "39efbdd7386719081a236c1ac2a3bfdb61959981"
+      },
+      {
+        "kind": "TEST",
+        "url": "https://github.com/che0319-debug/hy-agent-v2/blob/39efbdd7386719081a236c1ac2a3bfdb61959981/ai_work_v4/tests/test_code_work.py",
+        "summary": "測試程式存在；不代表正式案例驗收或此刻執行通過",
+        "version": "snapshot-39efbdd",
+        "commit": "39efbdd7386719081a236c1ac2a3bfdb61959981"
+      },
+      {
+        "kind": "CI",
+        "url": "https://github.com/che0319-debug/hy-agent-v2/actions/runs/38097665923",
+        "summary": "此 commit 的 AI Work V4 CI 已成功；僅證明工程檢查，不等於正式模組驗收",
+        "version": "snapshot-39efbdd",
+        "commit": "39efbdd7386719081a236c1ac2a3bfdb61959981"
+      }
+    ],
+    "acceptance_record": null,
+    "completed_capabilities": [
+      "程式工作 PR 查驗、GitHub Contents SHA 交易"
+    ],
+    "missing_capabilities": [
+      "跨 repository 失敗恢復與正式驗收紀錄"
+    ],
+    "next_steps": [
+      "驗證兩庫 PR/CI 查驗、SHA 衝突與失敗恢復，登錄正式情境證據"
+    ],
+    "updated_at": 1791676800,
+    "history": [],
+    "inventory_note": "程式盤點，未查得模組版本專屬正式驗收紀錄；既有專案成果不等於系統模組驗收",
+    "record_hash": "0a798dd589e77e2b5d6f3813a307439205f533460ef64197b5e5df54be1c8108"
+  },
+  {
+    "module_id": "database",
+    "module_name": "Database",
+    "layer": "基礎設施",
+    "description": "GitHub 儲存的 SQLite aggregate 與既有 JSON",
+    "implementation_status": "IMPLEMENTED",
+    "acceptance_status": "NOT_REVIEWED",
+    "version": "snapshot-39efbdd",
+    "commit": "39efbdd7386719081a236c1ac2a3bfdb61959981",
+    "source_repository": "che0319-debug/hy-agent-v2",
+    "source_paths": [
+      "ai_work_v4/package_store.py",
+      "core/hydata_client.py"
+    ],
+    "dependencies": [
+      "github"
+    ],
+    "evidence": [
+      {
+        "kind": "CODE",
+        "url": "https://github.com/che0319-debug/hy-agent-v2/blob/39efbdd7386719081a236c1ac2a3bfdb61959981/ai_work_v4/package_store.py",
+        "summary": "已核對程式能力：ai_work_v4/package_store.py",
+        "version": "snapshot-39efbdd",
+        "commit": "39efbdd7386719081a236c1ac2a3bfdb61959981"
+      },
+      {
+        "kind": "CODE",
+        "url": "https://github.com/che0319-debug/hy-agent-v2/blob/39efbdd7386719081a236c1ac2a3bfdb61959981/core/hydata_client.py",
+        "summary": "已核對程式能力：core/hydata_client.py",
+        "version": "snapshot-39efbdd",
+        "commit": "39efbdd7386719081a236c1ac2a3bfdb61959981"
+      },
+      {
+        "kind": "TEST",
+        "url": "https://github.com/che0319-debug/hy-agent-v2/blob/39efbdd7386719081a236c1ac2a3bfdb61959981/ai_work_v4/tests/test_engine.py",
+        "summary": "測試程式存在；不代表正式案例驗收或此刻執行通過",
+        "version": "snapshot-39efbdd",
+        "commit": "39efbdd7386719081a236c1ac2a3bfdb61959981"
+      },
+      {
+        "kind": "TEST",
+        "url": "https://github.com/che0319-debug/hy-agent-v2/blob/39efbdd7386719081a236c1ac2a3bfdb61959981/ai_work_v4/tests/test_read_speed.py",
+        "summary": "測試程式存在；不代表正式案例驗收或此刻執行通過",
+        "version": "snapshot-39efbdd",
+        "commit": "39efbdd7386719081a236c1ac2a3bfdb61959981"
+      },
+      {
+        "kind": "CI",
+        "url": "https://github.com/che0319-debug/hy-agent-v2/actions/runs/38097665923",
+        "summary": "此 commit 的 AI Work V4 CI 已成功；僅證明工程檢查，不等於正式模組驗收",
+        "version": "snapshot-39efbdd",
+        "commit": "39efbdd7386719081a236c1ac2a3bfdb61959981"
+      }
+    ],
+    "acceptance_record": null,
+    "completed_capabilities": [
+      "壓縮、完整性檢查、SHA 衝突防護與大小上限"
+    ],
+    "missing_capabilities": [
+      "正式備份還原與容量運維驗收"
+    ],
+    "next_steps": [
+      "制定不影響正式專案的備份還原演練及容量監控驗收方案"
+    ],
+    "updated_at": 1791676800,
+    "history": [],
+    "inventory_note": "程式盤點，未查得模組版本專屬正式驗收紀錄；既有專案成果不等於系統模組驗收",
+    "record_hash": "02c91453ca1d8a127baae57c3c2af1ddc6cbe17ce93f6b7a84dd3982866354ba"
+  },
+  {
+    "module_id": "auth",
+    "module_name": "Auth",
+    "layer": "基礎設施",
+    "description": "短效登入與執行角色授權",
+    "implementation_status": "IMPLEMENTED",
+    "acceptance_status": "NOT_REVIEWED",
+    "version": "snapshot-39efbdd",
+    "commit": "39efbdd7386719081a236c1ac2a3bfdb61959981",
+    "source_repository": "che0319-debug/hy-agent-v2",
+    "source_paths": [
+      "core/auth.py",
+      "core/auth_routes.py",
+      "ai_work_v4/package_api.py"
+    ],
+    "dependencies": [],
+    "evidence": [
+      {
+        "kind": "CODE",
+        "url": "https://github.com/che0319-debug/hy-agent-v2/blob/39efbdd7386719081a236c1ac2a3bfdb61959981/core/auth.py",
+        "summary": "已核對程式能力：core/auth.py",
+        "version": "snapshot-39efbdd",
+        "commit": "39efbdd7386719081a236c1ac2a3bfdb61959981"
+      },
+      {
+        "kind": "CODE",
+        "url": "https://github.com/che0319-debug/hy-agent-v2/blob/39efbdd7386719081a236c1ac2a3bfdb61959981/core/auth_routes.py",
+        "summary": "已核對程式能力：core/auth_routes.py",
+        "version": "snapshot-39efbdd",
+        "commit": "39efbdd7386719081a236c1ac2a3bfdb61959981"
+      },
+      {
+        "kind": "CODE",
+        "url": "https://github.com/che0319-debug/hy-agent-v2/blob/39efbdd7386719081a236c1ac2a3bfdb61959981/ai_work_v4/package_api.py",
+        "summary": "已核對程式能力：ai_work_v4/package_api.py",
+        "version": "snapshot-39efbdd",
+        "commit": "39efbdd7386719081a236c1ac2a3bfdb61959981"
+      },
+      {
+        "kind": "TEST",
+        "url": "https://github.com/che0319-debug/hy-agent-v2/blob/39efbdd7386719081a236c1ac2a3bfdb61959981/test_auth.py",
+        "summary": "測試程式存在；不代表正式案例驗收或此刻執行通過",
+        "version": "snapshot-39efbdd",
+        "commit": "39efbdd7386719081a236c1ac2a3bfdb61959981"
+      },
+      {
+        "kind": "CI",
+        "url": "https://github.com/che0319-debug/hy-agent-v2/actions/runs/38097665923",
+        "summary": "此 commit 的 AI Work V4 CI 已成功；僅證明工程檢查，不等於正式模組驗收",
+        "version": "snapshot-39efbdd",
+        "commit": "39efbdd7386719081a236c1ac2a3bfdb61959981"
+      }
+    ],
+    "acceptance_record": null,
+    "completed_capabilities": [
+      "短效 bearer、owner/delegate/scheduler 與角色限制"
+    ],
+    "missing_capabilities": [
+      "正式安全驗收與權限案例證據登錄"
+    ],
+    "next_steps": [
+      "整理 owner/delegate/scheduler 權限矩陣與短效 token 情境，提交安全驗收證據"
+    ],
+    "updated_at": 1791676800,
+    "history": [],
+    "inventory_note": "程式盤點，未查得模組版本專屬正式驗收紀錄；既有專案成果不等於系統模組驗收",
+    "record_hash": "641ad15e2732d27af54c3c23f4915a1b380b89947a2b140d6a7c617f8e173d72"
+  }
+]

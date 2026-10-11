@@ -1,0 +1,26 @@
+Existing PI smoke asynchronous comparison
+CI initial failure: https://github.com/che0319-debug/hy-hub/actions/runs/38100012473
+ExpertTeam product source unchanged from master and PR 78 initial head.
+ExpertTeam Git blob on both refs: ff8f7667abf3a28a98177ab22b4b0a3252199d8c
+Original smoke Git blob on master and initial PR head: dd800d6a19c89991937cc89bb6cd22dd85ff572c
+Controlled comparison: same product source and 200ms delayed /experts/registry fixture, only test waiting changed.
+Old smoke: FAIL (content visible, busy/reload still pending).
+Fixed smoke: PASS (trial actionability waits for enabled; original assertion retained).
+No publication click or real production data in this test.
+
+OLD:
+AssertionError [ERR_ASSERTION]: The expression evaluated to a falsy value:
+
+  assert(await p.getByRole('button',{name:'核准此版本發布'}).isEnabled())
+
+    at eval (eval at <anonymous> ([stdin]:5:1), <anonymous>:10:3305) {
+  generatedMessage: true,
+  code: 'ERR_ASSERTION',
+  actual: false,
+  expected: true,
+  operator: '==',
+  diff: 'simple'
+}
+
+FIXED:
+PI UI 390/1280: one readable Skill in Skill tab, unpublished Expert blocked, no overflow/errors
