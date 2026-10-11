@@ -351,7 +351,7 @@ export function Inbox({ items, project, onChanged, setError, attachmentIds = {} 
 
   if (!items.length) return <p className="cc5-empty">這個專案目前沒有待確認事項，其他工作包照常執行中。</p>
   return <div className="cc5-stack">
-    <p className="cc5-muted">{project?.startup?.state === 'WAITING_HY_APPROVAL' ? '本專案需先完成 Quality 啟動核准，AI 才會接手。' : '待確認不會擋住沒有依賴的工作包。'}</p>
+    <p className="cc5-muted">待確認不會擋住沒有依賴的工作包。</p>
     {items.map(item => {
       const approval = ['PLAN_APPROVAL', 'MILESTONE_REVIEW', 'CLOSURE_APPROVAL', 'QUALITY_POLICY_ENABLE', 'QUALITY_SKILL_PUBLISH', 'QUALITY_SKILL_DISABLE', 'QUALITY_CAPABILITY_REGISTER'].includes(item.action_type)
       const spec = item.action_type === 'SPEC_CHANGE_APPROVAL'
@@ -364,7 +364,7 @@ export function Inbox({ items, project, onChanged, setError, attachmentIds = {} 
         </div>
         <h2 className="cc5-q">{item.title}</h2>
         {item.question && item.question !== item.title && <p className="cc5-pre">{spec ? item.question.split('\n\n回覆 APPROVED')[0] : item.question}</p>}
-        {item.approval_allowed === false && <p className="cc5-muted">{item.action_type === 'QUALITY_POLICY_ENABLE' ? 'Quality 啟動核准僅限 HY 本人。' : item.action_type === 'MODULE_ACCEPTANCE' ? '模組版本或證據已變更，請重新提交正式驗收請求。' : '尚未通過同版本獨立審查，不能核准。'}</p>}
+        {item.approval_allowed === false && <p className="cc5-muted">{item.action_type === 'MODULE_ACCEPTANCE' ? '模組版本或證據已變更，請重新提交正式驗收請求。' : '尚未通過同版本獨立審查，不能核准。'}</p>}
         {item.reason && item.action_type !== 'MODULE_ACCEPTANCE' && <p className="cc5-muted cc5-pre">{code ? firstLine(item.reason) : item.reason}</p>}
         {item.plan && <AIExecutionPlan plan={item.plan} />}
         {item.plan && <details className="cc5-sub"><summary>查看專案規劃書草稿</summary><PlanBody plan={item.plan} /></details>}

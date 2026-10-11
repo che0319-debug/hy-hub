@@ -26,32 +26,23 @@ function Empty({ children }) { return <p className="ao-empty">{children}</p> }
 function Markdown({ value }) { return value ? <ReactMarkdown remarkPlugins={[remarkGfm]} skipHtml components={{a: ({href,children}) => <Link href={href}>{children}</Link>}}>{value}</ReactMarkdown> : <Empty>正式文件尚未提供。</Empty> }
 
 export default function AIOfficeV1() {
-  return <div className="ao"><ControlCenterV5 title="AI Office" loadData={loadOffice} renderCreation={props=><StartupCreate {...props}/>} renderHome={props=><OfficeHome {...props}/>} renderProject={({project,onBack,onDeleted}) => <OfficeProject key={project.id} id={project.id} onBack={onBack} onDeleted={onDeleted} />} /></div>
+  return <div className="ao"><ControlCenterV5 title="AI Office" loadData={loadOffice} renderCreation={props=><OfficeCreate {...props}/>} renderHome={props=><OfficeHome {...props}/>} renderProject={({project,onBack,onDeleted}) => <OfficeProject key={project.id} id={project.id} onBack={onBack} onDeleted={onDeleted} />} /></div>
 }
 
-function StartupCreate({onCancel,onCreated}) {
-  const [form,setForm]=useState({title:'',goal:'',description:'',owner_bot:'hy'}),[experts,setExperts]=useState([]),[pinKey,setPinKey]=useState(''),[error,setError]=useState(''),[loading,setLoading]=useState(true),[busy,setBusy]=useState(false)
-  const generation=useRef(0)
+function OfficeCreate({onCancel,onCreated}) {
+  const [form,setForm]=useState({title:'',goal:'',description:'',owner_bot:'hy'}),[error,setError]=useState(''),[busy,setBusy]=useState(false)
   const projectId=useRef(`project-${crypto.randomUUID()}`)
-  const load=useCallback(async()=>{const version=++generation.current;setLoading(true);setError('');setExperts([]);setPinKey('');try{const value=await office('/startup-options');if(!Array.isArray(value.experts))throw new Error('啟動資料契約未就緒');if(version===generation.current)setExperts(value.experts)}catch(e){if(version===generation.current)setError(e.message)}finally{if(version===generation.current)setLoading(false)}},[])
-  useEffect(()=>{load();return()=>{generation.current++}},[load])
   const set=key=>e=>setForm(f=>({...f,[key]:e.target.value}))
-  const selected=experts.find(e=>`${e.pin.version}:${e.pin.content_hash}`===pinKey)
-  async function submit(e){e.preventDefault();if(!selected)return;setBusy(true);setError('');try{const id=projectId.current;await office('/projects',{method:'POST',body:JSON.stringify({...form,title:form.title.trim(),goal:form.goal.trim(),project_id:id,pi_expert:selected.pin})});await onCreated(id)}catch(e){setError(e.message)}finally{setBusy(false)}}
-  return <form className="cc5-panel cc5-form" onSubmit={submit} aria-label="三引擎新專案">
+  async function submit(e){e.preventDefault();setBusy(true);setError('');try{const id=projectId.current;await office('/projects',{method:'POST',body:JSON.stringify({...form,title:form.title.trim(),goal:form.goal.trim(),project_id:id})});await onCreated(id)}catch(e){setError(e.message==='PI_NOT_READY'?'PI 尚未就緒，請稍後重試。':e.message)}finally{setBusy(false)}}
+  return <form className="cc5-panel cc5-form" onSubmit={submit} aria-label="新增專案">
     <h2>新增專案</h2>
     <label className="cc5-field">名稱<input required maxLength={200} value={form.title} onChange={set('title')}/></label>
     <label className="cc5-field">目標<textarea required maxLength={30000} value={form.goal} onChange={set('goal')}/></label>
     <label className="cc5-field">說明（選填）<textarea maxLength={10000} value={form.description} onChange={set('description')}/></label>
     <label className="cc5-field">負責 Bot<select value={form.owner_bot} onChange={set('owner_bot')}>{[['hy','HY'],['950157','950157'],['sam','Sam'],['family','小因']].map(([id,name])=><option key={id} value={id}>{name}</option>)}</select></label>
-    <label className="cc5-field">正式 PI 版本<select required aria-label="正式 PI 版本" value={pinKey} disabled={loading||busy} onChange={e=>setPinKey(e.target.value)}><option value="">請選擇已發布版本</option>{experts.map(e=><option key={e.pin.content_hash} value={`${e.pin.version}:${e.pin.content_hash}`}>{e.name} · v{e.pin.version} · GPT Chat</option>)}</select></label>
-    {selected&&<details className="ao-startup-pins"><summary>版本與 Skill 追溯</summary><p>Expert hash：<code>{selected.pin.content_hash}</code></p>{selected.skills.map(s=><p key={s.id+s.version}>{s.id} · v{s.version}<br/><code>{s.content_hash}</code></p>)}</details>}
-    {loading&&<p role="status">正在核對正式 PI／Skill…</p>}
-    {!loading&&!error&&!experts.length&&<p role="alert">沒有可用的正式 PI／Skill，請先完成 Registry 發布。</p>}
-    <p>建案會固定選取的版本，建立「啟用品質契約 V1」待你核准。核准前 AI 保持等待，由你決定是否啟動。</p>
-    <p className="ao-muted">GPT Chat 與 Claude 是否能實際接手尚未驗證，配置完成不代表實戰驗收通過。</p>
-    {error&&<div role="alert"><p>{error}</p><button type="button" disabled={busy} onClick={load}>重新核對啟動資料</button></div>}
-    <div className="cc5-two"><button type="button" disabled={busy} onClick={onCancel}>取消</button><button className="ao-primary" disabled={busy||loading||!selected||!form.title.trim()||!form.goal.trim()}>{busy?'建立中…':'建立專案並送交啟動確認'}</button></div>
+    <p className="ao-muted">PI 會先研究你的目標並展開規劃，完成後再交給你審閱。</p>
+    {error&&<p role="alert">{error}</p>}
+    <div className="cc5-two"><button type="button" disabled={busy} onClick={onCancel}>取消</button><button className="ao-primary" disabled={busy||!form.title.trim()||!form.goal.trim()}>{busy?'建立中…':'建立專案'}</button></div>
   </form>
 }
 
@@ -90,14 +81,12 @@ function OfficeProject({ id, onBack, onDeleted }) {
 }
 
 function Overview({project,plan,pending,onMeeting,onExecution,onOutputs,reload,onDeleted,setError}) {
-  const [editing,setEditing]=useState(false),[startupBusy,setStartupBusy]=useState(false)
-  async function retryStartup(){setStartupBusy(true);try{const result=await request(`${ppath(project.id)}/quality/enable-request`,{method:'POST'});await reload();onMeeting(result.action_id)}catch(e){setError(e.message)}finally{setStartupBusy(false)}}
+  const [editing,setEditing]=useState(false)
   const ms=milestones(project), current=project.packages.filter(p=>['RUNNING','READY','WAITING','BLOCKED','FAILED'].includes(p.status) && p.type!=='PROJECT_REPORT' && !String(p.milestone_id || '').startsWith('PARKED:'))
   const files=[...project.files].sort((a,b)=>b.created_at-a.created_at).slice(0,4)
   return <>
     <div className="ao-overview-actions"><button onClick={()=>setEditing(v=>!v)}>編輯</button>{project.permissions.delete ? <div className="cc5"><DeleteZone project={project} onDeleted={onDeleted}/></div> : <span className="ao-muted">刪除專案僅限 HY 本人</span>}</div>
     {editing && <Card title="編輯專案（正式規格變更）"><p>目標與範圍沿用正式規格變更及人工核准流程，不直接改動狀態。</p>{project.plan_state==='APPROVED' && project.phase==='執行期' && project.milestone_id ? <div className="cc5"><SpecChangeBox project={project} onChanged={reload} setError={setError} goInbox={()=>onMeeting(null)}/></div> : <Empty>目前階段未開放規格變更；請在 PI 會議室提供修訂意見，由既有工作流程接手。</Empty>}</Card>}
-    {project.startup&&project.startup.state!=='LEGACY_UNCONFIGURED'&&<Card title="三引擎啟動確認" className="ao-startup-pins"><p>PI：v{project.startup.pi_expert?.version} · 固定正式版本</p><details><summary>版本與 Skill 追溯</summary><p><code>{project.startup.pi_expert?.content_hash}</code></p>{project.startup.skills?.map(s=><p key={s.id+s.version}>{s.id} · v{s.version}<br/><code>{s.content_hash}</code></p>)}</details><p>建置配置：{({CONFIGURED:'配置完成，尚待實戰驗證',WAITING_HY_APPROVAL:'等待 HY 核准 Quality',PIN_INVALID:'正式版本驗證失敗，停止派工'})[project.startup.state]||'未就緒'}</p><p>Quality：{project.startup.quality_enabled?'已經正式核准啟用':'尚未啟用'}</p>{project.startup.pin_errors?.map(e=><p role="alert" key={e}>{e}</p>)}{project.startup.quality_action&&<><p>核准紀錄：{project.startup.quality_action.status} · {when(project.startup.quality_action.resolved_at)}</p><button onClick={()=>onMeeting(project.startup.quality_action.id)}>查看 Quality 正式核准事項</button></>}{project.startup.state==='WAITING_HY_APPROVAL'&&project.startup.quality_action?.status!=='OPEN'&&project.permissions.delete&&<button disabled={startupBusy} onClick={retryStartup}>重新提出 Quality 啟動確認</button>}<p className="ao-muted">執行端可用性尚未驗證；配置及品質契約啟用不等於三引擎正式驗收。</p></Card>}
     <div className="ao-dashboard">
       <Card title="專案概況"><dl><dt>名稱</dt><dd>{project.title}</dd><dt>類型</dt><dd>{plan?.project_type || '尚未記錄'}</dd><dt>Goal</dt><dd>{project.goal}</dd><dt>目前階段</dt><dd>{project.phase} {project.milestone_id}</dd><dt>開始日期</dt><dd>{when(project.started_at)}</dd><dt>預估完成</dt><dd>{plan?.estimated_completion_date || '尚未正式記錄'}</dd></dl><p>{project.description || '尚無簡要說明'}</p></Card>
       <Card title="里程碑進度"><ol className="ao-timeline">{ms.map(m=><li key={m.id}><button onClick={()=>onExecution(m.id)}><b>{m.id} {m.name}</b><small>{m.packages.filter(p=>p.status==='COMPLETED').length}／{m.packages.length} 工作包</small></button></li>)}</ol>{!ms.length && <Empty>正式規劃尚未提供里程碑。</Empty>}</Card>
