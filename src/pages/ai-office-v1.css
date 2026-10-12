@@ -45,7 +45,7 @@
 .ao-project-title{display:grid;gap:2px;min-width:0}.ao-project-title b{font-size:var(--hy-fs-body)}
 .ao-project-goal{color:var(--hy-muted);font-size:var(--hy-fs-meta);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .ao-project-stage,.ao-home-progress{display:grid;gap:4px;font-size:var(--hy-fs-meta);color:var(--hy-muted)}
-.ao-progress-track{display:block;height:6px;border-radius:var(--hy-r-pill);background:var(--hy-sunken);overflow:hidden}.ao-progress-track>span{display:block;height:100%;background:var(--hy-done)}
+.ao-progress-track{display:block;height:6px;border-radius:var(--hy-r-pill);background:var(--hy-sunken);overflow:hidden}.ao-progress-track>span{display:block;height:100%;background:var(--hy-ai)}.ao-progress-track[data-s=done]>span{background:var(--hy-done)}
 .ao-project-time{text-align:right}
 .ao-home-empty{text-align:center;padding:32px}
 
@@ -81,6 +81,11 @@
 .ao-timeline li.is-current:before{border-color:var(--hy-ai);background:var(--hy-ai-bg)}.ao-timeline li.is-done:before{border-color:var(--hy-done);background:var(--hy-done)}
 .ao .ao-timeline button{border:0;background:none;text-align:left;display:flex;flex-direction:column;padding:6px 0;height:auto}
 
+/* 頁首精簡：不常看，只留一行目標 */
+.ao-header{padding:12px 16px;gap:2px}.ao-header h1{font-size:var(--hy-fs-card)}
+.ao-goal{margin:0;font-size:var(--hy-fs-meta);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:none}
+.ao-header-meta{font-size:var(--hy-fs-tiny)}
+@media(min-width:641px){.ao .ao-header-actions button{min-height:34px;padding:0 12px;font-size:var(--hy-fs-meta)}}
 /* 會議室 */
 .ao-meeting{display:grid;grid-template-columns:minmax(0,1fr) minmax(230px,30%);gap:var(--hy-gap);align-items:start}
 .ao-thread{display:grid;gap:10px;max-height:560px;overflow:auto;padding:4px 0 12px}

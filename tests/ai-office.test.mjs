@@ -28,7 +28,11 @@ test('variable milestone count and canonical package mapping without invented cy
 test('journal preserves original action actors and resolution timestamps',()=>{
  const events=journal({packages:[],actions:[{action_id:'a',created_at:1,resolved_at:4,requested_by:'PI',resolved_by:'delegate',title:'Decision',answer:'Approved',package_id:'w'}],files:[{file_id:'f',created_at:3,filename:'Report',source:'GPT_CHAT'}],notes:[],suggestions:[]})
  assert.equal(events[0].actor,'delegate');assert.equal(events[0].at,4);assert.equal(events[2].actor,'PI')
- assert.equal(events[0].action,'a');assert.equal(events[1].file,'f')
+ assert.equal(events[0].action,undefined,'resolved: no jump to overview');assert.equal(events[2].action,null);assert.equal(events[1].file,'f')
+})
+test('system-created actions are not shown as HY; owner shows as HY',()=>{
+ const events=journal({packages:[],actions:[{action_id:'b',created_at:1,requested_by:'HY',status:'OPEN',title:'核准規劃書'}],files:[],notes:[{id:'n',created_at:2,author:'owner',content:'x'}],suggestions:[]})
+ assert.equal(events.find(e=>e.id==='request:b').actor,'AI Work 系統');assert.equal(events.find(e=>e.id==='request:b').action,'b');assert.equal(events.find(e=>e.id==='n').actor,'HY')
 })
 test('untrusted links cannot execute script or use ambiguous Drive IDs',()=>{
  assert.equal(safeUrl('javascript:alert(1)'),null);assert.equal(safeUrl('data:text/html,x'),null)
