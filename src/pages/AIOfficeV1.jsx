@@ -4,7 +4,7 @@ import remarkGfm from 'remark-gfm'
 import ControlCenterV5, { Inbox, DeleteZone, SpecChangeBox } from './ControlCenterV5'
 import { request } from '../aiWorkV5Data'
 import { authHeaders, ensureAccessToken, expireSession } from '../auth'
-import { OFFICE_TABS, TAB_NOTES, isPending, activityLabel, PACKAGE_STATUS, progress, milestones, journal, safeUrl, driveFile } from '../lib/aiOffice.mjs'
+import { OFFICE_TABS, TAB_NOTES, isPending, requester, activityLabel, PACKAGE_STATUS, progress, milestones, journal, safeUrl, driveFile } from '../lib/aiOffice.mjs'
 import { laneLabel } from '../lib/lanes'
 import OfficeHome from './OfficeHome'
 import './ai-office-v1.css'
@@ -74,7 +74,7 @@ function OfficeProject({ id, onBack, onDeleted }) {
     <header className="ao-header">
       <div className="ao-header-top"><h1>{project.title}</h1>{plan?.project_type && <span className="ao-type">{plan.project_type}</span>}<Pill s={pending.length?'you':project.status==='completed'?'done':'ai'}>{pending.length?'待你決定':activityLabel(project)}</Pill>
         <div className="ao-header-actions"><button aria-expanded={editing} onClick={()=>setEditing(v=>!v)}>編輯專案</button>{project.permissions.delete ? <div className="cc5"><DeleteZone project={project} onDeleted={onDeleted}/></div> : <span className="ao-muted">刪除專案僅限 HY 本人</span>}</div></div>
-      <p className="ao-goal">{project.goal}</p>
+      <p className="ao-goal" title={project.goal}>{project.goal}</p>
       <div className="ao-header-meta"><span>階段 <b>{project.phase} {project.milestone_id || ''}</b></span><span>工作包 <b>{count.done}／{count.total}</b></span><span>開始 <b>{when(project.started_at)}</b></span><span>最近紀錄 <b>{when(project.updated_at)}</b></span>{folder && <span>Drive <Link href={`https://drive.google.com/drive/folders/${folder}`}>專案資料夾</Link></span>}</div>
     </header>
     {editing && <Card title="編輯專案（正式規格變更）"><p className="ao-muted">目標與範圍走正式規格變更，由你核准後才生效。</p>{project.plan_state==='APPROVED' && project.phase==='執行期' && project.milestone_id ? <div className="cc5"><SpecChangeBox project={project} onChanged={reload} setError={setError} goInbox={()=>setTab('overview')}/></div> : <Empty>目前階段未開放規格變更；請到會議室提出意見。</Empty>}</Card>}

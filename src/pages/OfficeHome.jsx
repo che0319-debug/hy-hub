@@ -30,7 +30,7 @@ export default function OfficeHome({projects,details,inbox,loaded,error,creating
     <div className="ao-home-projects" aria-label="專案列表">{visible.map(p=>{const detail=details[p.id],count=detail?progress(detail):null,open=pending(p.id);return <button className={`ao-project-line${open?' needs-you':''}`} key={p.id} onClick={()=>onSelect(p.id)}>
       <span className="ao-project-title"><b>{p.title}</b><span className="ao-project-goal">{p.goal||'目標尚未記錄'}</span></span>
       <span className="ao-project-stage">{p.phase} {p.milestone_id||''}<small>負責 {OWNER[p.owner_bot]||p.owner_bot}</small></span>
-      <span className="ao-home-progress"><span>{count?`工作包 ${count.done}／${count.total}`:'工作包詳情未讀取'}</span>{count?.total>0&&<span className="ao-progress-track" aria-label={`執行工作包完成 ${count.done}／${count.total}`}><span style={{width:`${count.done/count.total*100}%`}}/></span>}</span>
+      <span className="ao-home-progress"><span>{count?`工作包 ${count.done}／${count.total}`:'工作包詳情未讀取'}</span>{count?.total>0&&<span className="ao-progress-track" data-s={count.done===count.total?'done':'ai'} aria-label={`執行工作包完成 ${count.done}／${count.total}`}><span style={{width:`${count.done/count.total*100}%`}}/></span>}</span>
       <span className="hy-pill" data-s={open?'you':p.status==='completed'?'done':'ai'}>{open?`${open} 項待你決定`:activityLabel(detail || p)}</span>
       <small className="ao-project-time">{date(detail?.updated_at)}</small>
     </button>})}</div>
