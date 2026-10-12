@@ -4,7 +4,8 @@ import remarkGfm from 'remark-gfm'
 import ControlCenterV5, { Inbox, DeleteZone, SpecChangeBox } from './ControlCenterV5'
 import { request } from '../aiWorkV5Data'
 import { authHeaders, ensureAccessToken, expireSession } from '../auth'
-import { OFFICE_TABS, activityLabel, PACKAGE_STATUS, progress, milestones, journal, safeUrl, driveFile } from '../lib/aiOffice.mjs'
+import { OFFICE_TABS, TAB_NOTES, isPending, activityLabel, PACKAGE_STATUS, progress, milestones, journal, safeUrl, driveFile } from '../lib/aiOffice.mjs'
+import { laneLabel } from '../lib/lanes'
 import OfficeHome from './OfficeHome'
 import './ai-office-v1.css'
 
@@ -53,50 +54,66 @@ async function loadOffice() {
   return {projects,inbox,details}
 }
 
+const STATE_TONE = { RUNNING:'ai', READY:'ai', WAITING:'wait', BLOCKED:'you', FAILED:'bad', COMPLETED:'done' }
+function Pill({ s, children }) { return <span className="hy-pill" data-s={s}>{children}</span> }
+
 function OfficeProject({ id, onBack, onDeleted }) {
   const [project, setProject] = useState(null), [error, setError] = useState(''), [tab, setTab] = useState('overview')
-  const [selectedAction,setSelectedAction] = useState(null), [selectedWork,setSelectedWork] = useState(null)
+  const [selectedWork,setSelectedWork] = useState(null), [editing,setEditing] = useState(false)
   const generation=useRef(0)
   const reload = useCallback(async () => {const version=++generation.current;try { const value=await office(ppath(id));if(version===generation.current){setProject(value);setError('')} }catch(e){if(version===generation.current){setProject(null);setError(e.message)}}},[id])
   useEffect(()=>{reload();return()=>{generation.current++}},[reload])
-  function openMeeting(action) {setSelectedAction(action);setTab('meeting')}
   function openExecution(work) {setSelectedWork(work);setTab('execution')}
-  if (!project) return <section className="ao"><button onClick={onBack}>‹ 全部專案</button>{error ? <div role="alert"><p>{error}</p><button onClick={reload}>重試讀取</button></div> : <p role="status">正在讀取正式專案資料…</p>}</section>
+  if (!project) return <section className="ao"><button className="ao-back" onClick={onBack}>‹ AI Office</button>{error ? <div role="alert"><p>{error}</p><button onClick={reload}>重試讀取</button></div> : <p role="status">正在讀取正式專案資料…</p>}</section>
   const count=progress(project)
   const plan=project.plan || project.packages?.find(p=>p.type==='PROJECT_PLANNING')?.result?.plan || null
-  const pending=project.actions.filter(a=>a.status==='OPEN' && ['HY','owner'].includes(a.assigned_to))
+  const pending=project.actions.filter(isPending)
+  const folder=project.drive?.project_folder_id
   return <section className="ao ao-project">
-    <button className="ao-back" onClick={onBack}>‹ 全部專案</button>
-    <header className="ao-header"><div><p className="ao-eyebrow">AI Office · {plan?.project_type || '類型尚未記錄'}</p><h1>{project.title}</h1><p className="ao-goal">{project.goal}</p></div>
-      <div className="ao-header-meta"><span className="ao-pill">{activityLabel(project)}</span><span>{project.phase} {project.milestone_id || ''}</span><small>最近紀錄 {when(project.updated_at)}</small><span>執行工作包完成 {count.done}／{count.total}（進度參考）</span></div>
+    <button className="ao-back" onClick={onBack}>‹ AI Office</button>
+    <header className="ao-header">
+      <div className="ao-header-top"><h1>{project.title}</h1>{plan?.project_type && <span className="ao-type">{plan.project_type}</span>}<Pill s={pending.length?'you':project.status==='completed'?'done':'ai'}>{pending.length?'待你決定':activityLabel(project)}</Pill>
+        <div className="ao-header-actions"><button aria-expanded={editing} onClick={()=>setEditing(v=>!v)}>編輯專案</button>{project.permissions.delete ? <div className="cc5"><DeleteZone project={project} onDeleted={onDeleted}/></div> : <span className="ao-muted">刪除專案僅限 HY 本人</span>}</div></div>
+      <p className="ao-goal">{project.goal}</p>
+      <div className="ao-header-meta"><span>階段 <b>{project.phase} {project.milestone_id || ''}</b></span><span>工作包 <b>{count.done}／{count.total}</b></span><span>開始 <b>{when(project.started_at)}</b></span><span>最近紀錄 <b>{when(project.updated_at)}</b></span>{folder && <span>Drive <Link href={`https://drive.google.com/drive/folders/${folder}`}>專案資料夾</Link></span>}</div>
     </header>
-    <nav className="ao-tabs" aria-label="AI Office 專案分頁">{OFFICE_TABS.map(([key,label])=><button key={key} aria-current={tab===key?'page':undefined} onClick={()=>setTab(key)}>{label}{key==='meeting' && pending.length>0 && <span>{pending.length}</span>}</button>)}</nav>
+    {editing && <Card title="編輯專案（正式規格變更）"><p className="ao-muted">目標與範圍走正式規格變更，由你核准後才生效。</p>{project.plan_state==='APPROVED' && project.phase==='執行期' && project.milestone_id ? <div className="cc5"><SpecChangeBox project={project} onChanged={reload} setError={setError} goInbox={()=>setTab('overview')}/></div> : <Empty>目前階段未開放規格變更；請到會議室提出意見。</Empty>}</Card>}
+    <nav className="ao-tabs" aria-label="AI Office 專案分頁">{OFFICE_TABS.map(([key,label])=><button key={key} aria-current={tab===key?'page':undefined} onClick={()=>setTab(key)}>{label}{key==='overview' && pending.length>0 && <span>{pending.length}</span>}</button>)}</nav>
+    <p className="ao-tabnote">{TAB_NOTES[tab]}</p>
     {error && <p role="alert">{error}</p>}
-    <div hidden={tab!=='overview'}><Overview project={project} plan={plan} pending={pending} onMeeting={openMeeting} onExecution={openExecution} onOutputs={()=>setTab('outputs')} reload={reload} onDeleted={onDeleted} setError={setError}/></div>
-    <div hidden={tab!=='meeting'}><Meeting project={project} pending={pending} selected={selectedAction} select={setSelectedAction} reload={reload} setError={setError}/></div>
+    <div hidden={tab!=='overview'}><Overview project={project} pending={pending} onExecution={openExecution} reload={reload} setError={setError}/></div>
+    <div hidden={tab!=='meeting'}><Meeting project={project} reload={reload} onOverview={()=>setTab('overview')}/></div>
     <div hidden={tab!=='execution'}><Execution project={project} plan={plan} selected={selectedWork} select={setSelectedWork}/></div>
-    <div hidden={tab!=='outputs'}><Results project={project} active={tab==='outputs'}/></div>
-    <div hidden={tab!=='log'}><Log project={project} onMeeting={openMeeting} onExecution={openExecution}/></div>
+    <div hidden={tab!=='outputs'}><Results project={project} active={tab==='outputs'} onOverview={()=>setTab('overview')}/></div>
+    <div hidden={tab!=='log'}><Log project={project} onOverview={()=>setTab('overview')} onExecution={openExecution}/></div>
   </section>
 }
 
-function Overview({project,plan,pending,onMeeting,onExecution,onOutputs,reload,onDeleted,setError}) {
-  const [editing,setEditing]=useState(false)
-  const ms=milestones(project), current=project.packages.filter(p=>['RUNNING','READY','WAITING','BLOCKED','FAILED'].includes(p.status) && p.type!=='PROJECT_REPORT' && !String(p.milestone_id || '').startsWith('PARKED:'))
-  const files=[...project.files].sort((a,b)=>b.created_at-a.created_at).slice(0,4)
-  return <>
-    <div className="ao-overview-actions"><button onClick={()=>setEditing(v=>!v)}>編輯</button>{project.permissions.delete ? <div className="cc5"><DeleteZone project={project} onDeleted={onDeleted}/></div> : <span className="ao-muted">刪除專案僅限 HY 本人</span>}</div>
-    {editing && <Card title="編輯專案（正式規格變更）"><p>目標與範圍沿用正式規格變更及人工核准流程，不直接改動狀態。</p>{project.plan_state==='APPROVED' && project.phase==='執行期' && project.milestone_id ? <div className="cc5"><SpecChangeBox project={project} onChanged={reload} setError={setError} goInbox={()=>onMeeting(null)}/></div> : <Empty>目前階段未開放規格變更；請在 PI 會議室提供修訂意見，由既有工作流程接手。</Empty>}</Card>}
-    <div className="ao-dashboard">
-      <Card title="專案概況"><dl><dt>名稱</dt><dd>{project.title}</dd><dt>類型</dt><dd>{plan?.project_type || '尚未記錄'}</dd><dt>Goal</dt><dd>{project.goal}</dd><dt>目前階段</dt><dd>{project.phase} {project.milestone_id}</dd><dt>開始日期</dt><dd>{when(project.started_at)}</dd><dt>預估完成</dt><dd>{plan?.estimated_completion_date || '尚未正式記錄'}</dd></dl><p>{project.description || '尚無簡要說明'}</p></Card>
-      <Card title="里程碑進度"><ol className="ao-timeline">{ms.map(m=><li key={m.id}><button onClick={()=>onExecution(m.id)}><b>{m.id} {m.name}</b><small>{m.packages.filter(p=>p.status==='COMPLETED').length}／{m.packages.length} 工作包</small></button></li>)}</ol>{!ms.length && <Empty>正式規劃尚未提供里程碑。</Empty>}</Card>
-      <Card title="目前工作">{current.slice(0,4).map(p=><button className="ao-row" key={p.id} onClick={()=>onExecution(p.id)}><b>{p.task}</b><small>{PACKAGE_STATUS[p.status]} · {p.milestone_id || '規劃期'}</small></button>)}{!current.length && <Empty>沒有進行中或待開始的正式工作包。</Empty>}</Card>
-      <Card title="待我處理" className="ao-needs">{pending.slice(0,4).map(a=><button className="ao-row" key={a.action_id} onClick={()=>onMeeting(a.action_id)}><b>{a.title}</b><small>{a.reason || '來源未記錄 PI 分析，請在會議室核對正式事項。'}</small></button>)}{!pending.length && <Empty>沒有需要 HY 處理的正式事項。</Empty>}</Card>
-      <Card title="近期成果">{files.map(f=><button className="ao-row" key={f.file_id} onClick={onOutputs}><b>{f.filename}</b><small>已登錄 · v{f.revision} · {when(f.created_at)}</small></button>)}{!files.length && <Empty>尚無已登錄成果。</Empty>}</Card>
-      <Card title="附加資訊">{project.references.map((r,i)=><p key={i}><Link href={r.data?.url || driveFile(r.data?.file_id)}>{r.data?.title || r.type}</Link></p>)}<p>標籤：{Array.isArray(plan?.tags)?plan.tags.join('、'):'尚未記錄'}</p><p>{plan?.notes || '尚無備註'}</p></Card>
+function DecisionBody({ d }) {
+  return <div className="ao-decision-body">
+    <p><b>為什麼要你決定：</b>{d.why}</p>
+    <ol className="ao-options">{(d.options||[]).map((o,i)=><li key={i} className={o.label===d.recommendation?'is-recommended':undefined}><b>{o.label}</b>{o.impact && <small>{o.impact}</small>}{o.label===d.recommendation && <Pill s="ai">PI 推薦</Pill>}</li>)}</ol>
+    {!(d.options||[]).some(o=>o.label===d.recommendation) && <p><b>PI 推薦：</b>{d.recommendation}</p>}
+    {d.evidence?.length>0 && <p className="ao-muted">證據：{d.evidence.join('、')}</p>}
+    {d.deadline && <p className="ao-muted">最晚：{d.deadline}</p>}
+  </div>
+}
+
+function Overview({project,pending,onExecution,reload,setError}) {
+  const ms=milestones(project)
+  const active=project.packages.filter(p=>['RUNNING','READY','BLOCKED','FAILED'].includes(p.status) && p.type!=='PROJECT_REPORT' && !String(p.milestone_id || '').startsWith('PARKED:'))
+  const decisions=project.decisions || {}
+  return <div className="ao-overview">
+    <div className="ao-overview-main">
+      <section className={`ao-card ao-decide${pending.length?' is-focus':''}`} aria-labelledby="ao-decide-title">
+        <div className="ao-card-head"><h2 id="ao-decide-title">待你決定</h2>{pending.length>0 && <Pill s="you">{pending.length} 項</Pill>}</div>
+        {pending.length>0 && <div className="cc5"><Inbox items={pending.map(a=>decisions[a.action_id] ? {...a, question:'', reason:''} : a)} project={project} onChanged={reload} setError={setError} renderExtra={a=>decisions[a.action_id] && <DecisionBody d={decisions[a.action_id]}/>}/></div>}
+        {!pending.length && <Empty>目前沒有需要你決定的事。PI 需要你時會出現在這裡。</Empty>}
+      </section>
+      <Card title="AI 正在做什麼">{active.map(p=><button className="ao-row ao-work" key={p.id} onClick={()=>onExecution(p.id)}><span className="ao-lane">{laneLabel(p.executor)}</span><span className="ao-work-main"><b>{p.task}</b><small>{p.milestone_id || '規劃期'}</small></span><Pill s={STATE_TONE[p.status] || 'wait'}>{PACKAGE_STATUS[p.status] || p.status}</Pill></button>)}{!active.length && <Empty>沒有執行中或待開始的工作包。</Empty>}</Card>
     </div>
-    <Card title="給 PI 的意見或補充資料"><Contribution project={project} reload={reload} onSent={()=>onMeeting(null)}/></Card>
-  </>
+    <Card title="里程碑" className="ao-overview-side"><ol className="ao-timeline">{ms.map(m=>{const done=m.packages.filter(p=>p.status==='COMPLETED').length;const current=m.id===project.milestone_id;return <li key={m.id} className={current?'is-current':done===m.packages.length&&m.packages.length?'is-done':undefined}><button onClick={()=>onExecution(m.id)}><b>{m.id} {m.name}</b><small>{done}／{m.packages.length} 工作包{current?' · 目前':''}</small></button></li>})}</ol>{!ms.length && <Empty>正式規劃尚未提供里程碑。</Empty>}</Card>
+  </div>
 }
 
 function FileInputs({project,selected,setSelected,reload,onBusy}) {
@@ -116,23 +133,19 @@ function FileInputs({project,selected,setSelected,reload,onBusy}) {
 function Contribution({project,reload,onSent}) {
   const [content,setContent]=useState(''),[selected,setSelected]=useState([]),[busy,setBusy]=useState(false),[message,setMessage]=useState(''),[uploading,setUploading]=useState(false)
   async function send(e){e.preventDefault();setBusy(true);setMessage('');try{const attachments=selected.map(id=>({file_id:id,filename:project.files.find(f=>f.file_id===id)?.filename,url:driveFile(id)}));await request(`${ppath(project.id)}/suggestions`,{method:'POST',body:JSON.stringify({content:[content.trim(),attachments.length?'附件（已登錄於本專案）：'+JSON.stringify(attachments):''].filter(Boolean).join('\n')})});setContent('');setSelected([]);setMessage('已提交至既有專案工作流程，等待工作包接手；不代表 PI 已回覆。');await reload();onSent?.()}catch(e){setMessage(e.message)}finally{setBusy(false)}}
-  return <form onSubmit={send}><label>意見或補充資料<textarea value={content} maxLength={8000} onChange={e=>setContent(e.target.value)}/></label><FileInputs project={project} selected={selected} setSelected={setSelected} reload={reload} onBusy={setUploading}/><button className="ao-primary" disabled={busy || uploading || (!content.trim()&&!selected.length)}>送交專案工作流程</button>{message && <p role="status">{message}</p>}</form>
+  return <form onSubmit={send}><label>意見或補充資料<textarea value={content} maxLength={8000} onChange={e=>setContent(e.target.value)}/></label><FileInputs project={project} selected={selected} setSelected={setSelected} reload={reload} onBusy={setUploading}/><button className="ao-primary" disabled={busy || uploading || (!content.trim()&&!selected.length)}>送給 PI</button>{message && <p role="status">{message}</p>}</form>
 }
 
-function Meeting({project,pending,selected,select,reload,setError}) {
-  const [filter,setFilter]=useState('all'),[attachmentIds,setAttachmentIds]=useState({}),[uploading,setUploading]=useState(false)
-  const events=journal(project).filter(e=>e.kind==='human' || (e.action && e.kind==='system'))
-  const shown=events.filter(e=>filter==='all' || e.kind===filter).sort((a,b)=>a.at-b.at)
-  const action=project.actions.find(a=>a.action_id===selected)
-  const executors=[...new Set(project.packages.map(p=>p.executor))]
+const SUGGESTION_STATE = { PENDING:'已送出', DELIVERED:'AI 已讀取', CONSUMED:'處理中', REVIEW:'待你驗收', DONE:'結案' }
+function Meeting({project,reload,onOverview}) {
+  const events=journal(project).filter(e=>e.kind==='human' || e.action).sort((a,b)=>a.at-b.at)
+  const lanes=[...new Set(project.packages.map(p=>p.executor))]
   return <div className="ao-meeting">
-    <Card title="對話與協作"><p className="ao-muted">PI 即時對話服務未就緒。以下為正式補充及 humanAction 紀錄，不模擬 PI、GPT 或 Claude 的訊息。</p><select aria-label="篩選協作訊息" value={filter} onChange={e=>setFilter(e.target.value)}><option value="all">全部訊息</option><option value="human">HY 與代理補充</option><option value="system">正式協作事項</option></select>
-      {shown.map(e=><article className="ao-message" key={e.id}><div><b>{e.actor}</b> <time>{when(e.at)}</time></div><p>{e.text}</p>{e.detail && <small>{e.detail}</small>}{e.action && <button onClick={()=>select(e.action)}>查看對應事項</button>}</article>)}{!shown.length && <Empty>尚無正式對話或補充紀錄。</Empty>}
-      <Contribution project={project} reload={reload}/>
-    </Card>
-    <div className="ao-meeting-support"><Card title="待我處理"><p className="ao-muted">僅呈現既有流程建立、指派給 HY 的正式 humanAction；PI 建議以來源記錄為準。</p>{pending.map(a=><button className="ao-row" key={a.action_id} aria-expanded={a.action_id===selected} onClick={()=>select(a.action_id===selected?null:a.action_id)}><b>{a.title}</b><small>{when(a.created_at)}</small></button>)}{!pending.length && <Empty>目前沒有正式待處理事項。</Empty>}</Card>
-      <Card title="團隊成員"><p>PI 預設大腦：Claude（高級模型）</p>{project.team.map(e=><p key={e.id+e.version}><span className="ao-avatar" aria-hidden="true">◇</span> {e.name} · {e.version} · {e.state==='PUBLISHED'?'已發布':'版本待確認'}</p>)}{!project.team.length && <p className="ao-muted">尚未記錄專案專家版本配置。</p>}{executors.map(e=><p key={e}>執行／審查工具：{e}</p>)}<p>HY 代理：{({hy:'HY','950157':'950157',sam:'Sam',family:'小因'})[project.owner_bot] || project.owner_bot}</p><small>Grok Bot 代表 HY 操作，不由 PI 指派。資源可用性尚未驗證。</small></Card></div>
-    {action && <Card title="對應正式事項" className="ao-action-detail"><p>請求來源：{action.requested_by || '尚未記錄'}</p><p>需要 HY 的原因：{action.reason || '來源未提供分析；不能宣稱 PI 已完成必要評估。'}</p>{action.status==='RESOLVED' ? <><p>已處理：{when(action.resolved_at)} · {action.resolved_by}</p><p>{text(action.answer)}</p>{(action.attachments || []).map(id=><p key={id}><Link href={driveFile(id)}>正式附件 {id}</Link></p>)}</> : <>{['PLAN_APPROVAL','CODE_REVIEW'].includes(action.action_type) ? <p>此正式核准沿用既有契約；補充附件請先透過專案概況送交工作流程。</p> : <FileInputs project={project} selected={attachmentIds[action.action_id] || []} setSelected={update=>setAttachmentIds(v=>({...v,[action.action_id]:typeof update==='function'?update(v[action.action_id] || []):update}))} reload={reload} onBusy={setUploading}/>}<div className="cc5">{uploading ? <p role="status">檔案傳送完成後才能提交正式回覆。</p> : <Inbox items={[action]} project={project} onChanged={async()=>{await reload();select(null)}} setError={setError} attachmentIds={attachmentIds}/>}</div></>}</Card>}
+    <section className="ao-card ao-thread-card"><h2>與 PI 的對話</h2><p className="ao-muted">正式的建議、補充與決策紀錄；PI 即時對話尚未接上。</p>
+      <div className="ao-thread">{events.map(e=><article className={`ao-message${e.kind==='human'?' is-me':''}`} key={e.id}><div><b>{e.actor}</b> <time>{when(e.at)}</time>{e.detail && SUGGESTION_STATE[e.detail] && <Pill s={e.detail==='REVIEW'?'you':'wait'}>{SUGGESTION_STATE[e.detail]}</Pill>}</div><p>{e.text}</p>{e.action && <button onClick={onOverview}>到概況處理</button>}</article>)}{!events.length && <Empty>還沒有對話。從下方送出第一則意見。</Empty>}</div>
+      <div className="ao-composer"><Contribution project={project} reload={reload}/></div>
+    </section>
+    <Card title="這個專案的團隊" className="ao-team">{project.team.map(e=><p key={e.id+e.version}><b>{e.name}</b> <small>v{e.version} · {e.state==='PUBLISHED'?'已發布':'版本待確認'}</small></p>)}{!project.team.length && <p className="ao-muted">由 PI 依 AI 執行規劃書配置專家。</p>}<h3>使用的通道</h3>{lanes.map(e=><p key={e}>{laneLabel(e)}</p>)}<p className="ao-muted">HY 代理：{({hy:'HY','950157':'950157',sam:'Sam',family:'小因'})[project.owner_bot] || project.owner_bot}（Grok Bot 代表 HY 操作，不由 PI 指派）</p></Card>
   </div>
 }
 
@@ -152,16 +165,18 @@ function Execution({project,plan,selected,select}) {
     </div></>
 }
 
-function Results({project,active}) {
+function Results({project,active,onOverview}) {
   const [chosen,setChosen]=useState(''),[html,setHtml]=useState(null),[error,setError]=useState(''),[full,setFull]=useState(false)
   const history=project.report?.history || [], fileId=chosen || project.report?.latest?.file_id
   useEffect(()=>{if(!active || !fileId)return;let alive=true;setHtml(null);setError('');office(`${ppath(project.id)}/reports/${encodeURIComponent(fileId)}`).then(data=>{if(alive)setHtml(data.html)}).catch(e=>{if(alive)setError(e.message)});return()=>{alive=false}},[active,fileId,project.id])
   useEffect(()=>{if(!full)return;const listener=e=>{if(e.key==='Escape')setFull(false)};window.addEventListener('keydown',listener);return()=>window.removeEventListener('keydown',listener)},[full])
-  const report=history.find(r=>r.file_id===fileId), checkpoints=project.quality?.checkpoints || []
-  return <div className="ao-results"><Card title="正式成果報告" className={full?'ao-reader-full':''}><div className="ao-toolbar"><label>報告版本<select aria-label="成果報告版本" value={fileId || ''} onChange={e=>setChosen(e.target.value)}>{!history.length && <option value="">尚無正式報告</option>}{history.map(r=><option key={r.file_id} value={r.file_id}>第 {r.revision} 版 · {when(r.created_at)}</option>)}</select></label><button disabled={!html} onClick={()=>setFull(v=>!v)}>{full?'離開完整閱讀':'完整閱讀'}</button></div><p className="ao-muted">最後更新：{when(report?.created_at)}{project.report?.stale?' · 最新報告落後於正式專案資料':''}</p>{error && <p role="alert">{error}</p>}{html ? <iframe title="正式 HTML 成果報告" sandbox="allow-popups allow-popups-to-escape-sandbox" referrerPolicy="no-referrer" srcDoc={html}/> : <Empty>{fileId?'報告讀取中或讀取失敗；不顯示預設內容。':`正式 HTML 報告未就緒（${project.report?.state || '未記錄'}）。`}</Empty>}</Card>
-    <Card title="成果資料與 Google Drive">{project.drive.project_folder_id && <Link href={`https://drive.google.com/drive/folders/${project.drive.project_folder_id}`}>專案資料夾</Link>} {project.drive.references_folder_id && <Link href={`https://drive.google.com/drive/folders/${project.drive.references_folder_id}`}>references 資料夾</Link>}{project.files.map(f=><div className="ao-row" key={f.file_id}><Link href={driveFile(f.file_id)}>{f.filename}</Link><small>{f.type} · v{f.revision} · {when(f.created_at)} · 已登錄，驗收以正式審查為準</small></div>)}{!project.files.length && <Empty>沒有已登錄成果檔案。</Empty>}</Card>
-    <Card title="重要審查">{checkpoints.map(c=>{const p=project.packages.find(p=>p.id===c.review_package_id);return <details key={c.checkpoint_id}><summary>{c.kind} {c.milestone_id} · 第 {c.round} 輪 · {c.verdict}</summary><p>審查工作包：{p?.task || c.review_package_id}</p><p>審查提交時間：尚未單獨記錄；工作包建立於 {when(p?.created_at)}</p><p>對應正式證據快照（不得推定為最新報告）：</p><pre>{JSON.stringify(c.target,null,2)}</pre><p>問題與補強：{text(p?.result?.summary || p?.result?.findings || '審查尚未交付')}</p><p>原始審查：</p>{(p?.result?.artifacts || []).map((a,i)=><p key={i}><Link href={driveFile(a.file_id)}>{a.title || a.file_id || '審查附件'}</Link></p>)}<p>補強／重審狀態：{PACKAGE_STATUS[p?.status] || '尚未記錄'} · {c.approved_action || '未有正式核准'}</p></details>})}{!checkpoints.length && <Empty>尚無 Quality Engine 正式審查紀錄。CI 或模擬測試不能代替正式驗收。</Empty>}</Card>
+  const report=history.find(r=>r.file_id===fileId), checkpoints=project.quality?.checkpoints || [], folder=project.drive?.project_folder_id
+  const tone=v=>v==='PASS'?'done':v==='CHANGES_REQUIRED'||v==='INSUFFICIENT_EVIDENCE'?'you':'wait'
+  return <div className="ao-results">
+    <Card title="成果報告" className={full?'ao-reader-full':''}><div className="ao-toolbar">{folder && <Link href={`https://drive.google.com/drive/folders/${folder}`}>開專案 Drive 資料夾</Link>}<label>報告版本<select aria-label="成果報告版本" value={fileId || ''} onChange={e=>setChosen(e.target.value)}>{!history.length && <option value="">尚無正式報告</option>}{history.map(r=><option key={r.file_id} value={r.file_id}>第 {r.revision} 版 · {when(r.created_at)}</option>)}</select></label><button disabled={!html} onClick={()=>setFull(v=>!v)}>{full?'離開完整閱讀':'完整閱讀'}</button></div><p className="ao-muted">最後更新：{when(report?.created_at)}{project.report?.stale?' · 最新報告落後於正式專案資料':''}</p>{error && <p role="alert">{error}</p>}{html ? <iframe title="正式 HTML 成果報告" sandbox="allow-popups allow-popups-to-escape-sandbox" referrerPolicy="no-referrer" srcDoc={html}/> : <Empty>{fileId?'報告讀取中或讀取失敗；不顯示預設內容。':`正式 HTML 報告未就緒（${project.report?.state || '未記錄'}）。`}</Empty>}</Card>
+    <Card title="獨立審查"><p className="ao-muted">只審三個節點：規劃、重大里程碑、結案。PASS 只代表內容通過，是否核准仍在<button className="ao-inline" onClick={onOverview}>概況</button>決定。</p>{checkpoints.map(c=>{const p=project.packages.find(p=>p.id===c.review_package_id);return <details className="ao-review" key={c.checkpoint_id}><summary><span className="ao-review-kind">{c.kind}</span><b>{c.milestone_id || ''} 第 {c.round} 輪</b><Pill s={tone(c.verdict)}>{c.verdict || '審查中'}</Pill></summary><p>審查工作包：{p?.task || c.review_package_id} · {PACKAGE_STATUS[p?.status] || '尚未記錄'}</p><p>問題與補強：{text(p?.result?.summary || p?.result?.findings || '審查尚未交付')}</p>{(p?.result?.artifacts || []).map((a,i)=><p key={i}><Link href={driveFile(a.file_id)}>{a.title || '審查報告'}</Link></p>)}<details><summary>審查對象的版本證據</summary><pre>{JSON.stringify(c.target,null,2)}</pre></details></details>})}{!checkpoints.length && <Empty>尚無獨立審查紀錄。</Empty>}</Card>
   </div>
 }
 
-function Log({project,onMeeting,onExecution}) {const [filter,setFilter]=useState('all');const events=journal(project).filter(e=>filter==='all'||e.kind===filter);return <Card title="工作日誌"><select aria-label="工作日誌篩選" value={filter} onChange={e=>setFilter(e.target.value)}><option value="all">全部事件</option><option value="human">人工補充與核准</option><option value="system">系統與工作包</option><option value="artifact">成果登錄</option></select><ol className="ao-journal">{events.map(e=><li key={e.id}><time>{when(e.at)}</time><b>{e.actor}</b><p>{e.text}</p>{e.detail && <details><summary>詳情</summary><p>{e.detail}</p></details>}{e.action && <button onClick={()=>onMeeting(e.action)}>原始 humanAction</button>}{e.work && <button onClick={()=>onExecution(e.work)}>關聯工作包 {e.milestone}</button>}{e.file && <Link href={driveFile(e.file)}>成果</Link>}</li>)}</ol>{!events.length && <Empty>尚無正式事件。</Empty>}</Card>}
+const LOG_FILTERS = [['all','全部'],['human','HY 與代理'],['system','系統與工作包'],['artifact','成果登錄']]
+function Log({project,onOverview,onExecution}) {const [filter,setFilter]=useState('all');const events=journal(project).filter(e=>filter==='all'||e.kind===filter);return <Card title="工作日誌"><div className="ao-toolbar" role="group" aria-label="工作日誌篩選">{LOG_FILTERS.map(([k,l])=><button key={k} aria-pressed={filter===k} onClick={()=>setFilter(k)}>{l}</button>)}</div><ol className="ao-journal">{events.map(e=><li key={e.id}><time>{when(e.at)}</time><b>{e.actor}</b><p>{e.text}</p>{e.detail && <details><summary>詳情</summary><p>{e.detail}</p></details>}{e.action && <button onClick={onOverview}>到概況</button>}{e.work && <button onClick={()=>onExecution(e.work)}>關聯工作包 {e.milestone}</button>}{e.file && <Link href={driveFile(e.file)}>成果</Link>}</li>)}</ol>{!events.length && <Empty>這個篩選沒有事件。</Empty>}</Card>}
