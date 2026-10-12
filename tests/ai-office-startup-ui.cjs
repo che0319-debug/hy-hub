@@ -26,7 +26,7 @@ const {chromium}=require('playwright');const assert=require('node:assert/strict'
   assert.equal(await submit.isEnabled(),true);assert(!reads.some(u=>u.includes('startup-options')));
   mkdirSync('docs/quality/ui/ai-office-startup',{recursive:true});await page.screenshot({path:`docs/quality/ui/ai-office-startup/create-${width}.png`,fullPage:true});
   await submit.click();await form.getByRole('alert').waitFor();assert.equal(await page.locator('.ao-dashboard').count(),0);
-  failure=false;await submit.click();await page.getByRole('heading',{name:'專案概況',exact:true}).waitFor();
+  failure=false;await submit.click();await page.getByRole('heading',{name:'待你決定',exact:true}).waitFor();
   const creates=writes.filter(w=>w.url.endsWith('/api/ai-office/projects'));assert.equal(creates.length,2);assert.equal(creates[0].body.project_id,creates[1].body.project_id);
   assert.equal(await page.getByRole('heading',{name:'三引擎啟動確認'}).count(),0);assert.equal(await page.getByText('查看 Quality 正式核准事項').count(),0);
   assert.equal(writes.filter(w=>w.url.includes('/resolve')||w.url.includes('/enable-request')).length,0);

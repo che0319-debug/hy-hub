@@ -16,7 +16,7 @@ test('activity uses canonical label and distinguishes Claude handoff with old AP
 })
 
 test('five approved pages, progress is a package count and excludes report bookkeeping',()=>{
- assert.deepEqual(OFFICE_TABS.map(x=>x[1]),['專案概況','PI 會議室','執行計畫','成果與審查','工作日誌'])
+ assert.deepEqual(OFFICE_TABS.map(x=>x[1]),['概況','會議室','執行計畫','成果與審查','工作日誌'])
  assert.deepEqual(progress({packages:[{type:'TASK',status:'COMPLETED'},{type:'TASK',status:'WAITING'},{type:'PROJECT_REPORT',status:'COMPLETED'}]}),{done:1,total:2})
  assert.deepEqual(progress({packages:[]}),{done:0,total:0})
 })

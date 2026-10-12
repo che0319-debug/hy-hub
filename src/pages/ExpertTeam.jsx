@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import { authHeaders } from '../auth'
 import './expert-team.css'
 import { laneLabel } from '../lib/lanes'
@@ -120,7 +121,8 @@ function ModelsTab() {
 }
 
 export default function ExpertTeam() {
-  const [data, setData] = useState(null), [tab, setTab] = useState('experts'), [error, setError] = useState(''), [busy, setBusy] = useState(false), [contents, setContents] = useState({}), [projects, setProjects] = useState([]), [project, setProject] = useState(''), [requests, setRequests] = useState([]), [search, setSearch] = useState(''), [editor, setEditor] = useState(null), [panel, setPanel] = useState(null)
+  const [params] = useSearchParams(), initialTab = ['experts','skills','models','requests'].includes(params.get('tab')) ? params.get('tab') : 'experts'
+  const [data, setData] = useState(null), [tab, setTab] = useState(initialTab), [error, setError] = useState(''), [busy, setBusy] = useState(false), [contents, setContents] = useState({}), [projects, setProjects] = useState([]), [project, setProject] = useState(''), [requests, setRequests] = useState([]), [search, setSearch] = useState(''), [editor, setEditor] = useState(null), [panel, setPanel] = useState(null)
   async function load() { setData(await api('/experts/registry')) }
   useEffect(() => { load().catch(e => setError(e.message)) }, [])
   useEffect(() => { if (tab === 'requests') api('/projects').then(setProjects).catch(e => setError(e.message)) }, [tab])

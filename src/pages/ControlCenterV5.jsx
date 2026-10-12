@@ -319,7 +319,7 @@ function Overview({ project, plan, openCount, goInbox, goOutputs }) {
   </div>
 }
 
-export function Inbox({ items, project, onChanged, setError, attachmentIds = {} }) {
+export function Inbox({ items, project, onChanged, setError, attachmentIds = {}, renderExtra }) {
   const [answer, setAnswer] = useState({})
   const [feedback, setFeedback] = useState({})
   const [busy, setBusy] = useState('')
@@ -368,6 +368,7 @@ export function Inbox({ items, project, onChanged, setError, attachmentIds = {} 
         {item.question && item.question !== item.title && <p className="cc5-pre">{spec ? item.question.split('\n\n回覆 APPROVED')[0] : item.question}</p>}
         {item.approval_allowed === false && <p className="cc5-muted">{item.action_type === 'MODULE_ACCEPTANCE' ? '模組版本或證據已變更，請重新提交正式驗收請求。' : '尚未通過同版本獨立審查，不能核准。'}</p>}
         {item.reason && item.action_type !== 'MODULE_ACCEPTANCE' && <p className="cc5-muted cc5-pre">{code ? firstLine(item.reason) : item.reason}</p>}
+        {renderExtra?.(item)}
         {item.plan && <AIExecutionPlan plan={item.plan} />}
         {item.plan && <details className="cc5-sub"><summary>查看專案規劃書草稿</summary><PlanBody plan={item.plan} /></details>}
         {approval && <ReviewDeliverables list={reviewDeliverables(project, item)} />}
