@@ -21,10 +21,12 @@ const actions=[
   {id:'act-expert',type:'EXPERT_PUBLISH',title:'發布專家：文件撰寫 @ 1.0.0',payload:{expert:{id:'writer',version:'1.0.0'},content_hash:h('f')}},
   {id:'act-skill',type:'QUALITY_SKILL_PUBLISH',title:'發布 Skill：HY 獨立審查規則 @ 2.1.0',payload:{skill:pin(skills[4])}},
 ];
-const models={roles:[
-  {role:'pi',name:'PI',lane:'GPT_CHAT',tier:'high',model:'Claude Opus',last_reported:{model:'claude-opus-x'},mismatch:false},
-  {role:'code',name:'程式工程師',lane:'CODEX',tier:'mid',model:'Claude Sonnet',last_reported:{model:'claude-opus-x'},mismatch:true},
-  {role:'review',name:'獨立審查員',lane:'CLAUDE_REVIEW',tier:'high',model:'Claude Opus',last_reported:null,mismatch:false},
+const models={schedule:{name:'AI Office PI（每小時，24 小時）',when:'每小時第 17 分（台北時間）',connectors:['HY AI Office','HY AI Work 獨立審查']},
+recent:[{role:'pi',role_name:'PI',model:'claude-opus-5-5',task:'PI 檢視：每日巡檢',at:1791793328}],
+roles:[
+  {role:'pi',name:'PI',lane:'GPT_CHAT',tier:'high',model:'Claude Opus',last_reported:{model:'claude-opus-x'},mismatch:false,runner:'AI Office PI 排程本身'},
+  {role:'code',name:'程式工程師',lane:'CODEX',tier:'mid',model:'Claude Sonnet',last_reported:{model:'claude-opus-x'},mismatch:true,runner:'PI 派出的子代理（在程式庫改程式、開 PR）'},
+  {role:'review',name:'獨立審查員',lane:'CLAUDE_REVIEW',tier:'high',model:'Claude Opus',last_reported:null,mismatch:false,runner:'PI 另開的子代理（只看審查包，不看製作過程）'},
 ],tools:[{id:'gpt-image',name:'GPT',use:'畫圖'},{id:'grok',name:'Grok',use:'第二意見'}]};
 (async()=>{
   const b=await chromium.launch({headless:true,args:['--no-sandbox']});const p=await b.newPage();const errors=[];const resolved=[];
@@ -68,6 +70,7 @@ const models={roles:[
     await p.getByText('有角色實際使用的模型和設定不同',{exact:false}).waitFor();
     await p.locator('.hy-pill:visible',{hasText:'與設定不同'}).first().waitFor();
     await p.locator('.hy-pill:visible',{hasText:'等首次回報'}).first().waitFor();
+    await p.getByRole('heading',{name:'誰在跑'}).waitFor();await p.locator(':text("AI Office PI 排程本身"):visible').first().waitFor();await p.getByRole('heading',{name:'最近實際使用'}).waitFor();
     await p.screenshot({path:`docs/quality/ui/expert-models-${w}.png`,fullPage:true});
     assert.equal(await p.evaluate(()=>document.documentElement.scrollWidth>innerWidth),false,`models overflow ${w}`);
     await p.getByRole('tab',{name:'專家'}).click();
