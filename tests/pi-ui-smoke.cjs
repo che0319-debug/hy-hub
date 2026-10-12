@@ -1,10 +1,82 @@
+// 專家團（AI Work v3）390／1280：專家卡、待核准版本、Skill 庫分組與內容、執行者與模型。
 const {chromium}=require('playwright');
 const assert=require('node:assert/strict');
 const {mkdirSync}=require('node:fs');
-const ids=['pi-discovery','pi-requirements','pi-capability-assessment','pi-planning','pi-task-decomposition','pi-review','pi-coordination','pi-replanning'];
-const names=['研究與問題定義','需求與驗收定義','能力與缺口評估','專案規劃','任務拆解建議','成果品質審查建議','專家協作建議','規劃修訂建議'];
-const skills=[{id:'pi-integrator',version:'2.1.0',content_hash:'a'.repeat(64),can_delete:true,references:[],state:'CANDIDATE',name:'PI 專案整合',description:'八項能力整合',steps:['研究與問題定義：查證來源'],acceptance:['成果可追溯'],excludes:['不得變更正式狀態'],markdown:'# PI 專案整合\n工作說明'}];
-const extra={...skills[0],id:'other-skill',name:'其他專業 Skill',version:'1.0.0'};
-skills.push({...skills[0],version:'2.0.0',state:'PUBLISHED',can_delete:false,references:['expert_versions']},extra);
-const experts=[{id:'pi',name:'PI',version:'2.0.0',state:'PUBLISHED',executor:'GPT_CHAT',capabilities:['研究','規劃','協作'],skills:[{id:'pi-integrator',version:'2.0.0',content_hash:'a'.repeat(64)}]},{id:'qa',name:'品質專家',version:'1.0.0',state:'CANDIDATE',executor:'GPT_CHAT',capabilities:['品質審查'],skills:[{id:'other-skill',version:'1.0.0',content_hash:'a'.repeat(64)}]}];
-(async()=>{const b=await chromium.launch({headless:true,args:['--no-sandbox']});const p=await b.newPage();const errors=[];p.on('pageerror',e=>errors.push(e.message));await p.addInitScript(()=>sessionStorage.setItem('hy_life_os_access_token',btoa(JSON.stringify({exp:Math.floor(Date.now()/1000)+3600}))+'.test'));await p.route('**/api/**',r=>{let data={ok:true};const u=r.request().url();if(u.endsWith('/dispatch-sessions'))data=[];if(u.endsWith('/projects'))data=[{id:'test',title:'PI Phase 測試專案'}];if(u.includes('/experts/registry'))data={skills,experts,actions:[{id:'fixture-only',title:'研究與問題定義 @ 1.0.0',payload:{skill:{id:'pi-integrator',version:'2.1.0',content_hash:'a'.repeat(64)}}}],ready:false};if(u.includes('pi/readiness'))data={skills:[],experts:[],actions:[],ready:false};if(u.includes('/pi/skills/'))data=skills.find(s=>u.includes(`/${s.id}/${s.version}/`));r.fulfill({contentType:'application/json',body:JSON.stringify(data)})});mkdirSync('docs/quality/ui',{recursive:true});for(const w of [390,1280]){await p.setViewportSize({width:w,height:900});await p.goto('http://127.0.0.1:5173/#/expert-team');await p.getByRole('heading',{name:'專家團',exact:true}).waitFor();await p.getByRole('heading',{name:'PI｜專案整合專家'}).waitFor();assert.equal(await p.locator('.expert-card').count(),2);assert.equal(await p.getByRole('button',{name:'新增專家',exact:true}).count(),1);assert.equal(await p.locator('.expert-card').first().getByRole('button',{name:'新增專家版本',exact:true}).count(),1);await p.getByRole('button',{name:'新增專家',exact:true}).click();await p.getByLabel('識別代碼').fill('new-expert');await p.getByRole('button',{name:'取消',exact:true}).click();assert.equal(await p.locator('details[open]').count(),0);await p.screenshot({path:`docs/quality/ui/pi-experts-${w}.png`,fullPage:true});assert.equal(await p.getByRole('button',{name:'查看 Skill 內容'}).count(),0);await p.getByRole('button',{name:'Skill 管理',exact:true}).click();assert.equal(await p.locator('.skill-grid>article').count(),2);assert.equal(await p.getByRole('button',{name:'新增 Skill',exact:true}).count(),1);assert.equal(await p.locator('.skill-grid>article').first().getByRole('button',{name:'新增 Skill 版本',exact:true}).count(),1);await p.locator('.skill-grid>article').first().getByRole('button',{name:'新增 Skill 版本',exact:true}).click();await p.locator('.skill-grid>article').first().locator('form').waitFor();assert.equal(await p.locator('.skill-grid>article').first().locator('form').count(),1);assert.equal(await p.getByLabel('識別代碼').inputValue(),'pi-integrator');assert.equal(await p.getByLabel('新版本').inputValue(),'2.0.1');await p.getByRole('button',{name:'取消',exact:true}).click();assert.equal(await p.locator('.skill-versions[open]').count(),0);await p.screenshot({path:`docs/quality/ui/pi-skills-${w}.png`,fullPage:true});await p.getByText('版本管理（2）',{exact:true}).click();assert(await p.getByRole('button',{name:'核准此版本發布'}).isDisabled());assert(await p.getByRole('button',{name:'刪除版本 2.0.0'}).isDisabled());await p.getByText('查看 Skill 內容',{exact:true}).first().click();await p.locator('.pi-version').filter({has:p.getByRole('heading',{name:'v2.1.0',exact:true})}).getByText('成果可追溯',{exact:true}).waitFor();await p.getByRole('button',{name:'核准此版本發布'}).click({trial:true});assert(await p.getByRole('button',{name:'核准此版本發布'}).isEnabled());await p.getByText('查看 Skill 內容',{exact:true}).first().click();assert(!(await p.locator('.pi-version').filter({has:p.getByRole('heading',{name:'v2.1.0',exact:true})}).getByText('成果可追溯',{exact:true}).isVisible()));await p.screenshot({path:`docs/quality/ui/pi-skill-detail-${w}.png`,fullPage:true});assert.equal(await p.evaluate(()=>document.documentElement.scrollWidth>innerWidth),false);await p.goto('http://127.0.0.1:5173/#/system-architecture');await p.getByRole('heading',{name:'系統架構',exact:true}).waitFor();}assert.deepEqual(errors,[]);await b.close();console.log('PI UI 390/1280: one readable Skill in Skill tab, unpublished Expert blocked, no overflow/errors')})().catch(e=>{console.error(e);process.exit(1)})
+const h=c=>c.repeat(64);
+const skills=[
+  {id:'hy-pi',version:'3.0.0',content_hash:h('a'),state:'PUBLISHED',name:'HY PI 規則',description:'PI 的 HY 專屬規則',references:['expert_versions'],can_delete:false},
+  {id:'hy-delivery',version:'1.0.0',content_hash:h('b'),state:'PUBLISHED',name:'HY 工作包交付規則',description:'交付規則',references:['expert_versions'],can_delete:false},
+  {id:'test-driven-development',version:'1.0.0',content_hash:h('c'),state:'PUBLISHED',name:'測試驅動開發',description:'先寫失敗測試',references:[],can_delete:false},
+  {id:'pi-integrator',version:'2.1.0',content_hash:h('d'),state:'PUBLISHED',name:'PI 專案整合',description:'舊版',references:['expert_versions'],can_delete:false},
+  {id:'hy-review',version:'2.1.0',content_hash:h('e'),state:'CANDIDATE',name:'HY 獨立審查規則',description:'審查規則候選',references:[],can_delete:true},
+];
+const pin=s=>({id:s.id,version:s.version,content_hash:s.content_hash});
+const experts=[
+  {id:'pi',version:'3.0.0',state:'PUBLISHED',name:'PI｜Project Integrator',description:'研究與規劃、專家配置',executor:'GPT_CHAT',model_tier:'high',capabilities:['研究與規劃','決策卡'],visual:{symbol:'compass'},skills:[pin(skills[0])]},
+  {id:'pi',version:'2.1.0',state:'PUBLISHED',name:'PI | Project Integrator',description:'舊版',executor:'GPT_CHAT',capabilities:['研究'],visual:{symbol:'digital-phantom'},skills:[pin(skills[3])]},
+  {id:'code-engineer',version:'1.0.0',state:'PUBLISHED',name:'程式工程師',description:'程式修改、測試',executor:'CODEX',model_tier:'mid',capabilities:['程式修改','測試'],visual:{symbol:'code'},skills:[pin(skills[1]),pin(skills[2])]},
+  {id:'writer',version:'1.0.0',state:'CANDIDATE',name:'文件撰寫',description:'文件、簡報',executor:'GPT_CHAT',model_tier:'mid',capabilities:['文件'],visual:{symbol:'doc'},skills:[pin(skills[1])]},
+];
+const actions=[
+  {id:'act-expert',type:'EXPERT_PUBLISH',title:'發布專家：文件撰寫 @ 1.0.0',payload:{expert:{id:'writer',version:'1.0.0'},content_hash:h('f')}},
+  {id:'act-skill',type:'QUALITY_SKILL_PUBLISH',title:'發布 Skill：HY 獨立審查規則 @ 2.1.0',payload:{skill:pin(skills[4])}},
+];
+const models={roles:[
+  {role:'pi',name:'PI',lane:'GPT_CHAT',tier:'high',model:'Claude Opus',last_reported:{model:'claude-opus-x'},mismatch:false},
+  {role:'code',name:'程式工程師',lane:'CODEX',tier:'mid',model:'Claude Sonnet',last_reported:{model:'claude-opus-x'},mismatch:true},
+  {role:'review',name:'獨立審查員',lane:'CLAUDE_REVIEW',tier:'high',model:'Claude Opus',last_reported:null,mismatch:false},
+],tools:[{id:'gpt-image',name:'GPT',use:'畫圖'},{id:'grok',name:'Grok',use:'第二意見'}]};
+(async()=>{
+  const b=await chromium.launch({headless:true,args:['--no-sandbox']});const p=await b.newPage();const errors=[];const resolved=[];
+  p.on('pageerror',e=>errors.push(e.message));
+  await p.addInitScript(()=>sessionStorage.setItem('hy_life_os_access_token',btoa(JSON.stringify({exp:Math.floor(Date.now()/1000)+3600}))+'.test'));
+  await p.route('**/api/**',r=>{let data={ok:true};const u=r.request().url();
+    if(u.endsWith('/dispatch-sessions'))data=[];
+    if(u.endsWith('/projects'))data=[{id:'test',title:'測試專案'}];
+    if(u.includes('/experts/registry'))data={skills,experts,actions};
+    if(u.includes('/api/ai-office/models'))data=models;
+    if(u.includes('/experts/pi/skills/')){const s=skills.find(s=>u.includes(`/${s.id}/${s.version}/`));data={...s,markdown:`# ${s.name}\n\n完整規則內文 ${s.id}`,steps:['依內容執行']}}
+    if(u.includes('/inbox/')){resolved.push(u.split('/inbox/')[1].split('/')[0])}
+    r.fulfill({contentType:'application/json',body:JSON.stringify(data)})});
+  mkdirSync('docs/quality/ui',{recursive:true});
+  for(const w of [390,1280]){
+    await p.setViewportSize({width:w,height:900});
+    await p.goto('http://127.0.0.1:5173/#/expert-team');
+    await p.getByRole('heading',{name:'專家團',exact:true}).waitFor();
+    await p.getByRole('heading',{name:'全部專家 3'}).waitFor();
+    assert.equal(await p.locator('.expert-card').count(),3);
+    assert.equal(await p.locator('.expert-card.needs-you').count(),1);
+    await p.getByText('另有 v2.1.0 供舊專案使用',{exact:false}).waitFor();
+    await p.getByText('Claude 程式通道',{exact:true}).first().waitFor();
+    assert.equal(await p.getByText('GPT Chat').count(),0);
+    await p.getByText('待你確認 2',{exact:true}).waitFor();
+    await p.screenshot({path:`docs/quality/ui/expert-team-${w}.png`,fullPage:true});
+    assert.equal(await p.evaluate(()=>document.documentElement.scrollWidth>innerWidth),false,`experts overflow ${w}`);
+    await p.locator('.expert-card.needs-you').getByRole('button',{name:'核准此版本發布'}).click();
+    // Skill chip opens the Skill panel with full markdown and approval for pending versions.
+    await p.locator('.expert-card').first().getByRole('button',{name:/HY PI 規則/}).click();
+    await p.getByRole('dialog').getByText('完整規則內文 hy-pi').waitFor();
+    assert(await p.getByRole('dialog').getByRole('button',{name:'刪除版本 3.0.0'}).isDisabled());
+    await p.getByRole('dialog').getByRole('button',{name:'關閉'}).click();
+    await p.getByRole('heading',{name:'HY 專屬規則 3'}).waitFor();
+    await p.getByRole('heading',{name:'GitHub 中譯 1'}).waitFor();
+    assert.equal(await p.getByRole('heading',{name:/其他 Skill/}).count(),0);
+    await p.getByRole('heading',{name:'舊版凍結 1'}).waitFor();
+    await p.screenshot({path:`docs/quality/ui/expert-skills-${w}.png`,fullPage:true});
+    assert.equal(await p.evaluate(()=>document.documentElement.scrollWidth>innerWidth),false,`skills overflow ${w}`);
+    await p.getByRole('tab',{name:'執行者與模型'}).click();
+    await p.getByText('有角色實際使用的模型和設定不同',{exact:false}).waitFor();
+    await p.locator('.hy-pill:visible',{hasText:'與設定不同'}).first().waitFor();
+    await p.locator('.hy-pill:visible',{hasText:'等首次回報'}).first().waitFor();
+    await p.screenshot({path:`docs/quality/ui/expert-models-${w}.png`,fullPage:true});
+    assert.equal(await p.evaluate(()=>document.documentElement.scrollWidth>innerWidth),false,`models overflow ${w}`);
+    await p.getByRole('tab',{name:'專家'}).click();
+    await p.getByRole('button',{name:'新增專家',exact:true}).click();
+    await p.getByLabel('識別代碼').fill('new-expert');
+    await p.getByRole('button',{name:'取消',exact:true}).click();
+    await p.goto('http://127.0.0.1:5173/#/system-architecture');await p.getByRole('heading',{name:'系統架構',exact:true}).waitFor();
+  }
+  assert.deepEqual([...new Set(resolved)],['act-expert']);
+  assert.deepEqual(errors,[]);await b.close();
+  console.log('Expert Team 390/1280: cards, pending expert approval, Skill panel with full markdown, source groups, models mismatch, no overflow/errors');
+})().catch(e=>{console.error(e);process.exit(1)});
