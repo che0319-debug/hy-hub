@@ -38,6 +38,7 @@ const ACTION_TYPE = {
   CODE_REVIEW: '程式審核',
   SPEC_CHANGE_DECISION: '規格變更結果',
   CHOICE: '選方案',
+  PI_DECISION: 'PI 決策',
   EXTERNAL_ACTION: '對外行動',
   CLOSURE_APPROVAL: '核准結案',
   QUALITY_GAP: '審查待補',
