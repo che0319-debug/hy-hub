@@ -8,6 +8,7 @@ import { isReportPackage, isReportFile } from '../lib/projectReport'
 import ProjectReportCard, { ReportStrip } from '../components/ProjectReportCard'
 import './control-center-v5.css'
 import { QualityPanel } from '../components/QualityPanel'
+import { LANE_LABELS } from '../lib/lanes'
 
 // AI Work 控制中心（v5 介面，第一版）
 // 兩層式：專案總表 → 單一專案（概況／待確認／規劃書／產出／工作紀錄）。
@@ -46,7 +47,7 @@ const ACTION_TYPE = {
   QUALITY_SKILL_DISABLE: '停用方法',
   QUALITY_CAPABILITY_REGISTER: '確認能力證據',
 }
-const EXECUTORS = { CLAUDE_REVIEW: 'Claude 獨立審查', GPT_CHAT: 'GPT', CHATGPT_WORK: 'ChatGPT Work', CODEX: 'Codex' }
+const EXECUTORS = LANE_LABELS
 const TABS = [['overview', '概況'], ['inbox', '待確認'], ['plan', '專案規劃書'], ['ai-plan', 'AI 執行規劃書'], ['outputs', '產出'], ['log', '工作紀錄'], ['quality', '品質與交接']]
 const FILTERS = [['all', '全部'], ['open', '待確認'], ['active', '進行中'], ['completed', '完成']]
 
