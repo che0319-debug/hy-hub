@@ -70,3 +70,5 @@
   .et-skill-list li{flex-direction:column}
   .pi-controls{align-items:stretch}.pi-controls .hy-btn{width:100%}
 }
+
+.et-recent>div{padding:10px 0;border-bottom:1px solid var(--hy-line)}.et-recent>div:last-child{border-bottom:0}
