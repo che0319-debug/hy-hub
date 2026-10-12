@@ -18,7 +18,6 @@ import ExpertTeam from './pages/ExpertTeam'
 import AgentConfig from './pages/AgentConfig'
 import Goals from './pages/Goals'
 import Strategy from './pages/Strategy'
-import WorkLab from './pages/WorkLab'
 import AuthGate from './components/AuthGate'
 import MobileAppV2 from './mobile/MobileAppV2'
 
@@ -42,8 +41,6 @@ function DesktopRoutes({ onMobileVersion }) {
         <Route path="ai-work-test/*" element={<Navigate to="/ai-work-v5" replace />} />
         <Route path="research" element={<Navigate to="/ai-work-v5" replace />} />
         <Route path="dispatch" element={<Navigate to="/ai-work-v5" replace />} />
-        <Route path="work-lab" element={<WorkLab />} />
-        <Route path="work-lab/:pid" element={<WorkLab />} />
         <Route path="line/hy" element={<LineHY />} />
         <Route path="line/xiaoyin" element={<LineXiaoyin />} />
         <Route path="line/950157" element={<Line950157 />} />
@@ -84,7 +81,7 @@ function Experience() {
   }
 
   if (location.pathname === '/command-center') return <Navigate to="/ai-work" replace />
-  if (mobileWidth && mode !== 'desktop' && !['/workspace', '/ai-work', '/ai-work-test', '/work-lab', '/expert-team', '/system-architecture'].some(path => location.pathname.startsWith(path))) {
+  if (mobileWidth && mode !== 'desktop' && !['/workspace', '/ai-work', '/ai-work-test', '/expert-team', '/system-architecture'].some(path => location.pathname.startsWith(path))) {
     return <MobileAppV2 onDesktopVersion={() => choose('desktop')} />
   }
   return <DesktopRoutes onMobileVersion={mobileWidth ? () => choose('mobile') : null} />

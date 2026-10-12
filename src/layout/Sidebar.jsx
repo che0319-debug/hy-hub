@@ -1,14 +1,13 @@
 import { NavLink } from 'react-router-dom'
 import {
-  Home, Bot, FlaskConical,
+  Home, Bot,
   MessageSquare, Settings, Target, LayoutDashboard, Boxes, Users
 } from 'lucide-react'
 
 const navItems = [
   { to: '/',           label: '首頁',     icon: Home },
   { to: '/helpers',    label: '我的小幫手', icon: Bot },
-  { to: '/ai-work-v5', label: 'AI Work 控制中心', icon: LayoutDashboard },
-  { to: '/work-lab',   label: 'Work Lab',  icon: FlaskConical },
+  { to: '/ai-work-v5', label: 'AI Office', icon: LayoutDashboard },
   { to: '/goals',      label: '人生目標',  icon: Target },
   { to: '/strategy',   label: '戰略盤',   icon: Target },
 ]
