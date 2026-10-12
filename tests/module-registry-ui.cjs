@@ -20,7 +20,6 @@ const modules=JSON.parse(readFileSync('tests/fixtures/module-registry.json','utf
  for(const width of [390,1280]){
   await page.setViewportSize({width,height:900});mode='ok';
   await page.goto('http://127.0.0.1:5173/#/system-architecture');
-  await page.getByRole('button',{name:'架構總覽',exact:true}).click();
   await page.getByText('18 個模組 · 0 個已正式驗收',{exact:true}).waitFor();
   assert.equal(await page.locator('.mr-tile').count(),18);
   assert.equal(await page.getByText('驗收：已正式驗收',{exact:true}).count(),0);
@@ -39,9 +38,7 @@ const modules=JSON.parse(readFileSync('tests/fixtures/module-registry.json','utf
   await page.screenshot({path:`docs/quality/ui/module-error-${width}.png`,fullPage:true});
   mode='ok';await page.getByRole('button',{name:'重試讀取',exact:true}).click();
   await page.getByText('18 個模組 · 0 個已正式驗收',{exact:true}).waitFor();
-  await page.getByRole('button',{name:'引擎測試',exact:true}).click();
-  await page.getByRole('checkbox').check();
-  await page.getByText('尚無可用正式 PI Expert，請先於專家團完成 Skill 與 Expert 核准。').waitFor();
+  assert.equal(await page.getByRole('button',{name:'引擎測試',exact:true}).count(),0);
   assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth),false);
  }
  mode='inbox';await page.goto('http://127.0.0.1:5173/#/ai-work-v5');
@@ -49,5 +46,5 @@ const modules=JSON.parse(readFileSync('tests/fixtures/module-registry.json','utf
  await page.getByRole('button',{name:'核准模組驗收',exact:true}).click();
  await page.getByRole('heading',{name:'系統模組待你驗收'}).waitFor({state:'hidden'});
  assert.equal(decisions.length,1);assert.equal(decisions[0].answer.decision,'APPROVED');
- assert.deepEqual(errors,[]);await browser.close();console.log('Registry 390/1280: 18 modules, independent states, details, error clears cards, retry, PI Lab, no overflow or browser errors');
+ assert.deepEqual(errors,[]);await browser.close();console.log('Registry 390/1280: 18 modules, independent states, details, error clears cards, retry, no PI Lab, no overflow or browser errors');
 })().catch(e=>{console.error(e);process.exit(1)});
