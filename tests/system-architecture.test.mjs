@@ -7,11 +7,11 @@ const overview = readFileSync(new URL('../src/components/ModuleRegistryOverview.
 const sidebar = readFileSync(new URL('../src/layout/Sidebar.jsx', import.meta.url), 'utf8')
 const routes = readFileSync(new URL('../src/main.jsx', import.meta.url), 'utf8')
 const seed = JSON.parse(readFileSync(new URL('./fixtures/module-registry.json', import.meta.url), 'utf8'))
-test('architecture keeps its top-level route and isolated PI Lab', () => {
+test('architecture keeps its top-level route; retired PI Lab is gone', () => {
   assert.match(sidebar, /to: '\/system-architecture'/)
   assert.match(routes, /path="system-architecture" element=\{<SystemArchitecture \/>\}/)
   assert.match(page, /ModuleRegistryOverview/)
-  for(const name of ['PI Engine', 'Mission Engine', 'Quality Engine', 'createPiLabJob', 'refreshPiLabJob', 'pi-lab\/prepare']) assert.ok(page.includes(name))
+  for(const name of ['pi-lab', 'PiLab', '引擎測試']) assert.ok(!page.includes(name))
   assert.doesNotMatch(page + overview, /moduleEvidence|package_chat_claim|package_submit|\/dispatch\/next|setReady/)
 })
 test('registry has all modules with independent construction and acceptance', () => {
