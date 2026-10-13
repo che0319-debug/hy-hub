@@ -64,8 +64,18 @@ function SkillContent({ body }) {
   </div>
 }
 
-const skillFields = [['description', '用途說明'], ['applies', '適用情境'], ['excludes', '限制與禁止事項'], ['capabilities', '能力'], ['tools', '使用工具'], ['steps', '工作步驟'], ['deliverables', '交付成果'], ['quality_references', '品質依據'], ['acceptance', '驗收標準'], ['common_errors', '常見錯誤'], ['sources', '資料來源'], ['good_example', '合格範例'], ['reject_example', '不合格範例'], ['markdown', '完整工作說明']]
+const PLACEHOLDER = '見完整工作說明'
 const listFields = new Set(['applies', 'excludes', 'capabilities', 'tools', 'steps', 'deliverables', 'quality_references', 'acceptance', 'common_errors', 'sources'])
+// Skill 只填一個大欄位；後端要求的其他欄位由前端帶入（編輯既有版本時沿用舊值）。
+function skillBodyFromContent(draft, seed) {
+  const content = (draft.markdown || '').trim()
+  const firstLine = content.replace(/^---[\s\S]*?---\s*/, '').split('\n').map(x => x.replace(/^[#>*\-\s]+/, '').trim()).find(Boolean) || draft.name
+  const body = { id: draft.id, name: draft.name, version: draft.version, maintainer: seed.maintainer || 'HY', publication_basis: 'CANDIDATE; requires owner humanAction', description: firstLine.slice(0, 120), markdown: content }
+  for (const k of listFields) body[k] = Array.isArray(seed[k]) && seed[k].length ? seed[k] : [PLACEHOLDER]
+  body.good_example = seed.good_example || PLACEHOLDER
+  body.reject_example = seed.reject_example || PLACEHOLDER
+  return body
+}
 function CandidateForm({ editor, skills, busy, onCancel, onSubmit }) {
   const [draft, setDraft] = useState(() => Object.fromEntries(Object.entries(editor.body).map(([k, v]) => [k, Array.isArray(v) && k !== 'skills' ? v.join('\n') : v])))
   const [chosen, setChosen] = useState((editor.body.skills || []).map(pinKey))
@@ -76,8 +86,7 @@ function CandidateForm({ editor, skills, busy, onCancel, onSubmit }) {
     event.preventDefault()
     let body
     if (isSkill) {
-      body = { id: draft.id, name: draft.name, version: draft.version, maintainer: draft.maintainer || 'HY', publication_basis: 'CANDIDATE; requires owner humanAction' }
-      for (const [k] of skillFields) body[k] = listFields.has(k) ? draft[k].split('\n').map(x => x.trim()).filter(Boolean) : draft[k]
+      body = skillBodyFromContent(draft, editor.body)
     } else {
       body = { id: draft.id, name: draft.name, version: draft.version, description: draft.description, executor: editor.body.executor || 'GPT_CHAT', ...(editor.body.model_tier ? { model_tier: editor.body.model_tier } : {}), capabilities: draft.capabilities.split('\n').map(x => x.trim()).filter(Boolean), visual: editor.body.visual || { kind: 'abstract', symbol: 'compass', real_person: false }, skills: available.filter(s => chosen.includes(pinKey(s))).map(({ id, version, content_hash }) => ({ id, version, content_hash })) }
     }
@@ -89,7 +98,9 @@ function CandidateForm({ editor, skills, busy, onCancel, onSubmit }) {
     <label>識別代碼<input required value={draft.id || ''} readOnly={!!editor.id} onChange={e => change('id', e.target.value)} placeholder="例如 research-assistant" /></label>
     <label>名稱<input required value={draft.name || ''} onChange={e => change('name', e.target.value)} /></label>
     <label>新版本<input required value={draft.version || ''} onChange={e => change('version', e.target.value)} placeholder="例如 1.0.0" /></label>
-    {(isSkill ? skillFields : [['description', '角色說明'], ['capabilities', '能力']]).map(([k, label]) => <label key={k}>{label}{listFields.has(k) && <span className="hy-note">（每行一項）</span>}<textarea required rows={k === 'markdown' ? 10 : 3} value={draft[k] || ''} onChange={e => change(k, e.target.value)} /></label>)}
+    {isSkill
+      ? <label>Skill 內容<span className="hy-note">（用途、適用情境、步驟、驗收標準等都寫在這裡；第一行會當作簡述）</span><textarea required rows={18} value={draft.markdown || ''} onChange={e => change('markdown', e.target.value)} /></label>
+      : [['description', '角色說明'], ['capabilities', '能力']].map(([k, label]) => <label key={k}>{label}{listFields.has(k) && <span className="hy-note">（每行一項）</span>}<textarea required rows={3} value={draft[k] || ''} onChange={e => change(k, e.target.value)} /></label>)}
     {!isSkill && <fieldset><legend>綁定已發布 Skill 的精確版本</legend>{available.length ? available.map(s => <label className="skill-choice" key={pinKey(s)}><input type="checkbox" checked={chosen.includes(pinKey(s))} onChange={e => setChosen(prev => e.target.checked ? [...prev, pinKey(s)] : prev.filter(k => k !== pinKey(s)))} />{s.name} · v{s.version}</label>) : <p>請先發布 Skill，再建立專家。</p>}</fieldset>}
     <div className="pi-controls"><button className="hy-btn is-primary" disabled={busy || (!isSkill && !chosen.length)} type="submit">建立候選與發布申請</button><button className="hy-btn" type="button" disabled={busy} onClick={onCancel}>取消</button></div>
   </form>
