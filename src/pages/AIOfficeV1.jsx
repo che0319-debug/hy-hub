@@ -7,6 +7,7 @@ import { authHeaders, ensureAccessToken, expireSession } from '../auth'
 import { OFFICE_TABS, TAB_NOTES, isPending, requester, activityLabel, PACKAGE_STATUS, progress, milestones, journal, safeUrl, driveFile } from '../lib/aiOffice.mjs'
 import { laneLabel } from '../lib/lanes'
 import OfficeHome from './OfficeHome'
+import { PlanSummary, PlanDocument, CapacityBanner } from './PlanViews'
 import './ai-office-v1.css'
 
 const base = (import.meta.env.VITE_API_BASE || '').replace(/\/$/, '')
@@ -27,7 +28,7 @@ function Empty({ children }) { return <p className="ao-empty">{children}</p> }
 function Markdown({ value }) { return value ? <ReactMarkdown remarkPlugins={[remarkGfm]} skipHtml components={{a: ({href,children}) => <Link href={href}>{children}</Link>}}>{value}</ReactMarkdown> : <Empty>正式文件尚未提供。</Empty> }
 
 export default function AIOfficeV1() {
-  return <div className="ao"><ControlCenterV5 title="AI Office" loadData={loadOffice} renderCreation={props=><OfficeCreate {...props}/>} renderHome={props=><OfficeHome {...props}/>} renderProject={({project,onBack,onDeleted}) => <OfficeProject key={project.id} id={project.id} onBack={onBack} onDeleted={onDeleted} />} /></div>
+  return <div className="ao"><ControlCenterV5 title="AI Office" loadData={loadOffice} renderCreation={props=><OfficeCreate {...props}/>} renderHome={props=><><CapacityBanner/><OfficeHome {...props}/></>} renderProject={({project,onBack,onDeleted}) => <OfficeProject key={project.id} id={project.id} onBack={onBack} onDeleted={onDeleted} />} /></div>
 }
 
 function OfficeCreate({onCancel,onCreated}) {
@@ -81,6 +82,7 @@ function OfficeProject({ id, onBack, onDeleted }) {
     <nav className="ao-tabs" aria-label="AI Office 專案分頁">{OFFICE_TABS.map(([key,label])=><button key={key} aria-current={tab===key?'page':undefined} onClick={()=>setTab(key)}>{label}{key==='overview' && pending.length>0 && <span>{pending.length}</span>}</button>)}</nav>
     <p className="ao-tabnote">{TAB_NOTES[tab]}</p>
     {error && <p role="alert">{error}</p>}
+    <CapacityBanner/>
     <div hidden={tab!=='overview'}><Overview project={project} pending={pending} onExecution={openExecution} reload={reload} setError={setError}/></div>
     <div hidden={tab!=='meeting'}><Meeting project={project} reload={reload} onOverview={()=>setTab('overview')}/></div>
     <div hidden={tab!=='execution'}><Execution project={project} plan={plan} selected={selectedWork} select={setSelectedWork}/></div>
@@ -150,18 +152,18 @@ function Meeting({project,reload,onOverview}) {
 }
 
 function Execution({project,plan,selected,select}) {
-  const [mode,setMode]=useState('split'),[ratio,setRatio]=useState(60),[document,setDocument]=useState('project'),[heading,setHeading]=useState('')
-  const container=useRef(null),reader=useRef(null),dragging=useRef(false),[drag,setDrag]=useState(false)
-  const rows=milestones(project), markdown=(document==='project'?plan?.project_plan_markdown:plan?.ai_execution_plan_markdown) || ''
-  const headings=markdown.split('\n').filter(line=>/^#{1,6}\s/.test(line)).map(line=>line.replace(/^#+\s*/,''))
-  function locate(value){const nodes=[...(reader.current?.querySelectorAll('h1,h2,h3,h4,h5,h6') || [])];const target=nodes.find(n=>n.textContent.includes(value));if(target){reader.current.scrollTop=Math.max(0,target.offsetTop-reader.current.offsetTop);setHeading(target.textContent)}else setHeading(`正式文件未提供 ${value} 的對應標題。`)}
-  useEffect(()=>{if(selected){const pkg=project.packages.find(p=>p.id===selected);locate(pkg?.milestone_id || selected)}},[selected,document,markdown])
+  const [mode,setMode]=useState('summary'),[ratio,setRatio]=useState(60),[focus,setFocus]=useState('')
+  const container=useRef(null),dragging=useRef(false),[drag,setDrag]=useState(false)
+  const rows=milestones(project)
+  // 從概況點里程碑／工作包進來：切到「規劃文件」並跳到對應章節。
+  useEffect(()=>{if(selected){const pkg=project.packages.find(p=>p.id===selected);setFocus(pkg?.milestone_id || selected);setMode(m=>m==='summary'?'split':m)}},[selected])
   useEffect(()=>{if(!drag)return;const move=e=>{const rect=container.current.getBoundingClientRect();setRatio(Math.max(30,Math.min(75,(e.clientX-rect.left)/rect.width*100)))};const up=()=>{dragging.current=false;setDrag(false)};window.addEventListener('pointermove',move);window.addEventListener('pointerup',up);return()=>{window.removeEventListener('pointermove',move);window.removeEventListener('pointerup',up)}},[drag])
-  return <><div className="ao-toolbar" role="group" aria-label="執行計畫顯示模式">{[['split','雙欄模式'],['work','時程與執行全寬'],['document','正式文件全寬']].map(([key,label])=><button key={key} aria-pressed={mode===key} onClick={()=>setMode(key)}>{label}</button>)}</div>
-    <div className={`ao-execution ao-mode-${mode}`} ref={container} style={{'--work-ratio':`${ratio}%`}}>
-      <section className="ao-card ao-work-pane" hidden={mode==='document'} aria-label="時程與執行"><h2>時程與執行</h2>{rows.map(m=><details key={m.id} open={selected===m.id || m.packages.some(p=>p.id===selected) || !selected}><summary onClick={()=>{select(m.id);locate(m.id)}}><b>{m.id} {m.name}</b></summary><p>目標：{text(m.goal || m.objective)}</p><p>交付：{text(m.deliverables)}</p><p>驗收條件：{text(m.acceptance_criteria)}</p>{m.packages.map(p=><article key={p.id} className="ao-package"><button className="ao-row" aria-pressed={selected===p.id} onClick={()=>{select(p.id);locate(m.id)}}><b>{p.task}</b><span>{PACKAGE_STATUS[p.status]} · {p.executor}</span></button><p>前置相依：{p.dependencies.length?p.dependencies.map(id=>project.packages.find(w=>w.id===id)?.task || id).join('、'):'無'}</p><p>交付成果：{text(p.expected_outputs)}</p><p>驗收條件：{text(p.acceptance_criteria)}</p>{p.status==='BLOCKED' && <p className="ao-muted">阻塞依據：{text(p.requires)}</p>}</article>)}</details>)}{!rows.length && <Empty>尚無正式 Milestone。小型專案不強制固定里程碑數量。</Empty>}</section>
+  return <><div className="ao-toolbar" role="group" aria-label="執行計畫顯示模式">{[['summary','規劃摘要'],['split','時程＋文件'],['work','時程與執行'],['document','完整文件']].map(([key,label])=><button key={key} aria-pressed={mode===key} onClick={()=>setMode(key)}>{label}</button>)}</div>
+    {mode==='summary' && <PlanSummary plan={plan} project={project} onOpenDocument={()=>setMode('document')}/>}
+    <div className={`ao-execution ao-mode-${mode}`} ref={container} style={{'--work-ratio':`${ratio}%`}} hidden={mode==='summary'}>
+      <section className="ao-card ao-work-pane" hidden={mode==='document'} aria-label="時程與執行"><h2>時程與執行</h2>{rows.map(m=><details key={m.id} open={selected===m.id || m.packages.some(p=>p.id===selected) || !selected}><summary onClick={()=>{select(m.id);setFocus(m.id)}}><b>{m.id} {m.name}</b></summary><p>目標：{text(m.goal || m.objective)}</p><p>交付：{text(m.deliverables)}</p><p>驗收條件：{text(m.acceptance_criteria)}</p>{m.packages.map(p=><article key={p.id} className="ao-package"><button className="ao-row" aria-pressed={selected===p.id} onClick={()=>{select(p.id);setFocus(m.id)}}><b>{p.task}</b><span>{PACKAGE_STATUS[p.status]} · {p.executor}</span></button><p>前置相依：{p.dependencies.length?p.dependencies.map(id=>project.packages.find(w=>w.id===id)?.task || id).join('、'):'無'}</p><p>交付成果：{text(p.expected_outputs)}</p><p>驗收條件：{text(p.acceptance_criteria)}</p>{p.status==='BLOCKED' && <p className="ao-muted">阻塞依據：{text(p.requires)}</p>}</article>)}</details>)}{!rows.length && <Empty>尚無正式 Milestone。小型專案不強制固定里程碑數量。</Empty>}</section>
       <div className="ao-splitter" hidden={mode!=='split'} role="separator" aria-label="調整雙欄比例" aria-orientation="vertical" aria-valuemin={30} aria-valuemax={75} aria-valuenow={Math.round(ratio)} tabIndex={0} onPointerDown={()=>{dragging.current=true;setDrag(true)}} onKeyDown={e=>{if(['ArrowLeft','ArrowRight','Home'].includes(e.key)){e.preventDefault();setRatio(e.key==='Home'?60:Math.max(30,Math.min(75,ratio+(e.key==='ArrowLeft'?-5:5))))}}}/>
-      <section className="ao-card ao-document-pane" hidden={mode==='work'} aria-label="正式規劃文件"><div className="ao-toolbar">{[['project','Project Plan'],['ai','AI Execution Plan']].map(([key,label])=><button key={key} aria-pressed={document===key} onClick={()=>setDocument(key)}>{label}</button>)}</div><p className="ao-muted">正式規劃 v{project.plan_revision} · {project.plan_state==='APPROVED'?'已核准':'草稿，尚未正式核准'}</p><label>標題導覽<select aria-label="規劃文件標題導覽" value={headings.includes(heading)?heading:''} onChange={e=>locate(e.target.value)}><option value="">選取標題…</option>{headings.map((h,i)=><option key={i}>{h}</option>)}</select></label>{heading && <small role="status">{heading}</small>}<div className="ao-document" ref={reader}><Markdown value={markdown}/></div></section>
+      <div className="ao-doc-slot" hidden={mode==='work'}><PlanDocument project={project} plan={plan} focus={focus}/></div>
     </div></>
 }
 
