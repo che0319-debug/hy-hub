@@ -9,6 +9,7 @@ import { laneLabel } from '../lib/lanes'
 import OfficeHome from './OfficeHome'
 import { PlanSummary, PlanDocument, CapacityBanner } from './PlanViews'
 import './ai-office-v1.css'
+import {ProjectRouter,ProjectRouterLog} from '../components/RouterControls'
 
 const base = (import.meta.env.VITE_API_BASE || '').replace(/\/$/, '')
 const when = value => value ? new Date(value * 1000).toLocaleString('zh-TW', { hour12: false }) : '尚未記錄'
@@ -85,9 +86,9 @@ function OfficeProject({ id, onBack, onDeleted }) {
     <CapacityBanner/>
     <div hidden={tab!=='overview'}><Overview project={project} pending={pending} onExecution={openExecution} reload={reload} setError={setError}/></div>
     <div hidden={tab!=='meeting'}><Meeting project={project} reload={reload} onOverview={()=>setTab('overview')}/></div>
-    <div hidden={tab!=='execution'}><Execution project={project} plan={plan} selected={selectedWork} select={setSelectedWork}/></div>
+    <div hidden={tab!=='execution'}><ProjectRouter projectId={project.id} active={tab==='execution'}/><Execution project={project} plan={plan} selected={selectedWork} select={setSelectedWork}/></div>
     <div hidden={tab!=='outputs'}><Results project={project} active={tab==='outputs'} onOverview={()=>setTab('overview')}/></div>
-    <div hidden={tab!=='log'}><Log project={project} onOverview={()=>setTab('overview')} onExecution={openExecution}/></div>
+    <div hidden={tab!=='log'}><ProjectRouterLog projectId={project.id} active={tab==='log'}/><Log project={project} onOverview={()=>setTab('overview')} onExecution={openExecution}/></div>
   </section>
 }
 

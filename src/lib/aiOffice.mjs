@@ -26,7 +26,7 @@ export function journal(project) {
   const events=[]
   for(const p of project.packages || []) events.push({id:'package:'+p.id,at:p.created_at,actor:'Mission Engine',kind:'system',text:'建立工作包：'+p.task,work:p.id,milestone:p.milestone_id,detail:PACKAGE_STATUS[p.status] || p.status})
   for(const a of project.actions || []) {events.push({id:'request:'+a.action_id,at:a.created_at,actor:requester(a.requested_by),kind:'system',text:'建立正式事項：'+a.title,action:a.status==='OPEN'?a.action_id:null,work:a.package_id});if(a.resolved_at)events.push({id:'answer:'+a.action_id,at:a.resolved_at,actor:person(a.resolved_by),kind:'human',text:'處理正式事項：'+a.title,detail:typeof a.answer==='string'?a.answer:JSON.stringify(a.answer)})}
-  for(const n of project.notes || [])events.push({id:n.id,at:n.created_at,actor:person(n.author),kind:'human',text:n.content})
+  for(const n of project.notes || [])events.push({id:n.id,at:n.created_at,actor:n.author==='system:router'?'Router 系統':person(n.author),kind:n.author==='system:router'?'system':'human',text:n.content})
   for(const n of project.suggestions || [])events.push({id:n.id,at:n.created_at,actor:person(n.author),kind:'human',text:n.content,detail:n.state})
   for(const f of project.files || [])events.push({id:'file:'+f.file_id,at:f.created_at,actor:f.source,kind:'artifact',text:'登錄成果：'+f.filename,file:f.file_id})
   return events.filter(e=>e.at).sort((a,b)=>b.at-a.at || a.id.localeCompare(b.id))

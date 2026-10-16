@@ -1,0 +1,944 @@
+{
+  "policy": {
+    "revision": 1,
+    "content_hash": "a89ac2597fe842c47ea584efb97beaff99bcd1ab8cd581ae029462e89818f784",
+    "document": {
+      "rules": [
+        {
+          "route": {
+            "fallbacks": [
+              "chatgpt-work"
+            ],
+            "health": {
+              "auto_reassign_enabled": true,
+              "cooldown_seconds": 7200,
+              "error_rate": 0.5,
+              "max_reassignments": 1,
+              "min_samples": 5,
+              "timeout_rate": 0.5,
+              "unclaimed_after_seconds": 10,
+              "unclaimed_threshold": 2,
+              "window_seconds": 86400,
+              "window_size": 10
+            },
+            "primary": "gpt-chat"
+          },
+          "scope": "global",
+          "scope_id": "",
+          "selector": "GENERAL"
+        }
+      ]
+    }
+  },
+  "can_edit": true,
+  "projects": [
+    {
+      "id": "p",
+      "title": "路由隔離驗證專案",
+      "owner_bot": "sam",
+      "enrolled": true
+    }
+  ],
+  "runners": [
+    {
+      "id": "chatgpt-work",
+      "roles": [
+        "GENERAL",
+        "CODE"
+      ],
+      "configured": true,
+      "providers": [
+        "gpt"
+      ],
+      "live_acceptance": "NOT_VERIFIED",
+      "ready": true,
+      "readiness": "CONFIGURED_AWAITING_LIVE_ACCEPTANCE"
+    },
+    {
+      "id": "claude-review",
+      "roles": [
+        "REVIEW"
+      ],
+      "configured": true,
+      "providers": [
+        "claude"
+      ],
+      "live_acceptance": "NOT_VERIFIED",
+      "ready": true,
+      "readiness": "CONFIGURED_AWAITING_LIVE_ACCEPTANCE"
+    },
+    {
+      "id": "gpt-chat",
+      "roles": [
+        "PLANNING",
+        "GENERAL"
+      ],
+      "configured": true,
+      "providers": [
+        "gpt"
+      ],
+      "live_acceptance": "NOT_VERIFIED",
+      "ready": true,
+      "readiness": "CONFIGURED_AWAITING_LIVE_ACCEPTANCE"
+    },
+    {
+      "id": "gpt-review-independent",
+      "roles": [
+        "REVIEW"
+      ],
+      "configured": true,
+      "providers": [
+        "gpt"
+      ],
+      "live_acceptance": "NOT_VERIFIED",
+      "ready": true,
+      "readiness": "CONFIGURED_AWAITING_LIVE_ACCEPTANCE"
+    },
+    {
+      "id": "grok-review",
+      "roles": [
+        "REVIEW"
+      ],
+      "configured": true,
+      "providers": [
+        "grok"
+      ],
+      "live_acceptance": "NOT_VERIFIED",
+      "ready": true,
+      "readiness": "CONFIGURED_AWAITING_LIVE_ACCEPTANCE"
+    },
+    {
+      "id": "owner-bot:950157",
+      "roles": [
+        "PI_REVIEW"
+      ],
+      "configured": true,
+      "providers": [
+        "gpt"
+      ],
+      "live_acceptance": "NOT_VERIFIED",
+      "ready": true,
+      "readiness": "CONFIGURED_AWAITING_LIVE_ACCEPTANCE"
+    },
+    {
+      "id": "owner-bot:family",
+      "roles": [
+        "PI_REVIEW"
+      ],
+      "configured": true,
+      "providers": [
+        "gpt"
+      ],
+      "live_acceptance": "NOT_VERIFIED",
+      "ready": true,
+      "readiness": "CONFIGURED_AWAITING_LIVE_ACCEPTANCE"
+    },
+    {
+      "id": "owner-bot:hy",
+      "roles": [
+        "PI_REVIEW"
+      ],
+      "configured": true,
+      "providers": [
+        "gpt"
+      ],
+      "live_acceptance": "NOT_VERIFIED",
+      "ready": true,
+      "readiness": "CONFIGURED_AWAITING_LIVE_ACCEPTANCE"
+    },
+    {
+      "id": "owner-bot:sam",
+      "roles": [
+        "PI_REVIEW"
+      ],
+      "configured": true,
+      "providers": [
+        "gpt"
+      ],
+      "live_acceptance": "NOT_VERIFIED",
+      "ready": true,
+      "readiness": "CONFIGURED_AWAITING_LIVE_ACCEPTANCE"
+    }
+  ],
+  "packages": [
+    {
+      "id": "wp-523f0241256b47338e83e6a3ff65c1e3",
+      "project_id": "p",
+      "task": "產出專案規劃書與 AI 執行規劃書 DRAFT v1",
+      "status": "COMPLETED",
+      "contract_lane": "GPT_CHAT",
+      "type": "PROJECT_PLANNING",
+      "runner_id": "gpt-chat",
+      "assignment_revision": 1,
+      "route_snapshot": {
+        "constraints": {
+          "code_github_verification": false,
+          "human_action_unchanged": true,
+          "independent_review": false,
+          "pr_merge_user_only": true
+        },
+        "contract_lane": "GPT_CHAT",
+        "original_type": "PROJECT_PLANNING",
+        "owner_bot": "sam",
+        "policy_hash": "da506c8a9c8a9f31aa00eaeef23d49764b9ace97158a1a0a7aa628e6d446b0fb",
+        "policy_revision": 0,
+        "role": "PLANNING",
+        "route": {
+          "escalation": null,
+          "fallbacks": [],
+          "health": {
+            "auto_reassign_enabled": false,
+            "cooldown_seconds": 3600,
+            "error_rate": 0.5,
+            "max_reassignments": 1,
+            "min_samples": 5,
+            "timeout_rate": 0.5,
+            "unclaimed_after_seconds": 7200,
+            "unclaimed_threshold": 3,
+            "window_seconds": 86400,
+            "window_size": 20
+          },
+          "primary": "gpt-chat"
+        },
+        "schema_version": 1,
+        "source": "builtin:PLANNING"
+      },
+      "current_route": {
+        "schema_version": 1,
+        "policy_revision": 1,
+        "policy_hash": "a89ac2597fe842c47ea584efb97beaff99bcd1ab8cd581ae029462e89818f784",
+        "source": "builtin:PLANNING",
+        "role": "PLANNING",
+        "original_type": "PROJECT_PLANNING",
+        "owner_bot": "sam",
+        "contract_lane": "GPT_CHAT",
+        "route": {
+          "primary": "gpt-chat",
+          "fallbacks": [],
+          "escalation": null,
+          "health": {
+            "window_size": 20,
+            "window_seconds": 86400,
+            "min_samples": 5,
+            "unclaimed_after_seconds": 7200,
+            "unclaimed_threshold": 3,
+            "timeout_rate": 0.5,
+            "error_rate": 0.5,
+            "cooldown_seconds": 3600,
+            "auto_reassign_enabled": false,
+            "max_reassignments": 1
+          }
+        },
+        "constraints": {
+          "code_github_verification": false,
+          "pr_merge_user_only": true,
+          "independent_review": false,
+          "human_action_unchanged": true
+        }
+      },
+      "current_route_error": null,
+      "last_claim": null,
+      "health": {
+        "cooled_until": 0,
+        "watermark": 0,
+        "recovered_at": 0,
+        "evidence": {}
+      },
+      "primary_health": {
+        "cooled_until": 0,
+        "watermark": 0,
+        "recovered_at": 0,
+        "evidence": {}
+      },
+      "metrics": {
+        "samples": 0,
+        "insufficient_samples": true,
+        "timeout_rate": 0,
+        "error_rate": 0,
+        "unclaimed": 2,
+        "consecutive_unclaimed": 2,
+        "evidence_seq": 10,
+        "attempt_evidence": [],
+        "opportunity_evidence": [
+          6,
+          7
+        ]
+      }
+    },
+    {
+      "id": "wp-a9ae3ce048424941ae0a83f22814ab57",
+      "project_id": "p",
+      "task": "A",
+      "status": "RUNNING",
+      "contract_lane": "GPT_CHAT",
+      "type": "DOCUMENT",
+      "runner_id": "gpt-chat",
+      "assignment_revision": 1,
+      "route_snapshot": {
+        "constraints": {
+          "code_github_verification": false,
+          "human_action_unchanged": true,
+          "independent_review": false,
+          "pr_merge_user_only": true
+        },
+        "contract_lane": "GPT_CHAT",
+        "original_type": "DOCUMENT",
+        "owner_bot": "sam",
+        "policy_hash": "a89ac2597fe842c47ea584efb97beaff99bcd1ab8cd581ae029462e89818f784",
+        "policy_revision": 1,
+        "role": "GENERAL",
+        "route": {
+          "escalation": null,
+          "fallbacks": [
+            "chatgpt-work"
+          ],
+          "health": {
+            "auto_reassign_enabled": true,
+            "cooldown_seconds": 7200,
+            "error_rate": 0.5,
+            "max_reassignments": 1,
+            "min_samples": 5,
+            "timeout_rate": 0.5,
+            "unclaimed_after_seconds": 10,
+            "unclaimed_threshold": 2,
+            "window_seconds": 86400,
+            "window_size": 10
+          },
+          "primary": "gpt-chat"
+        },
+        "schema_version": 1,
+        "source": "global::GENERAL"
+      },
+      "current_route": {
+        "schema_version": 1,
+        "policy_revision": 1,
+        "policy_hash": "a89ac2597fe842c47ea584efb97beaff99bcd1ab8cd581ae029462e89818f784",
+        "source": "global::GENERAL",
+        "role": "GENERAL",
+        "original_type": "DOCUMENT",
+        "owner_bot": "sam",
+        "contract_lane": "GPT_CHAT",
+        "route": {
+          "primary": "gpt-chat",
+          "fallbacks": [
+            "chatgpt-work"
+          ],
+          "escalation": null,
+          "health": {
+            "window_size": 10,
+            "window_seconds": 86400,
+            "min_samples": 5,
+            "unclaimed_after_seconds": 10,
+            "unclaimed_threshold": 2,
+            "timeout_rate": 0.5,
+            "error_rate": 0.5,
+            "cooldown_seconds": 7200,
+            "auto_reassign_enabled": true,
+            "max_reassignments": 1
+          }
+        },
+        "constraints": {
+          "code_github_verification": false,
+          "pr_merge_user_only": true,
+          "independent_review": false,
+          "human_action_unchanged": true
+        }
+      },
+      "current_route_error": null,
+      "last_claim": 1792137180.7304053,
+      "health": {
+        "cooled_until": 1792144391.7320304,
+        "watermark": 0,
+        "recovered_at": 0.0,
+        "evidence": {
+          "attempt_evidence": [],
+          "consecutive_unclaimed": 2,
+          "error_rate": 0,
+          "evidence_seq": 7,
+          "insufficient_samples": true,
+          "opportunity_evidence": [
+            6,
+            7
+          ],
+          "samples": 0,
+          "timeout_rate": 0,
+          "unclaimed": 2
+        }
+      },
+      "primary_health": {
+        "cooled_until": 1792144391.7320304,
+        "watermark": 0,
+        "recovered_at": 0.0,
+        "evidence": {
+          "attempt_evidence": [],
+          "consecutive_unclaimed": 2,
+          "error_rate": 0,
+          "evidence_seq": 7,
+          "insufficient_samples": true,
+          "opportunity_evidence": [
+            6,
+            7
+          ],
+          "samples": 0,
+          "timeout_rate": 0,
+          "unclaimed": 2
+        }
+      },
+      "metrics": {
+        "samples": 0,
+        "insufficient_samples": true,
+        "timeout_rate": 0,
+        "error_rate": 0,
+        "unclaimed": 2,
+        "consecutive_unclaimed": 2,
+        "evidence_seq": 10,
+        "attempt_evidence": [],
+        "opportunity_evidence": [
+          6,
+          7
+        ]
+      }
+    },
+    {
+      "id": "wp-4dfbecccdf5843188836796913dce267",
+      "project_id": "p",
+      "task": "整理市場研究資料",
+      "status": "READY",
+      "contract_lane": "GPT_CHAT",
+      "type": "DOCUMENT",
+      "runner_id": "chatgpt-work",
+      "assignment_revision": 2,
+      "route_snapshot": {
+        "constraints": {
+          "code_github_verification": false,
+          "human_action_unchanged": true,
+          "independent_review": false,
+          "pr_merge_user_only": true
+        },
+        "contract_lane": "GPT_CHAT",
+        "original_type": "DOCUMENT",
+        "owner_bot": "sam",
+        "policy_hash": "a89ac2597fe842c47ea584efb97beaff99bcd1ab8cd581ae029462e89818f784",
+        "policy_revision": 1,
+        "role": "GENERAL",
+        "route": {
+          "escalation": null,
+          "fallbacks": [
+            "chatgpt-work"
+          ],
+          "health": {
+            "auto_reassign_enabled": true,
+            "cooldown_seconds": 7200,
+            "error_rate": 0.5,
+            "max_reassignments": 1,
+            "min_samples": 5,
+            "timeout_rate": 0.5,
+            "unclaimed_after_seconds": 10,
+            "unclaimed_threshold": 2,
+            "window_seconds": 86400,
+            "window_size": 10
+          },
+          "primary": "gpt-chat"
+        },
+        "schema_version": 1,
+        "source": "global::GENERAL"
+      },
+      "current_route": {
+        "schema_version": 1,
+        "policy_revision": 1,
+        "policy_hash": "a89ac2597fe842c47ea584efb97beaff99bcd1ab8cd581ae029462e89818f784",
+        "source": "global::GENERAL",
+        "role": "GENERAL",
+        "original_type": "DOCUMENT",
+        "owner_bot": "sam",
+        "contract_lane": "GPT_CHAT",
+        "route": {
+          "primary": "gpt-chat",
+          "fallbacks": [
+            "chatgpt-work"
+          ],
+          "escalation": null,
+          "health": {
+            "window_size": 10,
+            "window_seconds": 86400,
+            "min_samples": 5,
+            "unclaimed_after_seconds": 10,
+            "unclaimed_threshold": 2,
+            "timeout_rate": 0.5,
+            "error_rate": 0.5,
+            "cooldown_seconds": 7200,
+            "auto_reassign_enabled": true,
+            "max_reassignments": 1
+          }
+        },
+        "constraints": {
+          "code_github_verification": false,
+          "pr_merge_user_only": true,
+          "independent_review": false,
+          "human_action_unchanged": true
+        }
+      },
+      "current_route_error": null,
+      "last_claim": null,
+      "health": {
+        "cooled_until": 0,
+        "watermark": 0,
+        "recovered_at": 0,
+        "evidence": {}
+      },
+      "primary_health": {
+        "cooled_until": 1792144391.7320304,
+        "watermark": 0,
+        "recovered_at": 0.0,
+        "evidence": {
+          "attempt_evidence": [],
+          "consecutive_unclaimed": 2,
+          "error_rate": 0,
+          "evidence_seq": 7,
+          "insufficient_samples": true,
+          "opportunity_evidence": [
+            6,
+            7
+          ],
+          "samples": 0,
+          "timeout_rate": 0,
+          "unclaimed": 2
+        }
+      },
+      "metrics": {
+        "samples": 0,
+        "insufficient_samples": true,
+        "timeout_rate": 0,
+        "error_rate": 0,
+        "unclaimed": 0,
+        "consecutive_unclaimed": 0,
+        "evidence_seq": 0,
+        "attempt_evidence": [],
+        "opportunity_evidence": []
+      }
+    },
+    {
+      "id": "wp-8fa7a2ec4d1e487da60b1215b43e39df",
+      "project_id": "p",
+      "task": "產出比較分析文件",
+      "status": "READY",
+      "contract_lane": "GPT_CHAT",
+      "type": "DOCUMENT",
+      "runner_id": "chatgpt-work",
+      "assignment_revision": 2,
+      "route_snapshot": {
+        "constraints": {
+          "code_github_verification": false,
+          "human_action_unchanged": true,
+          "independent_review": false,
+          "pr_merge_user_only": true
+        },
+        "contract_lane": "GPT_CHAT",
+        "original_type": "DOCUMENT",
+        "owner_bot": "sam",
+        "policy_hash": "a89ac2597fe842c47ea584efb97beaff99bcd1ab8cd581ae029462e89818f784",
+        "policy_revision": 1,
+        "role": "GENERAL",
+        "route": {
+          "escalation": null,
+          "fallbacks": [
+            "chatgpt-work"
+          ],
+          "health": {
+            "auto_reassign_enabled": true,
+            "cooldown_seconds": 7200,
+            "error_rate": 0.5,
+            "max_reassignments": 1,
+            "min_samples": 5,
+            "timeout_rate": 0.5,
+            "unclaimed_after_seconds": 10,
+            "unclaimed_threshold": 2,
+            "window_seconds": 86400,
+            "window_size": 10
+          },
+          "primary": "gpt-chat"
+        },
+        "schema_version": 1,
+        "source": "global::GENERAL"
+      },
+      "current_route": {
+        "schema_version": 1,
+        "policy_revision": 1,
+        "policy_hash": "a89ac2597fe842c47ea584efb97beaff99bcd1ab8cd581ae029462e89818f784",
+        "source": "global::GENERAL",
+        "role": "GENERAL",
+        "original_type": "DOCUMENT",
+        "owner_bot": "sam",
+        "contract_lane": "GPT_CHAT",
+        "route": {
+          "primary": "gpt-chat",
+          "fallbacks": [
+            "chatgpt-work"
+          ],
+          "escalation": null,
+          "health": {
+            "window_size": 10,
+            "window_seconds": 86400,
+            "min_samples": 5,
+            "unclaimed_after_seconds": 10,
+            "unclaimed_threshold": 2,
+            "timeout_rate": 0.5,
+            "error_rate": 0.5,
+            "cooldown_seconds": 7200,
+            "auto_reassign_enabled": true,
+            "max_reassignments": 1
+          }
+        },
+        "constraints": {
+          "code_github_verification": false,
+          "pr_merge_user_only": true,
+          "independent_review": false,
+          "human_action_unchanged": true
+        }
+      },
+      "current_route_error": null,
+      "last_claim": null,
+      "health": {
+        "cooled_until": 0,
+        "watermark": 0,
+        "recovered_at": 0,
+        "evidence": {}
+      },
+      "primary_health": {
+        "cooled_until": 1792144391.7320304,
+        "watermark": 0,
+        "recovered_at": 0.0,
+        "evidence": {
+          "attempt_evidence": [],
+          "consecutive_unclaimed": 2,
+          "error_rate": 0,
+          "evidence_seq": 7,
+          "insufficient_samples": true,
+          "opportunity_evidence": [
+            6,
+            7
+          ],
+          "samples": 0,
+          "timeout_rate": 0,
+          "unclaimed": 2
+        }
+      },
+      "metrics": {
+        "samples": 0,
+        "insufficient_samples": true,
+        "timeout_rate": 0,
+        "error_rate": 0,
+        "unclaimed": 0,
+        "consecutive_unclaimed": 0,
+        "evidence_seq": 0,
+        "attempt_evidence": [],
+        "opportunity_evidence": []
+      }
+    }
+  ],
+  "queues": [
+    {
+      "runner_id": "chatgpt-work",
+      "ready": 2,
+      "running": 0,
+      "last_claim": null
+    },
+    {
+      "runner_id": "claude-review",
+      "ready": 0,
+      "running": 0,
+      "last_claim": null
+    },
+    {
+      "runner_id": "gpt-chat",
+      "ready": 0,
+      "running": 1,
+      "last_claim": 1792137180.7304053
+    },
+    {
+      "runner_id": "gpt-review-independent",
+      "ready": 0,
+      "running": 0,
+      "last_claim": null
+    },
+    {
+      "runner_id": "grok-review",
+      "ready": 0,
+      "running": 0,
+      "last_claim": null
+    },
+    {
+      "runner_id": "owner-bot:950157",
+      "ready": 0,
+      "running": 0,
+      "last_claim": null
+    },
+    {
+      "runner_id": "owner-bot:family",
+      "ready": 0,
+      "running": 0,
+      "last_claim": null
+    },
+    {
+      "runner_id": "owner-bot:hy",
+      "ready": 0,
+      "running": 0,
+      "last_claim": null
+    },
+    {
+      "runner_id": "owner-bot:sam",
+      "ready": 0,
+      "running": 0,
+      "last_claim": null
+    }
+  ],
+  "events": [
+    {
+      "seq": 10,
+      "key": "decision:wp-8fa7a2ec4d1e487da60b1215b43e39df:1:1792144391.7320304:FROZEN_FALLBACK_AUTHORIZED",
+      "kind": "REASSIGNED",
+      "runner_id": "gpt-chat",
+      "package_id": "wp-8fa7a2ec4d1e487da60b1215b43e39df",
+      "execution_id": null,
+      "at": 1792137191.7320304,
+      "body": {
+        "actor": "system:router-tick",
+        "assignment_revision": 1,
+        "authority": "global::GENERAL",
+        "cooled_until": 1792144391.7320304,
+        "metrics": {
+          "attempt_evidence": [],
+          "consecutive_unclaimed": 2,
+          "error_rate": 0,
+          "evidence_seq": 7,
+          "insufficient_samples": true,
+          "opportunity_evidence": [
+            6,
+            7
+          ],
+          "samples": 0,
+          "timeout_rate": 0,
+          "unclaimed": 2
+        },
+        "new_runner": "chatgpt-work",
+        "next_assignment_revision": 2,
+        "old_runner": "gpt-chat",
+        "policy_revision": 1,
+        "project_id": "p",
+        "reason": "FROZEN_FALLBACK_AUTHORIZED",
+        "route_snapshot_hash": "62e09e6553e1cb14d7e120e16fc838b5fd284d765d563a96541ab0a6b8040d15",
+        "thresholds": {
+          "auto_reassign_enabled": true,
+          "cooldown_seconds": 7200,
+          "error_rate": 0.5,
+          "max_reassignments": 1,
+          "min_samples": 5,
+          "timeout_rate": 0.5,
+          "unclaimed_after_seconds": 10,
+          "unclaimed_threshold": 2,
+          "window_seconds": 86400,
+          "window_size": 10
+        }
+      }
+    },
+    {
+      "seq": 9,
+      "key": "decision:wp-4dfbecccdf5843188836796913dce267:1:1792144391.7320304:FROZEN_FALLBACK_AUTHORIZED",
+      "kind": "REASSIGNED",
+      "runner_id": "gpt-chat",
+      "package_id": "wp-4dfbecccdf5843188836796913dce267",
+      "execution_id": null,
+      "at": 1792137191.7320304,
+      "body": {
+        "actor": "system:router-tick",
+        "assignment_revision": 1,
+        "authority": "global::GENERAL",
+        "cooled_until": 1792144391.7320304,
+        "metrics": {
+          "attempt_evidence": [],
+          "consecutive_unclaimed": 2,
+          "error_rate": 0,
+          "evidence_seq": 7,
+          "insufficient_samples": true,
+          "opportunity_evidence": [
+            6,
+            7
+          ],
+          "samples": 0,
+          "timeout_rate": 0,
+          "unclaimed": 2
+        },
+        "new_runner": "chatgpt-work",
+        "next_assignment_revision": 2,
+        "old_runner": "gpt-chat",
+        "policy_revision": 1,
+        "project_id": "p",
+        "reason": "FROZEN_FALLBACK_AUTHORIZED",
+        "route_snapshot_hash": "62e09e6553e1cb14d7e120e16fc838b5fd284d765d563a96541ab0a6b8040d15",
+        "thresholds": {
+          "auto_reassign_enabled": true,
+          "cooldown_seconds": 7200,
+          "error_rate": 0.5,
+          "max_reassignments": 1,
+          "min_samples": 5,
+          "timeout_rate": 0.5,
+          "unclaimed_after_seconds": 10,
+          "unclaimed_threshold": 2,
+          "window_seconds": 86400,
+          "window_size": 10
+        }
+      }
+    },
+    {
+      "seq": 8,
+      "key": "cooldown:gpt-chat:8b63da4271b4ef687fadddabad66de7deb8af06360fa803ffc03190a36b7cab1:7",
+      "kind": "COOLED",
+      "runner_id": "gpt-chat",
+      "package_id": "wp-a9ae3ce048424941ae0a83f22814ab57",
+      "execution_id": null,
+      "at": 1792137191.7320304,
+      "body": {
+        "authority": "frozen-route-snapshot",
+        "cooled_until": 1792144391.7320304,
+        "metrics": {
+          "attempt_evidence": [],
+          "consecutive_unclaimed": 2,
+          "error_rate": 0,
+          "evidence_seq": 7,
+          "insufficient_samples": true,
+          "opportunity_evidence": [
+            6,
+            7
+          ],
+          "samples": 0,
+          "timeout_rate": 0,
+          "unclaimed": 2
+        },
+        "policy_hash": "8b63da4271b4ef687fadddabad66de7deb8af06360fa803ffc03190a36b7cab1",
+        "reason": "既有事件達凍結健康門檻，暫停新領件",
+        "thresholds": {
+          "auto_reassign_enabled": true,
+          "cooldown_seconds": 7200,
+          "error_rate": 0.5,
+          "max_reassignments": 1,
+          "min_samples": 5,
+          "timeout_rate": 0.5,
+          "unclaimed_after_seconds": 10,
+          "unclaimed_threshold": 2,
+          "window_seconds": 86400,
+          "window_size": 10
+        }
+      }
+    },
+    {
+      "seq": 7,
+      "key": "unclaimed:wp-8fa7a2ec4d1e487da60b1215b43e39df:1",
+      "kind": "UNCLAIMED",
+      "runner_id": "gpt-chat",
+      "package_id": "wp-8fa7a2ec4d1e487da60b1215b43e39df",
+      "execution_id": null,
+      "at": 1792137191.7320304,
+      "body": {
+        "assignment_revision": 1
+      }
+    },
+    {
+      "seq": 6,
+      "key": "unclaimed:wp-4dfbecccdf5843188836796913dce267:1",
+      "kind": "UNCLAIMED",
+      "runner_id": "gpt-chat",
+      "package_id": "wp-4dfbecccdf5843188836796913dce267",
+      "execution_id": null,
+      "at": 1792137191.7320304,
+      "body": {
+        "assignment_revision": 1
+      }
+    },
+    {
+      "seq": 5,
+      "key": "assignment:wp-8fa7a2ec4d1e487da60b1215b43e39df:1",
+      "kind": "ASSIGNED",
+      "runner_id": "gpt-chat",
+      "package_id": "wp-8fa7a2ec4d1e487da60b1215b43e39df",
+      "execution_id": null,
+      "at": 1792137180.7318106,
+      "body": {
+        "assignment_revision": 1,
+        "authority": "global::GENERAL",
+        "policy_hash": "a89ac2597fe842c47ea584efb97beaff99bcd1ab8cd581ae029462e89818f784"
+      }
+    },
+    {
+      "seq": 4,
+      "key": "assignment:wp-4dfbecccdf5843188836796913dce267:1",
+      "kind": "ASSIGNED",
+      "runner_id": "gpt-chat",
+      "package_id": "wp-4dfbecccdf5843188836796913dce267",
+      "execution_id": null,
+      "at": 1792137180.731583,
+      "body": {
+        "assignment_revision": 1,
+        "authority": "global::GENERAL",
+        "policy_hash": "a89ac2597fe842c47ea584efb97beaff99bcd1ab8cd581ae029462e89818f784"
+      }
+    },
+    {
+      "seq": 3,
+      "key": "claim:execution-cdea1d2fddea4abda2cc61e712877598",
+      "kind": "CLAIMED",
+      "runner_id": "gpt-chat",
+      "package_id": "wp-a9ae3ce048424941ae0a83f22814ab57",
+      "execution_id": "execution-cdea1d2fddea4abda2cc61e712877598",
+      "at": 1792137180.7304347,
+      "body": {
+        "assignment_revision": 1
+      }
+    },
+    {
+      "seq": 2,
+      "key": "assignment:wp-a9ae3ce048424941ae0a83f22814ab57:1",
+      "kind": "ASSIGNED",
+      "runner_id": "gpt-chat",
+      "package_id": "wp-a9ae3ce048424941ae0a83f22814ab57",
+      "execution_id": null,
+      "at": 1792137180.7295263,
+      "body": {
+        "assignment_revision": 1,
+        "authority": "global::GENERAL",
+        "policy_hash": "a89ac2597fe842c47ea584efb97beaff99bcd1ab8cd581ae029462e89818f784"
+      }
+    },
+    {
+      "seq": 1,
+      "key": "assignment:wp-523f0241256b47338e83e6a3ff65c1e3:1",
+      "kind": "ASSIGNED",
+      "runner_id": "gpt-chat",
+      "package_id": "wp-523f0241256b47338e83e6a3ff65c1e3",
+      "execution_id": null,
+      "at": 1792137180.728467,
+      "body": {
+        "assignment_revision": 1,
+        "authority": "builtin:PLANNING",
+        "policy_hash": "da506c8a9c8a9f31aa00eaeef23d49764b9ace97158a1a0a7aa628e6d446b0fb"
+      }
+    }
+  ],
+  "events_truncated": false,
+  "configuration_error": false,
+  "enrollment_enabled": false,
+  "auto_reassign_paused": false,
+  "health_defaults": {
+    "window_size": 20,
+    "window_seconds": 86400,
+    "min_samples": 5,
+    "unclaimed_after_seconds": 7200,
+    "unclaimed_threshold": 3,
+    "timeout_rate": 0.5,
+    "error_rate": 0.5,
+    "cooldown_seconds": 3600,
+    "auto_reassign_enabled": false,
+    "max_reassignments": 1
+  },
+  "as_of": 1792137191.7320304,
+  "project_id": null
+}

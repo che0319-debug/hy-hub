@@ -29,7 +29,7 @@ roles:[
   {role:'review',name:'獨立審查員',lane:'CLAUDE_REVIEW',tier:'high',model:'Claude Opus',last_reported:null,mismatch:false,runner:'PI 另開的子代理（只看審查包，不看製作過程）'},
 ],tools:[{id:'gpt-image',name:'GPT',use:'畫圖'},{id:'grok',name:'Grok',use:'第二意見'}]};
 (async()=>{
-  const b=await chromium.launch({headless:true,args:['--no-sandbox']});const p=await b.newPage();const errors=[];const resolved=[];
+  const b=await chromium.launch({headless:true,args:['--no-sandbox'],...(process.env.CHROME_BIN?{executablePath:process.env.CHROME_BIN}:{})});const p=await b.newPage();const errors=[];const resolved=[];
   p.on('pageerror',e=>errors.push(e.message));
   await p.addInitScript(()=>sessionStorage.setItem('hy_life_os_access_token',btoa(JSON.stringify({exp:Math.floor(Date.now()/1000)+3600}))+'.test'));
   await p.route('**/api/**',r=>{let data={ok:true};const u=r.request().url();
@@ -50,7 +50,8 @@ roles:[
     assert.equal(await p.locator('.expert-card.needs-you').count(),1);
     await p.getByText('另有 v2.1.0 供舊專案使用',{exact:false}).waitFor();
     await p.getByText('Claude 程式通道',{exact:true}).first().waitFor();
-    assert.equal(await p.getByText('GPT Chat').count(),0);
+    // GPT_CHAT already labels GPT Chat; verify the stored executor rather than the retired Claude wording.
+    await p.locator('.expert-card',{hasText:'PI｜Project Integrator'}).getByText('GPT Chat 對話通道',{exact:true}).first().waitFor();
     await p.getByText('待你確認 2',{exact:true}).waitFor();
     await p.screenshot({path:`docs/quality/ui/expert-team-${w}.png`,fullPage:true});
     assert.equal(await p.evaluate(()=>document.documentElement.scrollWidth>innerWidth),false,`experts overflow ${w}`);
@@ -67,6 +68,7 @@ roles:[
     await p.screenshot({path:`docs/quality/ui/expert-skills-${w}.png`,fullPage:true});
     assert.equal(await p.evaluate(()=>document.documentElement.scrollWidth>innerWidth),false,`skills overflow ${w}`);
     await p.getByRole('tab',{name:'執行者與模型'}).click();
+    await p.getByText('舊制模型回報（既有專案）',{exact:true}).click();
     await p.getByText('有角色實際使用的模型和設定不同',{exact:false}).waitFor();
     await p.locator('.hy-pill:visible',{hasText:'與設定不同'}).first().waitFor();
     await p.locator('.hy-pill:visible',{hasText:'等首次回報'}).first().waitFor();

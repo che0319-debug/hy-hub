@@ -3,6 +3,7 @@ import { useSearchParams } from 'react-router-dom'
 import { authHeaders } from '../auth'
 import './expert-team.css'
 import { laneLabel } from '../lib/lanes'
+import {RouterControls} from '../components/RouterControls'
 
 const base = import.meta.env.VITE_API_BASE || ''
 async function request(url, body) {
@@ -106,7 +107,7 @@ function CandidateForm({ editor, skills, busy, onCancel, onSubmit }) {
   </form>
 }
 
-function ModelsTab() {
+function LegacyModelsTab() {
   const [models, setModels] = useState(null), [error, setError] = useState('')
   const load = () => { setError(''); setModels(null); request(`${base}/api/ai-office/models`).then(setModels).catch(e => setError(e.message)) }
   useEffect(load, [])
@@ -141,6 +142,8 @@ function ModelsTab() {
     </section>
   </div>
 }
+
+function ModelsTab(){const [legacy,setLegacy]=useState(false);return <div className="hy-stack"><RouterControls/><details className="hy-card" open={legacy} onToggle={e=>setLegacy(e.currentTarget.open)}><summary>舊制模型回報（既有專案）</summary>{legacy&&<LegacyModelsTab/>}</details></div>}
 
 export default function ExpertTeam() {
   const [params] = useSearchParams(), initialTab = ['experts','skills','models','requests'].includes(params.get('tab')) ? params.get('tab') : 'experts'
@@ -182,7 +185,7 @@ export default function ExpertTeam() {
 
   return <div className="hy expert-team hy-stack">
     <div className="hy-pagehead">
-      <div><h1 className="hy-title">專家團</h1><p className="hy-lede">PI 帶隊規劃，各專家依自己的 Skill 執行。全部由 Claude 執行，GPT／Grok 只當外部工具。</p></div>
+      <div><h1 className="hy-title">專家團</h1><p className="hy-lede">PI 帶隊規劃，各專家依 Skill 與工作包凍結路由執行。既有專案保留原配置。</p></div>
       <div className="et-head-end">
         {data && <div className="hy-summary"><span className="hy-pill" data-s="done">{publishedExperts} 位專家已上線</span><span className="hy-pill" data-s="done">{publishedSkills} 份 Skill 已發布</span><span className="hy-pill" data-s={actions.length ? 'you' : 'wait'}>待你確認 {actions.length}</span></div>}
         <button className="hy-btn" disabled={busy} onClick={() => act(load)}>重新整理</button>
