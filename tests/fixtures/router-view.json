@@ -52,12 +52,17 @@
       ],
       "live_acceptance": "NOT_VERIFIED",
       "ready": true,
-      "readiness": "CONFIGURED_AWAITING_LIVE_ACCEPTANCE"
+      "readiness": "CONFIGURED_AWAITING_LIVE_ACCEPTANCE",
+      "label": "ChatGPT Work",
+      "models": [
+        "session-default"
+      ]
     },
     {
       "id": "claude-review",
       "roles": [
-        "REVIEW"
+        "REVIEW",
+        "PI_REVIEW"
       ],
       "configured": true,
       "providers": [
@@ -65,7 +70,13 @@
       ],
       "live_acceptance": "NOT_VERIFIED",
       "ready": true,
-      "readiness": "CONFIGURED_AWAITING_LIVE_ACCEPTANCE"
+      "readiness": "CONFIGURED_AWAITING_LIVE_ACCEPTANCE",
+      "label": "Claude",
+      "models": [
+        "session-default",
+        "opus",
+        "sonnet"
+      ]
     },
     {
       "id": "gpt-chat",
@@ -79,7 +90,13 @@
       ],
       "live_acceptance": "NOT_VERIFIED",
       "ready": true,
-      "readiness": "CONFIGURED_AWAITING_LIVE_ACCEPTANCE"
+      "readiness": "CONFIGURED_AWAITING_LIVE_ACCEPTANCE",
+      "label": "GPT Chat",
+      "models": [
+        "session-default",
+        "thinking",
+        "pro"
+      ]
     },
     {
       "id": "gpt-review-independent",
@@ -92,7 +109,11 @@
       ],
       "live_acceptance": "NOT_VERIFIED",
       "ready": true,
-      "readiness": "CONFIGURED_AWAITING_LIVE_ACCEPTANCE"
+      "readiness": "CONFIGURED_AWAITING_LIVE_ACCEPTANCE",
+      "label": "gpt-review-independent",
+      "models": [
+        "session-default"
+      ]
     },
     {
       "id": "grok-review",
@@ -105,7 +126,11 @@
       ],
       "live_acceptance": "NOT_VERIFIED",
       "ready": true,
-      "readiness": "CONFIGURED_AWAITING_LIVE_ACCEPTANCE"
+      "readiness": "CONFIGURED_AWAITING_LIVE_ACCEPTANCE",
+      "label": "Grok Bot",
+      "models": [
+        "session-default"
+      ]
     },
     {
       "id": "owner-bot:950157",
@@ -118,7 +143,11 @@
       ],
       "live_acceptance": "NOT_VERIFIED",
       "ready": true,
-      "readiness": "CONFIGURED_AWAITING_LIVE_ACCEPTANCE"
+      "readiness": "CONFIGURED_AWAITING_LIVE_ACCEPTANCE",
+      "label": "owner-bot:950157",
+      "models": [
+        "session-default"
+      ]
     },
     {
       "id": "owner-bot:family",
@@ -131,7 +160,11 @@
       ],
       "live_acceptance": "NOT_VERIFIED",
       "ready": true,
-      "readiness": "CONFIGURED_AWAITING_LIVE_ACCEPTANCE"
+      "readiness": "CONFIGURED_AWAITING_LIVE_ACCEPTANCE",
+      "label": "owner-bot:family",
+      "models": [
+        "session-default"
+      ]
     },
     {
       "id": "owner-bot:hy",
@@ -144,7 +177,11 @@
       ],
       "live_acceptance": "NOT_VERIFIED",
       "ready": true,
-      "readiness": "CONFIGURED_AWAITING_LIVE_ACCEPTANCE"
+      "readiness": "CONFIGURED_AWAITING_LIVE_ACCEPTANCE",
+      "label": "owner-bot:hy",
+      "models": [
+        "session-default"
+      ]
     },
     {
       "id": "owner-bot:sam",
@@ -157,7 +194,11 @@
       ],
       "live_acceptance": "NOT_VERIFIED",
       "ready": true,
-      "readiness": "CONFIGURED_AWAITING_LIVE_ACCEPTANCE"
+      "readiness": "CONFIGURED_AWAITING_LIVE_ACCEPTANCE",
+      "label": "owner-bot:sam",
+      "models": [
+        "session-default"
+      ]
     }
   ],
   "packages": [
@@ -940,5 +981,46 @@
     "max_reassignments": 1
   },
   "as_of": 1792137191.7320304,
-  "project_id": null
+  "project_id": null,
+  "control": {
+    "revision": 0,
+    "mode": "legacy",
+    "pilot_project_id": null
+  },
+  "role_defaults": {
+    "PLANNING": {
+      "primary": "gpt-chat",
+      "fallbacks": []
+    },
+    "GENERAL": {
+      "primary": "gpt-chat",
+      "fallbacks": [
+        "chatgpt-work"
+      ]
+    },
+    "CODE": {
+      "primary": "chatgpt-work",
+      "fallbacks": []
+    },
+    "REVIEW": {
+      "primary": "claude-review",
+      "fallbacks": [
+        "grok-review"
+      ]
+    },
+    "PI_REVIEW": {
+      "primary": "claude-review",
+      "fallbacks": [
+        "owner-bot:{owner}"
+      ],
+      "escalation": "user"
+    }
+  },
+  "role_names": {
+    "PLANNING": "PI 規劃",
+    "GENERAL": "一般執行專家",
+    "CODE": "程式工程師",
+    "REVIEW": "獨立審查員",
+    "PI_REVIEW": "PI 審查"
+  }
 }
