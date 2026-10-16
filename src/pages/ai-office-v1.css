@@ -179,3 +179,5 @@
 .ao-ms[open]>summary::after{content:'收合'}
 .ao-ms>summary{grid-template-columns:auto 1fr auto auto}
 @media(max-width:640px){.ao-ms>summary{grid-template-columns:auto 1fr auto}.ao-ms-count{grid-column:2}.ao-ms>summary::after{grid-row:1;grid-column:3}}
+
+.ao-draft-fields{border:0;padding:0;min-width:0;display:grid;gap:8px}
