@@ -3,6 +3,8 @@ on:
   pull_request:
     paths:
       - 'src/pages/AIOfficeV1.jsx'
+      - 'src/components/DraftGoalEditor.jsx'
+      - 'tests/draft-goal-ui.cjs'
       - 'src/pages/OfficeHome.jsx'
       - 'src/pages/ai-office-v1.css'
       - 'src/lib/aiOffice.mjs'
@@ -43,6 +45,7 @@ jobs:
           node tests/module-registry-ui.cjs
           node tests/ai-office-ui.cjs
           node tests/ai-office-startup-ui.cjs
+          node tests/draft-goal-ui.cjs
       - uses: actions/upload-artifact@v4
         if: always()
         with:

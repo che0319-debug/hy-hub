@@ -8,6 +8,7 @@ import { OFFICE_TABS, TAB_NOTES, isPending, requester, activityLabel, PACKAGE_ST
 import { laneLabel } from '../lib/lanes'
 import OfficeHome from './OfficeHome'
 import { PlanSummary, PlanDocument, CapacityBanner } from './PlanViews'
+import DraftGoalEditor from '../components/DraftGoalEditor'
 import './ai-office-v1.css'
 
 const base = (import.meta.env.VITE_API_BASE || '').replace(/\/$/, '')
@@ -78,7 +79,12 @@ function OfficeProject({ id, onBack, onDeleted }) {
       <p className="ao-goal" title={project.goal}>{project.goal}</p>
       <div className="ao-header-meta"><span>階段 <b>{project.phase} {project.milestone_id || ''}</b></span><span>工作包 <b>{count.done}／{count.total}</b></span><span>開始 <b>{when(project.started_at)}</b></span><span>最近紀錄 <b>{when(project.updated_at)}</b></span>{folder && <span>Drive <Link href={`https://drive.google.com/drive/folders/${folder}`}>專案資料夾</Link></span>}</div>
     </header>
-    {editing && <Card title="編輯專案（正式規格變更）"><p className="ao-muted">目標與範圍走正式規格變更，由你核准後才生效。</p>{project.plan_state==='APPROVED' && project.phase==='執行期' && project.milestone_id ? <div className="cc5"><SpecChangeBox project={project} onChanged={reload} setError={setError} goInbox={()=>setTab('overview')}/></div> : <Empty>目前階段未開放規格變更；請到會議室提出意見。</Empty>}</Card>}
+    {editing && <Card title={project.plan_state==='DRAFT' ? '編輯專案' : '編輯專案（正式規格變更）'}>
+      {project.plan_state==='DRAFT' ? project.permissions?.delete === true
+        ? <DraftGoalEditor project={project} onChanged={reload}/>
+        : <Empty>編輯草稿目標僅限 HY 本人。</Empty>
+        : <><p className="ao-muted">目標與範圍走正式規格變更，由你核准後才生效。</p>{project.plan_state==='APPROVED' && project.phase==='執行期' && project.milestone_id ? <div className="cc5"><SpecChangeBox project={project} onChanged={reload} setError={setError} goInbox={()=>setTab('overview')}/></div> : <Empty>目前階段未開放規格變更；請到會議室提出意見。</Empty>}</>}
+    </Card>}
     <nav className="ao-tabs" aria-label="AI Office 專案分頁">{OFFICE_TABS.map(([key,label])=><button key={key} aria-current={tab===key?'page':undefined} onClick={()=>setTab(key)}>{label}{key==='overview' && pending.length>0 && <span>{pending.length}</span>}</button>)}</nav>
     <p className="ao-tabnote">{TAB_NOTES[tab]}</p>
     {error && <p role="alert">{error}</p>}
