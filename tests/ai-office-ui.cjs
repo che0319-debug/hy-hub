@@ -6,16 +6,16 @@ const {chromium}=require('playwright');const assert=require('node:assert/strict'
  project.packages.push({id:'parked-old',task:'已停泊的舊版工作',type:'TASK',milestone_id:'PARKED:M3@r1',status:'WAITING',executor:'CODEX',created_at:1791676800,dependencies:[]});
  await page.route('**/api/**',route=>{const req=route.request(),url=req.url(),method=req.method();let data={};if(method!=='GET')writes.push({url,method,body:req.postDataJSON()});
  if(url.includes('/auth/'))data={access_token:'fixture',access_expires_in:3600,role:'owner'};
- else if(url.includes('/api/ai-office/projects/fixture-office/reports/'))data={html:`<html><body><h1>${url.endsWith('report_v1')?'歷史版本一':'正式版本二'}</h1><a href="https://drive.google.com/file/d/fixture_reference/view">引用</a></body></html>`};
- else if(url.endsWith('/api/ai-office/projects/fixture-office')){if(failure)return route.fulfill({status:503,contentType:'application/json',body:'{"detail":"unavailable"}'});data=project}
- else if(url.endsWith('/projects/fixture-office/files')){data={file_id:'uploaded_file',readback_verified:true};project.files.push({file_id:'uploaded_file',filename:'upload.txt',type:'text/plain',revision:1,created_at:1791677000,source:'HY_UI_UPLOAD'})}
- else if(url.endsWith('/projects/fixture-office/drive-reference')){data={file_id:'imported_file',source_file_id:'original_file',readback_verified:true};project.files.push({file_id:'imported_file',filename:'匯入.pdf',type:'application/pdf',revision:1,created_at:1791677000,source:'HY_DRIVE_REFERENCE'})}
+ else if(url.includes('/api/ai-office/projects/fixture-office/reports/'))data={html:`<html><body><h1>${url.split('?')[0].endsWith('report_v1')?'歷史版本一':'正式版本二'}</h1><a href="https://drive.google.com/file/d/fixture_reference/view">引用</a></body></html>`};
+ else if(url.split('?')[0].endsWith('/api/ai-office/projects/fixture-office')){if(failure)return route.fulfill({status:503,contentType:'application/json',body:'{"detail":"unavailable"}'});data=project}
+ else if(url.split('?')[0].endsWith('/projects/fixture-office/files')){data={file_id:'uploaded_file',readback_verified:true};project.files.push({file_id:'uploaded_file',filename:'upload.txt',type:'text/plain',revision:1,created_at:1791677000,source:'HY_UI_UPLOAD'})}
+ else if(url.split('?')[0].endsWith('/projects/fixture-office/drive-reference')){data={file_id:'imported_file',source_file_id:'original_file',readback_verified:true};project.files.push({file_id:'imported_file',filename:'匯入.pdf',type:'application/pdf',revision:1,created_at:1791677000,source:'HY_DRIVE_REFERENCE'})}
  else if(url.includes('/suggestions') && method==='POST'){data={id:'suggestion1'};project.suggestions.push({id:'suggestion1',content:req.postDataJSON().content,author:'owner',created_at:1791677200,state:'PENDING'})}
- else if(url.endsWith('/inbox/action1/resolve')){project.actions[0].status='RESOLVED';project.actions[0].resolved_at=1791677300;project.actions[0].resolved_by='owner';project.actions[0].answer=req.postDataJSON().answer;data={resolved:true}}
- else if(url.endsWith('/projects/fixture-office'))data=project;
- else if(url.endsWith('/projects')){if(homeFailure)return route.fulfill({status:503,contentType:'application/json',body:'{"detail":"home unavailable"}'});data=[project]}
- else if(url.includes('/inbox?') || url.endsWith('/api/ai-office/actions'))data=project.actions.filter(a=>a.status==='OPEN');
- else if(url.endsWith('/summary'))data={openTotal:1,openProjects:1,running:1,waiting:0,completed:0,all:1};
+ else if(url.split('?')[0].endsWith('/inbox/action1/resolve')){project.actions[0].status='RESOLVED';project.actions[0].resolved_at=1791677300;project.actions[0].resolved_by='owner';project.actions[0].answer=req.postDataJSON().answer;data={resolved:true}}
+ else if(url.split('?')[0].endsWith('/projects/fixture-office'))data=project;
+ else if(url.split('?')[0].endsWith('/projects')){if(homeFailure)return route.fulfill({status:503,contentType:'application/json',body:'{"detail":"home unavailable"}'});data=[project]}
+ else if(url.includes('/inbox?') || url.split('?')[0].endsWith('/api/ai-office/actions'))data=project.actions.filter(a=>a.status==='OPEN');
+ else if(url.split('?')[0].endsWith('/summary'))data={openTotal:1,openProjects:1,running:1,waiting:0,completed:0,all:1};
  return route.fulfill({contentType:'application/json',body:JSON.stringify(data)});
  });mkdirSync('docs/quality/ui/ai-office',{recursive:true});
  mkdirSync('docs/quality/ui/ai-office',{recursive:true});
@@ -93,10 +93,10 @@ const {chromium}=require('playwright');const assert=require('node:assert/strict'
  await form.getByLabel('上傳專案附件').setInputFiles({name:'upload.txt',mimeType:'text/plain',buffer:Buffer.from('fixture only')});await form.getByRole('link',{name:'upload.txt ↗',exact:true}).waitFor();
  await form.getByLabel('匯入其他 Google Drive 檔案 ID').fill('original_file');await form.getByRole('button',{name:'複製到專案 references 並驗證'}).click();await form.getByRole('link',{name:'匯入.pdf ↗',exact:true}).waitFor();
  await form.getByRole('button',{name:'送給 PI'}).click();await page.locator('.ao-message',{hasText:'HY 補充'}).waitFor();
- assert(writes.find(w=>w.url.endsWith('/suggestions')).body.content.includes('uploaded_file'));
+ assert(writes.find(w=>w.url.split('?')[0].endsWith('/suggestions')).body.content.includes('uploaded_file'));
  // 概況回答補資料
  await tab('概況').click();const supplement=page.locator('.ao-decide article',{hasText:'提供必要參考資料'});await supplement.getByLabel('你的回答').fill('正式回覆');await supplement.getByRole('button',{name:'送出',exact:true}).click();
- await page.locator('.ao-decide article',{hasText:'提供必要參考資料'}).waitFor({state:'detached'});assert.equal(writes.find(w=>w.url.endsWith('/inbox/action1/resolve')).body.answer,'正式回覆');
+ await page.locator('.ao-decide article',{hasText:'提供必要參考資料'}).waitFor({state:'detached'});assert.equal(writes.find(w=>w.url.split('?')[0].endsWith('/inbox/action1/resolve')).body.answer,'正式回覆');
  await tab('會議室').click();assert.equal(await page.locator('.ao-message',{hasText:'建立正式事項：提供必要參考資料'}).getByRole('button',{name:'到概況處理'}).count(),0,'resolved action has no jump');
  await tab('工作日誌').click();assert(await page.getByText('正式回覆',{exact:true}).count());
  // 錯誤與重試

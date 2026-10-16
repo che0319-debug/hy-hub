@@ -10,13 +10,13 @@ const {chromium}=require('playwright');const assert=require('node:assert/strict'
    const req=route.request(),url=req.url(),method=req.method();let data={};
    if(method!=='GET')writes.push({url,body:req.postDataJSON()});else reads.push(url);
    if(url.includes('/auth/'))data={access_token:'fixture',access_expires_in:3600,role:'owner'};
-   else if(url.endsWith('/api/ai-office/projects')&&method==='POST'){
+   else if(url.split('?')[0].endsWith('/api/ai-office/projects')&&method==='POST'){
     if(failure)return route.fulfill({status:503,contentType:'application/json',body:'{"detail":"暫時無法建立，請重試。"}'});
     const body=req.postDataJSON();assert(!('pi_expert' in body));assert(!('status' in body));
     project={...body,id:body.project_id,phase:'規劃期',status:'ai_pending',plan_state:'DRAFT',packages:[{id:'planning',type:'PROJECT_PLANNING',status:'READY',executor:'GPT_CHAT',task:'研究目標與展開規劃',created_at:1791676800}],references:[],notes:[],suggestions:[],files:[],team:[{id:'pi',name:'PI',version:'2.1.0',state:'PUBLISHED'}],permissions:{delete:true,contribute:true},drive:{state:'NOT_READY',project_folder_id:null,references_folder_id:null},report:{history:[]},quality:{checkpoints:[]},actions:[]};data={project_id:project.id};
-   }else if(url.endsWith('/api/ai-office/projects'))data=project?[project]:[];
-   else if(url.endsWith('/api/ai-office/actions'))data=[];
-   else if(project&&url.endsWith('/api/ai-office/projects/'+project.id))data=project;
+   }else if(url.split('?')[0].endsWith('/api/ai-office/projects'))data=project?[project]:[];
+   else if(url.split('?')[0].endsWith('/api/ai-office/actions'))data=[];
+   else if(project&&url.split('?')[0].endsWith('/api/ai-office/projects/'+project.id))data=project;
    return route.fulfill({contentType:'application/json',body:JSON.stringify(data)});
   });
   await page.goto('http://127.0.0.1:5173/#/ai-work-v5');await page.getByRole('button',{name:'新增專案',exact:true}).click();
@@ -27,7 +27,7 @@ const {chromium}=require('playwright');const assert=require('node:assert/strict'
   mkdirSync('docs/quality/ui/ai-office-startup',{recursive:true});await page.screenshot({path:`docs/quality/ui/ai-office-startup/create-${width}.png`,fullPage:true});
   await submit.click();await form.getByRole('alert').waitFor();assert.equal(await page.locator('.ao-dashboard').count(),0);
   failure=false;await submit.click();await page.getByRole('heading',{name:'待你決定',exact:true}).waitFor();
-  const creates=writes.filter(w=>w.url.endsWith('/api/ai-office/projects'));assert.equal(creates.length,2);assert.equal(creates[0].body.project_id,creates[1].body.project_id);
+  const creates=writes.filter(w=>w.url.split('?')[0].endsWith('/api/ai-office/projects'));assert.equal(creates.length,2);assert.equal(creates[0].body.project_id,creates[1].body.project_id);
   assert.equal(await page.getByRole('heading',{name:'三引擎啟動確認'}).count(),0);assert.equal(await page.getByText('查看 Quality 正式核准事項').count(),0);
   assert.equal(writes.filter(w=>w.url.includes('/resolve')||w.url.includes('/enable-request')).length,0);
   assert.equal(await page.locator('.ao-tabs button').count(),5);assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth),false);assert.deepEqual(errors,[]);await page.close();

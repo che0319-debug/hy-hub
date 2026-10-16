@@ -139,7 +139,7 @@ export default function ControlCenterV5({ renderProject, renderHome, renderCreat
 
   const reloadProject = useCallback(async id => {
     try {
-      const [detail, open] = await Promise.all([request(`/projects/${encodeURIComponent(id)}`), request('/inbox?status=OPEN')])
+      const [detail, open] = await Promise.all([request(`/projects/${encodeURIComponent(id)}?detail=full`), request('/inbox?status=OPEN')])
       setDetails(prev => ({ ...prev, [id]: detail }))
       setInbox(open)
       setProjects(prev => prev.map(p => p.id === id ? { ...p, status: detail.status, phase: detail.phase, milestone_id: detail.milestone_id } : p))
@@ -741,4 +741,3 @@ function NewProject({ onCancel, onCreated }) {
     </div>
   </form>
 }
-
