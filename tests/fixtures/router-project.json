@@ -1,0 +1,245 @@
+{
+  "id": "p",
+  "title": "路由隔離驗證專案",
+  "goal": "以新工作包驗證路由與安全交接",
+  "description": "",
+  "owner_bot": "sam",
+  "plan_revision": 1,
+  "plan_state": "APPROVED",
+  "phase": "執行期",
+  "milestone_id": "M1",
+  "status": "ai_running",
+  "plan": {
+    "goal": "測試目標",
+    "scope": [
+      "分析"
+    ],
+    "required_inputs": [],
+    "missing_inputs": [],
+    "risks": [],
+    "milestones": [
+      {
+        "id": "M1",
+        "packages": [
+          {
+            "key": "a",
+            "task": "A"
+          }
+        ],
+        "deliverables": [
+          "成果"
+        ],
+        "acceptance_criteria": [
+          "驗收"
+        ],
+        "dependencies": []
+      }
+    ]
+  },
+  "references": [],
+  "packages": [
+    {
+      "id": "wp-523f0241256b47338e83e6a3ff65c1e3",
+      "project_id": "p",
+      "plan_revision": 0,
+      "phase": "規劃期",
+      "milestone_id": null,
+      "type": "PROJECT_PLANNING",
+      "task": "產出專案規劃書與 AI 執行規劃書 DRAFT v1",
+      "executor": "GPT_CHAT",
+      "status": "COMPLETED",
+      "attempt": 0,
+      "next_retry_at": null,
+      "created_at": 1792137180.7283125,
+      "context": {
+        "description": "",
+        "goal": "以新工作包驗證路由與安全交接",
+        "owner_bot": "sam",
+        "title": "路由隔離驗證專案"
+      },
+      "inputs": {},
+      "references": [],
+      "requires": [],
+      "expected_outputs": [
+        "專案規劃書 DRAFT v1",
+        "AI 執行規劃書 DRAFT v1"
+      ],
+      "acceptance_criteria": [
+        "專案規劃書包含目標、範圍、Milestones、成果、驗收、依賴、必要與缺少資料、風險；兩份文件均放 result.plan",
+        "Research Lab 新案六段：PI 權責、團隊角色卡、階段上場、週期安排、審核關卡、交 HY 決定事項",
+        "每定案角色對應正式 Skill 與已發布固定 id/version/content_hash，候選與能力缺口如實列出",
+        "每里程碑 1–2 週週期、單一量化問題與分母／門檻／角色／package key／證據，回顧成果／學到／阻礙／下一步",
+        "PI 內審記錄隨交付、每輪最多五點修正，不加 PI gate 工作包；Claude 三節點外審與 HY humanAction 核准分開，不自動啟用品質契約"
+      ],
+      "capability": [],
+      "result": null,
+      "dependencies": []
+    },
+    {
+      "id": "wp-a9ae3ce048424941ae0a83f22814ab57",
+      "project_id": "p",
+      "plan_revision": 1,
+      "phase": "執行期",
+      "milestone_id": "M1",
+      "type": "DOCUMENT",
+      "task": "A",
+      "executor": "GPT_CHAT",
+      "status": "RUNNING",
+      "attempt": 1,
+      "next_retry_at": null,
+      "created_at": 1792137180.7294304,
+      "context": {},
+      "inputs": {},
+      "references": [],
+      "requires": [],
+      "expected_outputs": [],
+      "acceptance_criteria": [],
+      "capability": [],
+      "result": null,
+      "dependencies": []
+    },
+    {
+      "id": "wp-4dfbecccdf5843188836796913dce267",
+      "project_id": "p",
+      "plan_revision": 1,
+      "phase": "執行期",
+      "milestone_id": "M1",
+      "type": "DOCUMENT",
+      "task": "整理市場研究資料",
+      "executor": "GPT_CHAT",
+      "status": "READY",
+      "attempt": 0,
+      "next_retry_at": null,
+      "created_at": 1792137180.731474,
+      "context": {},
+      "inputs": {},
+      "references": [],
+      "requires": [],
+      "expected_outputs": [],
+      "acceptance_criteria": [],
+      "capability": [],
+      "result": null,
+      "dependencies": []
+    },
+    {
+      "id": "wp-8fa7a2ec4d1e487da60b1215b43e39df",
+      "project_id": "p",
+      "plan_revision": 1,
+      "phase": "執行期",
+      "milestone_id": "M1",
+      "type": "DOCUMENT",
+      "task": "產出比較分析文件",
+      "executor": "GPT_CHAT",
+      "status": "READY",
+      "attempt": 0,
+      "next_retry_at": null,
+      "created_at": 1792137180.7317145,
+      "context": {},
+      "inputs": {},
+      "references": [],
+      "requires": [],
+      "expected_outputs": [],
+      "acceptance_criteria": [],
+      "capability": [],
+      "result": null,
+      "dependencies": []
+    }
+  ],
+  "activity": {
+    "label": "AI 處理中",
+    "packages": [
+      {
+        "id": "wp-a9ae3ce048424941ae0a83f22814ab57",
+        "type": "DOCUMENT",
+        "executor": "GPT_CHAT",
+        "status": "RUNNING"
+      },
+      {
+        "id": "wp-4dfbecccdf5843188836796913dce267",
+        "type": "DOCUMENT",
+        "executor": "GPT_CHAT",
+        "status": "READY"
+      },
+      {
+        "id": "wp-8fa7a2ec4d1e487da60b1215b43e39df",
+        "type": "DOCUMENT",
+        "executor": "GPT_CHAT",
+        "status": "READY"
+      }
+    ]
+  },
+  "files": [],
+  "actions": [],
+  "decisions": {},
+  "notes": [
+    {
+      "id": "router-0df2c417ba7618193afd37705a6cd26ffbc66412b4873f36da73cafe1458cf4c",
+      "project_id": "p",
+      "author": "system:router",
+      "content": "Router：gpt-chat → chatgpt-work；FROZEN_FALLBACK_AUTHORIZED；窗口內連續 2 包未領（門檻 2），可評估 0 次執行，逾時率 0%／錯誤率 0%（門檻 50%／50%）；依建包凍結規則 global::GENERAL；冷卻至 2026-10-16T17:53:11.732030+08:00",
+      "created_at": 1792137191.7320304
+    },
+    {
+      "id": "router-7ceb6e436218eb16d38cfef8c1e698ca06a5c2ecbdc70eb3c23ddada172ed015",
+      "project_id": "p",
+      "author": "system:router",
+      "content": "Router：gpt-chat → chatgpt-work；FROZEN_FALLBACK_AUTHORIZED；窗口內連續 2 包未領（門檻 2），可評估 0 次執行，逾時率 0%／錯誤率 0%（門檻 50%／50%）；依建包凍結規則 global::GENERAL；冷卻至 2026-10-16T17:53:11.732030+08:00",
+      "created_at": 1792137191.7320304
+    }
+  ],
+  "suggestions": [],
+  "quality": {
+    "quality_summary": {
+      "contract_version": null,
+      "enabled": false,
+      "packages": [],
+      "checkpoints": [],
+      "review_history": [],
+      "unresolved_blocking_findings": [],
+      "pending_human_actions": [],
+      "outcomes": {
+        "program_verification": "NOT_RUN",
+        "pi_internal_review": "NOT_REQUIRED",
+        "claude_independent_review": "NOT_REQUIRED",
+        "hy_formal_approval": "EXISTING_MISSION_FLOW",
+        "product_functional_acceptance": "UNVERIFIED"
+      },
+      "last_validation_at": 1792137180.736017,
+      "validation_source": "canonical aggregate read-only projection",
+      "remote_originals_checked": false,
+      "semantic_quality_verified": false
+    },
+    "quality_contract_version": null,
+    "baseline": null,
+    "checkpoints": [],
+    "adopted_outputs": [],
+    "monitor": [],
+    "account_configuration": "UNVERIFIED",
+    "end_to_end": "UNVERIFIED"
+  },
+  "report": {
+    "state": "none",
+    "latest": null,
+    "history": [],
+    "stale": false,
+    "final": false
+  },
+  "drive": {
+    "project_folder_id": null,
+    "references_folder_id": null,
+    "state": "NOT_READY"
+  },
+  "started_at": 1792137180.7283125,
+  "updated_at": 1792137191.7320304,
+  "permissions": {
+    "delete": true,
+    "contribute": true
+  },
+  "capabilities": {
+    "pi_live_chat": "NOT_READY",
+    "drive_picker": "NOT_READY",
+    "resource_availability": "NOT_READY",
+    "estimate": "NOT_RECORDED"
+  },
+  "team": []
+}

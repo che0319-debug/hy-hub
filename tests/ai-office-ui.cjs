@@ -50,7 +50,7 @@ const {chromium}=require('playwright');const assert=require('node:assert/strict'
   await decide.locator('.is-recommended',{hasText:'提供內部資料'}).getByText('PI 推薦').waitFor();
   assert.equal(await decide.getByText('PI 分析：公開資料不足').count(),0,'structured decision replaces flattened text');
   await decide.getByText('請提供正式參考資料。').waitFor();
-  const work=page.locator('.ao-work',{hasText:'串接正式服務'});await work.getByText('Claude 對話通道').waitFor();
+  const work=page.locator('.ao-work',{hasText:'串接正式服務'});await work.getByText('GPT Chat 對話通道',{exact:true}).waitFor();
   assert.equal(await page.locator('.ao-work',{hasText:'已停泊的舊版工作'}).count(),0);
   assert.equal(await page.locator('.ao-overview textarea').count(),2,'only answer fields, no composer on overview');
   if(width===390){const [d,w]=await Promise.all([decide.boundingBox(),page.locator('.ao-card',{hasText:'AI 正在做什麼'}).boundingBox()]);assert(d.y<w.y,'decisions first on mobile')}
