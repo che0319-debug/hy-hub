@@ -50,7 +50,18 @@ roles:[
     assert.equal(await p.locator('.expert-card.needs-you').count(),1);
     await p.getByText('另有 v2.1.0 供舊專案使用',{exact:false}).waitFor();
     await p.getByText('Claude 程式通道',{exact:true}).first().waitFor();
-    assert.equal(await p.getByText('GPT Chat').count(),0);
+    // PR #93 restores GPT_CHAT's real channel name. Check each expert's
+    // current card and version history against its executor, not a page-wide count.
+    for (const expert of [experts[0], experts[2], experts[3]]) {
+      const card = p.locator('.expert-card').filter({has: p.getByRole('heading', {name: expert.name, exact:true})});
+      const label = expert.executor === 'GPT_CHAT' ? 'GPT Chat 對話通道' : 'Claude 程式通道';
+      assert.equal(await card.locator('.et-meta').getByText(label, {exact:true}).count(), 1);
+      const versions = experts.filter(e => e.id === expert.id);
+      assert.equal(await card.locator('.pi-version').getByText(label, {exact:false}).count(), versions.length);
+      if (expert.executor === 'GPT_CHAT') {
+        assert.equal(await card.getByText('Claude 對話通道', {exact:false}).count(), 0);
+      }
+    }
     await p.getByText('待你確認 2',{exact:true}).waitFor();
     await p.screenshot({path:`docs/quality/ui/expert-team-${w}.png`,fullPage:true});
     assert.equal(await p.evaluate(()=>document.documentElement.scrollWidth>innerWidth),false,`experts overflow ${w}`);
