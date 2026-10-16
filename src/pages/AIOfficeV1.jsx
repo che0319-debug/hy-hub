@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import ControlCenterV5, { Inbox, DeleteZone, SpecChangeBox } from './ControlCenterV5'
-import { request } from '../aiWorkV5Data'
+import { request, readProjectSummary } from '../aiWorkV5Data'
 import { authHeaders, ensureAccessToken, expireSession } from '../auth'
 import { OFFICE_TABS, TAB_NOTES, isPending, requester, activityLabel, PACKAGE_STATUS, progress, milestones, journal, safeUrl, driveFile } from '../lib/aiOffice.mjs'
 import { laneLabel } from '../lib/lanes'
@@ -17,7 +17,7 @@ const text = value => typeof value === 'string' ? value : value ? JSON.stringify
 const ppath = id => `/projects/${encodeURIComponent(id)}`
 async function office(path, options = {}) {
   if (!await ensureAccessToken()) { expireSession(); throw new Error('登入已過期，請重新登入。') }
-  const response = await fetch(`${base}/api/ai-office${path}`, { cache: 'no-store', ...options,
+  const response = await fetch(`${base}/api/ai-office${path}`, { cache: 'no-cache', ...options,
     headers: { ...authHeaders(), ...(options.body ? { 'Content-Type': 'application/json' } : {}) } })
   if (response.status === 401) { expireSession(); throw new Error('登入已過期，請重新登入。') }
   if (!response.ok) { const data = await response.json().catch(() => ({})); throw new Error(response.status === 404 ? 'AI Office API 尚未部署或資料不存在，請確認後重試。' : text(data.detail || `伺服器回應 ${response.status}`)) }
@@ -51,7 +51,7 @@ function OfficeCreate({onCancel,onCreated}) {
 
 async function loadOffice() {
   const [projects,inbox]=await Promise.all([office('/projects'),office('/actions')])
-  const results=await Promise.allSettled(projects.map(p=>office(ppath(p.id))))
+  const results=await Promise.allSettled(projects.map(p=>readProjectSummary(office, ppath(p.id))))
   const details=Object.fromEntries(results.map((r,i)=>[projects[i].id,r.status==='fulfilled'?r.value:null]))
   return {projects,inbox,details}
 }
@@ -63,7 +63,7 @@ function OfficeProject({ id, onBack, onDeleted }) {
   const [project, setProject] = useState(null), [error, setError] = useState(''), [tab, setTab] = useState('overview')
   const [selectedWork,setSelectedWork] = useState(null), [editing,setEditing] = useState(false)
   const generation=useRef(0)
-  const reload = useCallback(async () => {const version=++generation.current;try { const value=await office(ppath(id));if(version===generation.current){setProject(value);setError('')} }catch(e){if(version===generation.current){setProject(null);setError(e.message)}}},[id])
+  const reload = useCallback(async () => {const version=++generation.current;try { const value=await office(`${ppath(id)}?detail=full`);if(version===generation.current){setProject(value);setError('')} }catch(e){if(version===generation.current){setProject(null);setError(e.message)}}},[id])
   useEffect(()=>{reload();return()=>{generation.current++}},[reload])
   function openExecution(work) {setSelectedWork(work);setTab('execution')}
   if (!project) return <section className="ao"><button className="ao-back" onClick={onBack}>‹ AI Office</button>{error ? <div role="alert"><p>{error}</p><button onClick={reload}>重試讀取</button></div> : <p role="status">正在讀取正式專案資料…</p>}</section>
