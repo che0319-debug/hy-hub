@@ -12,3 +12,5 @@ export async function routerRequest(path,{method='GET',body,signal}={}){
 export const readRouter = (projectId,signal) => routerRequest('/view'+(projectId?'?project_id='+encodeURIComponent(projectId):''),{signal})
 export const saveRouter = body => routerRequest('/policy',{method:'PUT',body})
 export const previewRouter = body => routerRequest('/preview',{method:'POST',body})
+
+export const saveRouterControl = body => routerRequest('/control',{method:'PUT',body})

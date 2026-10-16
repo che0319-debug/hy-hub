@@ -107,43 +107,7 @@ function CandidateForm({ editor, skills, busy, onCancel, onSubmit }) {
   </form>
 }
 
-function LegacyModelsTab() {
-  const [models, setModels] = useState(null), [error, setError] = useState('')
-  const load = () => { setError(''); setModels(null); request(`${base}/api/ai-office/models`).then(setModels).catch(e => setError(e.message)) }
-  useEffect(load, [])
-  if (error) return <div className="hy-stack"><p role="alert" className="hy-alert is-bad">模型設定讀取失敗：{error}</p><button className="hy-btn" onClick={load}>重試讀取</button></div>
-  if (!models) return <p className="hy-empty">讀取中…</p>
-  const status = r => r.mismatch ? <span className="hy-pill" data-s="you">與設定不同</span> : r.last_reported ? <span className="hy-pill" data-s="done">一致</span> : <span className="hy-pill" data-s="wait">等首次回報</span>
-  const when = t => t ? new Date(t * 1000).toLocaleString('zh-TW', { hour12: false }) : ''
-  const sch = models.schedule
-  return <div className="hy-stack">
-    {models.roles.some(r => r.mismatch) && <p className="hy-alert">有角色實際使用的模型和設定不同，請檢查 PI 排程的模型或派工方式。</p>}
-    {sch && <section className="hy-card">
-      <div className="hy-card-head"><h2 className="hy-card-title">誰在跑</h2><span className="hy-pill" data-s="ai">1 個排程</span></div>
-      <p>{sch.name} · {sch.when}</p>
-      <p className="hy-note">PI 每次巡邏時自己做判斷，一般執行、程式與審查交給它當場派出的子代理。掛的連接器：{sch.connectors.join('、')}。</p>
-    </section>}
-    <section className="hy-card">
-      <div className="hy-card-head"><h2 className="hy-card-title">角色與模型</h2></div>
-      <p className="hy-note">關鍵判斷用高級模型，一般執行用中級。要調整時，PI 會出一張「模型配置」決策卡給你核准。</p>
-      <div className="et-table-wrap"><table className="et-table"><thead><tr><th>角色</th><th>由誰執行</th><th>應該用</th><th>最近實際</th><th>狀態</th></tr></thead>
-        <tbody>{models.roles.map(r => <tr key={r.role} className={r.mismatch ? 'needs-you' : undefined}><td><b>{r.name}</b></td><td>{r.runner || laneLabel(r.lane)}</td><td>{r.model}<span className="hy-note"> · {TIER[r.tier] || r.tier_label}</span></td><td>{r.last_reported?.model || <span className="hy-note">尚未回報</span>}</td><td>{status(r)}</td></tr>)}</tbody></table></div>
-      <div className="et-mobile-roles">{models.roles.map(r => <div className="et-mrole" key={r.role}><div className="hy-card-head"><b>{r.name}</b>{status(r)}</div><div className="hy-note">{r.runner || laneLabel(r.lane)}</div><div>應該用 {r.model}<span className="hy-note"> · 最近實際：{r.last_reported?.model || '尚未回報'}</span></div></div>)}</div>
-      <p className="hy-note">實際模型由交件時回報；和設定不同時，這裡會亮琥珀色提醒。</p>
-    </section>
-    {models.recent?.length > 0 && <section className="hy-card">
-      <div className="hy-card-head"><h2 className="hy-card-title">最近實際使用</h2></div>
-      <div className="et-recent">{models.recent.map((x, i) => <div key={i}><div><b>{x.role_name}</b> · {x.model}</div><div className="hy-note">{x.task} · {when(x.at)}</div></div>)}</div>
-    </section>}
-    <section className="hy-card">
-      <div className="hy-card-head"><h2 className="hy-card-title">外部工具</h2></div>
-      <p className="hy-note">不領工作包，只在 AI 執行規劃書指定時由執行專家呼叫。</p>
-      <ul className="hy-list">{models.tools.map(t => <li key={t.id}><b>{t.name}</b><span className="hy-note">{t.use}</span></li>)}</ul>
-    </section>
-  </div>
-}
-
-function ModelsTab(){const [legacy,setLegacy]=useState(false);return <div className="hy-stack"><RouterControls/><details className="hy-card" open={legacy} onToggle={e=>setLegacy(e.currentTarget.open)}><summary>舊制模型回報（既有專案）</summary>{legacy&&<LegacyModelsTab/>}</details></div>}
+function ModelsTab(){return <RouterControls/>}
 
 export default function ExpertTeam() {
   const [params] = useSearchParams(), initialTab = ['experts','skills','models','requests'].includes(params.get('tab')) ? params.get('tab') : 'experts'

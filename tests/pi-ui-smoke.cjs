@@ -36,7 +36,7 @@ roles:[
     if(u.endsWith('/dispatch-sessions'))data=[];
     if(u.endsWith('/projects'))data=[{id:'test',title:'測試專案'}];
     if(u.includes('/experts/registry'))data={skills,experts,actions};
-    if(u.includes('/api/ai-office/models'))data=models;
+    if(u.includes('/router/view'))data=JSON.parse(require('node:fs').readFileSync('tests/fixtures/router-view.json'));
     if(u.includes('/experts/pi/skills/')){const s=skills.find(s=>u.includes(`/${s.id}/${s.version}/`));data={...s,markdown:`# ${s.name}\n\n完整規則內文 ${s.id}`,steps:['依內容執行']}}
     if(u.includes('/inbox/')){resolved.push(u.split('/inbox/')[1].split('/')[0])}
     r.fulfill({contentType:'application/json',body:JSON.stringify(data)})});
@@ -68,11 +68,9 @@ roles:[
     await p.screenshot({path:`docs/quality/ui/expert-skills-${w}.png`,fullPage:true});
     assert.equal(await p.evaluate(()=>document.documentElement.scrollWidth>innerWidth),false,`skills overflow ${w}`);
     await p.getByRole('tab',{name:'執行者與模型'}).click();
-    await p.getByText('舊制模型回報（既有專案）',{exact:true}).click();
-    await p.getByText('有角色實際使用的模型和設定不同',{exact:false}).waitFor();
-    await p.locator('.hy-pill:visible',{hasText:'與設定不同'}).first().waitFor();
-    await p.locator('.hy-pill:visible',{hasText:'等首次回報'}).first().waitFor();
-    await p.getByRole('heading',{name:'誰在跑'}).waitFor();await p.locator(':text("AI Office PI 排程本身"):visible').first().waitFor();await p.getByRole('heading',{name:'最近實際使用'}).waitFor();
+    await p.getByRole('heading',{name:'派工方式與緊急停用'}).waitFor();
+    await p.getByRole('heading',{name:'工作包路由',exact:true}).waitFor();
+    assert.equal(await p.getByRole('heading',{name:'角色與模型',exact:true}).count(),0);
     await p.screenshot({path:`docs/quality/ui/expert-models-${w}.png`,fullPage:true});
     assert.equal(await p.evaluate(()=>document.documentElement.scrollWidth>innerWidth),false,`models overflow ${w}`);
     await p.getByRole('tab',{name:'專家'}).click();

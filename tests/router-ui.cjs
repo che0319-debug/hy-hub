@@ -6,10 +6,10 @@ const {chromium}=require('playwright');const assert=require('node:assert/strict'
  const project=JSON.parse(fs.readFileSync('tests/fixtures/router-project.json'));
  const browser=await chromium.launch({headless:true,args:['--no-sandbox'],...(process.env.CHROME_BIN?{executablePath:process.env.CHROME_BIN}:{})});
  const page=await browser.newPage({timezoneId:'UTC'});const errors=[],writes=[],reads=[];
- let view,mode='normal';
+ let view,mode='normal',acceptDialog=true;
  const reset=()=>{view=structuredClone(original);mode='normal';writes.length=0;reads.length=0};reset();
  await page.addInitScript(css=>{if(location.origin!=='http://127.0.0.1:5173')return;document.addEventListener('DOMContentLoaded',()=>{const style=document.createElement('style');style.textContent=css;document.head.append(style)})},fontCss);
- page.on('pageerror',e=>errors.push(e.message));page.on('dialog',d=>d.accept());
+ page.on('pageerror',e=>errors.push(e.message));page.on('dialog',d=>acceptDialog?d.accept():d.dismiss());
  await page.addInitScript(()=>{if(location.origin!=='http://127.0.0.1:5173')return;sessionStorage.setItem('hy_life_os_access_token',btoa(JSON.stringify({exp:Math.floor(Date.now()/1000)+3600}))+'.fixture');sessionStorage.setItem('hy_life_os_view','desktop')});
  await page.route('**/*',async route=>{
   const req=route.request(),url=new URL(req.url()),p=url.pathname;
@@ -28,10 +28,12 @@ const {chromium}=require('playwright');const assert=require('node:assert/strict'
   }else if(p==='/api/ai-work-packages/router/policy'){
    if(mode==='conflict')status=409;
    else {const body=req.postDataJSON();assert.equal(body.expected_revision,view.policy.revision);assert.deepEqual(Object.keys(body).sort(),['authority_ref','document','expected_revision','reason']);view.policy={...view.policy,revision:view.policy.revision+1,document:body.document};view.as_of+=1;data=view.policy;}
+  }else if(p==='/api/ai-work-packages/router/control'){
+   const b=req.postDataJSON();assert.equal(b.confirmed,true);assert.equal(b.expected_revision,view.control.revision);view.control={revision:view.control.revision+1,mode:b.mode,pilot_project_id:b.pilot_project_id};view.as_of+=1;data=view.control;
   }else if(p==='/api/ai-work-packages/router/preview'){
    const body=req.postDataJSON();const type=logic.normalize(body.package_type);const role=logic.roleOf(type);const candidates=body.document.rules;
    const found=[['project',body.project_id,type],['project',body.project_id,role],['project',body.project_id,'*'],['owner','sam',type],['owner','sam',role],['owner','sam','*'],['global','',type],['global','',role]].map(([s,id,k])=>candidates.find(r=>r.scope===s&&r.scope_id===id&&r.selector===k)).find(Boolean);
-   data={route:found?.route||logic.defaultRoute(role,'sam'),source:found?`${found.scope}:${found.scope_id}:${found.selector}`:'builtin:'+role};
+   data={route:found?.route||logic.defaultRoute(role,'sam',original.role_defaults),source:found?`${found.scope}:${found.scope_id}:${found.selector}`:'builtin:'+role};
   }else if(p==='/api/ai-office/projects')data=[project];
   else if(p==='/api/ai-office/projects/p')data=project;
   else if(p==='/api/ai-office/actions'||p.endsWith('/inbox')||p.endsWith('/dispatch-sessions'))data=[];
@@ -53,27 +55,27 @@ const {chromium}=require('playwright');const assert=require('node:assert/strict'
   assert(!reads.some(p=>/\/router\/(tick|packages|events|policy)/.test(p)));
   assert.equal(await page.getByRole('button',{name:'儲存未來新包設定'}).isDisabled(),true);
   await shot({path:`docs/quality/ui/router/models-${width}.png`,fullPage:true});await noOverflow('global');
-  const form=await edit('一般工作');await form.getByLabel('冷卻秒數',{exact:true}).fill('900');await form.getByLabel('最少執行樣本',{exact:true}).fill('3');await shot({path:`docs/quality/ui/router/thresholds-${width}.png`,fullPage:true});await noOverflow('threshold form');await form.getByRole('button',{name:'保留這列草稿'}).click();
+  const form=await edit('一般執行專家');await form.getByLabel('主端模型',{exact:true}).selectOption('thinking');await form.getByLabel('備援 1',{exact:true}).selectOption('chatgpt-work');await form.getByLabel('冷卻秒數',{exact:true}).fill('900');await form.getByLabel('最少執行樣本',{exact:true}).fill('3');await shot({path:`docs/quality/ui/router/thresholds-${width}.png`,fullPage:true});await noOverflow('threshold form');await form.getByRole('button',{name:'保留這列草稿'}).click();
   assert.equal(writes.length,0,'edits are draft only');
   await page.getByLabel('修改原因',{exact:true}).fill('隔離測試：調整新包冷卻');await page.getByLabel('授權或決策依據',{exact:true}).fill('fixture-owner-decision');
   const save=page.getByRole('button',{name:'儲存未來新包設定'});assert(await save.isDisabled());
   await page.getByLabel('我確認僅影響新包，現有專案與包不會被回寫或遷入。').check();await save.click();
   await page.getByText('已儲存，僅影響之後建立的新包。',{exact:true}).waitFor();
   assert.equal(writes.filter(x=>x.method==='PUT').length,1);assert.deepEqual(view.packages,original.packages);
-  assert.equal(view.policy.document.rules[0].route.health.cooldown_seconds,900);
-  await ruleRow('一般工作').getByRole('button',{name:'恢復繼承'}).click();assert.equal(writes.filter(x=>x.method==='PUT').length,1,'restore inheritance still needs explicit save');
+  assert.equal(view.policy.document.rules[0].route.health.cooldown_seconds,900);assert.equal(view.policy.document.rules[0].route.models['gpt-chat'],'thinking');
+  await ruleRow('一般執行專家').getByRole('button',{name:'恢復繼承'}).click();assert.equal(writes.filter(x=>x.method==='PUT').length,1,'restore inheritance still needs explicit save');
   // Project entry is collapsed, lazy, and edited in the same current policy document.
   reset();await page.goto('http://127.0.0.1:5173/#/ai-work-v5');await page.locator('.ao-project-line').click();
   await page.getByRole('navigation',{name:'AI Office 專案分頁'}).getByRole('button',{name:'執行計畫'}).click();
   assert.equal(reads.filter(p=>p.includes('/router/view')).length,0);
   await page.getByText('專案路由覆寫與繼承',{exact:true}).click();await page.getByRole('heading',{name:'工作包路由',exact:true}).waitFor();
   assert.equal(reads.filter(p=>p.includes('/router/view?project_id=p')).length,1);
-  for(const role of ['規劃','一般工作','程式','交件外審','里程碑 PI 審核']){
+  for(const role of ['PI 規劃','一般執行專家','程式工程師','獨立審查員','PI 審查']){
    const f=await edit(role);
-   if(role==='交件外審'){await f.getByLabel('主執行端',{exact:true}).selectOption('gpt-review-independent');await f.getByLabel('備援順序',{exact:true}).fill('')}
+   if(role==='獨立審查員'){await f.getByLabel('主執行端',{exact:true}).selectOption('gpt-review-independent');await f.getByRole('button',{name:'移除備援 1',exact:true}).click()}
    await f.getByRole('button',{name:'保留這列草稿'}).click();
   }
-  await page.getByText('預覽新包的繼承來源',{exact:true}).click();await page.getByLabel('預覽工作類型',{exact:true}).fill('QUALITY_REVIEW');await page.getByRole('button',{name:'預覽新包路由'}).click();await page.getByText(/來源：專案 p · 交件外審/).waitFor();
+  await page.getByText('預覽新包的繼承來源',{exact:true}).click();await page.getByLabel('預覽工作類型',{exact:true}).fill('QUALITY_REVIEW');await page.getByRole('button',{name:'預覽新包路由'}).click();await page.getByText(/來源：專案 p · 獨立審查員/).waitFor();
   assert.equal(writes.filter(x=>x.method==='PUT').length,0);assert.deepEqual(view.packages,original.packages);
   await shot({path:`docs/quality/ui/router/project-${width}.png`,fullPage:true});await noOverflow('project');
   // Draft survives switching to another existing project tab and back.
@@ -85,10 +87,11 @@ const {chromium}=require('playwright');const assert=require('node:assert/strict'
   await page.getByLabel('修改原因',{exact:true}).fill('隔離專案全 GPT 覆寫');await page.getByLabel('授權或決策依據',{exact:true}).fill('fixture-only');await page.getByLabel('我確認僅影響新包，現有專案與包不會被回寫或遷入。').check();await page.getByRole('button',{name:'儲存未來新包設定'}).click();await page.getByText('已儲存，僅影響之後建立的新包。',{exact:true}).waitFor();
   const overrides=view.policy.document.rules.filter(r=>r.scope==='project');assert.equal(overrides.length,5);assert.equal(overrides.find(r=>r.selector==='REVIEW').route.primary,'gpt-review-independent');assert.deepEqual(overrides.find(r=>r.selector==='REVIEW').route.fallbacks,[]);assert.deepEqual(view.packages,original.packages);
  }
- reset();await global();mode='conflict';let f=await edit('一般工作');await f.getByLabel('冷卻秒數',{exact:true}).fill('800');await f.getByRole('button',{name:'保留這列草稿'}).click();await page.getByLabel('修改原因',{exact:true}).fill('fixture');await page.getByLabel('授權或決策依據',{exact:true}).fill('owner');await page.getByLabel('我確認僅影響新包，現有專案與包不會被回寫或遷入。').check();await page.getByRole('button',{name:'儲存未來新包設定'}).click();await page.getByRole('alert').filter({hasText:'不會覆蓋新版'}).waitFor();assert(await page.getByRole('button',{name:'儲存未來新包設定'}).isDisabled());assert.equal(view.policy.revision,original.policy.revision);
+ reset();await global();mode='conflict';let f=await edit('一般執行專家');await f.getByLabel('冷卻秒數',{exact:true}).fill('800');await f.getByRole('button',{name:'保留這列草稿'}).click();await page.getByLabel('修改原因',{exact:true}).fill('fixture');await page.getByLabel('授權或決策依據',{exact:true}).fill('owner');await page.getByLabel('我確認僅影響新包，現有專案與包不會被回寫或遷入。').check();await page.getByRole('button',{name:'儲存未來新包設定'}).click();await page.getByRole('alert').filter({hasText:'不會覆蓋新版'}).waitFor();assert(await page.getByRole('button',{name:'儲存未來新包設定'}).isDisabled());assert.equal(view.policy.revision,original.policy.revision);
  await page.getByRole('button',{name:'重新讀取最新設定'}).click();await page.getByRole('heading',{name:'工作包路由',exact:true}).waitFor();
  reset();mode='readonly';await global();assert.equal(await page.getByRole('button',{name:'儲存未來新包設定'}).count(),0);assert.equal(await page.getByRole('button',{name:'新增覆寫',exact:true}).count(),0);
  reset();mode='error';await page.goto('http://127.0.0.1:5173/#/expert-team?tab=models');await page.reload();await page.getByRole('button',{name:'重試讀取路由'}).waitFor();assert.equal(await page.getByRole('heading',{name:'工作包路由',exact:true}).count(),0);mode='normal';await page.getByRole('button',{name:'重試讀取路由'}).click();await page.getByRole('heading',{name:'工作包路由',exact:true}).waitFor();
  reset();mode='missing';await page.reload();await page.getByRole('alert').filter({hasText:'路由服務尚未提供'}).waitFor();assert.equal(writes.length,0);
- assert.deepEqual(errors,[]);assert(writes.every(x=>['/api/ai-work-packages/router/policy','/api/ai-work-packages/router/preview'].includes(x.path)));await browser.close();console.log('Router UI 1280/390: drafts, explicit save, freeze, GPT overrides, preview, readonly, 409, errors, logs and no overflow passed');
+ reset();await global();await page.getByLabel('切換原因',{exact:true}).fill('取消不寫入');acceptDialog=false;await page.getByRole('button',{name:'確認切換派工方式',exact:true}).click();assert.equal(writes.length,0);acceptDialog=true;await page.getByLabel('派工方式',{exact:true}).selectOption('router');await page.getByLabel('切換原因',{exact:true}).fill('測試新案已驗收');await page.getByRole('button',{name:'確認切換派工方式',exact:true}).click();await page.getByText('目前：Router 預設派工 · r1',{exact:true}).waitFor();await page.getByRole('button',{name:'緊急停用 Router',exact:true}).click();await page.getByText('目前：舊派工 · r2',{exact:true}).waitFor();assert.deepEqual(view.packages,original.packages);
+ assert.deepEqual(errors,[]);assert(writes.every(x=>['/api/ai-work-packages/router/policy','/api/ai-work-packages/router/preview','/api/ai-work-packages/router/control'].includes(x.path)));await browser.close();console.log('Router UI 1280/390: drafts, explicit save, freeze, GPT overrides, preview, readonly, 409, errors, logs and no overflow passed');
 })().catch(e=>{console.error(e);process.exit(1)});
