@@ -42,6 +42,7 @@ const {chromium}=require('playwright');const assert=require('node:assert/strict'
  });
  fs.mkdirSync('docs/quality/ui/router',{recursive:true});
  const global=async()=>{await page.goto('about:blank');await page.goto('http://127.0.0.1:5173/#/expert-team?tab=models');await page.getByRole('heading',{name:'工作包路由',exact:true}).waitFor()};
+ const shot=async options=>{await page.evaluate(()=>window.scrollTo(0,0));await page.screenshot(options)};
  const noOverflow=async label=>assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth),false,label+' overflow');
  const ruleRow=(role)=>page.locator('.rt-route').filter({has:page.locator('b').filter({hasText:new RegExp('^'+role+'$')})});
  const edit=async(role)=>{await ruleRow(role).getByRole('button',{name:/^(編輯|新增覆寫)$/}).click();return page.getByRole('form',{name:'編輯路由規則'})};
@@ -51,8 +52,8 @@ const {chromium}=require('playwright');const assert=require('node:assert/strict'
   assert.equal(writes.length,0);assert(reads.filter(p=>p.includes('/router/view')).length<=2,'one aggregate fetch per StrictMode mount, no package fanout');
   assert(!reads.some(p=>/\/router\/(tick|packages|events|policy)/.test(p)));
   assert.equal(await page.getByRole('button',{name:'儲存未來新包設定'}).isDisabled(),true);
-  await page.screenshot({path:`docs/quality/ui/router/models-${width}.png`,fullPage:true});await noOverflow('global');
-  const form=await edit('一般工作');await form.getByLabel('冷卻秒數',{exact:true}).fill('900');await form.getByLabel('最少執行樣本',{exact:true}).fill('3');await page.screenshot({path:`docs/quality/ui/router/thresholds-${width}.png`,fullPage:true});await noOverflow('threshold form');await form.getByRole('button',{name:'保留這列草稿'}).click();
+  await shot({path:`docs/quality/ui/router/models-${width}.png`,fullPage:true});await noOverflow('global');
+  const form=await edit('一般工作');await form.getByLabel('冷卻秒數',{exact:true}).fill('900');await form.getByLabel('最少執行樣本',{exact:true}).fill('3');await shot({path:`docs/quality/ui/router/thresholds-${width}.png`,fullPage:true});await noOverflow('threshold form');await form.getByRole('button',{name:'保留這列草稿'}).click();
   assert.equal(writes.length,0,'edits are draft only');
   await page.getByLabel('修改原因',{exact:true}).fill('隔離測試：調整新包冷卻');await page.getByLabel('授權或決策依據',{exact:true}).fill('fixture-owner-decision');
   const save=page.getByRole('button',{name:'儲存未來新包設定'});assert(await save.isDisabled());
@@ -74,11 +75,11 @@ const {chromium}=require('playwright');const assert=require('node:assert/strict'
   }
   await page.getByText('預覽新包的繼承來源',{exact:true}).click();await page.getByLabel('預覽工作類型',{exact:true}).fill('QUALITY_REVIEW');await page.getByRole('button',{name:'預覽新包路由'}).click();await page.getByText(/來源：專案 p · 交件外審/).waitFor();
   assert.equal(writes.filter(x=>x.method==='PUT').length,0);assert.deepEqual(view.packages,original.packages);
-  await page.screenshot({path:`docs/quality/ui/router/project-${width}.png`,fullPage:true});await noOverflow('project');
+  await shot({path:`docs/quality/ui/router/project-${width}.png`,fullPage:true});await noOverflow('project');
   // Draft survives switching to another existing project tab and back.
   const nav=page.getByRole('navigation',{name:'AI Office 專案分頁'});
   await nav.getByRole('button',{name:'工作日誌'}).click();await page.getByText('冷卻、恢復與備援改派紀錄',{exact:true}).click();await page.getByRole('heading',{name:'路由工作紀錄',exact:true}).waitFor();
-  await page.locator('.rt-journal').getByText(/備援改派/).first().waitFor();await page.screenshot({path:`docs/quality/ui/router/log-${width}.png`,fullPage:true});await noOverflow('log');
+  await page.locator('.rt-journal').getByText(/備援改派/).first().waitFor();await shot({path:`docs/quality/ui/router/log-${width}.png`,fullPage:true});await noOverflow('log');
   await nav.getByRole('button',{name:'執行計畫'}).click();await page.getByText('有未儲存修改',{exact:true}).waitFor();
   assert.equal(reads.filter(p=>p.includes('/router/view?project_id=p')).length,2,'one execution read + one journal read, no per-package requests');
   await page.getByLabel('修改原因',{exact:true}).fill('隔離專案全 GPT 覆寫');await page.getByLabel('授權或決策依據',{exact:true}).fill('fixture-only');await page.getByLabel('我確認僅影響新包，現有專案與包不會被回寫或遷入。').check();await page.getByRole('button',{name:'儲存未來新包設定'}).click();await page.getByText('已儲存，僅影響之後建立的新包。',{exact:true}).waitFor();
