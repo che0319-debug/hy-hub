@@ -13,7 +13,7 @@ function useView(projectId,active=true){
  useEffect(()=>{const key=(projectId||'all')+':'+version;if(!active||loaded.current===key)return;const controller=new AbortController();setView(null);setError('');readRouter(projectId,controller.signal).then(data=>{if(!data.policy?.document?.rules||!Array.isArray(data.runners)||!Array.isArray(data.packages)||!Array.isArray(data.projects)||!Array.isArray(data.queues)||!Array.isArray(data.events)||!data.health_defaults||!data.role_defaults||!data.control)throw new Error('路由資料格式尚未就緒，請確認後端版本。');if(!controller.signal.aborted){loaded.current=key;setView(data)}}).catch(e=>{if(e.name!=='AbortError'&&!controller.signal.aborted)setError(e.message)});return()=>controller.abort()},[projectId,active,version])
  return {view,error,reload:()=>setVersion(v=>v+1)}
 }
-function Constraints(){return <p className="hy-note">規劃限 GPT、程式維持 GitHub 驗證；每次 PR 合併須本人同意，外審不得審自己參與的成果。PI 審查預設 Claude → 所屬 owner bot → 使用者；同一執行端參與過就跳過，正式過關仍須 humanAction。</p>}
+function Constraints(){return <p className="hy-note">規劃不可交給 Claude、程式維持 GitHub 驗證；每次 PR 合併須本人同意，外審不得審自己參與的成果。PI 審查預設 Claude → 所屬 owner bot → 使用者；同一執行端參與過就跳過，正式過關仍須 humanAction。</p>}
 function RuleForm({initial,editingKey,document,view,scope,scopeId,owner,onCancel,onApply}){
  const [rule,setRule]=useState(()=>{const value=clone(initial);const expand=id=>id.replace('{owner}',owner);value.route.primary=expand(value.route.primary);value.route.fallbacks=value.route.fallbacks.map(expand);value.route.models=Object.fromEntries(Object.entries(value.route.models||{}).map(([id,m])=>[expand(id),m]));return value}),[error,setError]=useState('')
  const role=roleOf(rule.selector),health={...view.health_defaults,...rule.route.health}
@@ -28,8 +28,8 @@ function RuleForm({initial,editingKey,document,view,scope,scopeId,owner,onCancel
  <label>主執行端<select aria-label="主執行端" required value={rule.route.primary} onChange={e=>endpoints(e.target.value,rule.route.fallbacks.filter(id=>id!==e.target.value))}><option value="">選擇執行端</option>{options.map(r=><option key={r.id} value={r.id} disabled={!r.ready}>{r.label||label(r.id)}{!r.ready?'（未就緒）':'（已綁定，待實測）'}</option>)}</select></label>
  {modelSelect(rule.route.primary,'主端模型')}
  {rule.route.fallbacks.map((id,index)=><div key={index} className="rt-fields"><label>備援 {index+1}<select aria-label={'備援 '+(index+1)} value={id} onChange={e=>endpoints(rule.route.primary,rule.route.fallbacks.map((v,i)=>i===index?e.target.value:v))}><option value="">選擇備援</option>{options.filter(r=>r.id!==rule.route.primary).map(r=><option key={r.id} value={r.id} disabled={!r.ready}>{r.label||label(r.id)}</option>)}</select></label>{modelSelect(id,'備援 '+(index+1)+' 模型')}<button type="button" className="hy-btn" onClick={()=>endpoints(rule.route.primary,rule.route.fallbacks.filter((_,i)=>i!==index))}>移除備援 {index+1}</button></div>)}
- {!['PLANNING','CODE'].includes(role)&&rule.route.fallbacks.length<3&&<button type="button" className="hy-btn" onClick={()=>endpoints(rule.route.primary,[...rule.route.fallbacks,''])}>新增備援</button>}
- {['PLANNING','CODE'].includes(role)&&<p className="hy-note">此角色無備援。</p>}</div>
+ {rule.route.fallbacks.length<3&&<button type="button" className="hy-btn" onClick={()=>endpoints(rule.route.primary,[...rule.route.fallbacks,''])}>新增備援</button>}
+ {!rule.route.fallbacks.length&&<p className="hy-note">目前無備援；可從相容執行端新增。</p>}</div>
  {role==='PI_REVIEW'&&<p>最終升級：使用者本人。</p>}
 
  <p className="hy-note">相容執行端：{options.map(r=>`${label(r.id)} · ${r.id}${r.ready?'':'（未就緒）'}`).join('、')||'尚未登錄'}。已綁定不代表已通過 PR6 實際執行驗收；獨立 GPT 外審需先由後端配置 reviewer 身分。</p>

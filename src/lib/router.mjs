@@ -16,7 +16,6 @@ export function validateRule(rule, document, catalog, defaults) {
  if(!rule.selector.trim()||rule.selector.length>64)errors.push('請填寫工作角色或類型（最多 64 字）。')
  if(!['global','owner','project'].includes(rule.scope)||rule.scope!=='global'&&!rule.scope_id)errors.push('請選擇設定範圍。')
  if(document.rules.some(r=>identity(r)===identity(rule)))errors.push('相同範圍已有這一列，請編輯原列。')
- if(['PLANNING','CODE'].includes(role)&&route.fallbacks.length)errors.push('規劃與程式不允許備援。')
  if(role==='PI_REVIEW'&&route.escalation!=='user')errors.push('PI 審查最終須升級使用者。')
  if(new Set([route.primary,...route.fallbacks]).size!==1+route.fallbacks.length)errors.push('主端與備援不可重複。')
  if(route.fallbacks.length>3)errors.push('備援最多三個。')
@@ -26,7 +25,7 @@ export function validateRule(rule, document, catalog, defaults) {
   if(!runner?.models?.includes(model))errors.push('請選擇此執行端名單中的模型。')
   if(!runner?.roles.includes(role==='*'?'GENERAL':role))errors.push(`${label(id)} 不支援這個工作角色。`)
   if(!runner?.ready)errors.push(`${label(id)} 未就緒，請先完成可信身分與能力配置。`)
-  if(role==='PLANNING'&&(id.toLowerCase().includes('claude')||runner?.providers.some(p=>p!=='gpt')))errors.push('規劃只能使用 GPT，不能交給 Claude。')
+  if(role==='PLANNING'&&(id.toLowerCase().includes('claude')||runner?.providers.some(p=>p==='claude')))errors.push('規劃不能交給 Claude。')
  }
  for(const key of ['window_size','min_samples','unclaimed_threshold'])if(!Number.isInteger(h[key])||h[key]<1||h[key]>100)errors.push(`${key} 須為 1–100 的整數。`)
  if(h.min_samples>h.window_size)errors.push('最少樣本不可超過窗口 N。')
