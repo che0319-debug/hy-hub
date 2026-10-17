@@ -1,5 +1,5 @@
 export const OWNERS = [['hy','HY'],['950157','950157'],['sam','Sam'],['family','小因']]
-export const ROLES = [['PLANNING','PI 規劃'],['GENERAL','一般執行專家'],['CODE','程式工程師'],['REVIEW','獨立審查員'],['PI_REVIEW','PI 審查'],['*','範圍預設']]
+export const ROLES = [['PLANNING','PI 規劃'],['GENERAL','一般執行專家'],['CODE','程式工程師'],['REVIEW','審查'],['PI_REVIEW','PI 審查'],['*','範圍預設']]
 export const LABELS = {'owner-bot:{owner}':'所屬 owner bot','gpt-chat':'GPT Chat','chatgpt-work':'ChatGPT Work','claude-review':'Claude','grok-review':'Grok Bot',...Object.fromEntries(OWNERS.map(([id,name])=>['owner-bot:'+id,name+' owner bot']))}
 export const label = id => (Object.hasOwn(LABELS,id)?LABELS[id]:id) || '無備援'
 export const when = time => time ? new Date(time*1000).toLocaleString('zh-TW',{timeZone:'Asia/Taipei',hour12:false}) : '尚無紀錄'
@@ -25,7 +25,6 @@ export function validateRule(rule, document, catalog, defaults) {
   if(!runner?.models?.includes(model))errors.push('請選擇此執行端名單中的模型。')
   if(!runner?.roles.includes(role==='*'?'GENERAL':role))errors.push(`${label(id)} 不支援這個工作角色。`)
   if(!runner?.ready)errors.push(`${label(id)} 未就緒，請先完成可信身分與能力配置。`)
-  if(role==='PLANNING'&&(id.toLowerCase().includes('claude')||runner?.providers.some(p=>p==='claude')))errors.push('規劃不能交給 Claude。')
  }
  for(const key of ['window_size','min_samples','unclaimed_threshold'])if(!Number.isInteger(h[key])||h[key]<1||h[key]>100)errors.push(`${key} 須為 1–100 的整數。`)
  if(h.min_samples>h.window_size)errors.push('最少樣本不可超過窗口 N。')

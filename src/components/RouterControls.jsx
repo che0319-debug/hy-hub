@@ -1,6 +1,6 @@
 import {useEffect,useRef,useState} from 'react'
 import {OWNERS,ROLES,label,when,identity,removeRule,eventText,reasonText,describeSource} from '../lib/router.mjs'
-import {AI_NAMES,family,choices,effectiveRoute,setAI} from '../lib/simpleRouter.mjs'
+import {AI_NAMES,family,choices,aiValue,effectiveRoute,setAI} from '../lib/simpleRouter.mjs'
 import {readRouter,saveRouter} from '../lib/routerApi'
 import '../../public/hy-ui/hy-ui.css'
 import './router-controls.css'
@@ -11,12 +11,9 @@ function useView(projectId,active=true){
  return {view,error,reload:()=>setVersion(v=>v+1)}
 }
 
-function AISelect({title,value,options,optional=false,onChange,disabled,runners}){
- const runner=runners.find(r=>r.id===value),known=options.some(x=>x.id===value)
- return <label>{title}<select aria-label={title} value={value||''} onChange={e=>onChange(e.target.value)} disabled={disabled}>
- {optional&&<option value="">無</option>}{!optional&&!value&&<option value="" disabled>選擇 AI</option>}
- {value&&!known&&<option value={value} disabled>{AI_NAMES[family(runner)]||label(value)}（目前設定，待驗證）</option>}
- {options.map(x=><option key={x.id} value={x.id}>{x.label}</option>)}</select></label>
+function AISelect({title,value,onChange,disabled}){
+ return <label>{title}<select aria-label={title} value={value} onChange={e=>onChange(e.target.value)} disabled={disabled}>
+ {choices().map(x=><option key={x.id} value={x.id}>{x.label}</option>)}</select></label>
 }
 function Connections({view}){
  return <div className="rt-connections" aria-label="AI 接通狀態">{Object.entries(AI_NAMES).map(([provider,name])=>{
@@ -32,7 +29,7 @@ function Editor({view,reload,projectId,onSaved}){
  const owner=scope==='owner'?scopeId:view.projects.find(p=>p.id===scopeId)?.owner_bot||'hy'
  useEffect(()=>{if(!dirty)return;const warn=e=>{e.preventDefault();e.returnValue=''};window.addEventListener('beforeunload',warn);return()=>window.removeEventListener('beforeunload',warn)},[dirty])
  function range(value){setScope(value);setScopeId(value==='global'?'':value==='owner'?'hy':projectId||view.projects[0]?.id||'')}
- function change(role,route,primary,fallback){try{setDocument(setAI(document,{role,scope,scopeId,owner,route,primary,fallback,runners:view.runners,health:view.simple_health_defaults}));setError('')}catch(e){setError(e.message)}}
+ function change(role,route,primary,fallback){try{setDocument(setAI(document,{role,scope,scopeId,owner,route,primary,fallback,targets:view.ai_targets,health:view.simple_health_defaults}));setError('')}catch(e){setError(e.message)}}
  async function save(){if(!dirty||busy||conflict)return;setBusy(true);setError('');try{await saveRouter({document,expected_revision:view.policy.revision,reason:'本人於前台調整主力與備案 AI',authority_ref:'authenticated-owner-ui'});onSaved('已儲存，僅影響之後建立的新包。');reload()}catch(e){setError(e.message);if(e.status===409)setConflict(true)}finally{setBusy(false)}}
  function refresh(){if(!dirty||window.confirm('重新讀取會捨棄尚未儲存的修改，是否繼續？'))reload()}
  return <div className="hy-stack rt-controls">
@@ -47,20 +44,21 @@ function Editor({view,reload,projectId,onSaved}){
  <div className="rt-fields">{!projectId&&<label>套用範圍<select aria-label="套用範圍" value={scope} disabled={busy} onChange={e=>range(e.target.value)}><option value="global">全部專案預設</option><option value="owner">指定 Bot</option><option value="project">指定專案</option></select></label>}
  {scope==='owner'&&<label>Bot<select aria-label="Bot" value={scopeId} onChange={e=>setScopeId(e.target.value)} disabled={busy}>{OWNERS.map(([id,name])=><option key={id} value={id}>{name}</option>)}</select></label>}
  {scope==='project'&&!projectId&&<label>專案<select aria-label="專案" value={scopeId} onChange={e=>setScopeId(e.target.value)} disabled={busy}><option value="">選擇專案</option>{view.projects.map(p=><option key={p.id} value={p.id}>{p.title}</option>)}</select></label>}</div>
- {ROLES.filter(([id])=>id!=='*').map(([role,name])=>{
- const route=effectiveRoute(document,role,scope,scopeId,owner,view.role_defaults),exact=document.rules.find(r=>r.scope===scope&&r.scope_id===(scope==='global'?'':scopeId)&&r.selector===role),fallback=route.fallbacks[0]||''
- const disabled=busy||conflict||!view.can_edit||(scope!=='global'&&!scopeId)||!view.simple_health_defaults
+ {ROLES.filter(([id])=>!['*','PI_REVIEW'].includes(id)).map(([role,name])=>{
+ const route=effectiveRoute(document,role,scope,scopeId,owner,view.role_defaults),exact=document.rules.find(r=>r.scope===scope&&r.scope_id===(scope==='global'?'':scopeId)&&r.selector===role),primary=aiValue(route.primary,view.runners),fallback=aiValue(route.fallbacks[0],view.runners)
+ const disabled=busy||conflict||!view.can_edit||(scope!=='global'&&!scopeId)||!view.simple_health_defaults||view.simple_routing_version!==2
  return <article className="rt-route rt-simple-route" key={role}><div><b>{name}</b><small>{exact?'此範圍設定':scope==='global'?'系統預設':'沿用上層設定'}</small></div>
- <AISelect title={name+'主力'} value={route.primary} options={choices(view.runners,role,owner,route.primary)} disabled={disabled} runners={view.runners} onChange={id=>change(role,route,id,fallback===id?'':fallback)}/>
- <AISelect title={name+'備案'} value={fallback} options={choices(view.runners,role,owner,fallback,route.primary)} optional disabled={disabled} runners={view.runners} onChange={id=>change(role,route,route.primary,id)}/>
+ <AISelect title={name+'主力'} value={primary} disabled={disabled} onChange={id=>change(role,route,id,fallback)}/>
+ <AISelect title={name+'備案'} value={fallback} disabled={disabled} onChange={id=>change(role,route,primary,id)}/>
  {exact&&view.can_edit&&<button className="hy-btn rt-inherit" disabled={disabled} onClick={()=>setDocument(removeRule(document,identity(exact)))}>恢復預設</button>}
+ {([route.primary,...route.fallbacks].some(id=>id!=='none'&&!aiValue(id,view.runners)))&&<p className="hy-note rt-wide">此列含舊 AI 設定，重新選擇並儲存後改用本頁選項。</p>}
  {route.fallbacks.length>1&&<p className="hy-note rt-wide">此列保留既有多個備案；重新選擇此列後改為一個備案。</p>}
  </article>})}
- <p className="hy-note">選單只列出已配置、支援此角色且有成功領包交件紀錄的 AI；尚未驗證的目前設定保留顯示。</p>
+ <p className="hy-note">各角色的主力與備案皆可選無、GPT、Claude；連線狀態不會改變選項。主力選無時暫停此類新包派工。</p>
  {view.can_edit&&<div className="rt-actions"><button className="hy-btn is-primary" disabled={!dirty||busy||conflict} onClick={save}>{busy?'儲存中…':'儲存設定'}</button>{dirty&&<button className="hy-btn" disabled={busy} onClick={()=>{setDocument(structuredClone(view.policy.document));setError('')}}>取消修改</button>}</div>}
  <ErrorBox error={error}/>{conflict&&<button className="hy-btn" onClick={refresh}>重新讀取最新設定</button>}
  </section>
- <footer className="hy-card rt-principles"><b>固定原則</b><p>設定僅影響之後建立的新包，既有工作與執行鎖保留。重新選擇並儲存的列，模型沿用 AI 排程設定；連續 3 包超時未領時，依可用備案自動切換，並留下給 Grok Bot 的通知。每包未領等待時間為 2 小時，不以頁面刷新次數計算。</p><p>規劃不交給 Claude；程式由 GPT 的 Work／Codex 執行，合併 PR 須本人同意。外審由未參與成果的執行者負責，正式核准仍由前台處理。</p></footer>
+ <footer className="hy-card rt-principles"><b>固定原則</b><p>設定僅影響之後建立的新包，既有工作與執行鎖保留。重新選擇並儲存的列，模型沿用 AI 排程設定；連續 3 包超時未領時，依可用備案自動切換，並留下工作紀錄。每包未領等待時間為 2 小時，不以頁面刷新次數計算。</p><p>審查統一由未參與成果的 AI 執行；交件品質與里程碑依受審內容檢查。程式仍須通過 GitHub 驗證，合併 PR 及正式核准由本人決定。</p></footer>
  </div>
 }
 export function RouterControls({projectId,active=true,showJournal=false}){
