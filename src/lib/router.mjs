@@ -1,6 +1,6 @@
 export const OWNERS = [['hy','HY'],['950157','950157'],['sam','Sam'],['family','小因']]
 export const ROLES = [['PLANNING','PI 規劃'],['GENERAL','一般執行專家'],['CODE','程式工程師'],['REVIEW','審查'],['PI_REVIEW','PI 審查'],['*','範圍預設']]
-export const LABELS = {'owner-bot:{owner}':'所屬 owner bot','gpt-chat':'GPT Chat','chatgpt-work':'ChatGPT Work','claude-review':'Claude','grok-review':'Grok Bot',...Object.fromEntries(OWNERS.map(([id,name])=>['owner-bot:'+id,name+' owner bot']))}
+export const LABELS = {'owner-bot:{owner}':'所屬 owner bot','gpt-chat':'GPT','chatgpt-work':'GPT','gpt-review-independent':'GPT','claude-worker':'Claude','claude-review':'Claude','grok':'Grok','grok-review':'Grok',...Object.fromEntries(OWNERS.map(([id,name])=>['owner-bot:'+id,name+' owner bot']))}
 export const label = id => (Object.hasOwn(LABELS,id)?LABELS[id]:id) || '無備援'
 export const when = time => time ? new Date(time*1000).toLocaleString('zh-TW',{timeZone:'Asia/Taipei',hour12:false}) : '尚無紀錄'
 export function roleOf(value){const type=(value||'').trim().toUpperCase();return ['CODE','IMPLEMENTATION','CODING','BUGFIX','BUG_FIX','REFACTOR','DEPLOYMENT','FRONTEND','BACKEND'].includes(type)?'CODE':['PROJECT_PLANNING','SPEC_CHANGE_PLANNING'].includes(type)?'PLANNING':['QUALITY_REVIEW','CLAUDE_REVIEW'].includes(type)?'REVIEW':ROLES.some(([id])=>id===type)?type:'GENERAL'}
