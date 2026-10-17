@@ -1004,9 +1004,7 @@
     },
     "GENERAL": {
       "primary": "gpt-chat",
-      "fallbacks": [
-        "chatgpt-work"
-      ]
+      "fallbacks": []
     },
     "CODE": {
       "primary": "chatgpt-work",
@@ -1014,15 +1012,11 @@
     },
     "REVIEW": {
       "primary": "claude-review",
-      "fallbacks": [
-        "grok-review"
-      ]
+      "fallbacks": []
     },
     "PI_REVIEW": {
       "primary": "claude-review",
-      "fallbacks": [
-        "owner-bot:{owner}"
-      ],
+      "fallbacks": [],
       "escalation": "user"
     }
   },
@@ -1044,5 +1038,28 @@
     "cooldown_seconds": 3600,
     "auto_reassign_enabled": true,
     "max_reassignments": 1
+  },
+  "simple_routing_version": 2,
+  "ai_targets": {
+    "PLANNING": {
+      "none": "none",
+      "gpt": "gpt-chat",
+      "claude": "claude-worker"
+    },
+    "GENERAL": {
+      "none": "none",
+      "gpt": "gpt-chat",
+      "claude": "claude-worker"
+    },
+    "CODE": {
+      "none": "none",
+      "gpt": "chatgpt-work",
+      "claude": "claude-worker"
+    },
+    "REVIEW": {
+      "none": "none",
+      "gpt": "gpt-chat",
+      "claude": "claude-review"
+    }
   }
 }

@@ -1,22 +1,15 @@
 import {defaultRoute,identity,normalize,replaceRule} from './router.mjs'
-export const AI_NAMES={gpt:'GPT',claude:'Claude',grok:'Grok'}
+export const AI_NAMES={gpt:'GPT',claude:'Claude'}
+export const AI_OPTIONS=[{id:'',label:'無'},{id:'gpt',label:'GPT'},{id:'claude',label:'Claude'}]
 export function family(r){
- if(!r)return ''
+ if(!r||r.id==='none')return ''
  const p=[...new Set(r.providers||[])]
  if(p.length===1&&Object.hasOwn(AI_NAMES,p[0]))return p[0]
- const known={'gpt-chat':'gpt','chatgpt-work':'gpt','claude-review':'claude','grok-review':'grok'}
+ const known={'gpt-chat':'gpt','chatgpt-work':'gpt','gpt-review-independent':'gpt','claude-worker':'claude','claude-review':'claude'}
  return Object.hasOwn(known,r.id)?known[r.id]:''
 }
-export function eligible(runners,role,owner){
- return runners.filter(r=>family(r)&&r.ready&&r.execution_verified===true&&r.roles.includes(role)&&(!r.id.startsWith('owner-bot:')||r.id==='owner-bot:'+owner)&&!(role==='PLANNING'&&family(r)==='claude'))
-}
-export function choices(runners,role,owner,current='',excluded=''){
- const list=eligible(runners,role,owner).filter(r=>r.id!==excluded)
- return Object.entries(AI_NAMES).flatMap(([id,label])=>{
- const matches=list.filter(r=>family(r)===id),selected=matches.find(r=>r.id===current)||matches.find(r=>r.id===(role==='CODE'?'chatgpt-work':'gpt-chat'))||matches[0]
- return selected?[{id:selected.id,label}]:[]
- })
-}
+export const choices=()=>AI_OPTIONS
+export const aiValue=(id,runners)=>family(runners.find(r=>r.id===id)||{id})
 export function effectiveRoute(document,role,scope,scopeId,owner,defaults){
  const scopes=scope==='project'?[['project',scopeId],['owner',owner],['global','']]:scope==='owner'?[['owner',scopeId],['global','']]:[['global','']]
  for(const [s,id] of scopes)for(const key of [role,'*']){
@@ -26,12 +19,15 @@ export function effectiveRoute(document,role,scope,scopeId,owner,defaults){
  }
  return defaultRoute(role,owner,defaults)
 }
-export function setAI(document,{role,scope,scopeId,owner,route,primary,fallback,runners,health}){
- if(!health)throw new Error('後端固定派工原則尚未就緒，請更新後端。')
- const ids=[primary,...(fallback?[fallback]:[])],allowed=eligible(runners,role,owner)
- if(new Set(ids).size!==ids.length||ids.some(id=>!allowed.some(r=>r.id===id)))throw new Error('所選 AI 尚未完成此角色的領包與交件驗證。')
- const symbolic=id=>scope==='global'?id.replace('owner-bot:'+owner,'owner-bot:{owner}'):id
- const value={...route,primary:symbolic(primary),fallbacks:fallback?[symbolic(fallback)]:[],models:Object.fromEntries(ids.map(id=>[symbolic(id),'session-default'])),health:{...health,auto_reassign_enabled:!!fallback},...(role==='PI_REVIEW'?{escalation:'user'}:{})}
+export function setAI(document,{role,scope,scopeId,route,primary,fallback,health,targets}){
+ if(!health||!targets?.[role])throw new Error('後端統一派工尚未就緒，請更新後端。')
+ if(!AI_OPTIONS.some(x=>x.id===primary)||!AI_OPTIONS.some(x=>x.id===fallback))throw new Error('請選擇無、GPT 或 Claude。')
+ if(primary&&primary===fallback)throw new Error('主力與備案不可是同一個 AI。')
+ const target=targets[role],main=target[primary||'none'],backup=fallback?target[fallback]:null
+ const ids=[main,...(backup?[backup]:[])].filter(id=>id!=='none')
+ const value={...route,primary:main,fallbacks:backup?[backup]:[],models:Object.fromEntries(ids.map(id=>[id,'session-default'])),health:{...health,auto_reassign_enabled:!!primary&&!!backup},escalation:role==='REVIEW'?'user':null}
  const rule={scope,scope_id:scope==='global'?'':scopeId,selector:role,route:value}
- return replaceRule(document,rule,identity(rule))
+ // One visible review policy drives both deliverable and milestone checks.
+ const base=role==='REVIEW'?{...document,rules:document.rules.filter(r=>!(r.scope===scope&&r.scope_id===rule.scope_id&&r.selector==='PI_REVIEW'))}:document
+ return replaceRule(base,rule,identity(rule))
 }
