@@ -159,7 +159,7 @@ export default function ExpertTeam() {
     {!data && !error && <p className="hy-empty">讀取中…</p>}
     {actions.length > 0 && <p className="hy-alert">{actions.length} 個版本等你核准發布，已在對應的專家卡或 Skill 標示「待你確認」。</p>}
 
-    <nav className="hy-tabs" role="tablist">{[['experts', '專家'], ['skills', 'Skill 庫'], ['models', '執行者與模型'], ['requests', '能力請求']].map(([id, label]) => <button className="hy-tab" role="tab" key={id} aria-current={tab === id ? 'page' : undefined} onClick={() => { setTab(id); setSearch(''); setEditor(null) }}>{label}</button>)}</nav>
+    <nav className="hy-tabs" role="tablist">{[['experts', '專家'], ['skills', 'Skill 庫'], ['models', 'AI 派工'], ['requests', '能力請求']].map(([id, label]) => <button className="hy-tab" role="tab" key={id} aria-current={tab === id ? 'page' : undefined} onClick={() => { setTab(id); setSearch(''); setEditor(null) }}>{label}</button>)}</nav>
 
     {(tab === 'experts' || tab === 'skills') && <label className="pi-search">搜尋{tab === 'experts' ? '專家' : 'Skill'}<input value={search} onChange={e => setSearch(e.target.value)} placeholder="輸入名稱或能力" /></label>}
 
