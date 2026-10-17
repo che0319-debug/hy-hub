@@ -17,8 +17,12 @@ function AISelect({title,value,onChange,disabled}){
 }
 function Connections({view}){
  return <div className="rt-connections" aria-label="AI 接通狀態">{Object.entries(AI_NAMES).map(([provider,name])=>{
- const runners=view.runners.filter(r=>family(r)===provider),done=runners.some(r=>r.ready&&r.execution_verified),bound=runners.some(r=>r.ready)
- return <div key={provider}><b>{name}</b><span>{done?'已有領包與交件紀錄':bound?'已配置，待領包驗證':'尚未接通領包'}</span></div>
+ const runners=view.runners.filter(r=>family(r)===provider),ids=new Set(runners.map(r=>r.id)),queues=view.queues.filter(q=>ids.has(q.runner_id))
+ const done=runners.some(r=>r.ready&&r.execution_verified),bound=runners.some(r=>r.ready)
+ const latest=values=>{const items=values.filter(v=>Number.isFinite(v));return items.length?Math.max(...items):null}
+ const lastPoll=latest([...runners.map(r=>r.last_poll),...queues.map(q=>q.last_poll)])
+ const lastClaim=latest(queues.map(q=>q.last_claim))
+ return <div key={provider}><b>{name}</b><span>{bound?(done?'已接通 · 已有交件紀錄':'已接通'):'尚未接通'}</span><span>最近巡檢：{when(lastPoll)}</span><span>最近領包：{when(lastClaim)}</span></div>
  })}</div>
 }
 export function RouterJournal({view}){return <section className="hy-card"><h3 className="hy-card-title">路由工作紀錄</h3>{view.events.length?<ol className="rt-journal">{view.events.map(e=><li key={e.key}><time>{when(e.at)}</time><p>{eventText(e)}</p><details><summary>決策依據</summary><dl className="hy-kv"><dt>工作包</dt><dd>{e.package_id||'範圍事件'}</dd><dt>政策／派工版本</dt><dd>{e.body.policy_revision??'尚無紀錄'}／{e.body.next_assignment_revision??e.body.assignment_revision??'尚無紀錄'}</dd><dt>授權來源</dt><dd>{describeSource(e.body.authority)} · {e.body.actor||'Router 系統'}</dd><dt>冷卻到期</dt><dd>{when(e.body.cooled_until)}</dd><dt>原因</dt><dd>{reasonText(e.body.reason)||'依既有執行事件記錄'}</dd></dl>{e.body.metrics&&<p>樣本 {e.body.metrics.samples}；連續未領 {e.body.metrics.consecutive_unclaimed}；逾時率 {Math.round(e.body.metrics.timeout_rate*100)}%；錯誤率 {Math.round(e.body.metrics.error_rate*100)}%</p>}{e.body.thresholds&&<p>門檻：至少 {e.body.thresholds.min_samples} 次執行／連續 {e.body.thresholds.unclaimed_threshold} 包未領，冷卻 {e.body.thresholds.cooldown_seconds} 秒。</p>}</details></li>)}</ol>:<p className="hy-empty">尚無路由事件。既有專案在正式納入前沿用原路徑。</p>}{view.events_truncated&&<p className="hy-note">顯示最近 100 筆路由事件；完整稽核仍保留於後端。</p>}</section>}
@@ -34,7 +38,7 @@ function Editor({view,reload,projectId,onSaved}){
  function refresh(){if(!dirty||window.confirm('重新讀取會捨棄尚未儲存的修改，是否繼續？'))reload()}
  return <div className="hy-stack rt-controls">
  <section className="hy-card"><div className="hy-card-head"><h2 className="hy-card-title">AI 派工</h2><button className="hy-btn" disabled={busy} onClick={refresh}>重新讀取</button>{dirty&&<span className="hy-pill" data-s="you">有未儲存修改</span>}</div>
- <p className="hy-note">選擇接工作包的 AI；模型由各 AI 的排程設定。</p><Connections view={view}/>
+ <p className="hy-note">選擇接工作包的 AI；模型由各 AI 的排程設定。最近巡檢代表該 AI 成功讀取 Router 工作包清單，最近領包則代表實際 claim。</p><Connections view={view}/>
  {!view.enrollment_enabled&&<p className="hy-alert" role="status">此設定目前尚未用於新專案派工，儲存不會自行啟用。</p>}
  {view.auto_reassign_paused&&<p className="hy-alert" role="status">自動切換備案目前暫停。</p>}
  {view.configuration_error&&<p className="hy-alert">AI 連線設定有誤，請先修復連線。</p>}
