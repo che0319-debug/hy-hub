@@ -57,6 +57,17 @@ const {chromium}=require('playwright');const assert=require('node:assert/strict'
   const aiLabels=await page.locator('.rt-simple-route option:not([disabled])').allTextContents();
   assert(aiLabels.every(x=>['GPT','Claude','無'].includes(x)),JSON.stringify(aiLabels));
   assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth),false,'no horizontal overflow');
+  for(const name of ['PI 規劃','一般執行專家','程式工程師','審查']){
+   assert.equal(await page.getByLabel(name+'主力',{exact:true}).inputValue(),name==='審查'?'claude':'gpt');
+   assert.equal(await page.getByLabel(name+'備案',{exact:true}).inputValue(),name==='審查'?'gpt':'claude');
+  }
+  if(width===1280){
+   const select=await page.getByLabel('一般執行專家備案',{exact:true}).boundingBox();
+   const restore=await row('一般執行專家').getByRole('button',{name:'恢復預設',exact:true}).boundingBox();
+   assert(select.width<=180,'compact dropdown width');
+   assert(Math.abs(select.y+select.height-restore.y-restore.height)<2,'restore stays on the same desktop row');
+   assert((await row('一般執行專家').boundingBox()).height<115,'no extra button row');
+  }
   await page.screenshot({path:'docs/quality/ui/router/simple-'+width+'.png',fullPage:true});
   await page.getByLabel('一般執行專家備案',{exact:true}).selectOption('claude');
   assert.equal(writes.length,0,'draft only');await save().click();
@@ -66,7 +77,7 @@ const {chromium}=require('playwright');const assert=require('node:assert/strict'
   const changed=view.policy.document.rules.find(r=>r.selector==='GENERAL').route;
   assert.deepEqual(changed.fallbacks,['claude-worker']);assert.equal(changed.models['gpt-chat'],'session-default');
   assert.equal(changed.health.unclaimed_threshold,3);assert.equal(changed.health.auto_reassign_enabled,true);
-  reset();await global();await page.getByLabel('審查主力',{exact:true}).selectOption('gpt');await save().click();
+  reset();await global();await page.getByLabel('審查備案',{exact:true}).selectOption('');await page.getByLabel('審查主力',{exact:true}).selectOption('gpt');await save().click();
   await page.getByText('已儲存，僅影響之後建立的新包。',{exact:true}).waitFor();
   assert.deepEqual(view.policy.document.rules.find(r=>r.selector==='REVIEW').route.fallbacks,[]);
   // Unrelated custom rules and their models/health remain untouched.
@@ -75,7 +86,7 @@ const {chromium}=require('playwright');const assert=require('node:assert/strict'
   const nav=page.getByRole('navigation',{name:'AI Office 專案分頁'});
   await nav.getByRole('button',{name:'執行計畫'}).click();assert.equal(reads.filter(p=>p.includes('/router/view')).length,0);
   await page.getByText('專案 AI 派工',{exact:true}).click();await page.getByRole('heading',{name:'AI 派工',exact:true}).waitFor();
-  await page.getByLabel('審查主力',{exact:true}).selectOption('gpt');
+  await page.getByLabel('審查備案',{exact:true}).selectOption('');await page.getByLabel('審查主力',{exact:true}).selectOption('gpt');
   await nav.getByRole('button',{name:'工作日誌'}).click();await page.getByText('冷卻、恢復與備援改派紀錄',{exact:true}).click();await page.getByRole('heading',{name:'路由工作紀錄',exact:true}).waitFor();
   await nav.getByRole('button',{name:'執行計畫'}).click();await page.getByText('有未儲存修改',{exact:true}).waitFor();
   await save().click();await page.getByText('已儲存，僅影響之後建立的新包。',{exact:true}).waitFor();
@@ -84,6 +95,7 @@ const {chromium}=require('playwright');const assert=require('node:assert/strict'
  reset();await global();mode='conflict';await page.getByLabel('一般執行專家備案',{exact:true}).selectOption('claude');await save().click();await page.getByRole('alert').filter({hasText:'不會覆蓋新版'}).waitFor();assert(await save().isDisabled());
  await page.getByRole('button',{name:'重新讀取最新設定'}).click();await page.getByRole('heading',{name:'AI 派工',exact:true}).waitFor();
  reset();await global();await page.getByLabel('程式工程師主力',{exact:true}).selectOption('');await save().click();await page.getByText('已儲存，僅影響之後建立的新包。',{exact:true}).waitFor();assert.equal(view.policy.document.rules.find(r=>r.selector==='CODE').route.primary,'none');
+ reset();await global();await row('一般執行專家').getByRole('button',{name:'恢復預設',exact:true}).click();await save().click();await page.getByText('已儲存，僅影響之後建立的新包。',{exact:true}).waitFor();assert.equal(await page.getByLabel('一般執行專家備案',{exact:true}).inputValue(),'claude');
  reset();mode='readonly';await global();assert.equal(await save().count(),0);assert.equal(await page.locator('.rt-simple-route select:not([disabled])').count(),0);
  reset();mode='unready';await global();assert.equal(await page.locator('.rt-simple-route select').count(),8);for(const select of await page.locator('.rt-simple-route select').all())assert.deepEqual(await select.locator('option').allTextContents(),['無','GPT','Claude']);
  reset();view.runners.forEach(r=>r.execution_verified=false);await global();assert.equal(await page.locator('.rt-simple-route select').count(),8);for(const select of await page.locator('.rt-simple-route select').all())assert.deepEqual(await select.locator('option').allTextContents(),['無','GPT','Claude']);
