@@ -54,7 +54,7 @@ function Editor({view,reload,projectId,onSaved}){
  {([route.primary,...route.fallbacks].some(id=>id!=='none'&&!aiValue(id,view.runners)))&&<p className="hy-note rt-wide">此列含舊 AI 設定，重新選擇並儲存後改用本頁選項。</p>}
  {route.fallbacks.length>1&&<p className="hy-note rt-wide">此列保留既有多個備案；重新選擇此列後改為一個備案。</p>}
  </article>})}
- <p className="hy-note">各角色的主力與備案皆可選無、GPT、Claude；連線狀態不會改變選項。主力選無時暫停此類新包派工。</p>
+ <p className="hy-note">各角色的主力與備案皆可選無、GPT、Claude、Grok；連線狀態不會改變選項。主力選無時暫停此類新包派工。</p>
  {view.can_edit&&<div className="rt-actions"><button className="hy-btn is-primary" disabled={!dirty||busy||conflict} onClick={save}>{busy?'儲存中…':'儲存設定'}</button>{dirty&&<button className="hy-btn" disabled={busy} onClick={()=>{setDocument(structuredClone(view.policy.document));setError('')}}>取消修改</button>}</div>}
  <ErrorBox error={error}/>{conflict&&<button className="hy-btn" onClick={refresh}>重新讀取最新設定</button>}
  </section>

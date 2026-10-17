@@ -53,9 +53,9 @@ const {chromium}=require('playwright');const assert=require('node:assert/strict'
   for(const name of ['派工方式與緊急停用','工作包路由','健康門檻與冷卻'])assert.equal(await page.getByText(name,{exact:true}).count(),0);
   assert.equal(await page.getByLabel('主端模型',{exact:true}).count(),0);
   assert.equal(await page.locator('.rt-simple-route select').count(),8);
-  assert.equal(await page.getByText('PI 審查',{exact:true}).count(),0);for(const select of await page.locator('.rt-simple-route select').all())assert.deepEqual(await select.locator('option').allTextContents(),['無','GPT','Claude']);
+  assert.equal(await page.getByText('PI 審查',{exact:true}).count(),0);for(const select of await page.locator('.rt-simple-route select').all())assert.deepEqual(await select.locator('option').allTextContents(),['無','GPT','Claude','Grok']);
   const aiLabels=await page.locator('.rt-simple-route option:not([disabled])').allTextContents();
-  assert(aiLabels.every(x=>['GPT','Claude','無'].includes(x)),JSON.stringify(aiLabels));
+  assert(aiLabels.every(x=>['GPT','Claude','Grok','無'].includes(x)),JSON.stringify(aiLabels));
   assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth),false,'no horizontal overflow');
   for(const name of ['PI 規劃','一般執行專家','程式工程師','審查']){
    assert.equal(await page.getByLabel(name+'主力',{exact:true}).inputValue(),name==='審查'?'claude':'gpt');
@@ -96,9 +96,10 @@ const {chromium}=require('playwright');const assert=require('node:assert/strict'
  await page.getByRole('button',{name:'重新讀取最新設定'}).click();await page.getByRole('heading',{name:'AI 派工',exact:true}).waitFor();
  reset();await global();await page.getByLabel('程式工程師主力',{exact:true}).selectOption('');await save().click();await page.getByText('已儲存，僅影響之後建立的新包。',{exact:true}).waitFor();assert.equal(view.policy.document.rules.find(r=>r.selector==='CODE').route.primary,'none');
  reset();await global();await row('一般執行專家').getByRole('button',{name:'恢復預設',exact:true}).click();await save().click();await page.getByText('已儲存，僅影響之後建立的新包。',{exact:true}).waitFor();assert.equal(await page.getByLabel('一般執行專家備案',{exact:true}).inputValue(),'claude');
+ reset();await global();await page.getByLabel('一般執行專家主力',{exact:true}).selectOption('grok');await save().click();await page.getByText('已儲存，僅影響之後建立的新包。',{exact:true}).waitFor();assert.equal(view.policy.document.rules.find(r=>r.selector==='GENERAL').route.primary,'grok');
  reset();mode='readonly';await global();assert.equal(await save().count(),0);assert.equal(await page.locator('.rt-simple-route select:not([disabled])').count(),0);
- reset();mode='unready';await global();assert.equal(await page.locator('.rt-simple-route select').count(),8);for(const select of await page.locator('.rt-simple-route select').all())assert.deepEqual(await select.locator('option').allTextContents(),['無','GPT','Claude']);
- reset();view.runners.forEach(r=>r.execution_verified=false);await global();assert.equal(await page.locator('.rt-simple-route select').count(),8);for(const select of await page.locator('.rt-simple-route select').all())assert.deepEqual(await select.locator('option').allTextContents(),['無','GPT','Claude']);
+ reset();mode='unready';await global();assert.equal(await page.locator('.rt-simple-route select').count(),8);for(const select of await page.locator('.rt-simple-route select').all())assert.deepEqual(await select.locator('option').allTextContents(),['無','GPT','Claude','Grok']);
+ reset();view.runners.forEach(r=>r.execution_verified=false);await global();assert.equal(await page.locator('.rt-simple-route select').count(),8);for(const select of await page.locator('.rt-simple-route select').all())assert.deepEqual(await select.locator('option').allTextContents(),['無','GPT','Claude','Grok']);
  reset();mode='error';await page.goto('about:blank');await page.goto('http://127.0.0.1:5173/#/expert-team?tab=models');await page.getByRole('button',{name:'重試讀取路由'}).waitFor();mode='normal';await page.getByRole('button',{name:'重試讀取路由'}).click();await page.getByRole('heading',{name:'AI 派工',exact:true}).waitFor();
  assert.deepEqual(errors,[]);assert(writes.every(x=>x.path==='/api/ai-work-packages/router/policy'));
  await browser.close();console.log('Simplified Router UI: 1280/390, AI-only choices, real readiness, explicit save, frozen packages, inheritance, conflicts and errors passed');

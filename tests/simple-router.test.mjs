@@ -4,9 +4,9 @@ import fs from 'node:fs'
 import {AI_OPTIONS,choices,effectiveRoute,setAI,family,aiValue} from '../src/lib/simpleRouter.mjs'
 const view=JSON.parse(fs.readFileSync(new URL('./fixtures/router-view.json',import.meta.url)))
 const args={role:'REVIEW',scope:'global',scopeId:'',owner:'hy',route:{primary:'claude-review',fallbacks:[]},primary:'gpt',fallback:'claude',health:view.simple_health_defaults,targets:view.ai_targets}
-test('every role and both selects always have exactly none GPT Claude',()=>{
+test('every role and both selects always have exactly none GPT Claude Grok',()=>{
  for(const role of ['PLANNING','GENERAL','CODE','REVIEW'])for(const runners of [view.runners,[],view.runners.map(r=>({...r,ready:false,execution_verified:false}))])assert.deepEqual(choices(runners,role,'hy'),AI_OPTIONS)
- assert.deepEqual(AI_OPTIONS.map(x=>x.label),['無','GPT','Claude'])
+ assert.deepEqual(AI_OPTIONS.map(x=>x.label),['無','GPT','Claude','Grok'])
  assert.equal(family({id:'__proto__',providers:['unrecognized']}),'')
 })
 test('one review selection replaces old separate PI settings and preserves other scopes',()=>{
@@ -25,10 +25,12 @@ test('none pauses new dispatch and does not silently promote backup',()=>{
  assert.equal(aiValue('none',view.runners),'')
 })
 test('invalid names, missing backend contract and duplicate AI are rejected',()=>{
- for(const patch of [{health:null},{targets:null},{primary:'grok'},{fallback:'gpt'}])assert.throws(()=>setAI({rules:[]},{...args,...patch}))
+ for(const patch of [{health:null},{targets:null},{primary:'unrecognized'},{fallback:'gpt'}])assert.throws(()=>setAI({rules:[]},{...args,...patch}))
 })
 test('inheritance follows project then owner then global',()=>{
  const rule=(scope,scope_id,primary)=>({scope,scope_id,selector:'REVIEW',route:{primary,fallbacks:[]}})
  const document={rules:[rule('global','','claude-review'),rule('owner','sam','gpt-chat')]}
  assert.equal(effectiveRoute(document,'REVIEW','project','p','sam',view.role_defaults).primary,'gpt-chat')
 })
+
+test('Grok is the same executor across every role',()=>{for(const role of ['PLANNING','GENERAL','CODE','REVIEW']){const route=setAI({rules:[]},{...args,role,primary:'grok',fallback:'gpt'}).rules[0].route;assert.equal(route.primary,'grok');assert.equal(route.escalation,role==='REVIEW'?'user':null)}})
