@@ -7,7 +7,7 @@
         {
           "route": {
             "fallbacks": [
-              "chatgpt-work"
+              "claude-worker"
             ],
             "health": {
               "auto_reassign_enabled": true,
@@ -85,7 +85,9 @@
       "id": "gpt-chat",
       "roles": [
         "PLANNING",
-        "GENERAL"
+        "GENERAL",
+        "REVIEW",
+        "PI_REVIEW"
       ],
       "configured": true,
       "providers": [
@@ -207,6 +209,26 @@
       "label": "owner-bot:sam",
       "models": [
         "session-default"
+      ],
+      "execution_verified": true
+    },
+    {
+      "id": "claude-worker",
+      "label": "Claude",
+      "models": [
+        "session-default",
+        "opus",
+        "sonnet",
+        "haiku"
+      ],
+      "roles": [
+        "PLANNING",
+        "GENERAL",
+        "CODE"
+      ],
+      "ready": true,
+      "providers": [
+        "claude"
       ],
       "execution_verified": true
     }
@@ -1000,23 +1022,33 @@
   "role_defaults": {
     "PLANNING": {
       "primary": "gpt-chat",
-      "fallbacks": []
+      "fallbacks": [
+        "claude-worker"
+      ]
     },
     "GENERAL": {
       "primary": "gpt-chat",
-      "fallbacks": []
+      "fallbacks": [
+        "claude-worker"
+      ]
     },
     "CODE": {
       "primary": "chatgpt-work",
-      "fallbacks": []
+      "fallbacks": [
+        "claude-worker"
+      ]
     },
     "REVIEW": {
       "primary": "claude-review",
-      "fallbacks": []
+      "fallbacks": [
+        "gpt-chat"
+      ]
     },
     "PI_REVIEW": {
       "primary": "claude-review",
-      "fallbacks": [],
+      "fallbacks": [
+        "gpt-chat"
+      ],
       "escalation": "user"
     }
   },

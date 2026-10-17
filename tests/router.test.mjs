@@ -6,7 +6,7 @@ const fixture=JSON.parse(fs.readFileSync(new URL('./fixtures/router-view.json',i
 const defaultRoute=(role,owner='hy')=>resolveDefault(role,owner,fixture.role_defaults)
 const rule=(selector='GENERAL',route=defaultRoute(selector))=>({scope:'global',scope_id:'',selector,route})
 const valid = candidate => validateRule(candidate,{rules:[]},fixture.runners,fixture.health_defaults)
-for(const [role,primary,fallbacks] of [['PLANNING','gpt-chat',[]],['GENERAL','gpt-chat',[]],['CODE','chatgpt-work',[]],['REVIEW','claude-review',[]],['PI_REVIEW','claude-review',[]]])test('confirmed default '+role,()=>{assert.deepEqual(defaultRoute(role,'sam').primary,primary);assert.deepEqual(defaultRoute(role,'sam').fallbacks,fallbacks)})
+for(const [role,primary,fallbacks] of [['PLANNING','gpt-chat',['claude-worker']],['GENERAL','gpt-chat',['claude-worker']],['CODE','chatgpt-work',['claude-worker']],['REVIEW','claude-review',['gpt-chat']],['PI_REVIEW','claude-review',['gpt-chat']]])test('confirmed default '+role,()=>{assert.deepEqual(defaultRoute(role,'sam').primary,primary);assert.deepEqual(defaultRoute(role,'sam').fallbacks,fallbacks)})
 test('compatible independent GPT review is permitted without adding a runner',()=>assert.deepEqual(valid(rule('REVIEW',{primary:'gpt-review-independent',fallbacks:[]})),[]))
 test('planning rejects Claude and provider mismatch',()=>assert(valid(rule('PLANNING',{primary:'claude-review',fallbacks:[]})).length))
 test('backups are configurable but must match role capabilities',()=>{assert.deepEqual(valid(rule('PLANNING',{primary:'gpt-chat',fallbacks:['chatgpt-work']})),[]);assert(valid(rule('CODE',{primary:'chatgpt-work',fallbacks:['grok-review']})).length)})
