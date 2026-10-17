@@ -57,7 +57,8 @@
       "label": "ChatGPT Work",
       "models": [
         "session-default"
-      ]
+      ],
+      "execution_verified": true
     },
     {
       "id": "claude-review",
@@ -77,7 +78,8 @@
         "session-default",
         "opus",
         "sonnet"
-      ]
+      ],
+      "execution_verified": true
     },
     {
       "id": "gpt-chat",
@@ -97,7 +99,8 @@
         "session-default",
         "thinking",
         "pro"
-      ]
+      ],
+      "execution_verified": true
     },
     {
       "id": "gpt-review-independent",
@@ -114,7 +117,8 @@
       "label": "gpt-review-independent",
       "models": [
         "session-default"
-      ]
+      ],
+      "execution_verified": true
     },
     {
       "id": "grok-review",
@@ -131,7 +135,8 @@
       "label": "Grok Bot",
       "models": [
         "session-default"
-      ]
+      ],
+      "execution_verified": true
     },
     {
       "id": "owner-bot:950157",
@@ -148,7 +153,8 @@
       "label": "owner-bot:950157",
       "models": [
         "session-default"
-      ]
+      ],
+      "execution_verified": true
     },
     {
       "id": "owner-bot:family",
@@ -165,7 +171,8 @@
       "label": "owner-bot:family",
       "models": [
         "session-default"
-      ]
+      ],
+      "execution_verified": true
     },
     {
       "id": "owner-bot:hy",
@@ -182,7 +189,8 @@
       "label": "owner-bot:hy",
       "models": [
         "session-default"
-      ]
+      ],
+      "execution_verified": true
     },
     {
       "id": "owner-bot:sam",
@@ -199,7 +207,8 @@
       "label": "owner-bot:sam",
       "models": [
         "session-default"
-      ]
+      ],
+      "execution_verified": true
     }
   ],
   "packages": [
@@ -391,7 +400,7 @@
       "health": {
         "cooled_until": 1792144391.7320304,
         "watermark": 0,
-        "recovered_at": 0.0,
+        "recovered_at": 0,
         "evidence": {
           "attempt_evidence": [],
           "consecutive_unclaimed": 2,
@@ -410,7 +419,7 @@
       "primary_health": {
         "cooled_until": 1792144391.7320304,
         "watermark": 0,
-        "recovered_at": 0.0,
+        "recovered_at": 0,
         "evidence": {
           "attempt_evidence": [],
           "consecutive_unclaimed": 2,
@@ -531,7 +540,7 @@
       "primary_health": {
         "cooled_until": 1792144391.7320304,
         "watermark": 0,
-        "recovered_at": 0.0,
+        "recovered_at": 0,
         "evidence": {
           "attempt_evidence": [],
           "consecutive_unclaimed": 2,
@@ -649,7 +658,7 @@
       "primary_health": {
         "cooled_until": 1792144391.7320304,
         "watermark": 0,
-        "recovered_at": 0.0,
+        "recovered_at": 0,
         "evidence": {
           "attempt_evidence": [],
           "consecutive_unclaimed": 2,
@@ -1023,5 +1032,17 @@
     "CODE": "程式工程師",
     "REVIEW": "獨立審查員",
     "PI_REVIEW": "PI 審查"
+  },
+  "simple_health_defaults": {
+    "window_size": 20,
+    "window_seconds": 86400,
+    "min_samples": 5,
+    "unclaimed_after_seconds": 7200,
+    "unclaimed_threshold": 3,
+    "timeout_rate": 0.5,
+    "error_rate": 0.5,
+    "cooldown_seconds": 3600,
+    "auto_reassign_enabled": true,
+    "max_reassignments": 1
   }
 }

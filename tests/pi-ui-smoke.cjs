@@ -1,4 +1,4 @@
-// 專家團（AI Work v3）390／1280：專家卡、待核准版本、Skill 庫分組與內容、執行者與模型。
+// 專家團（AI Work v3）390／1280：專家卡、待核准版本、Skill 庫分組與內容、AI 派工。
 const {chromium}=require('playwright');
 const assert=require('node:assert/strict');
 const {mkdirSync}=require('node:fs');
@@ -67,9 +67,9 @@ roles:[
     await p.getByRole('heading',{name:'舊版凍結 1'}).waitFor();
     await p.screenshot({path:`docs/quality/ui/expert-skills-${w}.png`,fullPage:true});
     assert.equal(await p.evaluate(()=>document.documentElement.scrollWidth>innerWidth),false,`skills overflow ${w}`);
-    await p.getByRole('tab',{name:'執行者與模型'}).click();
-    await p.getByRole('heading',{name:'派工方式與緊急停用'}).waitFor();
-    await p.getByRole('heading',{name:'工作包路由',exact:true}).waitFor();
+    await p.getByRole('tab',{name:'AI 派工'}).click();
+    assert.equal(await p.getByRole('heading',{name:'派工方式與緊急停用'}).count(),0);
+    await p.getByRole('heading',{name:'AI 派工',exact:true}).waitFor();
     assert.equal(await p.getByRole('heading',{name:'角色與模型',exact:true}).count(),0);
     await p.screenshot({path:`docs/quality/ui/expert-models-${w}.png`,fullPage:true});
     assert.equal(await p.evaluate(()=>document.documentElement.scrollWidth>innerWidth),false,`models overflow ${w}`);
