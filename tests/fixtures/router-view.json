@@ -231,6 +231,25 @@
         "claude"
       ],
       "execution_verified": true
+    },
+    {
+      "id": "grok",
+      "label": "Grok",
+      "models": [
+        "session-default"
+      ],
+      "roles": [
+        "PLANNING",
+        "GENERAL",
+        "CODE",
+        "REVIEW",
+        "PI_REVIEW"
+      ],
+      "ready": true,
+      "providers": [
+        "grok"
+      ],
+      "execution_verified": false
     }
   ],
   "packages": [
@@ -1076,22 +1095,26 @@
     "PLANNING": {
       "none": "none",
       "gpt": "gpt-chat",
-      "claude": "claude-worker"
+      "claude": "claude-worker",
+      "grok": "grok"
     },
     "GENERAL": {
       "none": "none",
       "gpt": "gpt-chat",
-      "claude": "claude-worker"
+      "claude": "claude-worker",
+      "grok": "grok"
     },
     "CODE": {
       "none": "none",
       "gpt": "chatgpt-work",
-      "claude": "claude-worker"
+      "claude": "claude-worker",
+      "grok": "grok"
     },
     "REVIEW": {
       "none": "none",
       "gpt": "gpt-chat",
-      "claude": "claude-review"
+      "claude": "claude-review",
+      "grok": "grok"
     }
   }
 }
