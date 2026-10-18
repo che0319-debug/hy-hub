@@ -1,5 +1,5 @@
 import {useEffect,useRef,useState} from 'react'
-import {OWNERS,ROLES,label,when,identity,removeRule,eventText,reasonText,describeSource} from '../lib/router.mjs'
+import {ROLES,when,identity,removeRule,eventText,reasonText,describeSource} from '../lib/router.mjs'
 import {AI_NAMES,family,choices,aiValue,effectiveRoute,setAI} from '../lib/simpleRouter.mjs'
 import {readRouter,saveRouter} from '../lib/routerApi'
 import '../../public/hy-ui/hy-ui.css'
@@ -28,11 +28,11 @@ function Connections({view}){
 export function RouterJournal({view}){return <section className="hy-card"><h3 className="hy-card-title">路由工作紀錄</h3>{view.events.length?<ol className="rt-journal">{view.events.map(e=><li key={e.key}><time>{when(e.at)}</time><p>{eventText(e)}</p><details><summary>決策依據</summary><dl className="hy-kv"><dt>工作包</dt><dd>{e.package_id||'範圍事件'}</dd><dt>政策／派工版本</dt><dd>{e.body.policy_revision??'尚無紀錄'}／{e.body.next_assignment_revision??e.body.assignment_revision??'尚無紀錄'}</dd><dt>授權來源</dt><dd>{describeSource(e.body.authority)} · {e.body.actor||'Router 系統'}</dd><dt>冷卻到期</dt><dd>{when(e.body.cooled_until)}</dd><dt>原因</dt><dd>{reasonText(e.body.reason)||'依既有執行事件記錄'}</dd></dl>{e.body.metrics&&<p>樣本 {e.body.metrics.samples}；連續未領 {e.body.metrics.consecutive_unclaimed}；逾時率 {Math.round(e.body.metrics.timeout_rate*100)}%；錯誤率 {Math.round(e.body.metrics.error_rate*100)}%</p>}{e.body.thresholds&&<p>門檻：至少 {e.body.thresholds.min_samples} 次執行／連續 {e.body.thresholds.unclaimed_threshold} 包未領，冷卻 {e.body.thresholds.cooldown_seconds} 秒。</p>}</details></li>)}</ol>:<p className="hy-empty">尚無路由事件。既有專案在正式納入前沿用原路徑。</p>}{view.events_truncated&&<p className="hy-note">顯示最近 100 筆路由事件；完整稽核仍保留於後端。</p>}</section>}
 
 function Editor({view,reload,projectId,onSaved}){
- const [document,setDocument]=useState(()=>structuredClone(view.policy.document)),[scope,setScope]=useState(projectId?'project':'global'),[scopeId,setScopeId]=useState(projectId||''),[busy,setBusy]=useState(false),[error,setError]=useState(''),[conflict,setConflict]=useState(false)
+ const [document,setDocument]=useState(()=>structuredClone(view.policy.document)),[busy,setBusy]=useState(false),[error,setError]=useState(''),[conflict,setConflict]=useState(false)
+ const scope=projectId?'project':'global',scopeId=projectId||''
  const dirty=JSON.stringify(document)!==JSON.stringify(view.policy.document)
- const owner=scope==='owner'?scopeId:view.projects.find(p=>p.id===scopeId)?.owner_bot||'hy'
+ const owner=view.projects.find(p=>p.id===scopeId)?.owner_bot||'hy'
  useEffect(()=>{if(!dirty)return;const warn=e=>{e.preventDefault();e.returnValue=''};window.addEventListener('beforeunload',warn);return()=>window.removeEventListener('beforeunload',warn)},[dirty])
- function range(value){setScope(value);setScopeId(value==='global'?'':value==='owner'?'hy':projectId||view.projects[0]?.id||'')}
  function change(role,route,primary,fallback){try{setDocument(setAI(document,{role,scope,scopeId,owner,route,primary,fallback,targets:view.ai_targets,health:view.simple_health_defaults}));setError('')}catch(e){setError(e.message)}}
  async function save(){if(!dirty||busy||conflict)return;setBusy(true);setError('');try{await saveRouter({document,expected_revision:view.policy.revision,reason:'本人於前台調整主力與備案 AI',authority_ref:'authenticated-owner-ui'});onSaved('已儲存，僅影響之後建立的新包。');reload()}catch(e){setError(e.message);if(e.status===409)setConflict(true)}finally{setBusy(false)}}
  function refresh(){if(!dirty||window.confirm('重新讀取會捨棄尚未儲存的修改，是否繼續？'))reload()}
@@ -44,10 +44,8 @@ function Editor({view,reload,projectId,onSaved}){
  {view.configuration_error&&<p className="hy-alert">AI 連線設定有誤，請先修復連線。</p>}
  </section>
  {!view.can_edit&&<p className="hy-alert">目前僅能檢視，設定由 HY 本人修改。</p>}
- <section className="hy-card"><h3 className="hy-card-title">主力與備案</h3>
- <div className="rt-fields">{!projectId&&<label>套用範圍<select aria-label="套用範圍" value={scope} disabled={busy} onChange={e=>range(e.target.value)}><option value="global">全部專案預設</option><option value="owner">指定 Bot</option><option value="project">指定專案</option></select></label>}
- {scope==='owner'&&<label>Bot<select aria-label="Bot" value={scopeId} onChange={e=>setScopeId(e.target.value)} disabled={busy}>{OWNERS.map(([id,name])=><option key={id} value={id}>{name}</option>)}</select></label>}
- {scope==='project'&&!projectId&&<label>專案<select aria-label="專案" value={scopeId} onChange={e=>setScopeId(e.target.value)} disabled={busy}><option value="">選擇專案</option>{view.projects.map(p=><option key={p.id} value={p.id}>{p.title}</option>)}</select></label>}</div>
+ <section className="hy-card"><h3 className="hy-card-title">{projectId?'此專案主力與備案':'全域主力與備案'}</h3>
+ <p className="hy-note">{projectId?'此處只調整本專案；未另外設定的角色沿用全域預設。儲存後只影響之後建立的新工作包。':'此頁只設定全域預設；各專案可在自己的概況頁覆蓋。'}</p>
  {ROLES.filter(([id])=>!['*','PI_REVIEW'].includes(id)).map(([role,name])=>{
  const route=effectiveRoute(document,role,scope,scopeId,owner,view.role_defaults),exact=document.rules.find(r=>r.scope===scope&&r.scope_id===(scope==='global'?'':scopeId)&&r.selector===role),primary=aiValue(route.primary,view.runners),fallback=aiValue(route.fallbacks[0],view.runners)
  const disabled=busy||conflict||!view.can_edit||(scope!=='global'&&!scopeId)||!view.simple_health_defaults||view.simple_routing_version!==2
@@ -70,5 +68,5 @@ export function RouterControls({projectId,active=true,showJournal=false}){
  if(!active&&!view)return null
  return <div className="hy rt-root hy-stack" hidden={!active}>{saved&&<p role="status">{saved}</p>}<ErrorBox error={error}/>{error&&<button className="hy-btn" onClick={reload}>重試讀取路由</button>}{!view&&!error&&<p className="hy-empty" role="status">讀取 AI 派工設定中…</p>}{view&&<><Editor key={view.as_of+':'+view.policy.revision} view={view} reload={reload} projectId={projectId} onSaved={setSaved}/>{showJournal&&<RouterJournal view={view}/>}</>}</div>
 }
-export function ProjectRouter({projectId,active}){const [open,setOpen]=useState(false);return <details className="hy rt-root hy-card" open={open} onToggle={e=>setOpen(e.currentTarget.open)}><summary>專案 AI 派工</summary><RouterControls projectId={projectId} active={active&&open}/></details>}
+export function ProjectRouter({projectId,active,defaultOpen=false}){const [open,setOpen]=useState(defaultOpen);return <details className="hy rt-root hy-card" open={open} onToggle={e=>setOpen(e.currentTarget.open)}><summary>AI 執行配置</summary><RouterControls projectId={projectId} active={active&&open}/></details>}
 export function ProjectRouterLog({projectId,active}){const [open,setOpen]=useState(false);const state=useView(projectId,active&&open);return <details className="hy rt-root hy-card" open={open} onToggle={e=>setOpen(e.currentTarget.open)}><summary>冷卻、恢復與備援改派紀錄</summary>{open&&<><ErrorBox error={state.error}/>{state.error&&<button className="hy-btn" onClick={state.reload}>重試讀取路由紀錄</button>}{state.view?<RouterJournal view={state.view}/>:!state.error&&<p role="status">讀取路由紀錄中…</p>}</>}</details>}
