@@ -53,6 +53,7 @@ const {chromium}=require('playwright');const assert=require('node:assert/strict'
   for(const name of ['派工方式與緊急停用','工作包路由','健康門檻與冷卻'])assert.equal(await page.getByText(name,{exact:true}).count(),0);
   assert.equal(await page.getByLabel('主端模型',{exact:true}).count(),0);
   assert.equal(await page.locator('.rt-simple-route select').count(),8);
+  assert.equal(await page.getByLabel('套用範圍',{exact:true}).count(),0,'global Router is global-only');
   for(const aiName of ['GPT','Claude','Grok']){const card=page.locator('.rt-connections>div').filter({has:page.locator('b').filter({hasText:new RegExp('^'+aiName+'$')})});assert.equal(await card.count(),1);assert.match(await card.innerText(),/最近巡檢：/);assert.match(await card.innerText(),/最近領包：/)}
   assert.equal(await page.getByText('PI 審查',{exact:true}).count(),0);for(const select of await page.locator('.rt-simple-route select').all())assert.deepEqual(await select.locator('option').allTextContents(),['無','GPT','Claude','Grok']);
   const aiLabels=await page.locator('.rt-simple-route option:not([disabled])').allTextContents();
@@ -85,13 +86,17 @@ const {chromium}=require('playwright');const assert=require('node:assert/strict'
   assert.deepEqual(view.policy.document.rules.find(r=>r.selector==='GENERAL'),original.policy.document.rules[0]);
   reset();await page.goto('http://127.0.0.1:5173/#/ai-work-v5');await page.locator('.ao-project-line').click();
   const nav=page.getByRole('navigation',{name:'AI Office 專案分頁'});
-  await nav.getByRole('button',{name:'執行計畫'}).click();assert.equal(reads.filter(p=>p.includes('/router/view')).length,0);
-  await page.getByText('專案 AI 派工',{exact:true}).click();await page.getByRole('heading',{name:'AI 派工',exact:true}).waitFor();
+  await page.getByText('AI 執行配置',{exact:true}).waitFor();
+  await page.getByRole('heading',{name:'此專案主力與備案',exact:true}).waitFor();
+  assert.equal(await page.getByLabel('套用範圍',{exact:true}).count(),0,'project scope is fixed by project page');
   await page.getByLabel('審查備案',{exact:true}).selectOption('');await page.getByLabel('審查主力',{exact:true}).selectOption('gpt');
   await nav.getByRole('button',{name:'工作日誌'}).click();await page.getByText('冷卻、恢復與備援改派紀錄',{exact:true}).click();await page.getByRole('heading',{name:'路由工作紀錄',exact:true}).waitFor();
-  await nav.getByRole('button',{name:'執行計畫'}).click();await page.getByText('有未儲存修改',{exact:true}).waitFor();
+  await nav.getByRole('button',{name:'概況'}).click();await page.getByText('有未儲存修改',{exact:true}).waitFor();
   await save().click();await page.getByText('已儲存，僅影響之後建立的新包。',{exact:true}).waitFor();
-  assert.equal(view.policy.document.rules.find(r=>r.scope==='project').route.primary,'gpt-chat');assert.deepEqual(view.packages,original.packages);
+  const projectRule=view.policy.document.rules.find(r=>r.scope==='project'&&r.scope_id==='p'&&r.selector==='REVIEW');
+  assert.equal(projectRule.route.primary,'gpt-chat');assert.deepEqual(projectRule.route.fallbacks,[]);
+  assert.deepEqual(view.packages,original.packages);
+  await nav.getByRole('button',{name:'執行計畫'}).click();assert.equal(await page.getByText('AI 執行配置',{exact:true}).count(),0,'project Router is not duplicated in execution plan');
  }
  reset();await global();mode='conflict';await page.getByLabel('一般執行專家備案',{exact:true}).selectOption('claude');await save().click();await page.getByRole('alert').filter({hasText:'不會覆蓋新版'}).waitFor();assert(await save().isDisabled());
  await page.getByRole('button',{name:'重新讀取最新設定'}).click();await page.getByRole('heading',{name:'AI 派工',exact:true}).waitFor();
