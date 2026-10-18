@@ -53,13 +53,14 @@ const {chromium}=require('playwright');const assert=require('node:assert/strict'
   for(const name of ['派工方式與緊急停用','工作包路由','健康門檻與冷卻'])assert.equal(await page.getByText(name,{exact:true}).count(),0);
   assert.equal(await page.getByLabel('主端模型',{exact:true}).count(),0);
   assert.equal(await page.locator('.rt-simple-route select').count(),8);
+  for(const aiName of ['GPT','Claude','Grok']){const card=page.locator('.rt-connections>div').filter({has:page.locator('b').filter({hasText:new RegExp('^'+aiName+'$')})});assert.equal(await card.count(),1);assert.match(await card.innerText(),/最近巡檢：/);assert.match(await card.innerText(),/最近領包：/)}
   assert.equal(await page.getByText('PI 審查',{exact:true}).count(),0);for(const select of await page.locator('.rt-simple-route select').all())assert.deepEqual(await select.locator('option').allTextContents(),['無','GPT','Claude','Grok']);
   const aiLabels=await page.locator('.rt-simple-route option:not([disabled])').allTextContents();
   assert(aiLabels.every(x=>['GPT','Claude','Grok','無'].includes(x)),JSON.stringify(aiLabels));
   assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth),false,'no horizontal overflow');
   for(const name of ['PI 規劃','一般執行專家','程式工程師','審查']){
    assert.equal(await page.getByLabel(name+'主力',{exact:true}).inputValue(),name==='審查'?'claude':'gpt');
-   assert.equal(await page.getByLabel(name+'備案',{exact:true}).inputValue(),name==='審查'?'gpt':'claude');
+   assert.equal(await page.getByLabel(name+'備案',{exact:true}).inputValue(),name==='審查'?'grok':'claude');
   }
   if(width===1280){
    const select=await page.getByLabel('一般執行專家備案',{exact:true}).boundingBox();

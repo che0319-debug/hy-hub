@@ -2,11 +2,11 @@ import {defaultRoute,identity,normalize,replaceRule} from './router.mjs'
 export const AI_NAMES={gpt:'GPT',claude:'Claude',grok:'Grok'}
 export const AI_OPTIONS=[{id:'',label:'無'},{id:'gpt',label:'GPT'},{id:'claude',label:'Claude'},{id:'grok',label:'Grok'}]
 export function family(r){
- if(!r||r.id==='none')return ''
- const p=[...new Set(r.providers||[])]
- if(p.length===1&&Object.hasOwn(AI_NAMES,p[0]))return p[0]
+ if(!r||r.id==='none'||String(r.id||'').startsWith('owner-bot:'))return ''
  const known={'grok':'grok','grok-review':'grok','gpt-chat':'gpt','chatgpt-work':'gpt','gpt-review-independent':'gpt','claude-worker':'claude','claude-review':'claude'}
- return Object.hasOwn(known,r.id)?known[r.id]:''
+ if(Object.hasOwn(known,r.id))return known[r.id]
+ const p=[...new Set(r.providers||[])]
+ return p.length===1&&Object.hasOwn(AI_NAMES,p[0])?p[0]:''
 }
 export const choices=()=>AI_OPTIONS
 export const aiValue=(id,runners)=>family(runners.find(r=>r.id===id)||{id})

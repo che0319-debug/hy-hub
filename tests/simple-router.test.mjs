@@ -8,6 +8,7 @@ test('every role and both selects always have exactly none GPT Claude Grok',()=>
  for(const role of ['PLANNING','GENERAL','CODE','REVIEW'])for(const runners of [view.runners,[],view.runners.map(r=>({...r,ready:false,execution_verified:false}))])assert.deepEqual(choices(runners,role,'hy'),AI_OPTIONS)
  assert.deepEqual(AI_OPTIONS.map(x=>x.label),['無','GPT','Claude','Grok'])
  assert.equal(family({id:'__proto__',providers:['unrecognized']}),'')
+ assert.equal(family({id:'owner-bot:hy',providers:['gpt']}),'')
 })
 test('one review selection replaces old separate PI settings and preserves other scopes',()=>{
  const document={rules:[{scope:'project',scope_id:'p',selector:'DOCUMENT',route:{primary:'gpt-chat',fallbacks:[]}},{scope:'global',scope_id:'',selector:'PI_REVIEW',route:{primary:'owner-bot:hy',fallbacks:[]}}]},before=JSON.stringify(document)

@@ -54,11 +54,12 @@
       "live_acceptance": "NOT_VERIFIED",
       "ready": true,
       "readiness": "CONFIGURED_AWAITING_LIVE_ACCEPTANCE",
-      "label": "ChatGPT Work",
+      "label": "GPT",
       "models": [
         "session-default"
       ],
-      "execution_verified": true
+      "execution_verified": true,
+      "last_poll": 1792137186.5
     },
     {
       "id": "claude-review",
@@ -79,7 +80,8 @@
         "opus",
         "sonnet"
       ],
-      "execution_verified": true
+      "execution_verified": true,
+      "last_poll": 1792137178.5
     },
     {
       "id": "gpt-chat",
@@ -96,13 +98,14 @@
       "live_acceptance": "NOT_VERIFIED",
       "ready": true,
       "readiness": "CONFIGURED_AWAITING_LIVE_ACCEPTANCE",
-      "label": "GPT Chat",
+      "label": "GPT",
       "models": [
         "session-default",
         "thinking",
         "pro"
       ],
-      "execution_verified": true
+      "execution_verified": true,
+      "last_poll": 1792137188.5
     },
     {
       "id": "gpt-review-independent",
@@ -116,11 +119,12 @@
       "live_acceptance": "NOT_VERIFIED",
       "ready": true,
       "readiness": "CONFIGURED_AWAITING_LIVE_ACCEPTANCE",
-      "label": "gpt-review-independent",
+      "label": "GPT",
       "models": [
         "session-default"
       ],
-      "execution_verified": true
+      "execution_verified": true,
+      "last_poll": null
     },
     {
       "id": "grok-review",
@@ -134,11 +138,12 @@
       "live_acceptance": "NOT_VERIFIED",
       "ready": true,
       "readiness": "CONFIGURED_AWAITING_LIVE_ACCEPTANCE",
-      "label": "Grok Bot",
+      "label": "Grok",
       "models": [
         "session-default"
       ],
-      "execution_verified": true
+      "execution_verified": true,
+      "last_poll": null
     },
     {
       "id": "owner-bot:950157",
@@ -156,7 +161,8 @@
       "models": [
         "session-default"
       ],
-      "execution_verified": true
+      "execution_verified": true,
+      "last_poll": null
     },
     {
       "id": "owner-bot:family",
@@ -174,7 +180,8 @@
       "models": [
         "session-default"
       ],
-      "execution_verified": true
+      "execution_verified": true,
+      "last_poll": null
     },
     {
       "id": "owner-bot:hy",
@@ -192,7 +199,8 @@
       "models": [
         "session-default"
       ],
-      "execution_verified": true
+      "execution_verified": true,
+      "last_poll": null
     },
     {
       "id": "owner-bot:sam",
@@ -210,7 +218,8 @@
       "models": [
         "session-default"
       ],
-      "execution_verified": true
+      "execution_verified": true,
+      "last_poll": null
     },
     {
       "id": "claude-worker",
@@ -230,7 +239,8 @@
       "providers": [
         "claude"
       ],
-      "execution_verified": true
+      "execution_verified": true,
+      "last_poll": 1792137177.5
     },
     {
       "id": "grok",
@@ -249,7 +259,8 @@
       "providers": [
         "grok"
       ],
-      "execution_verified": false
+      "execution_verified": false,
+      "last_poll": 1792137190.5
     }
   ],
   "packages": [
@@ -733,55 +744,64 @@
       "runner_id": "chatgpt-work",
       "ready": 2,
       "running": 0,
-      "last_claim": null
+      "last_claim": null,
+      "last_poll": 1792137186.5
     },
     {
       "runner_id": "claude-review",
       "ready": 0,
       "running": 0,
-      "last_claim": null
+      "last_claim": null,
+      "last_poll": 1792137178.5
     },
     {
       "runner_id": "gpt-chat",
       "ready": 0,
       "running": 1,
-      "last_claim": 1792137180.7304053
+      "last_claim": 1792137180.7304053,
+      "last_poll": 1792137188.5
     },
     {
       "runner_id": "gpt-review-independent",
       "ready": 0,
       "running": 0,
-      "last_claim": null
+      "last_claim": null,
+      "last_poll": null
     },
     {
       "runner_id": "grok-review",
       "ready": 0,
       "running": 0,
-      "last_claim": null
+      "last_claim": null,
+      "last_poll": null
     },
     {
       "runner_id": "owner-bot:950157",
       "ready": 0,
       "running": 0,
-      "last_claim": null
+      "last_claim": null,
+      "last_poll": null
     },
     {
       "runner_id": "owner-bot:family",
       "ready": 0,
       "running": 0,
-      "last_claim": null
+      "last_claim": null,
+      "last_poll": null
     },
     {
       "runner_id": "owner-bot:hy",
       "ready": 0,
       "running": 0,
-      "last_claim": null
+      "last_claim": null,
+      "last_poll": null
     },
     {
       "runner_id": "owner-bot:sam",
       "ready": 0,
       "running": 0,
-      "last_claim": null
+      "last_claim": null,
+      "last_poll": null
     }
   ],
   "events": [
@@ -1060,13 +1080,13 @@
     "REVIEW": {
       "primary": "claude-review",
       "fallbacks": [
-        "gpt-chat"
+        "grok"
       ]
     },
     "PI_REVIEW": {
       "primary": "claude-review",
       "fallbacks": [
-        "gpt-chat"
+        "grok"
       ],
       "escalation": "user"
     }
