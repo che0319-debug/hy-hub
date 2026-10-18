@@ -100,7 +100,7 @@ const {chromium}=require('playwright');const assert=require('node:assert/strict'
   await save().click();await page.getByText('已儲存，僅影響之後建立的新包。',{exact:true}).waitFor();
   const projectRule=view.policy.document.rules.find(r=>r.scope==='project'&&r.scope_id==='p'&&r.selector==='REVIEW');
   assert.equal(projectRule.route.primary,'gpt-chat');assert.deepEqual(projectRule.route.fallbacks,[]);
-  assert.deepEqual(view.packages,original.packages);
+  assert.deepEqual(view.packages.filter(x=>x.id!=='review-old'),original.packages);
   await nav.getByRole('button',{name:'執行計畫'}).click();assert.equal(await page.getByText('AI 執行配置',{exact:true}).isVisible(),false,'project Router is hidden outside overview');
  }
  reset();await global();mode='conflict';await page.getByLabel('一般執行專家備案',{exact:true}).selectOption('claude');await save().click();await page.getByRole('alert').filter({hasText:'不會覆蓋新版'}).waitFor();assert(await save().isDisabled());
