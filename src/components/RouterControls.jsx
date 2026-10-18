@@ -1,3 +1,4 @@
+import {authHeaders} from '../auth'
 import {useEffect,useRef,useState} from 'react'
 import {ROLES,when,identity,removeRule,eventText,reasonText,describeSource} from '../lib/router.mjs'
 import {AI_NAMES,family,choices,aiValue,effectiveRoute,setAI} from '../lib/simpleRouter.mjs'
@@ -26,6 +27,37 @@ function Connections({view}){
  })}</div>
 }
 export function RouterJournal({view}){return <section className="hy-card"><h3 className="hy-card-title">路由工作紀錄</h3>{view.events.length?<ol className="rt-journal">{view.events.map(e=><li key={e.key}><time>{when(e.at)}</time><p>{eventText(e)}</p><details><summary>決策依據</summary><dl className="hy-kv"><dt>工作包</dt><dd>{e.package_id||'範圍事件'}</dd><dt>政策／派工版本</dt><dd>{e.body.policy_revision??'尚無紀錄'}／{e.body.next_assignment_revision??e.body.assignment_revision??'尚無紀錄'}</dd><dt>授權來源</dt><dd>{describeSource(e.body.authority)} · {e.body.actor||'Router 系統'}</dd><dt>冷卻到期</dt><dd>{when(e.body.cooled_until)}</dd><dt>原因</dt><dd>{reasonText(e.body.reason)||'依既有執行事件記錄'}</dd></dl>{e.body.metrics&&<p>樣本 {e.body.metrics.samples}；連續未領 {e.body.metrics.consecutive_unclaimed}；逾時率 {Math.round(e.body.metrics.timeout_rate*100)}%；錯誤率 {Math.round(e.body.metrics.error_rate*100)}%</p>}{e.body.thresholds&&<p>門檻：至少 {e.body.thresholds.min_samples} 次執行／連續 {e.body.thresholds.unclaimed_threshold} 包未領，冷卻 {e.body.thresholds.cooldown_seconds} 秒。</p>}</details></li>)}</ol>:<p className="hy-empty">尚無路由事件。既有專案在正式納入前沿用原路徑。</p>}{view.events_truncated&&<p className="hy-note">顯示最近 100 筆路由事件；完整稽核仍保留於後端。</p>}</section>}
+
+
+function LegacyMigration({projectId,view,reload}){
+ const [preview,setPreview]=useState(null),[busy,setBusy]=useState(false),[error,setError]=useState(''),[done,setDone]=useState('')
+ const project=view.projects.find(p=>p.id===projectId)
+ if(!projectId||!view.can_edit||!project||project.enrolled)return null
+ const endpoint='/api/ai-work-packages/router/migration/'
+ async function call(url,body){
+   const res=await fetch(url,{method:body?'POST':'GET',headers:{...authHeaders(),...(body?{'Content-Type':'application/json'}:{})},...(body?{body:JSON.stringify(body)}:{})})
+   const data=await res.json().catch(()=>({}))
+   if(!res.ok)throw new Error(typeof data.detail==='string'?data.detail:'HTTP '+res.status)
+   return data
+ }
+ async function inspect(){setBusy(true);setError('');setDone('');setPreview(null);try{setPreview(await call(endpoint+'preview/'+encodeURIComponent(projectId)))}catch(e){setError(e.message)}finally{setBusy(false)}}
+ async function migrate(){
+   if(!preview||busy)return
+   if(!window.confirm('確定轉接此專案的 '+preview.routed+' 個未完成工作包？已完成成果不變，執行中或不相容的工作包會拒絕轉接。'))return
+   setBusy(true);setError('')
+   try{
+     await call(endpoint+'apply/'+encodeURIComponent(projectId),{confirmed:true,expected_package_ids:preview.packages.map(p=>p.id),authority_ref:'authenticated-owner-ui:router-migration'})
+     setDone('轉接已完成，請重新讀取路由及工作包清單。');setPreview(null);reload()
+   }catch(e){setError(e.message);setPreview(null)}finally{setBusy(false)}
+ }
+ return <section className="hy-card"><h3 className="hy-card-title">既有專案轉接 Router</h3>
+ <p className="hy-note">僅本人可操作。先預覽，再逐案確認；執行中的工作包、封鎖狀態或舊通道與新路由不相容時會拒絕，不會自動改寫執行契約。</p>
+ <button className="hy-btn" disabled={busy} onClick={inspect}>{busy?'檢查中…':'檢查可否轉接'}</button>
+ {preview&&<div className="hy-stack"><p role="status">待轉接 {preview.routed} 包；保留完成成果 {preview.preserved} 包。</p>
+ <ul>{preview.packages.map(p=><li key={p.id}>{p.id} · {p.status} · {p.action==='route'?'轉接':'保留'}</li>)}</ul>
+ <button className="hy-btn is-primary" disabled={busy} onClick={migrate}>確認轉接此專案</button></div>}
+ {done&&<p role="status">{done}</p>}<ErrorBox error={error}/></section>
+}
 
 function Editor({view,reload,projectId,onSaved}){
  const [document,setDocument]=useState(()=>structuredClone(view.policy.document)),[busy,setBusy]=useState(false),[error,setError]=useState(''),[conflict,setConflict]=useState(false)
@@ -60,6 +92,7 @@ function Editor({view,reload,projectId,onSaved}){
  {view.can_edit&&<div className="rt-actions"><button className="hy-btn is-primary" disabled={!dirty||busy||conflict} onClick={save}>{busy?'儲存中…':'儲存設定'}</button>{dirty&&<button className="hy-btn" disabled={busy} onClick={()=>{setDocument(structuredClone(view.policy.document));setError('')}}>取消修改</button>}</div>}
  <ErrorBox error={error}/>{conflict&&<button className="hy-btn" onClick={refresh}>重新讀取最新設定</button>}
  </section>
+ <LegacyMigration projectId={projectId} view={view} reload={reload}/>
  <footer className="hy-card rt-principles"><b>固定原則</b><p>設定僅影響之後建立的新包，既有工作與執行鎖保留。重新選擇並儲存的列，模型沿用 AI 排程設定；連續 3 包超時未領時，依可用備案自動切換，並留下工作紀錄。每包未領等待時間為 2 小時，不以頁面刷新次數計算。</p><p>審查統一由未參與成果的 AI 執行；交件品質與里程碑依受審內容檢查。程式仍須通過 GitHub 驗證，合併 PR 及正式核准由本人決定。</p></footer>
  </div>
 }
