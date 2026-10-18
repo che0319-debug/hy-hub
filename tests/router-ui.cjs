@@ -96,7 +96,7 @@ const {chromium}=require('playwright');const assert=require('node:assert/strict'
   const projectRule=view.policy.document.rules.find(r=>r.scope==='project'&&r.scope_id==='p'&&r.selector==='REVIEW');
   assert.equal(projectRule.route.primary,'gpt-chat');assert.deepEqual(projectRule.route.fallbacks,[]);
   assert.deepEqual(view.packages,original.packages);
-  await nav.getByRole('button',{name:'執行計畫'}).click();assert.equal(await page.getByText('AI 執行配置',{exact:true}).count(),0,'project Router is not duplicated in execution plan');
+  await nav.getByRole('button',{name:'執行計畫'}).click();assert.equal(await page.getByText('AI 執行配置',{exact:true}).isVisible(),false,'project Router is hidden outside overview');
  }
  reset();await global();mode='conflict';await page.getByLabel('一般執行專家備案',{exact:true}).selectOption('claude');await save().click();await page.getByRole('alert').filter({hasText:'不會覆蓋新版'}).waitFor();assert(await save().isDisabled());
  await page.getByRole('button',{name:'重新讀取最新設定'}).click();await page.getByRole('heading',{name:'AI 派工',exact:true}).waitFor();
