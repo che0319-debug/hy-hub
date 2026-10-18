@@ -1,7 +1,7 @@
 import {useEffect,useRef,useState} from 'react'
 import {ROLES,when,identity,removeRule,eventText,reasonText,describeSource} from '../lib/router.mjs'
 import {AI_NAMES,family,choices,aiValue,effectiveRoute,setAI} from '../lib/simpleRouter.mjs'
-import {readRouter,saveRouter} from '../lib/routerApi'
+import {readRouter,saveRouter,restartProjectReview} from '../lib/routerApi'
 import '../../public/hy-ui/hy-ui.css'
 import './router-controls.css'
 function ErrorBox({error}){return error?<p className="hy-alert is-bad" role="alert">{error}</p>:null}
@@ -28,13 +28,14 @@ function Connections({view}){
 export function RouterJournal({view}){return <section className="hy-card"><h3 className="hy-card-title">路由工作紀錄</h3>{view.events.length?<ol className="rt-journal">{view.events.map(e=><li key={e.key}><time>{when(e.at)}</time><p>{eventText(e)}</p><details><summary>決策依據</summary><dl className="hy-kv"><dt>工作包</dt><dd>{e.package_id||'範圍事件'}</dd><dt>政策／派工版本</dt><dd>{e.body.policy_revision??'尚無紀錄'}／{e.body.next_assignment_revision??e.body.assignment_revision??'尚無紀錄'}</dd><dt>授權來源</dt><dd>{describeSource(e.body.authority)} · {e.body.actor||'Router 系統'}</dd><dt>冷卻到期</dt><dd>{when(e.body.cooled_until)}</dd><dt>原因</dt><dd>{reasonText(e.body.reason)||'依既有執行事件記錄'}</dd></dl>{e.body.metrics&&<p>樣本 {e.body.metrics.samples}；連續未領 {e.body.metrics.consecutive_unclaimed}；逾時率 {Math.round(e.body.metrics.timeout_rate*100)}%；錯誤率 {Math.round(e.body.metrics.error_rate*100)}%</p>}{e.body.thresholds&&<p>門檻：至少 {e.body.thresholds.min_samples} 次執行／連續 {e.body.thresholds.unclaimed_threshold} 包未領，冷卻 {e.body.thresholds.cooldown_seconds} 秒。</p>}</details></li>)}</ol>:<p className="hy-empty">尚無路由事件。既有專案在正式納入前沿用原路徑。</p>}{view.events_truncated&&<p className="hy-note">顯示最近 100 筆路由事件；完整稽核仍保留於後端。</p>}</section>}
 
 function Editor({view,reload,projectId,onSaved}){
- const [document,setDocument]=useState(()=>structuredClone(view.policy.document)),[busy,setBusy]=useState(false),[error,setError]=useState(''),[conflict,setConflict]=useState(false)
+ const [document,setDocument]=useState(()=>structuredClone(view.policy.document)),[busy,setBusy]=useState(false),[restartBusy,setRestartBusy]=useState(''),[error,setError]=useState(''),[conflict,setConflict]=useState(false)
  const scope=projectId?'project':'global',scopeId=projectId||''
  const dirty=JSON.stringify(document)!==JSON.stringify(view.policy.document)
  const owner=view.projects.find(p=>p.id===scopeId)?.owner_bot||'hy'
  useEffect(()=>{if(!dirty)return;const warn=e=>{e.preventDefault();e.returnValue=''};window.addEventListener('beforeunload',warn);return()=>window.removeEventListener('beforeunload',warn)},[dirty])
  function change(role,route,primary,fallback){try{setDocument(setAI(document,{role,scope,scopeId,owner,route,primary,fallback,targets:view.ai_targets,health:view.simple_health_defaults}));setError('')}catch(e){setError(e.message)}}
  async function save(){if(!dirty||busy||conflict)return;setBusy(true);setError('');try{await saveRouter({document,expected_revision:view.policy.revision,reason:'本人於前台調整主力與備案 AI',authority_ref:'authenticated-owner-ui'});onSaved('已儲存，僅影響之後建立的新包。');reload()}catch(e){setError(e.message);if(e.status===409)setConflict(true)}finally{setBusy(false)}}
+ async function restartReview(pid){if(restartBusy)return;setRestartBusy(pid);setError('');try{const result=await restartProjectReview(projectId,pid);onSaved('已重新送審，新審查包已套用目前專案 AI 配置。');reload();return result}catch(e){setError(e.message)}finally{setRestartBusy('')}}
  function refresh(){if(!dirty||window.confirm('重新讀取會捨棄尚未儲存的修改，是否繼續？'))reload()}
  return <div className="hy-stack rt-controls">
  <section className="hy-card"><div className="hy-card-head"><h2 className="hy-card-title">AI 派工</h2><button className="hy-btn" disabled={busy} onClick={refresh}>重新讀取</button>{dirty&&<span className="hy-pill" data-s="you">有未儲存修改</span>}</div>
@@ -57,6 +58,11 @@ function Editor({view,reload,projectId,onSaved}){
  {route.fallbacks.length>1&&<p className="hy-note rt-wide">此列保留既有多個備案；重新選擇此列後改為一個備案。</p>}
  </article>})}
  <p className="hy-note">各角色的主力與備案皆可選無、GPT、Claude、Grok；連線狀態不會改變選項。主力選無時暫停此類新包派工。</p>
+ {projectId&&view.packages.filter(p=>p.project_id===projectId&&p.type==='QUALITY_REVIEW'&&['READY','WAITING'].includes(p.status)&&p.current_route&&!p.current_route_error&&JSON.stringify(p.route_snapshot?.route)!==JSON.stringify(p.current_route?.route)).map(p=>{
+   const oldName=AI_NAMES[family({id:p.route_snapshot.route.primary,provider:p.route_snapshot.route.primary})]||p.route_snapshot.route.primary
+   const newName=AI_NAMES[family({id:p.current_route.route.primary,provider:p.current_route.route.primary})]||p.current_route.route.primary
+   return <div className="hy-alert rt-review-restart" key={p.id}><b>目前審查包仍使用 {oldName}</b><span>專案現在設定為 {newName}。要讓這個尚未開始的審查套用新設定，需重新送審。</span><button className="hy-btn is-primary" disabled={!!restartBusy||dirty||busy} onClick={()=>restartReview(p.id)}>{restartBusy===p.id?'重新送審中…':'重新送審套用目前配置'}</button>{dirty&&<small>請先儲存目前 AI 配置。</small>}</div>
+ })}
  {view.can_edit&&<div className="rt-actions"><button className="hy-btn is-primary" disabled={!dirty||busy||conflict} onClick={save}>{busy?'儲存中…':'儲存設定'}</button>{dirty&&<button className="hy-btn" disabled={busy} onClick={()=>{setDocument(structuredClone(view.policy.document));setError('')}}>取消修改</button>}</div>}
  <ErrorBox error={error}/>{conflict&&<button className="hy-btn" onClick={refresh}>重新讀取最新設定</button>}
  </section>
