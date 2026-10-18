@@ -84,9 +84,9 @@ function OfficeProject({ id, onBack, onDeleted }) {
     <p className="ao-tabnote">{TAB_NOTES[tab]}</p>
     {error && <p role="alert">{error}</p>}
     <CapacityBanner/>
-    <div hidden={tab!=='overview'}><Overview project={project} pending={pending} onExecution={openExecution} reload={reload} setError={setError}/></div>
+    <div hidden={tab!=='overview'}><ProjectRouter projectId={project.id} active={tab==='overview'} defaultOpen/><Overview project={project} pending={pending} onExecution={openExecution} reload={reload} setError={setError}/></div>
     <div hidden={tab!=='meeting'}><Meeting project={project} reload={reload} onOverview={()=>setTab('overview')}/></div>
-    <div hidden={tab!=='execution'}><ProjectRouter projectId={project.id} active={tab==='execution'}/><Execution project={project} plan={plan} selected={selectedWork} select={setSelectedWork}/></div>
+    <div hidden={tab!=='execution'}><Execution project={project} plan={plan} selected={selectedWork} select={setSelectedWork}/></div>
     <div hidden={tab!=='outputs'}><Results project={project} active={tab==='outputs'} onOverview={()=>setTab('overview')}/></div>
     <div hidden={tab!=='log'}><ProjectRouterLog projectId={project.id} active={tab==='log'}/><Log project={project} onOverview={()=>setTab('overview')} onExecution={openExecution}/></div>
   </section>
