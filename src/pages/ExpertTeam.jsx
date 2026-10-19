@@ -4,6 +4,8 @@ import { authHeaders } from '../auth'
 import './expert-team.css'
 import { laneLabel } from '../lib/lanes'
 import {RouterControls} from '../components/RouterControls'
+import { routerRequest } from '../lib/routerApi'
+import { registerRouterCutoverTools } from '../lib/routerCutoverTools.mjs'
 
 const base = import.meta.env.VITE_API_BASE || ''
 async function request(url, body) {
@@ -111,6 +113,11 @@ function ModelsTab(){return <RouterControls/>}
 
 export default function ExpertTeam() {
   const [params] = useSearchParams(), initialTab = ['experts','skills','models','requests'].includes(params.get('tab')) ? params.get('tab') : 'experts'
+  const ownerCutover = params.get('owner-cutover') === '1'
+  useEffect(() => {
+    if (!ownerCutover) return
+    return registerRouterCutoverTools(document.modelContext || navigator.modelContext, routerRequest)
+  }, [ownerCutover])
   const [data, setData] = useState(null), [tab, setTab] = useState(initialTab), [error, setError] = useState(''), [busy, setBusy] = useState(false), [contents, setContents] = useState({}), [projects, setProjects] = useState([]), [project, setProject] = useState(''), [requests, setRequests] = useState([]), [search, setSearch] = useState(''), [editor, setEditor] = useState(null), [panel, setPanel] = useState(null)
   async function load() { setData(await api('/experts/registry')) }
   useEffect(() => { load().catch(e => setError(e.message)) }, [])
