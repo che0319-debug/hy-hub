@@ -84,7 +84,7 @@ function OfficeProject({ id, onBack, onDeleted }) {
     <p className="ao-tabnote">{TAB_NOTES[tab]}</p>
     {error && <p role="alert">{error}</p>}
     <CapacityBanner/>
-    <div hidden={tab!=='overview'}><ProjectRouter projectId={project.id} active={tab==='overview'} defaultOpen/><Overview project={project} pending={pending} onExecution={openExecution} reload={reload} setError={setError}/></div>
+    <div hidden={tab!=='overview'}><Overview project={project} pending={pending} onExecution={openExecution} reload={reload} setError={setError}/><ProjectRouter projectId={project.id} active={tab==='overview'}/></div>
     <div hidden={tab!=='meeting'}><Meeting project={project} reload={reload} onOverview={()=>setTab('overview')}/></div>
     <div hidden={tab!=='execution'}><Execution project={project} plan={plan} selected={selectedWork} select={setSelectedWork}/></div>
     <div hidden={tab!=='outputs'}><Results project={project} active={tab==='outputs'} onOverview={()=>setTab('overview')}/></div>
@@ -102,11 +102,18 @@ function DecisionBody({ d }) {
   </div>
 }
 
+function ReportSnapshot({project}) {
+ const [lines,setLines]=useState([]),[error,setError]=useState('')
+ const fileId=project.report?.latest?.file_id
+ useEffect(()=>{let alive=true;setLines([]);setError('');if(!fileId)return;office(`${ppath(project.id)}/reports/${encodeURIComponent(fileId)}`).then(data=>{if(!alive)return;const doc=new DOMParser().parseFromString(data.html||'','text/html');const heading=[...doc.querySelectorAll('h1,h2,h3,h4,b,strong')].find(e=>/一頁摘要|現在怎樣.*你要做什麼/.test(e.textContent||''));const section=heading?.closest('section,article')||heading?.parentElement?.parentElement;const bullets=section?[...section.querySelectorAll('li')].slice(0,6).map(e=>e.textContent.trim()).filter(Boolean):[];setLines(bullets.length?bullets:section?[section.textContent.trim().slice(0,1200)]:[])}).catch(e=>{if(alive)setError(e.message)});return()=>{alive=false}},[project.id,fileId])
+ return <section className="ao-card ao-report-snapshot"><div className="ao-card-head"><h2>一頁摘要：現在怎樣、你要做什麼</h2><small>正式成果報告</small></div>{lines.length?lines.map((line,i)=><p key={i}>{line}</p>):<p className="ao-muted">{error?'摘要讀取失敗，請至成果與審查查看。':fileId?'正在讀取正式報告摘要…':'尚無正式成果報告。'}</p>}{project.report?.stale&&<p className="ao-muted">最新報告落後於正式專案資料</p>}</section>
+}
 function Overview({project,pending,onExecution,reload,setError}) {
   const ms=milestones(project)
   const active=project.packages.filter(p=>['RUNNING','READY','BLOCKED','FAILED'].includes(p.status) && p.type!=='PROJECT_REPORT' && !String(p.milestone_id || '').startsWith('PARKED:'))
   const decisions=project.decisions || {}
-  return <div className="ao-overview">
+  return <div className="ao-overview ao-overview-v2"><ReportSnapshot project={project}/>
+    <Card title="里程碑" className="ao-milestone-strip"><ol className="ao-timeline">{ms.map(m=>{const done=m.packages.filter(p=>p.status==='COMPLETED').length;const current=m.id===project.milestone_id;return <li key={m.id} className={current?'is-current':done===m.packages.length&&m.packages.length?'is-done':undefined}><button onClick={()=>onExecution(m.id)}><b>{m.id} {m.name}</b><small>{done}／{m.packages.length} 工作包{current?' · 目前':''}</small></button></li>})}</ol>{!ms.length && <Empty>正式規劃尚未提供里程碑。</Empty>}</Card>
     <div className="ao-overview-main">
       <section className={`ao-card ao-decide${pending.length?' is-focus':''}`} aria-labelledby="ao-decide-title">
         <div className="ao-card-head"><h2 id="ao-decide-title">待你決定</h2>{pending.length>0 && <Pill s="you">{pending.length} 項</Pill>}</div>
@@ -115,7 +122,7 @@ function Overview({project,pending,onExecution,reload,setError}) {
       </section>
       <Card title="AI 正在做什麼">{active.map(p=><button className="ao-row ao-work" key={p.id} onClick={()=>onExecution(p.id)}><span className="ao-lane">{laneLabel(p.executor)}</span><span className="ao-work-main"><b>{p.task}</b><small>{p.milestone_id || '規劃期'}</small></span><Pill s={STATE_TONE[p.status] || 'wait'}>{PACKAGE_STATUS[p.status] || p.status}</Pill></button>)}{!active.length && <Empty>沒有執行中或待開始的工作包。</Empty>}</Card>
     </div>
-    <Card title="里程碑" className="ao-overview-side"><ol className="ao-timeline">{ms.map(m=>{const done=m.packages.filter(p=>p.status==='COMPLETED').length;const current=m.id===project.milestone_id;return <li key={m.id} className={current?'is-current':done===m.packages.length&&m.packages.length?'is-done':undefined}><button onClick={()=>onExecution(m.id)}><b>{m.id} {m.name}</b><small>{done}／{m.packages.length} 工作包{current?' · 目前':''}</small></button></li>})}</ol>{!ms.length && <Empty>正式規劃尚未提供里程碑。</Empty>}</Card>
+
   </div>
 }
 
