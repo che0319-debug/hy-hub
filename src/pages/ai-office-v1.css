@@ -179,3 +179,15 @@
 .ao-ms[open]>summary::after{content:'收合'}
 .ao-ms>summary{grid-template-columns:auto 1fr auto auto}
 @media(max-width:640px){.ao-ms>summary{grid-template-columns:auto 1fr auto}.ao-ms-count{grid-column:2}.ao-ms>summary::after{grid-row:1;grid-column:3}}
+
+/* AI Office overview V2: summary-first, compact milestones and settings last */
+.ao-overview-v2{display:flex;flex-direction:column;gap:16px}
+.ao-overview-v2>.ao-card,.ao-overview-v2>.ao-overview-main{width:100%;min-width:0}
+.ao-overview-v2 .ao-milestone-strip .ao-timeline{display:flex;flex-wrap:wrap;gap:12px;list-style:none;padding:0;margin:0}
+.ao-overview-v2 .ao-milestone-strip .ao-timeline li{flex:1 1 130px;min-width:0;border:1px solid var(--hy-line);border-radius:10px;padding:12px}
+.ao-overview-v2 .ao-milestone-strip .ao-timeline li button{width:100%;text-align:left}
+.ao-overview-v2 .ao-report-snapshot{border-left:4px solid #376ee6}
+.ao-overview-v2 .ao-report-snapshot p{line-height:1.7;margin:8px 0}
+.ao-overview-v2 .ao-overview-main{display:flex;flex-direction:column}
+.ao-overview-v2 .ao-decide{order:0}
+@media(max-width:700px){.ao-overview-v2 .ao-milestone-strip .ao-timeline li{flex-basis:42%}}
