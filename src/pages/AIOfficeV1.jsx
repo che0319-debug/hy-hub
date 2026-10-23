@@ -1,3 +1,5 @@
+import ReviewBlockers from '../components/ReviewBlockers'
+import { reviewError } from '../lib/reviewErrors.mjs'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
@@ -20,7 +22,7 @@ async function office(path, options = {}) {
   const response = await fetch(`${base}/api/ai-office${path}`, { cache: 'no-cache', ...options,
     headers: { ...authHeaders(), ...(options.body ? { 'Content-Type': 'application/json' } : {}) } })
   if (response.status === 401) { expireSession(); throw new Error('登入已過期，請重新登入。') }
-  if (!response.ok) { const data = await response.json().catch(() => ({})); throw new Error(response.status === 404 ? 'AI Office API 尚未部署或資料不存在，請確認後重試。' : text(data.detail || `伺服器回應 ${response.status}`)) }
+  if (!response.ok) { const data = await response.json().catch(() => ({})); throw new Error(response.status === 404 ? 'AI Office API 尚未部署或資料不存在，請確認後重試。' : reviewError(data.detail || `伺服器回應 ${response.status}`)) }
   return response.json()
 }
 function Link({ href, children }) { const url = safeUrl(href); return url ? <a href={url} target="_blank" rel="noopener noreferrer">{children} ↗</a> : <span>{children}（連結未就緒）</span> }
@@ -74,11 +76,12 @@ function OfficeProject({ id, onBack, onDeleted }) {
   return <section className="ao ao-project">
     <button className="ao-back" onClick={onBack}>‹ AI Office</button>
     <header className="ao-header">
-      <div className="ao-header-top"><h1>{project.title}</h1>{plan?.project_type && <span className="ao-type">{plan.project_type}</span>}<Pill s={pending.length?'you':project.status==='completed'?'done':'ai'}>{pending.length?'待你決定':activityLabel(project)}</Pill>
+      <div className="ao-header-top"><h1>{project.title}</h1>{plan?.project_type && <span className="ao-type">{plan.project_type}</span>}<Pill s={project.system_blockers?.length?'bad':pending.length?'you':project.status==='completed'?'done':'ai'}>{pending.length?'待你決定':activityLabel(project)}</Pill>
         <div className="ao-header-actions"><button aria-expanded={editing} onClick={()=>setEditing(v=>!v)}>編輯專案</button>{project.permissions.delete ? <div className="cc5"><DeleteZone project={project} onDeleted={onDeleted}/></div> : <span className="ao-muted">刪除專案僅限 HY 本人</span>}</div></div>
       <p className="ao-goal" title={project.goal}>{project.goal}</p>
       <div className="ao-header-meta"><span>階段 <b>{project.phase} {project.milestone_id || ''}</b></span><span>工作包 <b>{count.done}／{count.total}</b></span><span>開始 <b>{when(project.started_at)}</b></span><span>最近紀錄 <b>{when(project.updated_at)}</b></span>{folder && <span>Drive <Link href={`https://drive.google.com/drive/folders/${folder}`}>專案資料夾</Link></span>}</div>
     </header>
+    <ReviewBlockers items={project.system_blockers}/>
     {editing && <Card title="編輯專案（正式規格變更）"><p className="ao-muted">目標與範圍走正式規格變更，由你核准後才生效。</p>{project.plan_state==='APPROVED' && project.phase==='執行期' && project.milestone_id ? <div className="cc5"><SpecChangeBox project={project} onChanged={reload} setError={setError} goInbox={()=>setTab('overview')}/></div> : <Empty>目前階段未開放規格變更；請到會議室提出意見。</Empty>}</Card>}
     <nav className="ao-tabs" aria-label="AI Office 專案分頁">{OFFICE_TABS.map(([key,label])=><button key={key} aria-current={tab===key?'page':undefined} onClick={()=>setTab(key)}>{label}{key==='overview' && pending.length>0 && <span>{pending.length}</span>}</button>)}</nav>
     <p className="ao-tabnote">{TAB_NOTES[tab]}</p>
@@ -148,7 +151,7 @@ function Contribution({project,reload,onSent}) {
 
 const SUGGESTION_STATE = { PENDING:'已送出', DELIVERED:'AI 已讀取', CONSUMED:'處理中', REVIEW:'待你驗收', DONE:'結案' }
 function Meeting({project,reload,onOverview}) {
-  const events=journal(project).filter(e=>e.kind==='human' || e.action).sort((a,b)=>a.at-b.at)
+  const events=journal(project).filter(e=>e.kind==='human' || e.kind==='notification' || e.action).sort((a,b)=>a.at-b.at)
   const lanes=[...new Set(project.packages.map(p=>p.executor))]
   return <div className="ao-meeting">
     <section className="ao-card ao-thread-card"><h2>與 PI 的對話</h2><p className="ao-muted">正式的建議、補充與決策紀錄；PI 即時對話尚未接上。</p>

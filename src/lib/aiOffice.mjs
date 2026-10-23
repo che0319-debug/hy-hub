@@ -4,6 +4,7 @@ export const TAB_NOTES = { overview:'現在怎樣、你要決定什麼。核准�
 export const isPending = a => a.status==='OPEN' && ['HY','owner'].includes(a.assigned_to)
 export const PROJECT_STATUS = { ai_pending:'待 AI 接手中', ai_running:'進行中', confirmation:'等待確認', completed:'完成' }
 export function activityLabel(project) {
+  if (project?.system_blockers?.length) return '系統阻塞'
   if (typeof project?.activity?.label === 'string' && project.activity.label.trim()) return project.activity.label
   const active=(project?.packages || []).filter(p=>['READY','RUNNING'].includes(p.status) && p.type!=='PROJECT_REPORT' && !p.context?.superseded && !String(p.milestone_id || '').startsWith('PARKED:'))
   if (active.length && active.every(p=>p.type==='QUALITY_REVIEW' && p.executor==='CLAUDE_REVIEW')) return active.some(p=>p.status==='RUNNING')?'Claude 品質審查中':'待 Claude 品質審查'
@@ -26,7 +27,7 @@ export function journal(project) {
   const events=[]
   for(const p of project.packages || []) events.push({id:'package:'+p.id,at:p.created_at,actor:'Mission Engine',kind:'system',text:'建立工作包：'+p.task,work:p.id,milestone:p.milestone_id,detail:PACKAGE_STATUS[p.status] || p.status})
   for(const a of project.actions || []) {events.push({id:'request:'+a.action_id,at:a.created_at,actor:requester(a.requested_by),kind:'system',text:'建立正式事項：'+a.title,action:a.status==='OPEN'?a.action_id:null,work:a.package_id});if(a.resolved_at)events.push({id:'answer:'+a.action_id,at:a.resolved_at,actor:person(a.resolved_by),kind:'human',text:'處理正式事項：'+a.title,detail:typeof a.answer==='string'?a.answer:JSON.stringify(a.answer)})}
-  for(const n of project.notes || [])events.push({id:n.id,at:n.created_at,actor:n.author==='system:router'?'Router 系統':person(n.author),kind:n.author==='system:router'?'system':'human',text:n.content})
+  for(const n of project.notes || [])events.push({id:n.id,at:n.created_at,actor:n.author==='system:review'?'審查系統':n.author==='system:router'?'Router 系統':person(n.author),kind:n.author==='system:review'?'notification':n.author==='system:router'?'system':'human',text:n.content})
   for(const n of project.suggestions || [])events.push({id:n.id,at:n.created_at,actor:person(n.author),kind:'human',text:n.content,detail:n.state})
   for(const f of project.files || [])events.push({id:'file:'+f.file_id,at:f.created_at,actor:f.source,kind:'artifact',text:'登錄成果：'+f.filename,file:f.file_id})
   return events.filter(e=>e.at).sort((a,b)=>b.at-a.at || a.id.localeCompare(b.id))

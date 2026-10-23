@@ -45,7 +45,7 @@ const {chromium}=require('playwright');const assert=require('node:assert/strict'
   await page.getByRole('button',{name:'新增專案',exact:true}).click();await page.locator('.ao-home-create form').waitFor();await page.getByRole('button',{name:'取消',exact:true}).click();assert.equal(await page.locator('.ao-home-create').count(),0);
   // 概況：唯一核准處，並直接提供專案 AI 主力／備案配置
   await page.locator('.ao-project-line').click();await page.getByRole('heading',{name:'待你決定',exact:true}).waitFor();
-  await page.getByText('AI 執行配置',{exact:true}).waitFor();await page.getByRole('heading',{name:'此專案主力與備案',exact:true}).waitFor();
+  await page.locator('summary').filter({hasText:'AI 執行配置'}).click();await page.getByRole('heading',{name:'此專案主力與備案',exact:true}).waitFor();
   assert.deepEqual(await tabs.locator('button').evaluateAll(b=>b.map(x=>x.firstChild.textContent)),['概況','會議室','執行計畫','成果與審查','工作日誌']);
   assert.equal(await page.locator('.is-focus').count(),1);
   const decide=page.locator('.ao-decide');
