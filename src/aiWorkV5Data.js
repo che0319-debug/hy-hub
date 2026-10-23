@@ -1,3 +1,4 @@
+import { reviewError } from './lib/reviewErrors.mjs'
 import { readProjectSummary } from './lib/projectSummary.mjs'
 export { readProjectSummary } from './lib/projectSummary.mjs'
 import { authHeaders, ensureAccessToken, expireSession } from './auth'
@@ -18,7 +19,7 @@ export async function request(path, options = {}) {
   if (response.status === 401) { expireSession(); throw new Error('登入已過期，請重新登入。') }
   if (!response.ok) {
     const detail = (await response.json().catch(() => ({}))).detail
-    throw new Error(typeof detail === 'string' ? detail : `伺服器回應 ${response.status}`)
+    throw new Error(reviewError(detail || `伺服器回應 ${response.status}`))
   }
   return response.json()
 }

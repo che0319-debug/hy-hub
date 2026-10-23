@@ -1,3 +1,4 @@
+import ReviewBlockers from '../components/ReviewBlockers'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
@@ -365,6 +366,7 @@ export function Inbox({ items, project, onChanged, setError, attachmentIds = {},
           <span className="cc5-small">{time(item.created_at)}</span>
         </div>
         <h2 className="cc5-q">{item.title}</h2>
+        <ReviewBlockers items={item.system_blockers} compact/>
         {item.question && item.question !== item.title && <p className="cc5-pre">{spec ? item.question.split('\n\n回覆 APPROVED')[0] : item.question}</p>}
         {item.approval_allowed === false && <p className="cc5-muted">{item.action_type === 'MODULE_ACCEPTANCE' ? '模組版本或證據已變更，請重新提交正式驗收請求。' : '尚未通過同版本獨立審查，不能核准。'}</p>}
         {item.reason && item.action_type !== 'MODULE_ACCEPTANCE' && <p className="cc5-muted cc5-pre">{code ? firstLine(item.reason) : item.reason}</p>}
