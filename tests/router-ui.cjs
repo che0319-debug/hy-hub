@@ -86,7 +86,8 @@ const {chromium}=require('playwright');const assert=require('node:assert/strict'
   assert.deepEqual(view.policy.document.rules.find(r=>r.selector==='GENERAL'),original.policy.document.rules[0]);
   reset();await page.goto('http://127.0.0.1:5173/#/ai-work-v5');await page.locator('.ao-project-line').click();
   const nav=page.getByRole('navigation',{name:'AI Office 專案分頁'});
-  await page.getByText('AI 執行配置',{exact:true}).waitFor();
+  // The overview configuration has been collapsed since #107; open it as a user would.
+  await page.locator('summary').filter({hasText:'AI 執行配置'}).click();
   await page.getByRole('heading',{name:'此專案主力與備案',exact:true}).waitFor();
   assert.equal(await page.getByLabel('套用範圍',{exact:true}).count(),0,'project scope is fixed by project page');
   await page.getByLabel('審查備案',{exact:true}).selectOption('');await page.getByLabel('審查主力',{exact:true}).selectOption('gpt');

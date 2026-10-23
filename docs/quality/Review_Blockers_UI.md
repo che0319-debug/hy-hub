@@ -22,3 +22,5 @@
 - 截圖均為隔離 fixture，非正式專案或正式驗收。最後畫面在 ui/review-blockers/overview-{390,1280}.png 與 meeting-{390,1280}.png。
 
 相依後端：che0319-debug/hy-agent-v2 #194。舊後端未提供 system_blockers 時不顯示新卡片；本 PR 不啟用後端旗標、不改資料、不部署。
+
+CI 補正：router-ui.cjs 原先直接等待收合區內的「此專案主力與備案」，但 master #107 已將配置預設收合；改為先點「AI 執行配置」再核對。保留原本所有設定／權限／未儲存修改斷言；沒有改動後端獨立審查測試。新阻塞 UI 腳本也納入 pi-ui CI。
