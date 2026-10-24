@@ -242,7 +242,7 @@ for (const isl of ISLANDS) {
 }
 const islById = Object.fromEntries(ISLANDS.map(i => [i.id, i]));
 
-buildBridges(props, ISLANDS, isRoadAt);
+const BRG = buildBridges(props, ISLANDS, isRoadAt);
 const landMesh = new Mesh(land.build(), matToon); landMesh.receiveShadow = true; landMesh.castShadow = true; scene.add(landMesh);
 const propsMesh = new Mesh(props.build(), matToon); propsMesh.castShadow = true; propsMesh.receiveShadow = true; scene.add(propsMesh);
 const tint = [0xffffff, 0xf4fff0, 0xfffbe8, 0xeaffea];
@@ -273,35 +273,83 @@ const nearestRoad = (id, x, z) => roads[id].cells.reduce((best, c) => { const d 
     const lp = { kind: 'bot', id: f.id, name: f.name, status: f.status, idx: i, x: c0.i, y: 0.02 + 0.82 * FS, z: c0.j };
     labelPts.push(lp);
     bots.push({ bot, f, lp, isl: f.island, phase: i * 1.3, pos: [c0.i, c0.j], ci: c0.i, cj: c0.j, from: [c0.i, c0.j], to: null, t: 0, wait: 0.5 + i * 0.6, moving: false, stay,
-      zone: { x: zb.x, z: zb.z, r: 7 }, prev: null, rot: CAMAZ, ox: (i % 3 - 1) * 0.16, oz: ((i + 1) % 3 - 1) * 0.16, hello: false });
+      zone: { x: zb.x, z: zb.z, r: 7 }, homeIsl: f.island, homeZone: { x: zb.x, z: zb.z, r: 7 }, legs: [], bridge: null, away: false, nextTrip: 25 + i * 9 + Math.random() * 25, prev: null, rot: CAMAZ, ox: (i % 3 - 1) * 0.16, oz: ((i + 1) % 3 - 1) * 0.16, hello: false });
   });
 }
+// ---- 過橋：外島隊員偶爾去別的島逛逛，再走回自己的島 ----
+function bfsPath(id, from, to) {
+  const set = roads[id].set, goal = to[0] + ',' + to[1], q = [[from[0], from[1]]], prev = new Map([[from[0] + ',' + from[1], null]]);
+  while (q.length) {
+    const [i, j] = q.shift(), k = i + ',' + j;
+    if (k === goal) { const path = []; let c = k; while (prev.get(c)) { const [a, b2] = c.split(',').map(Number); path.unshift([a, b2]); c = prev.get(c); } return path; }
+    for (const [a, c2] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) { const nk = (i + a) + ',' + (j + c2); if (set.has(nk) && !prev.has(nk)) { prev.set(nk, k); q.push([i + a, j + c2]); } }
+  }
+  return null;
+}
+const brOf = id => BRG.find(x => x.id === id);
+function planTrip(b, dest) {
+  const legs = [];
+  if (b.isl !== 'central') { const br = brOf(b.isl); if (!br) return; legs.push({ cell: br.qCell, br, dir: 'in' }); }
+  if (dest !== 'central') { const br = brOf(dest); if (!br) return; legs.push({ cell: br.pCell, br, dir: 'out' }); }
+  b.legs = legs; if (TRIPDBG) console.warn('[plan]', b.f.id, b.isl, '->', dest, legs.length);
+}
+const islCenterZone = id => { const bb = bldList.find(x => x.isl.id === id); return bb ? { x: bb.x, z: bb.z, r: 7 } : null; };
+
+const TRIPDBG = (() => { try { return !!new URLSearchParams((location.hash.split('?')[1]) || '').get('trip'); } catch { return false; } })();
+try { if (TRIPDBG) bots.forEach(b => { if (!b.stay) b.nextTrip = 1 + Math.random() * 3; }); } catch {}
 function updateBots(dt, now) {
+  if (TRIPDBG) dt *= 8;   // 除錯：加速
   const occupied = new Set(bots.flatMap(b => [b.ci + ',' + b.cj, b.to ? b.to[0] + ',' + b.to[1] : null]).filter(Boolean));
   for (const b of bots) {
     const paused = b.stay || selected === 'bot:' + b.f.id;
-    if (!b.moving) {
-      b.wait -= dt;
-      if (!paused && b.wait <= 0) {
-        let opts = nbrsOf(b.isl, b.ci, b.cj).filter(([a, c]) => !occupied.has(a + ',' + c));
-        if (opts.length) {
-          const inZone = opts.filter(([a, c]) => Math.hypot(a - b.zone.x, c - b.zone.z) <= b.zone.r);
-          if (inZone.length) opts = inZone; else opts.sort((p, q) => Math.hypot(p[0] - b.zone.x, p[1] - b.zone.z) - Math.hypot(q[0] - b.zone.x, q[1] - b.zone.z)).splice(1);
-          const fwd = opts.filter(([a, c]) => !b.prev || a !== b.prev[0] || c !== b.prev[1]);
-          const pickFrom = fwd.length ? fwd : opts, nx = pickFrom[(Math.random() * pickFrom.length) | 0];
-          b.to = nx; b.from = [b.ci, b.cj]; b.t = 0; b.moving = true; occupied.add(nx[0] + ',' + nx[1]);
-        } else b.wait = 0.8;
+    let heading = null, onBridge = 0;
+    if (b.bridge) {          // 正在橋上
+      if (!paused) b.bridge.t += dt * 0.9 / b.bridge.br.L;
+      const br = b.bridge.br, out = b.bridge.dir === 'out', k = Math.min(1, b.bridge.t), u = out ? k : 1 - k;
+      b.pos = [br.a[0] + (br.b[0] - br.a[0]) * u, br.a[1] + (br.b[1] - br.a[1]) * u]; onBridge = br.arch(u);
+      heading = Math.atan2((out ? 1 : -1) * (br.b[0] - br.a[0]), (out ? 1 : -1) * (br.b[1] - br.a[1])); b.moving = true;
+      if (b.bridge.t >= 1) {
+        const c = out ? br.qCell : br.pCell; b.isl = out ? br.id : 'central'; b.ci = c[0]; b.cj = c[1]; b.pos = [c[0], c[1]]; b.bridge = null; b.moving = false; b.prev = null; b.wait = 0.4;
+        if (!b.legs.length) {
+          if (b.isl === b.homeIsl) { b.away = false; b.zone = b.homeZone; b.nextTrip = now + 40 + Math.random() * 80; }
+          else { b.zone = islCenterZone(b.isl) || b.zone; b.nextTrip = now + 22 + Math.random() * 25; }
+        }
       }
+    } else {
+      if (!b.moving) {
+        b.wait -= dt;
+        if (!paused && !b.stay && !b.legs.length && now > b.nextTrip) {
+          const others = ISLANDS.filter(x => !x.deco && x.id !== b.isl).map(x => x.id);
+          if (!b.away) { b.away = true; planTrip(b, others[(Math.random() * others.length) | 0]); } else planTrip(b, b.homeIsl);
+          if (!b.legs.length) b.nextTrip = now + 30;
+        }
+        if (!paused && b.wait <= 0) {
+          let nx = null;
+          if (b.legs.length) {
+            const leg = b.legs[0], path = bfsPath(b.isl, [b.ci, b.cj], leg.cell);
+            if (path && !path.length) { if (TRIPDBG) console.warn('[bridge]', b.f.id, leg.dir, leg.br.id); b.bridge = { br: leg.br, dir: leg.dir, t: 0 }; b.legs.shift(); }
+            else if (path && !occupied.has(path[0][0] + ',' + path[0][1])) nx = path[0]; else b.wait = 0.4;
+          } else {
+            let opts = nbrsOf(b.isl, b.ci, b.cj).filter(([a, c]) => !occupied.has(a + ',' + c));
+            if (opts.length) {
+              const inZone = opts.filter(([a, c]) => Math.hypot(a - b.zone.x, c - b.zone.z) <= b.zone.r);
+              if (inZone.length) opts = inZone; else opts.sort((p, q) => Math.hypot(p[0] - b.zone.x, p[1] - b.zone.z) - Math.hypot(q[0] - b.zone.x, q[1] - b.zone.z)).splice(1);
+              const fwd = opts.filter(([a, c]) => !b.prev || a !== b.prev[0] || c !== b.prev[1]);
+              const pickFrom = fwd.length ? fwd : opts; nx = pickFrom[(Math.random() * pickFrom.length) | 0];
+            } else b.wait = 0.8;
+          }
+          if (nx) { b.to = nx; b.from = [b.ci, b.cj]; b.t = 0; b.moving = true; occupied.add(nx[0] + ',' + nx[1]); }
+        }
+      }
+      if (b.moving && b.to) {
+        b.t += dt * 0.85; const k = Math.min(1, b.t);
+        b.pos = [b.from[0] + (b.to[0] - b.from[0]) * k, b.from[1] + (b.to[1] - b.from[1]) * k];
+        heading = Math.atan2(b.to[0] - b.from[0], b.to[1] - b.from[1]);
+        if (b.t >= 1) { b.prev = b.from; b.ci = b.to[0]; b.cj = b.to[1]; b.to = null; b.moving = false; b.wait = b.legs.length ? 0.05 : (Math.random() < 0.45 ? 0.15 : 1.5 + Math.random() * 3); }
+      } else if (!b.moving) b.pos = [b.ci, b.cj];
     }
-    let heading = null;
-    if (b.moving) {
-      b.t += dt * 0.85; const k = Math.min(1, b.t);
-      b.pos = [b.from[0] + (b.to[0] - b.from[0]) * k, b.from[1] + (b.to[1] - b.from[1]) * k];
-      heading = Math.atan2(b.to[0] - b.from[0], b.to[1] - b.from[1]);
-      if (b.t >= 1) { b.prev = b.from; b.ci = b.to[0]; b.cj = b.to[1]; b.to = null; b.moving = false; b.wait = Math.random() < 0.45 ? 0.15 : 1.5 + Math.random() * 3; }
-    } else b.pos = [b.ci, b.cj];
     const x = b.pos[0] + b.ox, z = b.pos[1] + b.oz;
-    b.bot.root.position.x = x; b.bot.root.position.z = z; b.lp.x = x; b.lp.z = z;
+    b.bot.root.position.set(x, 0.02 + onBridge, z); b.lp.x = x; b.lp.z = z; b.lp.y = 0.02 + onBridge + 0.82 * FS;
     const want = heading !== null ? heading : CAMAZ; let d = ((want - b.rot + Math.PI) % (Math.PI * 2) + Math.PI * 2) % (Math.PI * 2) - Math.PI;
     b.rot += d * Math.min(1, dt * 10); b.bot.root.rotation.y = b.rot;
     b.hello = selected === 'bot:' + b.f.id;

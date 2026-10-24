@@ -39,7 +39,7 @@ export const CENTRAL_ISLAND = {
 };
 
 export const BUSINESS_ISLAND = {
-  id: 'biz', name: '本業島', sub: 'ITRI · 950157', c: [-24, -8], R: 3,
+  id: 'biz', name: '科研島', sub: 'ITRI · 950157', c: [-24, -8], R: 3,
   buildings: [
     {
       id: 'hq', title: '本業總部', type: 'business', form: 'hq', height: 3.0, q: 0, r: 0,
@@ -59,7 +59,7 @@ export const BUSINESS_ISLAND = {
 };
 
 export const LIFE_ISLAND = {
-  id: 'life', name: '人生島', sub: 'HY', c: [14, -26], R: 3,
+  id: 'life', name: '隱地島', sub: 'HY', c: [14, -26], R: 3,
   buildings: [
     {
       id: 'brain', title: '大腦圖書館', type: 'system', form: 'brain', height: 3.0, q: 0, r: 0,
@@ -83,7 +83,7 @@ export const LIFE_ISLAND = {
 }
 
 export const FAMILY_ISLAND = {
-  id: 'family', name: '家庭島', sub: '小因', c: [-14, 26], R: 3,
+  id: 'family', name: '棲園島', sub: '小因', c: [-14, 26], R: 3,
   buildings: [
     {
       id: 'home', title: '家', type: 'personal', form: 'home', height: 2.2, q: 0, r: 0,
@@ -101,7 +101,7 @@ export const FAMILY_ISLAND = {
 }
 
 export const SIDE_ISLAND = {
-  id: 'side', name: '副業島', sub: 'Sam', c: [26, 5], R: 3,
+  id: 'side', name: '金融島', sub: 'Sam', c: [26, 5], R: 3,
   buildings: [
     {
       id: 'sidehq', title: '副業總部', type: 'business', form: 'sidehq', height: 3.3, q: 0, r: 0,
@@ -138,13 +138,19 @@ export const ALL_BUILDINGS = ISLANDS_DATA.flatMap(isl => isl.buildings.map(b => 
 export const FIGURES = [
   { id: 'atlas', island: 'central', name: 'Atlas', kind: 'atlas', status: 'ai', zone: 'dispatch', role: '中央島隊長（主 Grok Bot）', board: null,
     doing: '分派今天的工作包給各 Bot', last: '早上整理了晨會待辦' },
-  { id: 'xiaoyin', island: 'family', name: '小因', kind: 'xiaoyin', status: 'wait', zone: 'home', role: '家庭島隊長', board: '/line/family',
+  { id: 'xiaoyin', island: 'family', name: '小因', kind: 'xiaoyin', status: 'wait', zone: 'home', role: '棲園島隊長', board: '/line/family',
     doing: '追蹤家裡這週的行程', last: '更新了小孩接送時間' },
-  { id: 'sam', island: 'side', name: 'Sam', kind: 'sam', status: 'you', zone: 'sidehq', role: '副業島隊長', board: '/line/sam',
+  { id: 'sam', island: 'side', name: 'Sam', kind: 'sam', status: 'you', zone: 'sidehq', role: '金融島隊長', board: '/line/sam',
     doing: '等你確認一張補件卡', last: '整理了手機店的庫存' },
-  { id: 'p950157', island: 'biz', name: '950157', kind: 'p950157', status: 'done', zone: 'hq', role: '本業島隊長（ITRI 工作分身）', board: '/line/950157',
+  { id: 'p950157', island: 'biz', name: '950157', kind: 'p950157', status: 'done', zone: 'hq', role: '科研島隊長（ITRI 工作分身）', board: '/line/950157',
     doing: '剛完成月報初稿', last: '整理了研究院的待辦' },
-  { id: 'hy', island: 'life', name: 'HY', kind: 'hy', status: 'bad', zone: 'dojo', role: '人生島隊長', board: '/line/hy',
+  { id: 'claude', island: 'central', name: 'Claude', kind: 'claude', status: 'ai', zone: 'dispatch', role: 'AI 執行者（Claude）', board: null,
+    doing: '寫程式工作包，改完會附截圖', last: '剛交出一個前端工作包' },
+  { id: 'gpt', island: 'central', name: 'GPT', kind: 'gpt', status: 'wait', zone: 'meeting', role: 'AI 執行者（GPT）', board: null,
+    doing: '等下一個分析工作包', last: '整理了一份文獻摘要' },
+  { id: 'grokbuild', island: 'central', name: 'Grok Build', kind: 'grokbuild', status: 'ai', zone: 'syscenter', role: 'AI 執行者（Grok Build）', board: null,
+    doing: '建置與檢查程式碼', last: '跑完一輪測試' },
+  { id: 'hy', island: 'life', name: 'HY', kind: 'hy', status: 'bad', zone: 'dojo', role: '隱地島隊長', board: '/line/hy',
     doing: '有一項任務逾期，需要處理', last: '更新了人生目標進度' },
 ];
 
