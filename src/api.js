@@ -285,6 +285,17 @@ export async function fetchMobileState() {
   return res.json()
 }
 
+// 各 runner（GPT／Claude／Grok…）目前執行中與排隊的工作包數。後端尚未上線時（404）回傳 null，不算錯誤。
+export async function fetchRunnerActivity() {
+  const res = await fetch(`${API_BASE}/api/ai-work-packages/runners/activity`, {
+    headers: { ...authHeaders() },
+    cache: 'no-store',
+  })
+  if (res.status === 404) return null
+  if (!res.ok) throw new Error(`fetchRunnerActivity failed: ${res.status}`)
+  return res.json()
+}
+
 export async function fetchLifeOSContext() {
   const res = await fetch(`${API_BASE}/api/life-os/v1/context`, {
     method: 'GET',

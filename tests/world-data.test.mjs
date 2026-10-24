@@ -40,3 +40,32 @@ test('deriveSummary：待你確認取 openTotal；系統數讀取失敗的來源
   assert.deepEqual(deriveSummary({ aiWork: null, loaded: false }), { needsYou: null, systemIssues: null })
   assert.equal(deriveSummary({ aiWork: null, aiWorkError: true, mobileFailed: true, dailyFailed: false, loaded: true }).systemIssues, 2)
 })
+
+import { deriveRunners, RUNNER_FIG, LIVE_FIGS } from '../src/life-island/worldData.js'
+
+test('deriveRunners：runner 合併到三位執行者小人', () => {
+  const r = deriveRunners({ runners: {
+    'gpt-chat': { running: 1, ready: 2, inferred: 0, current: '整理文獻摘要' },
+    'chatgpt-work': { running: 0, ready: 1, inferred: 1, current: null },
+    'claude-review': { running: 0, ready: 0, inferred: 0, current: null },
+    grok: { running: 2, ready: 0, inferred: 2, current: '跑測試' },
+  } })
+  assert.equal(r.gpt.status, 'ai'); assert.equal(r.gpt.doing, '整理文獻摘要（1 件執行中、3 件排隊）'); assert.equal(r.gpt.inferred, true)
+  assert.equal(r.claude.status, 'wait'); assert.equal(r.claude.doing, '目前沒有工作')
+  assert.equal(r.grokbuild.status, 'ai'); assert.equal(r.grokbuild.doing, '跑測試（2 件執行中）')
+  assert.equal(r.atlas, undefined)   // Atlas 沒有 runner 對應，不編造
+  assert.equal(r.gpt.last, null)
+})
+
+test('deriveRunners：沒有資料就是空物件；未知 runner 與 lane: 開頭的忽略', () => {
+  assert.deepEqual(deriveRunners(null), {})
+  assert.deepEqual(deriveRunners({}), {})
+  const r = deriveRunners({ runners: { 'lane:CODEX': { running: 5, ready: 0 }, 'owner-bot:hy': { running: 1 } } })
+  assert.equal(r.gpt.status, 'wait'); assert.equal(r.claude.status, 'wait')
+})
+
+test('LIVE_FIGS 包含四位小幫手與三位執行者，不含 Atlas', () => {
+  for (const id of ['hy', 'p950157', 'xiaoyin', 'sam', 'gpt', 'claude', 'grokbuild']) assert.ok(LIVE_FIGS.has(id), id)
+  assert.ok(!LIVE_FIGS.has('atlas'))
+  assert.equal(RUNNER_FIG['chatgpt-work'], 'gpt')
+})

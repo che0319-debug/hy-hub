@@ -6,7 +6,7 @@ import { ALL_BUILDINGS, FIGURES, STATUS_INFO } from '../life-island/data'
 import { createIslandScene, webglOk } from '../life-island/scene'
 import { useWorldInfo, formatDue } from '../life-island/useWorldInfo'
 import { useWorldData } from '../life-island/useWorldData'
-import { FIG_AGENT } from '../life-island/worldData'
+import { LIVE_FIGS } from '../life-island/worldData'
 
 const BUILDINGS = ALL_BUILDINGS
 const BY_ID = Object.fromEntries(BUILDINGS.map(b => [b.id, b]))
@@ -107,8 +107,8 @@ function MiniMap({ onGo, current }) {
 }
 
 function BotCard({ f: fig, live, loaded, onClose }) {
-  const f = { ...fig, status: live?.status ?? 'wait', doing: live?.doing ?? '—', last: live?.last ?? '—' }
-  const note = !(fig.id in FIG_AGENT) ? '這位的狀態還沒接資料。' : live ? '' : loaded ? '讀不到這位的狀態資料。' : '正在讀取狀態…'
+  const f = { ...fig, status: live?.status ?? 'wait', doing: live?.doing ?? '—', last: live?.last || '—' }
+  const note = !LIVE_FIGS.has(fig.id) ? '這位的狀態還沒接資料。' : live ? (live.inferred ? '依工作通道推測，後端尚無派工紀錄。' : '') : loaded ? '讀不到這位的狀態資料。' : '正在讀取狀態…'
   const [min, setMin] = useStored('li_card_min', false)
   const btn = { display: 'inline-flex', alignItems: 'center', textDecoration: 'none' }
   if (min) {
@@ -125,7 +125,7 @@ function BotCard({ f: fig, live, loaded, onClose }) {
     <section className={'hy-card is-focus' + (f.status === 'you' ? ' needs-you' : '')} aria-live="polite">
       <div className="hy-card-head">
         <h2 className="hy-card-title">{f.name} <span className="hy-pill" data-s={f.status}>{STATUS_INFO[f.status]}</span></h2>
-        <div style={{ display: 'flex', gap: 8 }}>
+        <div style={{ display: 'flex', gap: 8, flexShrink: 0, whiteSpace: 'nowrap' }}>
           <button type="button" className="hy-btn" onClick={() => setMin(true)} aria-label="縮小卡片">縮小</button>
           <button type="button" className="hy-btn" onClick={onClose} aria-label="關閉卡片">關閉</button>
         </div>
@@ -162,7 +162,7 @@ function BuildingCard({ b, onClose, floating }) {
     <section className="hy-card is-focus" aria-live="polite">
       <div className="hy-card-head">
         <h2 className="hy-card-title">{b.title}</h2>
-        <div style={{ display: 'flex', gap: 8 }}>
+        <div style={{ display: 'flex', gap: 8, flexShrink: 0, whiteSpace: 'nowrap' }}>
           {floating && <button type="button" className="hy-btn" onClick={() => setMin(true)} aria-label="縮小卡片">縮小</button>}
           <button type="button" className="hy-btn" onClick={onClose} aria-label="關閉卡片">關閉</button>
         </div>
