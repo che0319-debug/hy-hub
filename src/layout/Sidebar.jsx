@@ -9,6 +9,7 @@ const navItems = [
   { to: '/life-island', label: 'HY Life 島', icon: Map },
   { to: '/helpers',    label: '我的小幫手', icon: Bot },
   { to: '/ai-work-v5', label: 'AI Office', icon: LayoutDashboard },
+  { to: '/bot-office', label: 'Bot Office', icon: LayoutDashboard },
   { to: '/goals',      label: '人生目標',  icon: Target },
   { to: '/strategy',   label: '戰略盤',   icon: Target },
 ]
