@@ -46,3 +46,21 @@ export const FIGURES = [
   { id: 'p950157', name: '950157', kind: 'p950157', status: 'done', lx: 0.8, lz: 1.8 },
   { id: 'hy', name: 'HY', kind: 'hy', status: 'bad', lx: 1.6, lz: 1.5 },
 ];
+
+// 狀態色的意義（全站一致，見 hy-ui 風格 A）
+export const STATUS_INFO = {
+  wait: '等待／追蹤中',
+  ai: 'AI 執行中',
+  you: '待你確認',
+  done: '完成',
+  bad: '逾期／失敗／危險',
+};
+
+// 頂部狀態列的數字。目前是範例數字，等資料契約（Part 2）定案後換成真資料。
+export const WORLD_STATUS = {
+  overdue: 2,      // A：逾期待辦（首頁待辦清單）
+  today: 3,        // A：今日到期待辦
+  needsYou: 1,     // B：Bot Office 待你確認
+  systemIssues: 0, // C：系統異狀
+  demo: true,
+};

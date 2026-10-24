@@ -2,11 +2,34 @@ import { useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import '../../public/hy-ui/hy-ui.css'
 import '../life-island/life-island.css'
-import { CENTRAL_ISLAND } from '../life-island/data'
+import { CENTRAL_ISLAND, STATUS_INFO, WORLD_STATUS } from '../life-island/data'
 import { createIslandScene, webglOk } from '../life-island/scene'
 
 const BUILDINGS = CENTRAL_ISLAND.buildings
 const BY_ID = Object.fromEntries(BUILDINGS.map(b => [b.id, b]))
+
+function StatusBar({ onGo }) {
+  const w = WORLD_STATUS
+  return (
+    <div className="li-status" role="group" aria-label="今日狀態">
+      <button type="button" className="li-chip" data-s={w.overdue > 0 ? 'bad' : 'wait'} onClick={() => onGo('today')}>
+        逾期 <b>{w.overdue}</b>・今日待辦 <b>{w.today}</b>
+      </button>
+      <button type="button" className="li-chip li-chip-you" data-s={w.needsYou > 0 ? 'you' : 'done'} onClick={() => onGo('dispatch')}>
+        待你確認 <b>{w.needsYou}</b>
+      </button>
+      <button type="button" className="li-chip" data-s={w.systemIssues > 0 ? 'bad' : 'done'} onClick={() => onGo('syscenter')}>
+        {w.systemIssues > 0 ? <>系統有異狀 <b>{w.systemIssues}</b></> : '系統正常'}
+      </button>
+      <details className="li-legend">
+        <summary>狀態色說明</summary>
+        <ul>
+          {Object.entries(STATUS_INFO).map(([k, v]) => <li key={k}><i data-s={k} />{v}</li>)}
+        </ul>
+      </details>
+    </div>
+  )
+}
 
 function BuildingCard({ b, onClose }) {
   return (
@@ -67,6 +90,8 @@ export default function LifeIsland() {
           <p className="hy-lede">目前只建了中央島（原型、範例內容）。點建築開卡片，舊的 2D 頁都還在。</p>
         </div>
       </div>
+      <StatusBar onGo={choose} />
+      {WORLD_STATUS.demo && <p className="hy-lede" style={{ marginTop: -6, marginBottom: 12, fontSize: 12 }}>狀態列的數字目前是範例，等資料接上後會換成真的。</p>}
       <div className="li-grid">
         <div>
           {gl ? (

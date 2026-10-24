@@ -19,3 +19,27 @@
 .li-label-bot[data-s="you"] i { background: #f2a93a; box-shadow: 0 0 0 3px rgba(242, 169, 58, .35); }
 .li-label-bot[data-s="done"] i { background: #2fb36f; }
 .li-label-bot[data-s="bad"] i { background: #e5484d; }
+
+.li-label-bot span { display: none; font-weight: 500; color: #4a5568; }
+.li-label-bot.is-near span { display: inline; }
+
+/* 頂部狀態列：三類資訊＋圖例 */
+.li-status { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; margin: 4px 0 14px; }
+.li-chip { display: inline-flex; align-items: center; gap: 8px; min-height: 44px; padding: 0 16px; border-radius: 999px; border: 1px solid transparent; font: inherit; font-size: 15px; font-weight: 500; cursor: pointer; }
+.li-chip b { font-size: 18px; font-weight: 700; }
+.li-chip[data-s="wait"] { background: var(--hy-wait-bg); color: var(--hy-wait); }
+.li-chip[data-s="ai"] { background: var(--hy-ai-bg); color: var(--hy-ai); }
+.li-chip[data-s="you"] { background: var(--hy-you-bg); color: var(--hy-you); border-color: var(--hy-you-line); }
+.li-chip[data-s="done"] { background: var(--hy-done-bg); color: var(--hy-done); }
+.li-chip[data-s="bad"] { background: var(--hy-bad-bg); color: var(--hy-bad); }
+.li-chip:focus-visible { outline: 2px solid #14202a; outline-offset: 2px; }
+.li-legend { position: relative; margin-left: auto; }
+.li-legend summary { list-style: none; cursor: pointer; min-height: 44px; display: inline-flex; align-items: center; padding: 0 14px; border-radius: 999px; font-size: 14px; color: var(--hy-muted); }
+.li-legend summary::-webkit-details-marker { display: none; }
+.li-legend[open] summary { background: #fff; border: 1px solid var(--hy-line, #e3e8ef); }
+.li-legend ul { position: absolute; right: 0; top: 48px; z-index: 5; margin: 0; padding: 12px 16px; list-style: none; background: #fff; border: 1px solid var(--hy-line, #e3e8ef); border-radius: 12px; box-shadow: 0 6px 24px rgba(14, 39, 51, .16); min-width: 220px; display: grid; gap: 8px; font-size: 14px; }
+.li-legend li { display: flex; align-items: center; gap: 10px; }
+.li-legend i { width: 12px; height: 12px; border-radius: 50%; flex: none; }
+.li-legend i[data-s="wait"] { background: #8d99ab; } .li-legend i[data-s="ai"] { background: #2f6bff; }
+.li-legend i[data-s="you"] { background: #f2a93a; } .li-legend i[data-s="done"] { background: #2fb36f; } .li-legend i[data-s="bad"] { background: #e5484d; }
+@media (max-width: 640px) { .li-chip-you { order: -1; } .li-legend { margin-left: 0; } .li-legend ul { right: auto; left: 0; } }

@@ -14,7 +14,7 @@ import { makeDispatch } from './dispatch.js';
 import { makeMeeting } from './meeting.js';
 import { makeSysCenter } from './syscenter.js';
 import { makeDistTexture, makeWater } from './water.js';
-import { CENTRAL_ISLAND, FIGURES } from './data.js';
+import { CENTRAL_ISLAND, FIGURES, STATUS_INFO } from './data.js';
 
 export function webglOk() {
   try { const c = document.createElement('canvas'); return !!(c.getContext('webgl2') || c.getContext('webgl')); } catch { return false; }
@@ -309,7 +309,7 @@ function placeRing(r, id) { const b = id && bById[id]; if (!b) { r.visible = fal
 const labels = labelPts.filter(p => p.kind !== 'fig' && !p.deco).map(p => {
   const el = document.createElement('div');
   el.className = 'li-label ' + (p.kind === 'island' ? 'li-label-island' : p.kind === 'bot' ? 'li-label-bot' : 'li-label-bldg');
-  if (p.kind === 'bot') { el.dataset.s = p.status; const dot = document.createElement('i'); el.appendChild(dot); el.appendChild(document.createTextNode(p.name)); } else
+  if (p.kind === 'bot') { el.dataset.s = p.status; el.title = p.name + '：' + STATUS_INFO[p.status]; const dot = document.createElement('i'); el.appendChild(dot); el.appendChild(document.createTextNode(p.name)); const st = document.createElement('span'); st.textContent = '・' + STATUS_INFO[p.status]; el.appendChild(st); } else
   el.textContent = p.name;
   if (p.kind === 'bldg') { el.setAttribute('role', 'button'); el.tabIndex = 0; el.addEventListener('click', () => api.select(p.id, true)); el.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); api.select(p.id, true); } }); }
   labelLayer.appendChild(el); return { p, el };
@@ -379,6 +379,7 @@ function frame(now) {
     tmp.set(p.x, p.y, p.z).project(camera);
     if (tmp.z > 1) { de.style.display = 'none'; continue; }
     const oy = p.kind === 'bot' ? -26 * (p.idx % (view.dist > 45 ? 3 : 2)) : 0;
+    if (p.kind === 'bot') de.classList.toggle('is-near', view.dist < 30);
     de.style.display = ''; de.style.transform = `translate(${(tmp.x * 0.5 + 0.5) * W}px, ${(-tmp.y * 0.5 + 0.5) * H + oy}px) translate(-50%, -100%)`;
     if (p.kind === 'bldg') de.classList.toggle('is-sel', p.id === selected);
   }
