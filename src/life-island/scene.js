@@ -23,14 +23,16 @@ const CFG = { az: 0.62 };
 const S3 = Math.sqrt(3), WATER_Y = -0.5;
 
 // ---------- world definition ----------
-const ISLANDS = [{ id: CENTRAL_ISLAND.id, name: CENTRAL_ISLAND.name, sub: CENTRAL_ISLAND.sub, c: CENTRAL_ISLAND.c, R: CENTRAL_ISLAND.R, col: '#d9a441',
-  bs: CENTRAL_ISLAND.buildings.map(b => ({ id: b.id, title: b.title, type: b.type, form: b.form, height: b.height, q: b.q, r: b.r })) }];
+const KEYPOS = { today: [0, 0], dispatch: [1, -1], meeting: [0, 1], syscenter: [-1, 0] };
+const ISLANDS = [{ id: CENTRAL_ISLAND.id, name: CENTRAL_ISLAND.name, sub: CENTRAL_ISLAND.sub, c: [0, 0], cityR: 13, seed: 3, col: '#d9a441',
+  bs: CENTRAL_ISLAND.buildings.map(b => ({ id: b.id, title: b.title, type: b.type, form: b.form, height: b.height * 1.15 })),
+  keys: CENTRAL_ISLAND.buildings.map(b => ({ id: b.id, bi: KEYPOS[b.id][0], bj: KEYPOS[b.id][1], park: b.id === 'meeting' })) }];
 const DECO = [
-  { id: 'd1', deco: true, c: [27, 7], R: 1, col: '#fff', bs: [{ id: 'd1b', title: '', type: 'system', form: 'lighthouse', height: 2.4, q: 0, r: 0 }] },
-  { id: 'd2', deco: true, c: [-3, -26], R: 1, col: '#fff', bs: [{ id: 'd2b', title: '', type: 'business', form: 'tent', height: 1.5, q: 0, r: 0 }] },
-  { id: 'd3', deco: true, turbine: true, c: [-31, -1], R: 1, col: '#fff', bs: [] },
-  { id: 'd4', deco: true, turbine: true, c: [25, -22], R: 1, col: '#fff', bs: [] },
-  { id: 'd5', deco: true, c: [-5, 27], R: 1, col: '#fff', bs: [{ id: 'd5b', title: '', type: 'business', form: 'tent', height: 1.5, q: 0, r: 0 }] },
+  { id: 'd1', deco: true, allPark: true, seed: 5, c: [27, 7], cityR: 3, bs: [{ id: 'd1b', title: '', type: 'system', form: 'lighthouse', height: 2.4 }], keys: [{ id: 'd1b', bi: 0, bj: 0, park: true }] },
+  { id: 'd2', deco: true, allPark: true, seed: 7, c: [-3, -27], cityR: 3, bs: [{ id: 'd2b', title: '', type: 'business', form: 'tent', height: 1.5 }], keys: [{ id: 'd2b', bi: 0, bj: 0, park: true }] },
+  { id: 'd3', deco: true, allPark: true, turbine: true, seed: 9, c: [-31, -1], cityR: 3, bs: [], keys: [] },
+  { id: 'd4', deco: true, allPark: true, turbine: true, seed: 11, c: [25, -22], cityR: 3, bs: [], keys: [] },
+  { id: 'd5', deco: true, allPark: true, seed: 13, c: [-5, 27], cityR: 3, bs: [{ id: 'd5b', title: '', type: 'business', form: 'tent', height: 1.5 }], keys: [{ id: 'd5b', bi: 0, bj: 0, park: true }] },
 ];
 ISLANDS.push(...DECO);
 const BRIDGES = [];
@@ -101,9 +103,8 @@ function makeRock(s) {
   g.setAttribute('color', new (p.constructor)(col, 3)); g.computeVertexNormals(); return g;
 }
 const axy = (isl, q, r) => [isl.c[0] + S3 * (q + r / 2), isl.c[1] + 1.5 * r];
-const ringOf = (q, r) => Math.max(Math.abs(q), Math.abs(r), Math.abs(q + r));
 
-// ---------- build islands ----------
+// ---------- build islands (city blocks) ----------
 const TG = treeGeos(), RN = rng(11);
 const land = new B(), props = new B(), allTiles = [];
 const lists = { round: [], pine: [], cherry: [], bush: [], berry: [], flower: [], tuft: [], rock: [] };
@@ -111,139 +112,122 @@ const flowerTints = [0xff8fa8, 0xffd35c, 0xffffff, 0xb79cf0, 0xff9f6b];
 const place = (k, x, z, s = 1) => lists[k].push({ x, y: 0, z, s, ry: RN() * 6.28 });
 const bldList = [], labelPts = []; const pickMeshes = [];
 
-for (const isl of ISLANDS) {
-  const tiles = [];
-  for (let q = -isl.R; q <= isl.R; q++) for (let r = -isl.R; r <= isl.R; r++) {
-    const ring = ringOf(q, r); if (ring > isl.R) continue;
-    const [x, z] = axy(isl, q, r); tiles.push({ q, r, x, z, ring, kind: 'grass', isl });
+const PAVE = new Color(0xf5efe4), PAVE2 = new Color(0xece4d5), ROAD = new Color(0xc3c7cc), PARK = new Color(0xb9d98f);
+const WALL = [0xf3e6d3, 0xeedfcb, 0xf6d9c4, 0xe8e4dc, 0xd9e6ea, 0xf0cfa8, 0xe2d4c0, 0xf8efe0, 0xdfe7ee];
+const ROOF = [0xd9694a, 0xc4573b, 0x5f8fa8, 0x4f9a96, 0xe0a84a, 0x8d7a9e, 0xb5483a, 0x6f8c6a];
+const cellGeo = box(1.0, 0.16, 1.0, 0.025, 1), soilA = box(0.98, 0.34, 0.98, 0.03, 1), soilB = box(0.96, 0.34, 0.96, 0.03, 1), soilC = box(0.9, 0.3, 0.9, 0.03, 1);
+const isRoadAt = (i, j) => ((i + 2) % 4 + 4) % 4 === 0 || ((j + 2) % 4 + 4) % 4 === 0;
+
+// 一座城市島：街區 3×3 格、馬路 1 格；外形用雜訊做成不規則海岸
+function cityIsland(isl) {
+  const [cx, cz] = isl.c, cells = new Map(), key = (i, j) => i + ',' + j;
+  const Rr = isl.cityR, seed = isl.seed || 3;
+  for (let i = -Rr - 1; i <= Rr + 1; i++) for (let j = -Rr - 1; j <= Rr + 1; j++) {
+    const nx = Math.hypot(i / Rr, j / Rr), n = vnoise(i * 0.28 + seed, j * 0.28 + seed * 2), edge = 1.02 - 0.34 * n - 0.14 * vnoise(i * 0.7 + seed * 3, j * 0.7);
+    const sq = Math.pow(Math.pow(Math.abs(i) / Rr, 2.4) + Math.pow(Math.abs(j) / Rr, 2.4), 1 / 2.4);
+    if (sq <= edge) cells.set(key(i, j), { i, j });
   }
-  isl.tiles = tiles; allTiles.push(...tiles);
-  const byKey = new Map(tiles.map(t => [t.q + ',' + t.r, t]));
-  const bTiles = new Set(isl.bs.map(b => b.q + ',' + b.r));
-  for (const t of tiles) {
-    if (isl.deco) t.kind = 'park';
-    else if (t.ring === 0) t.kind = 'plaza';
-    else if (t.ring === 1 && isl.R >= 2) t.kind = 'path';
-    else t.kind = (vnoise(t.x * 0.45 + 3, t.z * 0.45) > 0.74 && !bTiles.has(t.q + ',' + t.r)) ? 'park' : 'block';
-  }
-  for (const t of tiles) {
-    let top = null; if (t.kind === 'block') top = CONC; else if (t.ring === 0 && isl.R >= 2) top = STONE_C;
-    land.add(capGeo, 0xffffff, { x: t.x, z: t.z, fn: (i, x, y, z) => {
-      if (y < -0.05) return (top ? top.clone() : grassAt(x, z)).multiplyScalar(0.88);
-      if (top) return top.clone().multiplyScalar(0.97 + 0.04 * vnoise(x * 1.4, z * 1.4));
-      return grassAt(x, z);
-    } });
-    if (t.kind === 'path') land.add(paverGeo, 0xf6e6c0, { x: t.x, z: t.z, y: 0.012, s: [0.8, 1, 0.8] });
-    if (t.kind === 'plaza' && isl.R >= 2) land.add(paverGeo, STONE_P, { x: t.x, z: t.z, y: 0.012 });
-    if (t.ring === isl.R) {
-      land.add(soil1, 0xd9ab7c, { x: t.x, y: -0.16, z: t.z, g: [0.9, 1.04] });
-      land.add(soil2, 0xc0916a, { x: t.x, y: -0.36, z: t.z, g: [0.9, 1.02] });
-      land.add(soil3, 0xa97a5c, { x: t.x, y: -0.56, z: t.z, g: [0.85, 1] });
+  const has = (i, j) => cells.has(key(i, j));
+  const inner1 = new Set(), inner2 = new Set();
+  for (const c of cells.values()) if (has(c.i + 1, c.j) && has(c.i - 1, c.j) && has(c.i, c.j + 1) && has(c.i, c.j - 1)) inner1.add(key(c.i, c.j));
+  for (const k of inner1) { const [i, j] = k.split(',').map(Number); if (inner1.has(key(i + 1, j)) && inner1.has(key(i - 1, j)) && inner1.has(key(i, j + 1)) && inner1.has(key(i, j - 1))) inner2.add(k); }
+  const blockOf = (i, j) => [Math.round(i / 4), Math.round(j / 4)];
+  const keyBlocks = new Map((isl.keys || []).map(k => [k.bi + ',' + k.bj, k]));
+  for (const c of cells.values()) {
+    const x = cx + c.i, z = cz + c.j, road = isRoadAt(c.i, c.j), [bi, bj] = blockOf(c.i, c.j), kb = keyBlocks.get(bi + ',' + bj);
+    const park = !road && (isl.allPark || (kb && kb.park) || (vnoise(bi * 1.7 + seed, bj * 1.3) > 0.62 && !kb));
+    const top = road ? ROAD : park ? PARK : ((c.i + c.j) % 2 ? PAVE : PAVE2);
+    allTiles.push({ x, z, sq: true });
+    land.add(cellGeo, 0xffffff, { x, z, y: -0.08, fn: () => top.clone().multiplyScalar(0.97 + 0.05 * vnoise(x * 1.7, z * 1.7)) });
+    land.add(soilA, 0xd9ab7c, { x, z, y: -0.33, g: [0.9, 1.03] });
+    if (inner1.has(key(c.i, c.j))) land.add(soilB, 0xc0916a, { x, z, y: -0.67, g: [0.9, 1.02] });
+    if (inner2.has(key(c.i, c.j))) land.add(soilC, 0xa97a5c, { x, z, y: -0.99, g: [0.85, 1] });
+    // 馬路標線
+    if (road && !isl.allPark) {
+      const alongX = ((c.j + 2) % 4 + 4) % 4 === 0 && ((c.i + 2) % 4 + 4) % 4 !== 0, alongZ = ((c.i + 2) % 4 + 4) % 4 === 0 && ((c.j + 2) % 4 + 4) % 4 !== 0;
+      if (alongX) land.add(box(0.5, 0.02, 0.07, 0, 1), 0xffffff, { x, z, y: 0.012 });
+      if (alongZ) land.add(box(0.07, 0.02, 0.5, 0, 1), 0xffffff, { x, z, y: 0.012 });
+      const crossX = ((c.i + 2) % 4 + 4) % 4 === 1 || ((c.i + 2) % 4 + 4) % 4 === 3, crossZ = ((c.j + 2) % 4 + 4) % 4 === 1 || ((c.j + 2) % 4 + 4) % 4 === 3;
+      if (alongZ && crossZ && RN() > 0.5) for (let k = -2; k <= 2; k++) land.add(box(0.1, 0.02, 0.34, 0, 1), 0xffffff, { x: x + k * 0.17, z, y: 0.012 });
+      if (alongX && crossX && RN() > 0.5) for (let k = -2; k <= 2; k++) land.add(box(0.34, 0.02, 0.1, 0, 1), 0xffffff, { x, z: z + k * 0.17, y: 0.012 });
     }
   }
-  // road strips around ring 1
-  if (isl.R >= 2) {
-    const r1 = tiles.filter(t => t.ring === 1).sort((a, b) => Math.atan2(a.x - isl.c[0], a.z - isl.c[1]) - Math.atan2(b.x - isl.c[0], b.z - isl.c[1]));
-    for (let i = 0; i < r1.length; i++) {
-      const a = r1[i], b2 = r1[(i + 1) % r1.length], dx = b2.x - a.x, dz = b2.z - a.z, L = Math.hypot(dx, dz);
-      land.add(box(0.5, 0.03, L, 0.014, 1), 0xf6e6c0, { x: (a.x + b2.x) / 2, z: (a.z + b2.z) / 2, y: 0.01, ry: Math.atan2(dx, dz) });
+  // 街區內容
+  const seen = new Set();
+  for (const c of cells.values()) {
+    const [bi, bj] = blockOf(c.i, c.j), bk = bi + ',' + bj; if (seen.has(bk)) continue; seen.add(bk);
+    const bx = cx + bi * 4, bz = cz + bj * 4;
+    let cnt = 0; for (let a = -1; a <= 1; a++) for (let b2 = -1; b2 <= 1; b2++) if (has(bi * 4 + a, bj * 4 + b2)) cnt++;
+    const kb = keyBlocks.get(bk);
+    if (cnt < 4 && !kb) continue;
+    if (kb) { kb.wx = bx; kb.wz = bz; }
+    if (isl.allPark || (kb && kb.park) || (!kb && vnoise(bi * 1.7 + seed, bj * 1.3) > 0.62)) {
+      for (let k = 0; k < 6; k++) place(RN() > 0.6 ? 'cherry' : 'round', bx + (RN() - 0.5) * 2.4, bz + (RN() - 0.5) * 2.4, 0.8 + RN() * 0.4);
+      for (let k = 0; k < 5; k++) place('bush', bx + (RN() - 0.5) * 2.6, bz + (RN() - 0.5) * 2.6, 0.9);
+      for (let k = 0; k < 8; k++) place('flower', bx + (RN() - 0.5) * 2.6, bz + (RN() - 0.5) * 2.6, 1);
+      continue;
     }
-  }
-  // rock body
-  const s = (isl.R * S3 + 0.15) / 5.35;
-  const rk = new Mesh(makeRock(s), toon()); rk.position.set(isl.c[0], 0, isl.c[1]); rk.receiveShadow = true; scene.add(rk);
-  const plug = new Mesh(new CylinderGeometry(4.7 * s, 4.7 * s, 0.3, 24), new MeshLambertMaterial({ color: 0x5ea878 })); plug.position.set(isl.c[0], -0.22, isl.c[1]); scene.add(plug);
-  // city blocks + sparse greenery
-  const [icx, icz] = isl.c;
-  const WALL = [0xf3e6d3, 0xeedfcb, 0xf6d9c4, 0xe8e4dc, 0xd9e6ea, 0xf0cfa8, 0xe2d4c0, 0xf8efe0];
-  const ROOF = [0xd9694a, 0xc4573b, 0x5f8fa8, 0x4f9a96, 0xe0a84a, 0x8d7a9e, 0xb5483a, 0x6f8c6a];
-  for (const t of tiles) {
-    if (bTiles.has(t.q + ',' + t.r) || t.kind === 'path' || t.kind === 'plaza') continue;
-    const o = Math.hypot(t.x - icx, t.z - icz) || 1, ox = (t.x - icx) / o, oz = (t.z - icz) / o;
-    if (t.kind === 'block') {
-      const slots = [[-0.34, -0.3], [0.34, -0.3], [-0.34, 0.34], [0.34, 0.34], [0, 0]];
-      slots.forEach(([sx, sz], i) => {
-        if (i === 4 ? RN() > 0.25 : RN() > 0.72) return;
-        const w = 0.42 + RN() * 0.16, d = 0.42 + RN() * 0.14, tall = 1 + (isl.R - t.ring) * 0.1, h = (0.32 + RN() * RN() * 0.85) * tall;
-        const x = t.x + sx + (RN() - 0.5) * 0.06, z = t.z + sz + (RN() - 0.5) * 0.06, ry = (RN() - 0.5) * 0.35, wc = WALL[(RN() * WALL.length) | 0], rc = ROOF[(RN() * ROOF.length) | 0];
-        props.add(box(w, h, d, 0.03, 1), wc, { x, y: h / 2, z, ry, g: [0.92, 1] });
-        if (RN() > 0.45) props.add(prismTri(d + 0.06, 0.16 + RN() * 0.1, w + 0.06), rc, { x, y: h, z, ry });
-        else props.add(box(w + 0.05, 0.06, d + 0.05, 0.015, 1), rc, { x, y: h + 0.03, z, ry });
-      });
-      if (RN() > 0.5) place('round', t.x + ox * 0.55, t.z + oz * 0.55, 0.55 + RN() * 0.25);
-    } else {
-      for (let i = 0; i < 3; i++) place(RN() > 0.6 ? 'cherry' : 'round', t.x + (RN() - 0.5) * 1.1, t.z + (RN() - 0.5) * 1.1, 0.8 + RN() * 0.4);
-      place('bush', t.x + 0.3, t.z - 0.3, 0.9);
-      for (let i = 0; i < 4; i++) place('flower', t.x + (RN() - 0.5) * 1.3, t.z + (RN() - 0.5) * 1.3, 1);
+    if (kb) continue; // 主建築街區：周邊留給主建築與少量小樓
+    // 非主建築街區：只做少量低矮小房子與造景，主建築周圍留空給人偶
+    const r0 = vnoise(bi * 2.3 + seed * 5, bj * 1.9);
+    const nb = r0 > 0.7 ? 2 : r0 > 0.38 ? 1 : 0;
+    const spots = [[-0.7, -0.7], [0.7, 0.7], [0.7, -0.7], [-0.7, 0.7]];
+    for (let q = 0; q < nb; q++) {
+      const [sx, sz] = spots[(q + ((bi + bj + 8) % 4)) % 4]; if (!has(bi * 4 + Math.round(sx * 1.4), bj * 4 + Math.round(sz * 1.4))) continue;
+      const w = 0.62 + RN() * 0.2, d = 0.62 + RN() * 0.2, h = 0.45 + RN() * 0.7, x = bx + sx, z = bz + sz, wc = WALL[(RN() * WALL.length) | 0], rc = ROOF[(RN() * ROOF.length) | 0];
+      props.add(box(w, h, d, 0.04, 1), wc, { x, y: h / 2, z, g: [0.92, 1] });
+      if (h > 0.8) props.add(box(w + 0.02, 0.09, d + 0.02, 0, 1), 0x9ec6d8, { x, y: h * 0.55, z });
+      if (RN() > 0.4) props.add(prismTri(d + 0.08, 0.24, w + 0.08), rc, { x, y: h, z }); else props.add(box(w + 0.06, 0.07, d + 0.06, 0.02, 1), rc, { x, y: h + 0.035, z });
     }
+    // 造景：樹、花、長椅
+    for (let k = 0; k < 3; k++) place(RN() > 0.6 ? 'cherry' : 'round', bx + (RN() - 0.5) * 2.4, bz + (RN() - 0.5) * 2.4, 0.6 + RN() * 0.3);
+    for (let k = 0; k < 4; k++) place('flower', bx + (RN() - 0.5) * 2.4, bz + (RN() - 0.5) * 2.4, 1);
+    if (RN() > 0.5) { const bxp = bx + (RN() - 0.5) * 1.6, bzp = bz + 1.15; props.add(box(0.5, 0.06, 0.16, 0.02, 1), 0xb98a5a, { x: bxp, y: 0.12, z: bzp }); props.add(box(0.5, 0.14, 0.04, 0.01, 1), 0xb98a5a, { x: bxp, y: 0.2, z: bzp + 0.08 }); }
   }
-  if (isl.turbine) props.with({ x: icx, z: icz, ry: CFG.az + 0.2 }, () => {
-    for (const ox of [-0.5, 0.55]) {
-      const H = 2.6 + (ox > 0 ? 0 : 0.4);
-      props.add(cyl(0.05, 0.09, H, 8), 0xf4f1ea, { x: ox, y: H / 2 });
-      props.add(sph(0.09, 8, 6), 0xffffff, { x: ox, y: H + 0.02, z: 0.06 });
-      for (let k = 0; k < 3; k++) { const a = k * 2.094 + ox; props.add(box(0.07, 1.1, 0.02, 0, 1), 0xffffff, { x: ox - Math.sin(a) * 0.55, y: H + Math.cos(a) * 0.55, z: 0.1, rz: a }); }
+  // 路燈、行道樹、停放的車
+  for (const c of cells.values()) {
+    if (!isRoadAt(c.i, c.j)) continue;
+    const x = cx + c.i, z = cz + c.j;
+    if (!isl.allPark && ((c.i + c.j) % 5 === 0)) lamp(props, x + 0.38, z + 0.38);
+    if (!isl.allPark && RN() > 0.93) { const cc = [0xd9694a, 0xf0c36a, 0x5f8fa8, 0xf4f1ea][(RN() * 4) | 0], alongX = ((c.j + 2) % 4 + 4) % 4 === 0; props.add(box(alongX ? 0.5 : 0.28, 0.2, alongX ? 0.28 : 0.5, 0.05, 1), cc, { x, y: 0.12, z }); props.add(box(alongX ? 0.26 : 0.24, 0.12, alongX ? 0.24 : 0.26, 0.04, 1), 0xdff0f6, { x, y: 0.28, z }); }
+  }
+  for (const c of cells.values()) if (!isRoadAt(c.i, c.j) && ((c.i * 7 + c.j * 3) % 11 === 0) && !isl.allPark) place('round', cx + c.i + 0.35, cz + c.j + 0.35, 0.5);
+  isl.cells = cells;
+  if (!isl.deco) labelPts.push({ kind: 'island', id: isl.id, name: isl.name, sub: isl.sub, col: isl.col, x: cx, y: 0.2, z: cz + Rr + 1.6, ax: cx, az: cz });
+  if (isl.turbine) props.with({ x: cx, z: cz, ry: CFG.az + 0.2 }, () => {
+    for (const ox of [-0.8, 0.9]) {
+      const H = 3.0 + (ox > 0 ? 0 : 0.5);
+      props.add(cyl(0.06, 0.1, H, 8), 0xf4f1ea, { x: ox, y: H / 2 });
+      props.add(sph(0.1, 8, 6), 0xffffff, { x: ox, y: H + 0.02, z: 0.06 });
+      for (let k = 0; k < 3; k++) { const a = k * 2.094 + ox; props.add(box(0.08, 1.3, 0.02, 0, 1), 0xffffff, { x: ox - Math.sin(a) * 0.65, y: H + Math.cos(a) * 0.65, z: 0.1, rz: a }); }
     }
   });
-  // lamps on ring 1 path
-  if (isl.R >= 2) tiles.filter(t => t.kind === 'path').forEach((t, i) => { if (i % 3 !== 1) return; const o = Math.hypot(t.x - icx, t.z - icz) || 1; lamp(props, t.x + (t.x - icx) / o * 0.62, t.z + (t.z - icz) / o * 0.62); });
-  // fountain on central ring-1 tile (-1,1)
-  if (isl.id === 'central') {
-    const [fx, fz] = axy(isl, -1, 1);
-    props.with({ x: fx, z: fz }, () => {
-      props.add(cyl(0.64, 0.68, 0.2, 24), 0xe9e0d6, { y: 0.1, g: [0.9, 1.05] });
-      props.add(cyl(0.58, 0.58, 0.04, 24), 0xe9e0d6, { y: 0.215 }); props.add(cyl(0.54, 0.54, 0.03, 24), 0x8fe3f0, { y: 0.215 });
-      props.add(new TorusGeometry(0.6, 0.05, 8, 28), 0xf6efe6, { rx: Math.PI / 2, y: 0.2 });
-      props.add(cyl(0.07, 0.1, 0.38, 12), 0xefe6dc, { y: 0.4 }); props.add(cyl(0.2, 0.1, 0.07, 16), 0xefe6dc, { y: 0.6 });
-      props.add(cyl(0.17, 0.17, 0.02, 16), 0x8fe3f0, { y: 0.64 }); props.add(sph(0.06, 10, 8), 0xaaf0f8, { y: 0.68 });
-    });
-  }
-  // label anchor for island
-  if (!isl.deco) labelPts.push({ kind: 'island', id: isl.id, name: isl.name, sub: isl.sub, col: isl.col, x: icx, y: 0.2, z: icz + isl.R * 1.5 + 1.4, ax: icx, az: icz });
 }
 
-// scaffold geometry
 function scaffold() {
   const b = new B();
   b.add(box(1.3, 0.08, 1.3, 0.03), 0xe9dfd2, { y: 0.04 });
   for (const sx of [-1, 1]) for (const sz of [-1, 1]) b.add(box(0.06, 1.25, 0.06, 0.02, 1), 0xd2b07a, { x: sx * 0.55, y: 0.7, z: sz * 0.55 });
-  for (const y of [0.45, 0.95]) for (const s of [-1, 1]) { b.add(box(1.16, 0.05, 0.05, 0.015, 1), 0xe4c48e, { y, z: s * 0.55 }); b.add(box(0.05, 0.05, 1.16, 0.015, 1), 0xe4c48e, { y, x: s * 0.55 }); }
   b.add(box(0.55, 0.42, 0.55, 0.05), 0xfff1d8, { y: 0.3 });
-  b.add(cyl(0.015, 0.015, 0.5, 6), 0x8a5a3a, { y: 1.5, x: 0.55, z: 0.55 }); b.add(box(0.3, 0.16, 0.012, 0.005, 1), 0xf27b66, { y: 1.68, x: 0.7, z: 0.55 });
   return { geo: b.build(), top: 1.5, smoke: [] };
 }
-const CAMAZ = CFG.az;
-let bi = 0;
-for (const isl of ISLANDS) for (const bd of isl.bs) {
-  const made = bd.form === 'scaffold' ? scaffold() : makeBuilding(bd, bi++ + 3);
-  const [x, z] = axy(isl, bd.q, bd.r);
-  const g = new Group(), m = new Mesh(made.geo, matToon); m.castShadow = m.receiveShadow = true; g.add(m); m.userData.bid = bd.id; pickMeshes.push(m);
-  g.position.set(x, 0, z); g.rotation.y = CAMAZ + (RN() - 0.5) * 0.5; g.scale.setScalar(bd.form === 'tent' ? 0.95 : 1.15);
-  scene.add(g); bldList.push({ bd, isl, x, z, top: made.top * (bd.form === 'tent' ? 0.95 : 1.15) });
-  // yard
-  for (let i = 0; i < 2; i++) place('flower', x + (RN() - 0.5) * 1.5, z + 0.6 + RN() * 0.3, 1.1);
-  labelPts.push({ kind: 'bldg', id: bd.id, name: bd.title, type: bd.type, flag: !!bd.flag, island: isl.id, x, y: made.top * (bd.form === 'tent' ? 0.95 : 1.15) + 0.2, z, deco: !!isl.deco });
-}
 
-// bridges
-const islById = Object.fromEntries(ISLANDS.map(i => [i.id, i]));
-for (const [a, b2] of BRIDGES) {
-  const A = islById[a], Bz = islById[b2];
-  const dx = Bz.c[0] - A.c[0], dz = Bz.c[1] - A.c[1], D = Math.hypot(dx, dz), ux = dx / D, uz = dz / D;
-  const ea = A.R * S3 * 0.98 + 0.55, eb = Bz.R * S3 * 0.98 + 0.55;
-  const sx = A.c[0] + ux * ea, sz = A.c[1] + uz * ea, L = D - ea - eb;
-  props.with({ x: sx, z: sz, ry: Math.atan2(ux, uz) }, () => {
-    const n = Math.round(L / 0.19);
-    for (let i = 0; i < n; i++) props.add(box(0.62, 0.05, 0.17, 0.02, 1), i % 2 ? 0xc99a62 : 0xd7ac72, { y: -0.12, z: 0.1 + i * 0.19 });
-    for (const s of [-1, 1]) props.add(box(0.05, 0.06, L, 0.02, 1), 0x8a5a3a, { x: s * 0.27, y: -0.18, z: L / 2 + 0.1 });
-    const np = Math.max(2, Math.round(L / 2.2));
-    for (let i = 0; i <= np; i++) for (const s of [-1, 1]) {
-      props.add(cyl(0.045, 0.05, 0.85, 8), 0x7a4d33, { x: s * 0.31, y: -0.46, z: 0.15 + i * (L - 0.1) / np });
-      props.add(cyl(0.05, 0.05, 0.03, 8), 0xc99a62, { x: s * 0.31, y: -0.03, z: 0.15 + i * (L - 0.1) / np });
-    }
-    for (let i = 0; i <= np; i += 2) { lamp(props, 0.31, 0.15 + i * (L - 0.1) / np); }
-  });
+const CAMAZ = CFG.az;
+let bi2 = 0;
+for (const isl of ISLANDS) {
+  cityIsland(isl);
+  for (const bd of isl.bs) {
+    const kb = (isl.keys || []).find(k => k.id === bd.id); if (!kb || kb.wx === undefined) continue;
+    const made = bd.form === 'scaffold' ? scaffold() : makeBuilding(bd, bi2++ + 3), SC = bd.form === 'tent' ? 1.5 : 1.7;
+    const g = new Group(), m = new Mesh(made.geo, matToon); m.castShadow = m.receiveShadow = true; g.add(m); m.userData.bid = bd.id; pickMeshes.push(m);
+    g.position.set(kb.wx, 0, kb.wz); g.rotation.y = CAMAZ + 0.2 * (bi2 % 3 - 1); g.scale.setScalar(SC);
+    scene.add(g); bldList.push({ bd, isl, x: kb.wx, z: kb.wz, top: made.top * SC, sc: SC });
+    // 周圍的人行道小物
+    for (let k = 0; k < 4; k++) place('round', kb.wx + (k % 2 ? 1.25 : -1.25), kb.wz + (k < 2 ? 1.2 : -1.2), 0.55);
+    labelPts.push({ kind: 'bldg', id: bd.id, name: bd.title, type: bd.type, flag: !!bd.flag, island: isl.id, x: kb.wx, y: made.top * SC + 0.2, z: kb.wz, deco: !!isl.deco });
+  }
 }
+const islById = Object.fromEntries(ISLANDS.map(i => [i.id, i]));
 
 const landMesh = new Mesh(land.build(), matToon); landMesh.receiveShadow = true; landMesh.castShadow = true; scene.add(landMesh);
 const propsMesh = new Mesh(props.build(), matToon); propsMesh.castShadow = true; propsMesh.receiveShadow = true; scene.add(propsMesh);
@@ -252,13 +236,12 @@ for (const k of ['round', 'pine', 'cherry', 'bush', 'berry', 'rock', 'tuft']) if
 { const fl = instanced(TG.flower, matToon, lists.flower, flowerTints); fl.castShadow = false; scene.add(fl); }
 
 // figures
-const FS = 1.7;
+const FS = 2.1;
 for (const f of FIGS) {
-  const isl = islById[f.island], w = makeWalker(matToon, matOL, TRIBE_COL[f.tribe]);
-  const [x, z] = axy(isl, f.q, f.r); w.root.position.set(x + f.dx, 0.02, z + f.dz); w.root.rotation.y = CAMAZ + 0.3; w.root.scale.setScalar(FS);
+  const w = makeWalker(matToon, matOL, TRIBE_COL[f.tribe]); const x = 2.2 + f.dx, z = 1.6 + f.dz;
+  w.root.position.set(x, 0.02, z); w.root.rotation.y = CAMAZ + 0.3; w.root.scale.setScalar(FS);
   if (f.wave) { w.armR.rotation.z = -2.5; }
   scene.add(w.root);
-  labelPts.push({ kind: 'fig', id: f.id, name: f.name, tribe: f.tribe, x: x + f.dx, y: 0.75 * FS + 0.25, z: z + f.dz });
 }
 
 // water
@@ -312,7 +295,7 @@ const selRing = new Mesh(ringGeo, new MeshBasicMaterial({ color: 0xffe08a, trans
 const hovRing = new Mesh(ringGeo, new MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.7, depthWrite: false })); hovRing.visible = false; scene.add(hovRing);
 const bById = Object.fromEntries(bldList.map(b => [b.bd.id, b]));
 let selected = null, hovered = null;
-function placeRing(r, id) { const b = id && bById[id]; if (!b) { r.visible = false; return; } r.visible = true; r.position.set(b.x, 0.05, b.z); r.scale.setScalar(b.bd.form === 'tent' ? 0.9 : 1.15); }
+function placeRing(r, id) { const b = id && bById[id]; if (!b) { r.visible = false; return; } r.visible = true; r.position.set(b.x, 0.05, b.z); r.scale.setScalar(b.sc * 0.95); }
 
 // ---------- labels (DOM) ----------
 const labels = labelPts.filter(p => p.kind !== 'fig' && !p.deco).map(p => {
@@ -324,7 +307,7 @@ const labels = labelPts.filter(p => p.kind !== 'fig' && !p.deco).map(p => {
 });
 
 // ---------- camera ----------
-const HOME = { az: 0.62, el: 0.5, dist: 80, tx: 0.5, ty: 2, tz: 2.5 };
+const HOME = { az: 0.62, el: 0.5, dist: 72, tx: 0.5, ty: 2, tz: 2.5 };
 const view = { ...HOME };
 const LIM = { dist: [20, 125], el: [0.28, 1.25] };
 let target = { ...HOME }, W = W0, H = H0;

@@ -8,7 +8,7 @@ export function makeDistTexture(tiles, apothem = 0.92) {
     const iz0 = Math.max(0, Math.floor((t.z - 1 + HALF) / cell)), iz1 = Math.min(N - 1, Math.ceil((t.z + 1 + HALF) / cell));
     for (let iz = iz0; iz <= iz1; iz++) for (let ix = ix0; ix <= ix1; ix++) {
       const x = -HALF + (ix + 0.5) * cell, z = -HALF + (iz + 0.5) * cell, dx = x - t.x, dz = z - t.z;
-      if (Math.abs(dx) <= apothem && Math.abs(dx * 0.5 + dz * 0.866) <= apothem && Math.abs(dx * 0.5 - dz * 0.866) <= apothem) occ[iz * N + ix] = 1;
+      if (t.sq ? (Math.abs(dx) <= 0.52 && Math.abs(dz) <= 0.52) : (Math.abs(dx) <= apothem && Math.abs(dx * 0.5 + dz * 0.866) <= apothem && Math.abs(dx * 0.5 - dz * 0.866) <= apothem)) occ[iz * N + ix] = 1;
     }
   }
   // chamfer distance transform (3-4)
