@@ -1,6 +1,6 @@
 import { NavLink } from 'react-router-dom'
 import {
-  Home, Bot,
+  Home, Bot, Smartphone,
   MessageSquare, Settings, Target, LayoutDashboard, Boxes, Users, Map
 } from 'lucide-react'
 
@@ -46,10 +46,11 @@ function NavItem({ to, label, Icon }) {
   )
 }
 
-export default function Sidebar({ open, pilot = false, collapsed = false }) {
+export default function Sidebar({ open, pilot = false, world = false, collapsed = false, onMobileVersion }) {
   return (
-    <aside className={`fixed ${pilot ? 'top-0 w-[216px] pilot-sidebar' : 'top-12 w-[200px]'} left-0 bottom-0 bg-white flex flex-col py-4 px-2 overflow-y-auto z-40 border-r border-slate-200 transition-transform duration-200 ${collapsed ? 'md:-translate-x-full' : 'md:translate-x-0'} ${open ? 'translate-x-0' : '-translate-x-full'}`}>
+    <aside className={`fixed ${pilot ? 'top-0 w-[216px] pilot-sidebar' : world ? 'top-12 md:top-0 w-[200px]' : 'top-12 w-[200px]'} left-0 bottom-0 bg-white flex flex-col py-4 px-2 overflow-y-auto z-40 border-r border-slate-200 transition-transform duration-200 ${collapsed ? 'md:-translate-x-full' : 'md:translate-x-0'} ${open ? 'translate-x-0' : '-translate-x-full'}`}>
       {pilot && <div className="pilot-sidebar-title">HY Life OS</div>}
+      {world && <div className="hidden md:block px-3 pb-3 text-lg font-bold tracking-wide text-slate-800">HY World</div>}
       <nav className="flex flex-col gap-0.5">
         {navItems.map(({ to, label, icon: Icon }) => (
           <NavItem key={to} to={to} label={label} Icon={Icon} />
@@ -70,6 +71,11 @@ export default function Sidebar({ open, pilot = false, collapsed = false }) {
           <NavItem key={to} to={to} label={label} Icon={Icon} />
         ))}
       </nav>
+      {world && onMobileVersion && (
+        <button type="button" onClick={onMobileVersion} className="hidden md:flex mt-auto mx-1 items-center justify-center gap-1.5 px-2.5 py-2 rounded-md bg-slate-100 text-slate-700 text-sm hover:bg-slate-200">
+          <Smartphone size={14} />手機版
+        </button>
+      )}
     </aside>
   )
 }
