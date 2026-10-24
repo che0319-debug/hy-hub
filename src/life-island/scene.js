@@ -5,7 +5,7 @@ import {
   BufferGeometry, Float32BufferAttribute, SphereGeometry
 } from 'three';
 import { B, box, cyl, sph, cone, rng, prismTri } from './geo.js';
-import { toon, outline } from './mats.js';
+import { toon, outline, U } from './mats.js';
 import { makeBuilding } from './buildings.js';
 import { treeGeos, instanced, fence, lamp } from './props.js';
 import { makeBot, animateBot } from './bots.js';
@@ -25,6 +25,8 @@ import { makePhoneShop } from './phoneshop.js';
 import { makeCuyu } from './cuyu.js';
 import { makeChuan } from './chuan.js';
 import { makeDistTexture, makeWater } from './water.js';
+import { createAtmosphere } from './sky.js';
+import { buildBridges, makeBoats } from './bridges.js';
 import { ISLANDS_DATA, FIGURES, STATUS_INFO } from './data.js';
 
 export function webglOk() {
@@ -68,9 +70,6 @@ Object.assign(sun.shadow.camera, { left: -34, right: 34, top: 34, bottom: -34, n
 sun.shadow.bias = -0.0004; sun.shadow.normalBias = 0.035; sun.shadow.radius = 5;
 const sunDir = new Vector3(-0.4, 0.95, 1.0).normalize(); sun.position.copy(sunDir).multiplyScalar(70); sun.target.position.set(0, 0, 0);
 scene.add(sun, sun.target);
-{ const c = document.createElement('canvas'); c.width = 4; c.height = 256; const x = c.getContext('2d'), g = x.createLinearGradient(0, 0, 0, 256);
-  g.addColorStop(0, '#8fc9ec'); g.addColorStop(0.5, '#cfe8ee'); g.addColorStop(1, '#f2eadb'); x.fillStyle = g; x.fillRect(0, 0, 4, 256);
-  const t = new CanvasTexture(c); t.colorSpace = SRGBColorSpace; scene.background = t; }
 const matToon = toon(), matOL = outline(0.011);
 
 // ---------- geometry helpers ----------
@@ -243,6 +242,7 @@ for (const isl of ISLANDS) {
 }
 const islById = Object.fromEntries(ISLANDS.map(i => [i.id, i]));
 
+buildBridges(props, ISLANDS, isRoadAt);
 const landMesh = new Mesh(land.build(), matToon); landMesh.receiveShadow = true; landMesh.castShadow = true; scene.add(landMesh);
 const propsMesh = new Mesh(props.build(), matToon); propsMesh.castShadow = true; propsMesh.receiveShadow = true; scene.add(propsMesh);
 const tint = [0xffffff, 0xf4fff0, 0xfffbe8, 0xeaffea];
@@ -314,6 +314,9 @@ const dist = makeDistTexture(allTiles);
 const water = makeWater(dist, WATER_Y); scene.add(water);
 { const u = water.material.uniforms;
   u.uShallow.value.set(0xa4ecd8); u.uDeep.value.set(0x6cc6d8); u.uSky.value.set(0xe8f1ee); u.uSunDir.value.copy(sunDir); u.uSunCol.value.set(0xfff1d6).multiplyScalar(0.8); u.uTime.value = 3.2; }
+const boats = makeBoats(matToon, matOL, [[-31, 9, 0xe2564f, 2.5, 3.5, 0.05], [6, 31, 0x4a90e2, 3.5, 2.5, -0.06], [31, -17, 0xffb347, 3, 3, 0.05], [-16, -27, 0x2fa58a, 3.5, 2.5, -0.05]]);
+scene.add(boats.group);
+const atmo = createAtmosphere({ scene, hemi, sun, water, U, onSky: opts.onSky });
 
 
 // ---------- surroundings: bay ringed by hills ----------
@@ -430,6 +433,8 @@ function frame(now) {
   for (const key of ['az', 'el', 'dist', 'tx', 'ty', 'tz']) view[key] += (target[key] - view[key]) * k;
   placeCamera();
   water.material.uniforms.uTime.value = 3.2 + (now - t0) / 1000 * 0.6;
+  boats.update((now - t0) / 1000);
+  atmo.update(now, Math.min(0.1, (now - (frame.lastA || now)) / 1000), { x: view.tx, z: view.tz }, camera.position); frame.lastA = now;
   const dtb = Math.min(0.1, (now - (frame.lastB || now)) / 1000); frame.lastB = now; updateBots(dtb, (now - t0) / 1000);
   if (selRing.visible) selRing.material.opacity = 0.75 + 0.2 * Math.sin(now / 260);
   renderer.render(scene, camera);
@@ -458,7 +463,7 @@ const api = {
   home() { Object.assign(target, HOME); },
   focus(islandId) { const isl = ISLANDS.find(x => x.id === islandId); if (!isl) return; selected = null; placeRing(selRing, null); target.tx = isl.c[0] + (islandId === 'central' ? 0.5 : 0); target.tz = isl.c[1] + 2.5; target.dist = islandId === 'central' ? 72 : 46; opts.onSelect && opts.onSelect(null); },
   dispose() {
-    disposed = true; cancelAnimationFrame(raf); ro.disconnect();
+    disposed = true; atmo.dispose(); cancelAnimationFrame(raf); ro.disconnect();
     scene.traverse(o => { if (o.geometry) o.geometry.dispose(); if (o.material) (Array.isArray(o.material) ? o.material : [o.material]).forEach(m => m.dispose()); });
     renderer.dispose(); renderer.domElement.remove(); labels.forEach(l => l.el.remove());
   },

@@ -160,12 +160,13 @@ export default function LifeIsland() {
   const [sel, setSel] = useState(null)
   const [gl, setGl] = useState(() => webglOk())
   const [mapCur, setMapCur] = useState('central')
+  const [sky, setSky] = useState(null)
 
   useEffect(() => {
     if (!gl || !stageRef.current) return undefined
     let api
     try {
-      api = createIslandScene(stageRef.current, layerRef.current, { onSelect: id => setSel(id) })
+      api = createIslandScene(stageRef.current, layerRef.current, { onSelect: id => setSel(id), onSky: v => setSky(v) })
       apiRef.current = api
     } catch (e) {
       console.warn('[LifeIsland] WebGL 啟動失敗，改用清單', e)
@@ -193,6 +194,12 @@ export default function LifeIsland() {
             <StatusBar onGo={choose} />
             <button type="button" className="hy-btn li-reset" onClick={() => { apiRef.current && apiRef.current.home(); }}>回中央島</button>
           </div>
+          {sky && (
+            <div className={'li-sign' + (sky.night > 0.6 ? ' is-night' : '')} aria-label={`新竹 ${sky.date} ${sky.weekday} ${sky.time}，${sky.phase}，${sky.weather}`}>
+              <span className="li-sign-d">{sky.date} {sky.weekday}</span>
+              <span className="li-sign-t">{sky.time} · {sky.phase} · {sky.weather}{sky.temp != null ? ` ${sky.temp}°` : ''}</span>
+            </div>
+          )}
           {(b || fig) && <div className="li-float">{fig ? <BotCard f={fig} onClose={() => choose(null)} /> : <BuildingCard floating b={b} onClose={() => choose(null)} />}</div>}
           <div className="li-hint">拖曳旋轉、滾輪或雙指縮放、Shift＋拖曳平移</div>
         </div>
