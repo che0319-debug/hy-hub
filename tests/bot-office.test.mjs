@@ -8,15 +8,15 @@ const state = { updated: '2026-10-24T00:00:00Z', islands: [{ id: 'central', name
 ], decisions: [{ id: 'd1', status: 'open', ref: 'b', title: '待決定' }, { id: 'd2', status: 'answered', ref: 'a', title: '已回答' }] }
 const index = { updated: state.updated, cards: ['meeting', 'execution', 'output', 'log', 'decision'].map(type => ({ id: type, project: 'a', type, title: type, summary: '摘要', drive_url: 'https://drive.google.com/file/d/demo/view' })) }
 
-test('mapping uses the v0 project field, all five groups, and only open decisions', () => {
+test('mapping uses the v0 project field, six tabs, and only open decisions', () => {
   const out = mapOffice(state, index)
   assert.equal(out.projects[0].id, 'b')
   assert.deepEqual(out.decisions.map(d => d.id), ['d1'])
   const a = out.projects.find(p => p.id === 'a')
-  for (const [tab] of OFFICE_TABS) assert.equal(a.cards[tab].length, 1)
+  for (const [tab] of OFFICE_TABS) assert.equal(a.cards[tab].length, tab === 'quality' ? 0 : 1)
   assert.equal(a.island, '中央')
   assert.equal(a.executor, 'gpt')
-  assert.equal(out.projects.find(p => p.id === 'b').cards.meeting.length, 0)
+  assert.equal(out.projects.find(p => p.id === 'b').cards.overview.length, 0)
   assert.equal('last_review' in a, false)
 })
 
@@ -120,4 +120,22 @@ test('v1 question mapping keeps attribution distinct from verified answer source
   assert.equal(out.decisions[0].questions[0].answeredBy, 'hy')
   assert.equal(out.decisions[0].questions[0].confirmed, true)
   assert.equal('future' in out.decisions[0], false)
+})
+
+
+test('P1 tabs, review activity, intake waiting, figures, review links and answered history', () => {
+  const out = mapOffice({updated:state.updated, buildings:[{id:'p',owner_bot:'sam',stage:'assigned',last_review:'fail',returned_count:2,review_card:'review',required_changes:['補證據']}],
+    figures:[{id:'pi',owner:'sam',project:'p',island:'side',look_as:'PI',status:'waiting'}],
+    decisions:[{id:'open',project:'p',kind:'intake',status:'open'}, {id:'closed',project:'p',status:'answered',revision:17,card:'decision',questions:[{no:1,q:'主力？',answer:'已確認',answered_by:'sam',answer_source:'proxy',confirmed_by:'hy',confirmed_at:'now',bot_suggestions:[{answer:'參考',answered_by:'sam',basis:'紀錄',confidence:'high'}]}],history:[{actor:'hy',action:'confirm'}]}]},
+    {cards:[{id:'review',project:'p',type:'review',drive_url:'https://drive.google.com/report'}, {id:'decision',project:'p',type:'decision',summary:'過期摘要'}]})
+  assert.deepEqual(OFFICE_TABS.map(t=>t[1]),['概況','待確認','規劃書','產出','工作紀錄','品質與審查'])
+  assert.equal(out.projects[0].stageLabel,'等 HY 回答')
+  assert.equal(out.projects[0].review.verdict,'fail'); assert.equal(out.projects[0].review.returnedCount,2)
+  assert.deepEqual(out.projects[0].review.requiredChanges,['補證據']);assert.equal(out.projects[0].review.url,'https://drive.google.com/report')
+  assert.equal(out.projects[0].figures[0].lookAs,'PI');assert.equal(out.allDecisions[1].revision,17)
+  assert.equal(out.allDecisions[1].questions[0].suggestions[0].answer,'參考')
+  assert.match(out.projects[0].cards.inbox.find(c=>c.id==='decision').summary,/已確認/)
+  assert.doesNotMatch(out.projects[0].cards.inbox.find(c=>c.id==='decision').summary,/過期/)
+  const review=mapOffice({buildings:[{id:'r',stage:'review'}]})
+  assert.equal(review.totals.running,1)
 })

@@ -1,11 +1,13 @@
-// Copied from AIOfficeV1's project-list / five-tab layout; only Office data is used.
+// AI Office interaction structure; only the new Office APIs are used.
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { authHeaders, expireSession } from '../auth'
 import { demoOffice, loadBotOffice, OFFICE_TABS, REFRESH_MS } from '../botOfficeData'
 import './bot-office.css'
 import Decisions from '../components/OfficeDecisions'
+import { OfficeRequest, OfficeLog, OfficeReview } from '../components/OfficeActions'
 
-const PendingWrite = ({ action }) => <button type="button" disabled title="此項操作暫未開放">{action}・待接寫入</button>
+const REQUEST_LABELS = {spec_change: '規格變更', message: '會議室留言', new_project: '新增專案', reassign: '改派'}
+const BOT_LABELS = {sam: 'Sam', family: '小因', hy: 'HY Bot', '950157': '950157'}
 const Pill = ({ project }) => <span className="hy-pill" data-s={project.tone}>{project.stageLabel}</span>
 
 function Cards({ items }) {
@@ -18,7 +20,7 @@ function Cards({ items }) {
 
 export default function BotOffice() {
   const [mode, setMode] = useState('real'), [data, setData] = useState(null), [error, setError] = useState(null), [loading, setLoading] = useState(true)
-  const [projectId, setProjectId] = useState(null), [tab, setTab] = useState('overview'), [query, setQuery] = useState(''), [filter, setFilter] = useState('all')
+  const [projectId, setProjectId] = useState(null), [tab, setTab] = useState('overview'), [query, setQuery] = useState(''), [filter, setFilter] = useState('all'), [decisionFilter, setDecisionFilter] = useState('open')
   const generation = useRef(0), controller = useRef(null), initialLoad = useRef(true)
   const reload = useCallback(async () => {
     const version = ++generation.current
@@ -56,7 +58,7 @@ export default function BotOffice() {
       <div className="ao-home-actions"><div className="ao-chips" aria-label="資料來源">
         <button aria-pressed={mode === 'real'} onClick={() => changeMode('real')}>真實</button>
         <button aria-pressed={mode === 'demo'} onClick={() => changeMode('demo')}>示範</button>
-      </div><button onClick={reload} disabled={loading}>重新整理</button><PendingWrite action="新增專案" /></div>
+      </div><button onClick={reload} disabled={loading}>重新整理</button><OfficeRequest type="new_project" projects={data?.projects || []} readOnly={mode === 'demo' || !data} reload={reload} /></div>
     </header>
     {mode === 'demo' && <p className="bo-notice" role="status">示範資料・全部為虛構，不會讀寫正式專案。</p>}
     {mode === 'real' && <p className="ao-muted">每 30 秒自動刷新・回答後等待 Atlas 處理</p>}
@@ -69,7 +71,8 @@ export default function BotOffice() {
       {error.kind === 'auth' ? <button onClick={expireSession}>重新登入</button> : <button onClick={reload}>重試讀取</button>}
     </section>}
     {data && !project && <>
-      <Decisions items={data.decisions} readOnly={mode === 'demo'} reload={reload} />
+      <div className="ao-chips" aria-label="首頁決策篩選">{[['open', '待確認'], ['answered', '已回覆'], ['all', '全部歷史']].map(([key, label]) => <button key={key} aria-pressed={decisionFilter === key} onClick={() => setDecisionFilter(key)}>{label}</button>)}</div><Decisions items={data.allDecisions.filter(d => decisionFilter === 'all' || d.status === decisionFilter)} title={decisionFilter === 'open' ? '待 HY 決定' : '決策與歷史'} readOnly={mode === 'demo'} reload={reload} />
+      {data.requests.some(r => !r.project && r.status === 'open') && <section className="ao-card"><h2>等待 Atlas 開案</h2>{data.requests.filter(r => !r.project && r.status === 'open').map(r => <p key={r.id}>{r.payload?.title}・負責 Bot：{r.payload?.owner_bot}</p>)}</section>}
       <div className="ao-tiles" aria-label="工作摘要">{tiles.map(([key, label, field, tone]) => <button key={key} className="ao-tile" data-s={tone} aria-pressed={filter === key} onClick={() => setFilter(key)}><small>{label}</small><strong>{data.totals[field]}</strong></button>)}</div>
       <div className="ao-home-controls"><input aria-label="搜尋專案" type="search" placeholder="搜尋專案名稱" value={query} onChange={e => setQuery(e.target.value)} />
         <div className="ao-chips">{[['all', '全部'], ['open', '待你決定'], ['active', '進行中'], ['finished', '完成或退回']].map(([key, label]) => <button key={key} aria-pressed={key === filter} onClick={() => setFilter(key)}>{label}</button>)}</div>
@@ -82,15 +85,21 @@ export default function BotOffice() {
     </>}
     {data && project && <section className="ao-project">
       <button className="ao-back" onClick={() => setProjectId(null)}>‹ Bot Office 專案列表</button>
-      <header className="ao-header"><div className="ao-header-top"><h1>{project.title}</h1><Pill project={project} /><div className="ao-header-actions"><PendingWrite action="規格變更" /><PendingWrite action="改派" /></div></div>
-        <div className="ao-header-meta"><span>分區 <b>{project.island}</b></span><span>執行者 <b>{project.executor}</b></span></div>
+      <header className="ao-header"><div className="ao-header-top"><h1>{project.title}</h1><Pill project={project} /><div className="ao-header-actions"><OfficeRequest key={`spec-${project.id}`} type="spec_change" projects={data.projects} projectId={project.id} readOnly={mode === 'demo'} reload={reload} /><OfficeRequest key={`reassign-${project.id}`} type="reassign" projects={data.projects} projectId={project.id} readOnly={mode === 'demo'} reload={reload} /></div></div>
+        <div className="ao-header-meta"><span>分區 <b>{project.island}</b></span><span>執行者 <b>{project.executor}</b></span><span>負責 Bot <b>{BOT_LABELS[project.ownerBot] || project.ownerBot || '待補'}</b></span></div>
       </header>
-      <nav className="ao-tabs" aria-label="Bot Office 專案分頁">{OFFICE_TABS.map(([key, label]) => <button key={key} aria-current={tab === key ? 'page' : undefined} onClick={() => setTab(key)}>{label}</button>)}</nav>
-      {tab === 'overview' && <><Decisions items={project.decisions} readOnly={mode === 'demo'} reload={reload} /><div className="ao-overview"><div className="ao-overview-main"><Cards items={project.cards.overview} /></div><section className="ao-card"><h2>專案狀態</h2><p><Pill project={project} /></p><p>執行者：{project.executor}</p><PendingWrite action="收件匣處理" /></section></div></>}
-      {tab === 'meeting' && <><div className="ao-toolbar"><PendingWrite action="會議室留言" /></div><Cards items={project.cards.meeting} /></>}
-      {tab === 'execution' && <Cards items={project.cards.execution} />}
+      <nav className="ao-tabs" aria-label="Bot Office 專案分頁">{OFFICE_TABS.map(([key, label]) => <button key={key} aria-current={tab === key ? 'page' : undefined} onClick={() => setTab(key)}>{label}{key === 'inbox' && project.decisions.length > 0 && <span aria-label={`${project.decisions.length} 項待確認`}>{project.decisions.length}</span>}</button>)}</nav>
+      {tab === 'overview' && <>
+        <Decisions items={project.decisions} readOnly={mode === 'demo'} reload={reload} />
+        <div className="ao-overview"><div className="ao-overview-main"><Cards items={project.cards.overview} /></div><section className="ao-card"><h2>專案狀態</h2><p><Pill project={project} /></p><p>執行者：{project.executor}</p><button onClick={() => setTab('inbox')}>到待確認處理（{project.decisions.length}）</button></section></div>
+        <section className="ao-card"><h2>PI 與專案成員</h2>{project.figures.length ? project.figures.map((f, i) => <dl className="hy-kv" key={f.id || i}><dt>負責 Bot</dt><dd>{BOT_LABELS[f.owner] || f.owner || '待補'}</dd><dt>專案／島</dt><dd>{f.project}／{f.island || '待補'}</dd><dt>呈現角色</dt><dd>{f.lookAs || '待補'}</dd><dt>狀態</dt><dd>{({waiting: '等待中', running: '執行中', review: '待審', done: '完成'})[f.status] || f.status || '待補'}</dd></dl>) : <p className="ao-muted">尚無 PI 人偶資料。</p>}</section>
+        <section className="ao-card"><h2>等待 Atlas 處理</h2>{project.requests.filter(r => r.status === 'open').map(r => <p key={r.id}>{REQUEST_LABELS[r.type] || r.type}：{r.payload?.content}</p>)}{!project.requests.some(r => r.status === 'open') && <p className="ao-muted">沒有待處理請求。</p>}<OfficeRequest type="message" projects={data.projects} projectId={project.id} readOnly={mode === 'demo'} reload={reload} /></section>
+      </>}
+      {tab === 'inbox' && <><div className="ao-chips" aria-label="決策篩選">{[['open', '待確認'], ['answered', '已回覆'], ['all', '全部歷史']].map(([key, label]) => <button key={key} aria-pressed={decisionFilter === key} onClick={() => setDecisionFilter(key)}>{label}</button>)}</div><Decisions items={project.allDecisions.filter(d => decisionFilter === 'all' || d.status === decisionFilter)} title={decisionFilter === 'open' ? '待 HY 決定' : '決策與歷史'} readOnly={mode === 'demo'} reload={reload} />{!project.allDecisions.some(d => decisionFilter === 'all' || d.status === decisionFilter) && <div className="ao-card hy-empty">這個篩選沒有決策。</div>}</>}
+      {tab === 'plan' && <>{project.planUrl && <section className="ao-card"><a href={project.planUrl} target="_blank" rel="noopener noreferrer">開啟正式規劃書 ↗</a></section>}<Cards items={project.cards.plan} /></>}
       {tab === 'outputs' && <Cards items={project.cards.outputs} />}
-      {tab === 'log' && <Cards items={project.cards.log} />}
+      {tab === 'log' && <><OfficeLog key={project.id} project={project} readOnly={mode === 'demo'} reload={reload} /><Cards items={project.cards.log} /></>}
+      {tab === 'quality' && <><OfficeReview project={project} /><Cards items={project.cards.quality} /></>}
     </section>}
   </section>
 }

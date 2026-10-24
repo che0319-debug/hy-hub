@@ -4,9 +4,11 @@ on:
     paths:
       - 'src/botOfficeData.js'
       - 'src/components/OfficeDecisions.jsx'
+      - 'src/components/OfficeActions.jsx'
       - 'src/pages/BotOffice.jsx'
       - 'src/pages/bot-office.css'
       - 'tests/office-answers*'
+      - 'tests/office-p1*'
       - 'tests/bot-office*'
       - '.github/workflows/office-p0-ui.yml'
 permissions:
@@ -30,6 +32,7 @@ jobs:
           npm run dev -- --host 127.0.0.1 --port 5173 --strictPort > /tmp/office-vite.log 2>&1 &
           node -e "(async()=>{for(let n=0;n<40;n++){try{if((await fetch('http://127.0.0.1:5173/')).ok)return}catch{}await new Promise(r=>setTimeout(r,250))}throw new Error('Vite not ready')})().catch(e=>{console.error(e);process.exit(1)})"
           node tests/office-answers-ui.cjs
+          node tests/office-p1-ui.cjs
           node tests/bot-office-ui.cjs
           node tests/router-ui.cjs
           node tests/pi-ui-smoke.cjs
