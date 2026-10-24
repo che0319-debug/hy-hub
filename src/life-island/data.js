@@ -4,7 +4,7 @@ export const CENTRAL_ISLAND = {
   id: 'central', name: '中央島', sub: '派工 · Atlas', c: [0, 0], R: 4,
   buildings: [
     {
-      id: 'today', title: '今日廣場', type: 'system', form: 'library', height: 3.0, q: 0, r: 0,
+      id: 'today', title: '今日廣場', type: 'system', form: 'plaza', height: 3.0, q: 0, r: 0,
       kind: '功能', agent: 'Atlas', status: '新做',
       blurb: '今天要看的事：今日行程、待辦清單、本週變化。',
       links: [{ label: '開啟首頁（現有）', to: '/' }],
