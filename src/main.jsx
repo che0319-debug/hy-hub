@@ -1,4 +1,4 @@
-import { StrictMode, useEffect, useState } from 'react'
+import { StrictMode, Suspense, lazy, useEffect, useState } from 'react'
 import { createRoot } from 'react-dom/client'
 import { HashRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom'
 import './index.css'
@@ -20,6 +20,7 @@ import Goals from './pages/Goals'
 import Strategy from './pages/Strategy'
 import AuthGate from './components/AuthGate'
 import MobileAppV2 from './mobile/MobileAppV2'
+const LifeIsland = lazy(() => import('./pages/LifeIsland'))
 
 function LegacyAIWorkRedirect() {
   const location = useLocation()
@@ -52,6 +53,7 @@ function DesktopRoutes({ onMobileVersion }) {
         <Route path="system-architecture" element={<SystemArchitecture />} />
         <Route path="expert-team" element={<ExpertTeam />} />
         <Route path="settings" element={<Settings />} />
+        <Route path="life-island" element={<Suspense fallback={<p className="hy-lede">載入 HY Life 島…</p>}><LifeIsland /></Suspense>} />
       </Route>
     </Routes>
   )
@@ -81,7 +83,7 @@ function Experience() {
   }
 
   if (location.pathname === '/command-center') return <Navigate to="/ai-work" replace />
-  if (mobileWidth && mode !== 'desktop' && !['/workspace', '/ai-work', '/ai-work-test', '/expert-team', '/system-architecture'].some(path => location.pathname.startsWith(path))) {
+  if (mobileWidth && mode !== 'desktop' && !['/workspace', '/ai-work', '/ai-work-test', '/expert-team', '/system-architecture', '/life-island'].some(path => location.pathname.startsWith(path))) {
     return <MobileAppV2 onDesktopVersion={() => choose('desktop')} />
   }
   return <DesktopRoutes onMobileVersion={mobileWidth ? () => choose('mobile') : null} />
