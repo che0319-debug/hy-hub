@@ -11,9 +11,9 @@ const BY_ID = Object.fromEntries(BUILDINGS.map(b => [b.id, b]))
 // 小地圖：五座島的大致位置（x、y 是百分比）。built=false 的還沒建，先標示建設中。
 const MAP_ISLANDS = [
   { id: 'central', name: '中央島', x: 50, y: 56, built: true },
-  { id: 'biz', name: '科學園區', x: 20, y: 34, built: true },
-  { id: 'life', name: '靜域', x: 80, y: 30, built: true },
-  { id: 'family', name: '暖居', x: 24, y: 80, built: true },
+  { id: 'biz', name: '科研島', x: 20, y: 34, built: true },
+  { id: 'life', name: '隱地島', x: 80, y: 30, built: true },
+  { id: 'family', name: '棲園島', x: 24, y: 80, built: true },
   { id: 'side', name: '金融島', x: 78, y: 80, built: true },
 ]
 const FIG_BY_ID = Object.fromEntries(FIGURES.map(f => [f.id, f]))
