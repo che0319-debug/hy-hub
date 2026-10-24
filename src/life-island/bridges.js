@@ -5,7 +5,18 @@ import { B, box, cyl, sph, prismTri } from './geo.js';
 // 找兩座島之間最近的一對馬路格子，當作橋的兩端
 function endpoints(a, b, isRoad) {
   let best = null;
-  const roadCells = isl => [...isl.cells.values()].filter(c => isRoad(c.i, c.j)).map(c => [c.i + isl.c[0], c.j + isl.c[1]]);
+  // 只取最大的一片相連馬路，這樣小人一定走得到橋頭
+  const roadCells = isl => {
+    const all = [...isl.cells.values()].filter(c => isRoad(c.i, c.j)).map(c => [c.i + isl.c[0], c.j + isl.c[1]]), set = new Set(all.map(c => c.join(','))), seen = new Set();
+    let best = [];
+    for (const c of all) {
+      if (seen.has(c.join(','))) continue;
+      const comp = [], q = [c]; seen.add(c.join(','));
+      while (q.length) { const [i, j] = q.pop(); comp.push([i, j]); for (const [a, b2] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) { const k = (i + a) + ',' + (j + b2); if (set.has(k) && !seen.has(k)) { seen.add(k); q.push([i + a, j + b2]); } } }
+      if (comp.length > best.length) best = comp;
+    }
+    return best;
+  };
   const A = roadCells(a), Bc = roadCells(b);
   for (const p of A) for (const q of Bc) { const d = Math.hypot(p[0] - q[0], p[1] - q[1]); if (!best || d < best.d) best = { d, p, q }; }
   return best;
@@ -37,7 +48,7 @@ export function buildBridges(b, islands, isRoad) {
     }
     // 橋墩
     for (const t of [0.3, 0.7]) { const x = ax + (bx - ax) * t, z = az + (bz - az) * t; b.add(cyl(0.16, 0.2, 1.2, 10), 0xdcd2c2, { x, y: hy(t) - 0.6, z }); }
-    list.push({ id: isl.id, a: [ax, az], b: [bx, bz] });
+    list.push({ id: isl.id, a: [ax, az], b: [bx, bz], pCell: e.p, qCell: e.q, L, arch: hy });
   }
   return list;
 }

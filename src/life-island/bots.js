@@ -3,7 +3,7 @@
 import { Group, Mesh, TorusGeometry, SphereGeometry, MeshBasicMaterial, CylinderGeometry, RingGeometry } from 'three';
 import { B, sph, cyl, cone, box } from './geo.js';
 
-export const BOT_COLORS = { atlas: 0x15171c, xiaoyin: 0x9c6a3c, sam: 0xf0409a, p950157: 0xf23d4b, hy: 0x37b5a4 };
+export const BOT_COLORS = { atlas: 0x15171c, xiaoyin: 0x9c6a3c, sam: 0xf0409a, p950157: 0xf23d4b, hy: 0x37b5a4, claude: 0xff8a1f, gpt: 0x9bd62c, grokbuild: 0xeceff3 };
 export const STATUS_COLORS = { wait: 0x8d99ab, ai: 0x2f6bff, you: 0xf2a93a, done: 0x2fb36f, bad: 0xe5484d };
 
 function eyes(b, z, y = 0.27, dx = 0.075) {
@@ -37,6 +37,24 @@ function bodyGeo(kind) {
     case 'hy': {
       b.add(box(0.4, 0.38, 0.36, 0.1, 3), BOT_COLORS.hy, { y: 0.235, rz: -0.12, ry: 0.0, g: [0.86, 1.05] });
       eyes(b, 0.187, 0.25);
+      break; }
+    case 'claude': {   // 橘色像素小怪物：方身、兩側方手、四隻短腳、兩顆黑色直長眼
+      const O = BOT_COLORS.claude;
+      b.add(box(0.42, 0.3, 0.24, 0.015, 1), O, { y: 0.27, g: [0.9, 1.05] });
+      for (const s of [-1, 1]) { b.add(box(0.1, 0.1, 0.18, 0.01, 1), O, { x: s * 0.255, y: 0.19 }); b.add(box(0.07, 0.07, 0.16, 0.01, 1), O, { x: s * 0.31, y: 0.19 }); }
+      for (const x of [-0.14, -0.06, 0.06, 0.14]) b.add(box(0.045, 0.12, 0.08, 0, 1), O, { x, y: 0.06, g: [0.85, 1] });
+      for (const s of [-1, 1]) b.add(box(0.045, 0.1, 0.02, 0, 1), 0x1c1c1f, { x: s * 0.1, y: 0.29, z: 0.125 });
+      break; }
+    case 'gpt': {      // 彩色圓點家族的青蘋果綠小圓團：扁圓身體、頭頂兩顆大圓眼
+      const G = BOT_COLORS.gpt;
+      b.add(sph(0.22, 22, 16), G, { y: 0.2, s: [1.08, 0.88, 0.98], g: [0.84, 1.06] });
+      for (const s of [-1, 1]) { b.add(sph(0.07, 14, 10), 0xffffff, { x: s * 0.1, y: 0.4, z: 0.04 }); b.add(sph(0.032, 8, 6), 0x1c1c1f, { x: s * 0.1, y: 0.405, z: 0.1 }); }
+      b.add(box(0.12, 0.018, 0.02, 0.005, 1), 0x2f6a10, { y: 0.17, z: 0.2 });
+      break; }
+    case 'grokbuild': { // Grok 圖示：白色圓角方塊、兩顆斜的深色膠囊眼
+      b.add(box(0.4, 0.38, 0.34, 0.1, 3), BOT_COLORS.grokbuild, { y: 0.235, g: [0.9, 1.05] });
+      b.add(box(0.4, 0.14, 0.34, 0.08, 2), 0x2b2d33, { y: 0.4, z: -0.0, g: [0.9, 1] });
+      for (const [x, y, r] of [[-0.065, 0.2, 0.55], [0.1, 0.28, 0.55]]) b.add(sph(0.03, 10, 8), 0x1c1d22, { x, y, z: 0.172, s: [0.8, 2.0, 0.5], rz: r });
       break; }
   }
   return b.build();

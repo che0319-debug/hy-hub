@@ -144,6 +144,12 @@ export const FIGURES = [
     doing: '等你確認一張補件卡', last: '整理了手機店的庫存' },
   { id: 'p950157', island: 'biz', name: '950157', kind: 'p950157', status: 'done', zone: 'hq', role: '本業島隊長（ITRI 工作分身）', board: '/line/950157',
     doing: '剛完成月報初稿', last: '整理了研究院的待辦' },
+  { id: 'claude', island: 'central', name: 'Claude', kind: 'claude', status: 'ai', zone: 'dispatch', role: 'AI 執行者（Claude）', board: null,
+    doing: '寫程式工作包，改完會附截圖', last: '剛交出一個前端工作包' },
+  { id: 'gpt', island: 'central', name: 'GPT', kind: 'gpt', status: 'wait', zone: 'meeting', role: 'AI 執行者（GPT）', board: null,
+    doing: '等下一個分析工作包', last: '整理了一份文獻摘要' },
+  { id: 'grokbuild', island: 'central', name: 'Grok Build', kind: 'grokbuild', status: 'ai', zone: 'syscenter', role: 'AI 執行者（Grok Build）', board: null,
+    doing: '建置與檢查程式碼', last: '跑完一輪測試' },
   { id: 'hy', island: 'life', name: 'HY', kind: 'hy', status: 'bad', zone: 'dojo', role: '人生島隊長', board: '/line/hy',
     doing: '有一項任務逾期，需要處理', last: '更新了人生目標進度' },
 ];
