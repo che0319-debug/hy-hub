@@ -53,6 +53,45 @@
       ],
       [
         "GET",
+        "/api/office/state"
+      ],
+      [
+        "GET",
+        "/api/office/index"
+      ],
+      [
+        "GET",
+        "/api/dispatch-sessions"
+      ],
+      [
+        "GET",
+        "/api/office/state"
+      ],
+      [
+        "GET",
+        "/api/office/index"
+      ],
+      [
+        "GET",
+        "/api/dispatch-sessions"
+      ]
+    ]
+  },
+  {
+    "scenario": "index-empty",
+    "overflow": false,
+    "errors": [],
+    "api": [
+      [
+        "GET",
+        "/api/auth/session"
+      ],
+      [
+        "GET",
+        "/api/auth/session"
+      ],
+      [
+        "GET",
         "/api/dispatch-sessions"
       ],
       [
@@ -81,14 +120,6 @@
       [
         "GET",
         "/api/auth/session"
-      ],
-      [
-        "GET",
-        "/api/office/state"
-      ],
-      [
-        "GET",
-        "/api/office/index"
       ],
       [
         "GET",
@@ -159,6 +190,14 @@
       [
         "GET",
         "/api/auth/session"
+      ],
+      [
+        "GET",
+        "/api/office/state"
+      ],
+      [
+        "GET",
+        "/api/office/index"
       ],
       [
         "GET",

@@ -68,3 +68,45 @@ test('unknown stages and extra fields are tolerated, unsafe links are not active
   assert.equal(safeDriveUrl('data:text/html,test'), null)
   assert.equal(safeDriveUrl('https://drive.google.com/'), 'https://drive.google.com/')
 })
+
+
+test('decisions accept project, card and legacy ref with project > card > ref priority', () => {
+  const decisions = [
+    { id: 'project', project: 'b' }, { id: 'card', card: 'meeting' },
+    { id: 'ref-project', ref: 'b' }, { id: 'ref-card', ref: 'log' },
+    { id: 'project-wins', project: 'b', card: 'meeting', ref: 'a' },
+    { id: 'card-wins', card: 'meeting', ref: 'b' },
+    { id: 'project-missing', project: 'unknown', card: 'meeting', ref: 'b' },
+    { id: 'card-missing', card: 'unknown', ref: 'b' },
+    { id: 'unresolved', project: 'unknown', card: 'unknown', ref: 'unknown' },
+  ].map(d => ({ ...d, status: 'open' }))
+  const result = mapOffice({ ...state, decisions }, index)
+  assert.deepEqual(result.decisions.map(d => d.projectId), ['b', 'a', 'b', 'a', 'b', 'a', 'a', 'b', null])
+  assert.deepEqual(result.projects.find(p => p.id === 'a').decisions.map(d => d.id), ['card', 'ref-card', 'card-wins', 'project-missing'])
+})
+
+test('missing index keeps state projects and direct decisions visible with empty cards', async () => {
+  const result = await loadBotOffice({ fetcher: async url => url.endsWith('state')
+    ? new Response(JSON.stringify({ ...state, decisions: [{ id: 'open', project: 'b', status: 'open' }] }), { headers: { 'X-Brain-Stale': '1' } })
+    : new Response('{"error":"brain_data_not_ready"}', { status: 404 }) })
+  assert.equal(result.projects.length, 2)
+  assert.equal(result.projects[0].id, 'b')
+  assert.equal(result.projects[0].decisions.length, 1)
+  assert.ok(result.projects.every(p => OFFICE_TABS.every(([tab]) => p.cards[tab].length === 0)))
+  assert.equal(result.stale, true)
+  assert.equal(result.indexUpdated, '尚未提供')
+})
+
+test('missing state remains empty even when the index exists', async () => {
+  await assert.rejects(loadBotOffice({ fetcher: async url => url.endsWith('state')
+    ? new Response('{"error":"brain_data_not_ready"}', { status: 404 })
+    : new Response(JSON.stringify(index)) }), e => e.kind === 'empty')
+})
+
+test('index errors other than not-ready stay errors', async () => {
+  for (const status of [401, 404, 502]) {
+    await assert.rejects(loadBotOffice({ fetcher: async url => url.endsWith('state')
+      ? new Response(JSON.stringify(state)) : new Response('{"error":"different_error"}', { status }) }),
+    e => e.kind === (status === 401 ? 'auth' : 'error'))
+  }
+})

@@ -27,7 +27,9 @@ export function mapOffice(state = {}, index = {}, metadata = {}) {
   const projectIds = new Set(array(state.buildings).map(p => p.id))
   const decisions = array(state.decisions).filter(d => d && d.status === 'open').map(d => ({
     id: text(d.id), title: text(d.title) || '待 HY 決定', suggestion: text(d.suggestion),
-    projectId: projectIds.has(d.ref) ? d.ref : cards.find(c => c.id === d.ref)?.projectId || null,
+    projectId: (projectIds.has(d.project) ? d.project : null)
+      || cards.find(c => c.id === d.card)?.projectId
+      || (projectIds.has(d.ref) ? d.ref : cards.find(c => c.id === d.ref)?.projectId) || null,
   }))
   const projects = array(state.buildings).filter(p => p && typeof p === 'object').map(p => {
     const [stageLabel, tone] = STAGES[p.stage] || ['狀態待確認', 'wait']
@@ -57,7 +59,10 @@ export async function loadBotOffice({ headers = {}, signal, fetcher = fetch, bas
     if (response.status === 401) throw new OfficeReadError('auth', '登入已過期，請重新登入。')
     let data
     try { data = await response.json() } catch { throw new OfficeReadError('error', '資料格式異常，請稍後重新整理。') }
-    if (response.status === 404 && data.error === 'brain_data_not_ready') throw new OfficeReadError('empty', '尚無資料')
+    if (response.status === 404 && data.error === 'brain_data_not_ready') {
+      if (name === 'index') return { data: { cards: [] }, updated: null, stale: false }
+      throw new OfficeReadError('empty', '尚無資料')
+    }
     if (!response.ok) throw new OfficeReadError('error', '讀取失敗，請稍後重新整理。')
     return { data, updated: response.headers.get('X-Brain-Updated'), stale: response.headers.get('X-Brain-Stale') === '1' }
   }))

@@ -14,7 +14,7 @@
 
 ## 契約與範圍
 
-欄位對照集中於 src/botOfficeData.js。依 Drive 的專案卡／工作卡 v0：cards.project 對應 buildings.id；meeting、execution、output、log、decision 分別進五頁。七個 stage 值沿用 v0，done／returned 屬同一個完成或退回篩選。只顯示 decisions.status=open；ref 可指專案 ID 或其卡片 ID。新增的 schema_version、generated_by、opened_at、last_review 等欄位容忍但不呈現。卡片只顯示 summary、drive_url，不讀取完整內文，不啟動 F2。
+欄位對照集中於 src/botOfficeData.js。依 Drive 的專案卡／工作卡 v0：cards.project 對應 buildings.id；meeting、execution、output、log、decision 分別進五頁。七個 stage 值沿用 v0，done／returned 屬同一個完成或退回篩選。只顯示 decisions.status=open；關聯先用 project，再用 card 所指卡片的 project，最後用 ref（專案或卡片 ID）。新增的 schema_version、generated_by、opened_at、last_review 等欄位容忍但不呈現。卡片只顯示 summary、drive_url，不讀取完整內文，不啟動 F2。
 
 契約來源（只讀）：
 - 專案卡：https://drive.google.com/file/d/1u53MdCERgZywVyxQwHDs8qp7CnZxupxg/view
@@ -26,12 +26,16 @@
 
 安裝依賴後 `npm run dev -- --host 127.0.0.1`，開啟 `/#/bot-office`。登入沿用現有方式；未部署後端 F 或尚未有快照時顯示「尚無資料」，可自行切換「示範」。不提供繞過驗證的正式模式。
 
-- `node --test tests/*.test.mjs`：106 passed，含新增 8 項資料層測試。
+- `node --test tests/*.test.mjs`：110 passed，含新增 12 項資料層測試。
 - `npm run build`：通過，原有大 chunk 警告未擴大處理。
-- `node tests/bot-office-ui.cjs`：隔離 mock 驗證桌面 1280、手機 390、五頁、示範、401／404／stale、30 秒刷新、沒有 Office 寫入、無溢出與 pageerror。需自行安裝 Playwright、Chromium、@fontsource/noto-sans-tc；可用 CHROME_BIN 指定瀏覽器。沒有修改依賴清單或 CI。
+- `node tests/bot-office-ui.cjs`：隔離 mock 驗證桌面 1280、手機 390、五頁、示範、401／state 404／index 404／stale、30 秒背景刷新不顯示載入文字、沒有 Office 寫入、無溢出與 pageerror。需自行安裝 Playwright、Chromium、@fontsource/noto-sans-tc；可用 CHROME_BIN 指定瀏覽器。沒有修改依賴清單或 CI。
 - `node tests/ai-office-ui.cjs`：舊 AI Office 桌面／手機完整回歸通過（全部 API mock）。
 - 手動讀圖自評：列表／決策優先順序清楚；五頁對應正確；手機單欄無溢出，沿用 44px 控件；補齊測試機中文字型後重新截圖。沒有新增色彩或寫入入口。
 
-截圖均為工程 fixture，非真實專案：ui/bot-office/desktop.png、mobile.png、empty.png、unauthorized.png、stale.png、demo.png、tab-0.png 至 tab-4.png。qa-results.json 記錄各情境的 API 方法與路徑。
+截圖均為工程 fixture，非真實專案：ui/bot-office/desktop.png、mobile.png、index-empty.png、empty.png、unauthorized.png、stale.png、demo.png、tab-0.png 至 tab-4.png。qa-results.json 記錄各情境的 API 方法與路徑。
 
 PR 不合併、不部署、不改 hy-data 或金鑰。回退：revert 本 PR。F2、C、D、Atlas 巡視與觀察期皆不在本次範圍。Claude 獨立審查後仍須 HY 本人授權合併。
+
+## Claude 複審修正
+
+G-1：決策關聯支援 project → card → ref，測試三種形狀與優先／fallback。G-2：只有 state 缺檔顯示尚無資料；index 缺檔當空卡片，專案與直接關聯決策仍保留，其他錯誤維持原處理。G-3：只在首次載入顯示載入文字；測試將背景請求刻意暫停，核對等待期間不出現載入提示。重複按目前資料來源不會清掉畫面。

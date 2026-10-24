@@ -28,13 +28,13 @@ function Decisions({ items }) {
 export default function BotOffice() {
   const [mode, setMode] = useState('real'), [data, setData] = useState(null), [error, setError] = useState(null), [loading, setLoading] = useState(true)
   const [projectId, setProjectId] = useState(null), [tab, setTab] = useState('overview'), [query, setQuery] = useState(''), [filter, setFilter] = useState('all')
-  const generation = useRef(0), controller = useRef(null)
+  const generation = useRef(0), controller = useRef(null), initialLoad = useRef(true)
   const reload = useCallback(async () => {
     const version = ++generation.current
     controller.current?.abort()
-    if (mode === 'demo') { setData(demoOffice()); setError(null); setLoading(false); return }
+    if (mode === 'demo') { initialLoad.current = false; setData(demoOffice()); setError(null); setLoading(false); return }
     controller.current = new AbortController()
-    setLoading(true)
+    setLoading(initialLoad.current)
     try {
       const next = await loadBotOffice({ headers: authHeaders(), signal: controller.current.signal })
       if (version === generation.current) { setData(next); setError(null) }
@@ -43,7 +43,7 @@ export default function BotOffice() {
         setError({ kind: e.kind || 'error', message: e.message })
         if (e.kind === 'auth' || e.kind === 'empty') setData(null)
       }
-    } finally { if (version === generation.current) setLoading(false) }
+    } finally { if (version === generation.current) { initialLoad.current = false; setLoading(false) } }
   }, [mode])
   useEffect(() => {
     const previous = document.documentElement.getAttribute('data-bot')
@@ -56,7 +56,7 @@ export default function BotOffice() {
     return () => { generation.current++; controller.current?.abort(); if (interval) clearInterval(interval) }
   }, [mode, reload])
   const project = data?.projects.find(p => p.id === projectId)
-  const changeMode = next => { setMode(next); setProjectId(null); setTab('overview'); setData(null); setError(null) }
+  const changeMode = next => { if (next === mode) return; initialLoad.current = true; setMode(next); setProjectId(null); setTab('overview'); setData(null); setError(null) }
   const projects = (data?.projects || []).filter(p => p.title.toLowerCase().includes(query.toLowerCase()) &&
     (filter === 'all' || filter === 'open' && p.pending || filter === 'active' && !p.finished || filter === 'finished' && p.finished))
   const tiles = [['open', '待你決定', 'pending', 'you'], ['active', 'AI 執行中', 'running', 'ai'], ['finished', '完成或退回', 'finished', 'done'], ['all', '專案總數', 'all', 'wait']]
