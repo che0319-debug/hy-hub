@@ -2,9 +2,11 @@ import { useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import '../../public/hy-ui/hy-ui.css'
 import '../life-island/life-island.css'
-import { ALL_BUILDINGS, FIGURES, STATUS_INFO, WORLD_STATUS } from '../life-island/data'
+import { ALL_BUILDINGS, FIGURES, STATUS_INFO } from '../life-island/data'
 import { createIslandScene, webglOk } from '../life-island/scene'
 import { useWorldInfo, formatDue } from '../life-island/useWorldInfo'
+import { useWorldData } from '../life-island/useWorldData'
+import { FIG_AGENT } from '../life-island/worldData'
 
 const BUILDINGS = ALL_BUILDINGS
 const BY_ID = Object.fromEntries(BUILDINGS.map(b => [b.id, b]))
@@ -25,11 +27,10 @@ function useStored(key, init) {
   return [v, set]
 }
 
-function StatusBar({ onGo, info, panel, setPanel }) {
-  const w = WORLD_STATUS
-  const overdue = info.overdue ?? w.overdue, todayN = info.todayCount ?? w.today
-  const real = info.overdue !== null
-  const worst = w.needsYou > 0 ? 'you' : (overdue > 0 || w.systemIssues > 0) ? 'bad' : 'done'
+function StatusBar({ onGo, info, data, panel, setPanel }) {
+  const overdue = info.overdue, todayN = info.todayCount
+  const real = overdue !== null
+  const needs = data.needsYou, sysN = data.systemIssues
   const toggle = k => setPanel(panel === k ? null : k)
   const nextText = info.schedFailed ? '行程讀取失敗' : info.sched === null ? '行程載入中' : info.next ? `下一個 ${info.next.start} ${info.next.title}` : info.sched.length ? '今天的行程結束了' : '今天沒有行程'
   return (
@@ -40,17 +41,16 @@ function StatusBar({ onGo, info, panel, setPanel }) {
       <button type="button" className="li-chip li-chip-next" data-panel="sched" data-s="wait" onClick={() => toggle('sched')} aria-expanded={panel === 'sched'} aria-controls="li-panel" title={nextText}>
         <span className="li-next-t">{nextText}</span><i className="li-caret" aria-hidden="true" />
       </button>
-      <button type="button" className="li-chip li-chip-you" data-s={w.needsYou > 0 ? 'you' : 'done'} onClick={() => onGo('dispatch')}>
-        待你確認 <b>{w.needsYou}</b>
+      <button type="button" className="li-chip li-chip-you" data-s={needs > 0 ? 'you' : needs === 0 ? 'done' : 'wait'} onClick={() => onGo('dispatch')}>
+        待你確認 <b>{needs ?? '—'}</b>
       </button>
-      <button type="button" className="li-chip" data-s={w.systemIssues > 0 ? 'bad' : 'done'} onClick={() => onGo('syscenter')}>
-        {w.systemIssues > 0 ? <>系統有異狀 <b>{w.systemIssues}</b></> : '系統正常'}
+      <button type="button" className="li-chip" data-s={sysN > 0 ? 'bad' : sysN === 0 ? 'done' : 'wait'} onClick={() => onGo('syscenter')}>
+        {sysN === null ? '系統載入中' : sysN > 0 ? <>資料讀取異常 <b>{sysN}</b></> : '系統正常'}
       </button>
       <details className="li-legend">
         <summary>狀態色說明</summary>
         <ul>
           {Object.entries(STATUS_INFO).map(([k, v]) => <li key={k}><i data-s={k} />{v}</li>)}
-          {WORLD_STATUS.demo && <li className="li-legend-note">「待你確認」和「系統」的數字目前是範例，資料接上後會換成真的。</li>}
         </ul>
       </details>
     </div>
@@ -106,7 +106,9 @@ function MiniMap({ onGo, current }) {
   )
 }
 
-function BotCard({ f, onClose }) {
+function BotCard({ f: fig, live, loaded, onClose }) {
+  const f = { ...fig, status: live?.status ?? 'wait', doing: live?.doing ?? '—', last: live?.last ?? '—' }
+  const note = !(fig.id in FIG_AGENT) ? '這位的狀態還沒接資料。' : live ? '' : loaded ? '讀不到這位的狀態資料。' : '正在讀取狀態…'
   const [min, setMin] = useStored('li_card_min', false)
   const btn = { display: 'inline-flex', alignItems: 'center', textDecoration: 'none' }
   if (min) {
@@ -133,7 +135,7 @@ function BotCard({ f, onClose }) {
         <dt>正在做</dt><dd>{f.doing}</dd>
         <dt>最近完成</dt><dd>{f.last}</dd>
       </dl>
-      <p className="hy-lede" style={{ marginTop: 12, fontSize: 12 }}>內容目前是範例，資料接上後會換成真的。</p>
+      {note && <p className="hy-lede" style={{ marginTop: 12, fontSize: 12 }}>{note}</p>}
       <div className="li-links">
         {f.status === 'you' && <Link to="/bot-office" className="hy-btn is-primary" style={btn}>去確認</Link>}
         <Link to="/bot-office" className="hy-btn" style={btn}>專案</Link>
@@ -192,6 +194,7 @@ export default function LifeIsland() {
   const [mapCur, setMapCur] = useState('central')
   const [sky, setSky] = useState(null)
   const info = useWorldInfo()
+  const data = useWorldData()
   const [panel, setPanel] = useState(null)
 
   useEffect(() => {
@@ -206,6 +209,13 @@ export default function LifeIsland() {
     }
     return () => { api && api.dispose(); apiRef.current = null }
   }, [gl])
+
+  // 把真實狀態同步到 3D 小人（光環、標籤、是否停在原地）
+  useEffect(() => {
+    const api = apiRef.current
+    if (!api) return
+    for (const [id, v] of Object.entries(data.bots)) if (v) api.setBotStatus(id, v.status)
+  }, [data.bots, gl])
 
   function choose(id) {
     setSel(id)
@@ -223,7 +233,7 @@ export default function LifeIsland() {
           <div ref={layerRef} className="li-layer" />
           <MiniMap onGo={id => { setSel(null); setMapCur(id); apiRef.current && apiRef.current.focus(id) }} current={mapCur} />
           <div className="li-hud">
-            <StatusBar onGo={choose} info={info} panel={panel} setPanel={setPanel} />
+            <StatusBar onGo={choose} info={info} data={data} panel={panel} setPanel={setPanel} />
           </div>
           {panel && <InfoPanel kind={panel} info={info} onClose={() => setPanel(null)} />}
           {sky && (
@@ -232,13 +242,13 @@ export default function LifeIsland() {
               <span className="li-sign-t">{sky.time} · {sky.phase} · {sky.weather}{sky.temp != null ? ` ${sky.temp}°` : ''}</span>
             </div>
           )}
-          {(b || fig) && <div className="li-float">{fig ? <BotCard f={fig} onClose={() => choose(null)} /> : <BuildingCard floating b={b} onClose={() => choose(null)} />}</div>}
+          {(b || fig) && <div className="li-float">{fig ? <BotCard f={fig} live={data.bots[fig.id]} loaded={data.loaded} onClose={() => choose(null)} /> : <BuildingCard floating b={b} onClose={() => choose(null)} />}</div>}
           <div className="li-hint">拖曳旋轉、滾輪或雙指縮放、Shift＋拖曳平移</div>
         </div>
       ) : (
         <div style={{ display: 'grid', gap: 16 }}>
           <div className="hy-empty">這台裝置不支援 3D，改用下方清單。內容與 3D 相同。</div>
-          <StatusBar onGo={choose} info={info} panel={panel} setPanel={setPanel} />
+          <StatusBar onGo={choose} info={info} data={data} panel={panel} setPanel={setPanel} />
           {panel && <InfoPanel kind={panel} info={info} onClose={() => setPanel(null)} />}
           {b && <BuildingCard b={b} onClose={() => choose(null)} />}
           <section className="hy-card">
