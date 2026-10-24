@@ -11,7 +11,7 @@ export const CENTRAL_ISLAND = {
       note: '整合進來後，首頁的資訊都從這裡看；開啟 HY Life 島時不會彈出。',
     },
     {
-      id: 'dispatch', title: '派工坊', type: 'system', form: 'workshop', height: 2.6, q: 2, r: -2,
+      id: 'dispatch', title: '派工坊', type: 'system', form: 'dispatch', height: 2.6, q: 2, r: -2,
       kind: '功能', agent: 'Atlas', status: '現有',
       blurb: '全部專案的派工、執行、審查與驗收。',
       links: [{ label: '開啟 AI Office', to: '/ai-work-v5' }],
