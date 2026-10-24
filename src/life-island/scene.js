@@ -240,7 +240,7 @@ for (const k of ['round', 'pine', 'cherry', 'bush', 'berry', 'rock', 'tuft']) if
 { const fl = instanced(TG.flower, matToon, lists.flower, flowerTints); fl.castShadow = false; scene.add(fl); }
 
 // figures
-const FS = 2.0, bots = [];
+const FS = 1.7, bots = [];
 {
   const pz = bldList.find(b => b.bd.id === 'today'), ca = Math.cos(CAMAZ), sa = Math.sin(CAMAZ);
   FIGS.forEach((f, i) => {
@@ -315,8 +315,10 @@ const labels = labelPts.filter(p => p.kind !== 'fig' && !p.deco).map(p => {
 
 // ---------- camera ----------
 const HOME = { az: 0.62, el: 0.5, dist: 72, tx: 0.5, ty: 2, tz: 2.5 };
+// 除錯用：網址加 ?cam=dist,tx,tz,el 可指定起始鏡頭（截圖檢查細節用）
+try { const q = new URLSearchParams((location.hash.split('?')[1]) || '').get('cam'); if (q) { const [d, x, z, e] = q.split(',').map(Number); if (d) HOME.dist = d; if (!Number.isNaN(x)) HOME.tx = x; if (!Number.isNaN(z)) HOME.tz = z; if (e) HOME.el = e; } } catch { /* ignore */ }
 const view = { ...HOME };
-const LIM = { dist: [20, 125], el: [0.28, 1.25] };
+const LIM = { dist: [8, 125], el: [0.28, 1.25] };
 let target = { ...HOME }, W = W0, H = H0;
 const tmp = new Vector3();
 function placeCamera() {
