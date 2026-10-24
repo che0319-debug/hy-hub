@@ -18,7 +18,7 @@ export const CENTRAL_ISLAND = {
       note: '之後 AI Office 會改名為 Bot Office。',
     },
     {
-      id: 'meeting', title: '會議帳篷', type: 'business', form: 'tent', height: 1.5, q: 0, r: 2,
+      id: 'meeting', title: '會議帳篷', type: 'business', form: 'meeting', height: 1.5, q: 0, r: 2,
       kind: '功能', agent: 'Atlas', status: '待補',
       blurb: '晨會紀錄與你的 comment。',
       links: [],

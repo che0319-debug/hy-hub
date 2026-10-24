@@ -11,6 +11,7 @@ import { treeGeos, instanced, fence, lamp } from './props.js';
 import { makeWalker } from './chars.js';
 import { makePlaza } from './plaza.js';
 import { makeDispatch } from './dispatch.js';
+import { makeMeeting } from './meeting.js';
 import { makeDistTexture, makeWater } from './water.js';
 import { CENTRAL_ISLAND, FIGURES } from './data.js';
 
@@ -25,10 +26,10 @@ const CFG = { az: 0.62 };
 const S3 = Math.sqrt(3), WATER_Y = -0.5;
 
 // ---------- world definition ----------
-const KEYPOS = { today: [0, 0], dispatch: [1, -1], meeting: [1, 1], syscenter: [-1, 0] };
+const KEYPOS = { today: [0, 0], dispatch: [1, -1], meeting: [2, 1], syscenter: [-1, 0] };
 const ISLANDS = [{ id: CENTRAL_ISLAND.id, name: CENTRAL_ISLAND.name, sub: CENTRAL_ISLAND.sub, c: [0, 0], cityR: 13, seed: 3, col: '#d9a441',
   bs: CENTRAL_ISLAND.buildings.map(b => ({ id: b.id, title: b.title, type: b.type, form: b.form, height: b.height * 1.15 })),
-  keys: CENTRAL_ISLAND.buildings.map(b => ({ id: b.id, bi: KEYPOS[b.id][0], bj: KEYPOS[b.id][1], park: b.id === 'meeting' })) }];
+  keys: CENTRAL_ISLAND.buildings.map(b => ({ id: b.id, bi: KEYPOS[b.id][0], bj: KEYPOS[b.id][1], park: false })) }];
 const DECO = [
   { id: 'd1', deco: true, allPark: true, seed: 5, c: [27, 7], cityR: 3, bs: [{ id: 'd1b', title: '', type: 'system', form: 'lighthouse', height: 2.4 }], keys: [{ id: 'd1b', bi: 0, bj: 0, park: true }] },
   { id: 'd2', deco: true, allPark: true, seed: 7, c: [-3, -27], cityR: 3, bs: [{ id: 'd2b', title: '', type: 'business', form: 'tent', height: 1.5 }], keys: [{ id: 'd2b', bi: 0, bj: 0, park: true }] },
@@ -220,12 +221,12 @@ for (const isl of ISLANDS) {
   cityIsland(isl);
   for (const bd of isl.bs) {
     const kb = (isl.keys || []).find(k => k.id === bd.id); if (!kb || kb.wx === undefined) continue;
-    const made = bd.form === 'scaffold' ? scaffold() : bd.form === 'plaza' ? makePlaza() : bd.form === 'dispatch' ? makeDispatch() : makeBuilding(bd, bi2++ + 3), SC = (bd.form === 'plaza' || bd.form === 'dispatch') ? 1 : bd.form === 'tent' ? 2.3 : 3.2;
+    const made = bd.form === 'scaffold' ? scaffold() : bd.form === 'plaza' ? makePlaza() : bd.form === 'dispatch' ? makeDispatch() : bd.form === 'meeting' ? makeMeeting() : makeBuilding(bd, bi2++ + 3), SC = ['plaza', 'dispatch', 'meeting'].includes(bd.form) ? 1 : bd.form === 'tent' ? 2.3 : 3.2;
     const g = new Group(), m = new Mesh(made.geo, matToon); m.castShadow = m.receiveShadow = true; g.add(m); m.userData.bid = bd.id; pickMeshes.push(m);
-    g.position.set(kb.wx, 0, kb.wz); g.rotation.y = CAMAZ + ((bd.form === 'plaza' || bd.form === 'dispatch') ? 0 : 0.2 * (bi2 % 3 - 1)); g.scale.setScalar(SC);
+    g.position.set(kb.wx, 0, kb.wz); g.rotation.y = CAMAZ + (['plaza', 'dispatch', 'meeting'].includes(bd.form) ? 0 : 0.2 * (bi2 % 3 - 1)); g.scale.setScalar(SC);
     scene.add(g); bldList.push({ bd, isl, x: kb.wx, z: kb.wz, top: made.top * SC, sc: SC });
     // 周圍的人行道小物
-    if (bd.form !== 'plaza' && bd.form !== 'dispatch') for (let k = 0; k < 4; k++) place('round', kb.wx + (k % 2 ? 1.7 : -1.7), kb.wz + (k < 2 ? 1.7 : -1.7), 0.55);
+    if (!['plaza', 'dispatch', 'meeting'].includes(bd.form)) for (let k = 0; k < 4; k++) place('round', kb.wx + (k % 2 ? 1.7 : -1.7), kb.wz + (k < 2 ? 1.7 : -1.7), 0.55);
     labelPts.push({ kind: 'bldg', id: bd.id, name: bd.title, type: bd.type, flag: !!bd.flag, island: isl.id, x: kb.wx, y: made.top * SC + 0.2, z: kb.wz, deco: !!isl.deco });
   }
 }
