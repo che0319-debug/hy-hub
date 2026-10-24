@@ -205,3 +205,16 @@
 .bo-page .bo-question{border-top:1px solid var(--hy-line);padding:var(--hy-gap) 0;margin-top:var(--hy-gap)}
 .bo-page .bo-decision-form+.bo-decision-form{border-top:1px solid var(--hy-line);margin-top:var(--hy-gap);padding-top:var(--hy-gap)}
 .bo-page .bo-answer{background:var(--hy-surface);border:1px solid var(--hy-line);border-radius:var(--hy-r-sm);padding:12px;margin:12px 0}
+
+/* Office requests and project metadata use the existing HY tokens. */
+.bo-page .bo-action{max-width:100%;min-width:0}
+.bo-page .bo-request-form{width:min(580px,100%);text-align:left}
+.bo-page .bo-request-form fieldset{min-width:0;border:0;padding:0;margin:0}
+.bo-page .bo-request-form label{display:grid;gap:8px;margin:12px 0}
+.bo-page .bo-request-form input,.bo-page .bo-request-form textarea,.bo-page .bo-request-form select{max-width:100%;width:100%;box-sizing:border-box}
+.bo-page .bo-request-form textarea{min-height:90px}
+.bo-page .bo-action [role=alert],.bo-page .bo-action [role=status]{white-space:normal;overflow-wrap:anywhere}
+.bo-page .hy-kv dd{overflow-wrap:anywhere}
+
+.bo-page .bo-action>button,.bo-page .bo-request-form button{min-height:44px}
+.bo-page .bo-decisions:not(.needs-you){background:var(--hy-surface)}
