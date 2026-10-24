@@ -24,6 +24,15 @@ export function makePhoneShop() {
   b.add(box(1.2, 0.2, 0.06, 0.02, 1), 0x4a90e2, { y: 1.62, z: CZ + 0.5, glow: 0.35 });
   b.add(box(0.16, 0.14, 0.03, 0.02, 1), 0xffffff, { x: -0.4, y: 1.62, z: CZ + 0.54, glow: 0.5 }); b.add(box(0.7, 0.05, 0.03, 0, 1), 0xffffff, { x: 0.1, y: 1.62, z: CZ + 0.54, glow: 0.5 });
   for (const sx of [-1, 1]) b.add(box(0.05, 0.25, 0.05, 0, 1), DARK, { x: sx * 0.55, y: 1.55, z: CZ + 0.45 });
+  // 屋頂巨型手機招牌（一眼認出是手機店）
+  b.with({ x: 0.55, y: 1.5, z: CZ + 0.1, ry: -0.25 }, () => {
+    b.add(box(0.1, 0.5, 0.1, 0, 1), 0x8a8f99, { y: 0.25 });
+    b.add(box(0.62, 1.05, 0.1, 0.06, 2), 0x2c3345, { y: 1.0 });
+    b.add(box(0.52, 0.9, 0.03, 0.03, 1), 0x4aa8ff, { y: 1.0, z: 0.06, glow: 0.55, g: [0.9, 1.15] });
+    b.add(box(0.3, 0.05, 0.02, 0, 1), 0xffffff, { y: 1.35, z: 0.08, glow: 0.8 });
+    for (const [x, y, c] of [[-0.14, 1.12, 0xff7a3c], [0.0, 1.12, 0x5ec38a], [0.14, 1.12, 0xffd34d], [-0.14, 0.92, 0xe2564f], [0.0, 0.92, 0x8fb4ff], [0.14, 0.92, 0xff7fa5]]) b.add(box(0.1, 0.1, 0.02, 0.02, 1), c, { x, y, z: 0.08, glow: 0.5 });
+    b.add(sph(0.025, 6, 5), 0x1a1f2b, { x: 0, y: 1.5, z: 0.06 });
+  });
   // 黃白條紋遮陽棚
   for (let k = 0; k < 8; k++) b.add(box(0.27, 0.03, 0.55, 0, 1), k % 2 ? 0xffffff : 0xffc21a, { x: -0.95 + k * 0.27, y: 0.82 - 0.0, z: CZ + 0.97, rx: -0.28 });
   for (const sx of [-1, 1]) b.add(cyl(0.025, 0.025, 0.62, 6), DARK, { x: sx * 0.95, y: 0.45, z: CZ + 1.22 });
@@ -34,5 +43,5 @@ export function makePhoneShop() {
   for (let k = 0; k < 3; k++) b.add(cyl(0.012, 0.012, 0.18, 4), 0x2c3345, { x: 0.87 + k * 0.08, y: 0.5, z: 1.2, rx: 0.9 });
   b.with({ x: 0.15, z: 1.35, ry: 0.2 }, () => { b.add(box(0.3, 0.5, 0.04, 0.02, 1), 0x2c3345, { y: 0.4 }); b.add(box(0.25, 0.42, 0.02, 0, 1), 0x4a90e2, { y: 0.4, z: 0.02, glow: 0.4 }); });
   for (const [x, z] of [[-1.4, -1.45], [1.4, -1.45], [-1.45, 1.45], [1.45, 1.45]]) lamp(b, x, z);
-  return { geo: b.build(), top: 1.9, smoke: [] };
+  return { geo: b.build(), top: 3.0, smoke: [] };
 }
