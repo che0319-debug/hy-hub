@@ -2,7 +2,7 @@ import { Link } from 'react-router-dom'
 
 export default function Line950157() {
   return (
-    <div style={{ margin: "-1.5rem", height: "calc(100vh - 3rem)", display: "flex", flexDirection: "column" }}>
+    <div style={{ margin: "-1.5rem", height: "calc(100vh - var(--hy-topbar, 3rem))", display: "flex", flexDirection: "column" }}>
       <div style={{ padding: "4px 12px", background: "white", borderBottom: "1px solid #e2e8f0", display: "flex", justifyContent: "flex-end", flexShrink: 0 }}>
         <Link to="/agent/950157" style={{ display: "flex", alignItems: "center", gap: 4, fontSize: 11, color: "#64748b", textDecoration: "none" }}>
           ⚙ 人設
