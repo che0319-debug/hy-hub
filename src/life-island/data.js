@@ -40,17 +40,18 @@ export const CENTRAL_ISLAND = {
 
 // 五位 Agent。展示階段全部先在中央島活動，之後各自搬到自己的島。
 // status：wait / ai / you / done / bad。zone：平常活動的建築區。status 是 you 或 bad 的會停在原地等你。
+// board：該 Bot 專屬看板（待辦）。對話功能之後再建。
 // doing／last 目前是範例文字，等資料契約定案後換成真資料。
 export const FIGURES = [
-  { id: 'atlas', name: 'Atlas', kind: 'atlas', status: 'ai', zone: 'dispatch', role: '中央島隊長（主 Grok Bot）', chat: null,
+  { id: 'atlas', name: 'Atlas', kind: 'atlas', status: 'ai', zone: 'dispatch', role: '中央島隊長（主 Grok Bot）', board: null,
     doing: '分派今天的工作包給各 Bot', last: '早上整理了晨會待辦' },
-  { id: 'xiaoyin', name: '小因', kind: 'xiaoyin', status: 'wait', zone: 'syscenter', role: '家庭島隊長', chat: '/line/family',
+  { id: 'xiaoyin', name: '小因', kind: 'xiaoyin', status: 'wait', zone: 'syscenter', role: '家庭島隊長', board: '/line/family',
     doing: '追蹤家裡這週的行程', last: '更新了小孩接送時間' },
-  { id: 'sam', name: 'Sam', kind: 'sam', status: 'you', zone: 'today', role: '副業島隊長', chat: '/line/sam',
+  { id: 'sam', name: 'Sam', kind: 'sam', status: 'you', zone: 'today', role: '副業島隊長', board: '/line/sam',
     doing: '等你確認一張補件卡', last: '整理了手機店的庫存' },
-  { id: 'p950157', name: '950157', kind: 'p950157', status: 'done', zone: 'meeting', role: '本業島隊長（ITRI 工作分身）', chat: '/line/950157',
+  { id: 'p950157', name: '950157', kind: 'p950157', status: 'done', zone: 'meeting', role: '本業島隊長（ITRI 工作分身）', board: '/line/950157',
     doing: '剛完成月報初稿', last: '整理了研究院的待辦' },
-  { id: 'hy', name: 'HY', kind: 'hy', status: 'bad', zone: 'syscenter', role: '人生島隊長', chat: '/line/hy',
+  { id: 'hy', name: 'HY', kind: 'hy', status: 'bad', zone: 'syscenter', role: '人生島隊長', board: '/line/hy',
     doing: '有一項任務逾期，需要處理', last: '更新了人生目標進度' },
 ];
 

@@ -82,3 +82,5 @@
 /* 世界撐滿內容區（抵銷外層 padding） */
 .li-page { margin: 0 -24px -24px -24px; }
 .li-page .li-stage { border-radius: 0; }
+
+.li-btn-soon { border-style: dashed !important; color: var(--hy-muted); background: transparent; cursor: not-allowed; }

@@ -81,8 +81,9 @@ function BotCard({ f, onClose }) {
       <p className="hy-lede" style={{ marginTop: 12, fontSize: 12 }}>內容目前是範例，資料接上後會換成真的。</p>
       <div className="li-links">
         {f.status === 'you' && <Link to="/bot-office" className="hy-btn is-primary" style={btn}>去確認</Link>}
-        {f.chat && <Link to={f.chat} className={'hy-btn' + (f.status === 'you' ? '' : ' is-primary')} style={btn}>開啟對話</Link>}
-        <Link to="/bot-office" className="hy-btn" style={btn}>看他的待辦</Link>
+        <Link to="/bot-office" className="hy-btn" style={btn}>專案</Link>
+        {f.board && <Link to={f.board} className="hy-btn" style={btn}>待辦</Link>}
+        <button type="button" className="hy-btn li-btn-soon" disabled title="對話功能建置中">對話（建置中）</button>
       </div>
     </section>
   )
