@@ -15,6 +15,9 @@ import { makeMeeting } from './meeting.js';
 import { makeSysCenter } from './syscenter.js';
 import { makeHQ } from './hq.js';
 import { makeLab } from './lab.js';
+import { makeBrain } from './brain.js';
+import { makeDojo } from './dojo.js';
+import { makeBoard } from './board.js';
 import { makeDistTexture, makeWater } from './water.js';
 import { ISLANDS_DATA, FIGURES, STATUS_INFO } from './data.js';
 
@@ -29,16 +32,15 @@ const CFG = { az: 0.62 };
 const S3 = Math.sqrt(3), WATER_Y = -0.5;
 
 // ---------- world definition ----------
-const KEYPOS = { today: [0, 0], dispatch: [1, -1], meeting: [2, 1], syscenter: [-1, 0], hq: [0, 0], lab: [1, 0] };
-const ISL_CFG = { central: { cityR: 13, seed: 3, col: '#d9a441' }, biz: { cityR: 8, seed: 4, col: '#5a8fe0' } };
+const KEYPOS = { today: [0, 0], dispatch: [1, -1], meeting: [2, 1], syscenter: [-1, 0], hq: [0, 0], lab: [1, 0], brain: [0, 0], dojo: [1, 0], board: [0, 1] };
+const ISL_CFG = { central: { cityR: 13, seed: 3, col: '#d9a441' }, biz: { cityR: 8, seed: 4, col: '#5a8fe0' }, life: { cityR: 8, seed: 6, col: '#b06ad8' } };
 const ISLANDS = ISLANDS_DATA.map(d => ({ id: d.id, name: d.name, sub: d.sub, c: d.c, ...ISL_CFG[d.id],
   bs: d.buildings.map(b => ({ id: b.id, title: b.title, type: b.type, form: b.form, height: b.height * 1.15 })),
   keys: d.buildings.map(b => ({ id: b.id, bi: KEYPOS[b.id][0], bj: KEYPOS[b.id][1], park: false })) }));
-const BESPOKE = ['plaza', 'dispatch', 'meeting', 'syscenter', 'hq', 'lab'];
+const BESPOKE = ['plaza', 'dispatch', 'meeting', 'syscenter', 'hq', 'lab', 'brain', 'dojo', 'sandtable'];
 const DECO = [
   { id: 'd1', deco: true, allPark: true, seed: 5, c: [27, 7], cityR: 3, bs: [{ id: 'd1b', title: '', type: 'system', form: 'lighthouse', height: 2.4 }], keys: [{ id: 'd1b', bi: 0, bj: 0, park: true }] },
   { id: 'd2', deco: true, allPark: true, seed: 7, c: [-3, -27], cityR: 3, bs: [{ id: 'd2b', title: '', type: 'business', form: 'tent', height: 1.5 }], keys: [{ id: 'd2b', bi: 0, bj: 0, park: true }] },
-  { id: 'd4', deco: true, allPark: true, turbine: true, seed: 11, c: [25, -22], cityR: 3, bs: [], keys: [] },
   { id: 'd5', deco: true, allPark: true, seed: 13, c: [-5, 27], cityR: 3, bs: [{ id: 'd5b', title: '', type: 'business', form: 'tent', height: 1.5 }], keys: [{ id: 'd5b', bi: 0, bj: 0, park: true }] },
 ];
 ISLANDS.push(...DECO);
@@ -225,7 +227,7 @@ for (const isl of ISLANDS) {
   cityIsland(isl);
   for (const bd of isl.bs) {
     const kb = (isl.keys || []).find(k => k.id === bd.id); if (!kb || kb.wx === undefined) continue;
-    const made = bd.form === 'scaffold' ? scaffold() : bd.form === 'plaza' ? makePlaza() : bd.form === 'dispatch' ? makeDispatch() : bd.form === 'meeting' ? makeMeeting() : bd.form === 'syscenter' ? makeSysCenter() : bd.form === 'hq' ? makeHQ() : bd.form === 'lab' ? makeLab() : makeBuilding(bd, bi2++ + 3), SC = BESPOKE.includes(bd.form) ? 1 : bd.form === 'tent' ? 2.3 : 3.2;
+    const made = bd.form === 'scaffold' ? scaffold() : bd.form === 'plaza' ? makePlaza() : bd.form === 'dispatch' ? makeDispatch() : bd.form === 'meeting' ? makeMeeting() : bd.form === 'syscenter' ? makeSysCenter() : bd.form === 'hq' ? makeHQ() : bd.form === 'lab' ? makeLab() : bd.form === 'brain' ? makeBrain() : bd.form === 'dojo' ? makeDojo() : bd.form === 'sandtable' ? makeBoard() : makeBuilding(bd, bi2++ + 3), SC = BESPOKE.includes(bd.form) ? 1 : bd.form === 'tent' ? 2.3 : 3.2;
     const g = new Group(), m = new Mesh(made.geo, matToon); m.castShadow = m.receiveShadow = true; g.add(m); m.userData.bid = bd.id; pickMeshes.push(m);
     g.position.set(kb.wx, 0, kb.wz); g.rotation.y = CAMAZ + (BESPOKE.includes(bd.form) ? 0 : 0.2 * (bi2 % 3 - 1)); g.scale.setScalar(SC);
     scene.add(g); bldList.push({ bd, isl, x: kb.wx, z: kb.wz, top: made.top * SC, sc: SC });

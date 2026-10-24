@@ -58,7 +58,31 @@ export const BUSINESS_ISLAND = {
   ],
 };
 
-export const ISLANDS_DATA = [CENTRAL_ISLAND, BUSINESS_ISLAND];
+export const LIFE_ISLAND = {
+  id: 'life', name: '人生島', sub: 'HY', c: [14, -26], R: 3,
+  buildings: [
+    {
+      id: 'brain', title: '大腦圖書館', type: 'system', form: 'brain', height: 3.0, q: 0, r: 0,
+      kind: '功能', agent: 'HY', status: '待補',
+      blurb: '第二大腦：筆記、文獻與想法的收納處。',
+      links: [], note: '還沒有對應頁面，等第二大腦建好再連結。',
+    },
+    {
+      id: 'dojo', title: '人生修練館', type: 'personal', form: 'dojo', height: 2.0, q: 1, r: 0,
+      kind: '功能', agent: 'HY', status: '現有',
+      blurb: '人生目標與習慣：修練的地方。',
+      links: [{ label: '開啟人生目標', to: '/goals' }],
+    },
+    {
+      id: 'board', title: '戰略盤', type: 'system', form: 'sandtable', height: 1.5, q: 0, r: 1,
+      kind: '功能', agent: 'HY', status: '現有',
+      blurb: '長期策略：棋盤上推演下一步。',
+      links: [{ label: '開啟策略', to: '/strategy' }],
+    },
+  ],
+}
+
+export const ISLANDS_DATA = [CENTRAL_ISLAND, BUSINESS_ISLAND, LIFE_ISLAND];
 export const ALL_BUILDINGS = ISLANDS_DATA.flatMap(isl => isl.buildings.map(b => ({ ...b, islandId: isl.id, islandName: isl.name })));
 
 // 五位 Agent。展示階段全部先在中央島活動，之後各自搬到自己的島。
@@ -74,7 +98,7 @@ export const FIGURES = [
     doing: '等你確認一張補件卡', last: '整理了手機店的庫存' },
   { id: 'p950157', island: 'biz', name: '950157', kind: 'p950157', status: 'done', zone: 'hq', role: '本業島隊長（ITRI 工作分身）', board: '/line/950157',
     doing: '剛完成月報初稿', last: '整理了研究院的待辦' },
-  { id: 'hy', island: 'central', name: 'HY', kind: 'hy', status: 'bad', zone: 'syscenter', role: '人生島隊長', board: '/line/hy',
+  { id: 'hy', island: 'life', name: 'HY', kind: 'hy', status: 'bad', zone: 'dojo', role: '人生島隊長', board: '/line/hy',
     doing: '有一項任務逾期，需要處理', last: '更新了人生目標進度' },
 ];
 
