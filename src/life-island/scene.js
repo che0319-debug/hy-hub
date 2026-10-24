@@ -241,15 +241,60 @@ for (const k of ['round', 'pine', 'cherry', 'bush', 'berry', 'rock', 'tuft']) if
 
 // figures
 const FS = 1.7, bots = [];
+// 小人走動：沿著馬路格子慢慢逛，活動範圍以各自的建築區為中心；待你確認／異常的停在原地
+const central = ISLANDS[0];
+const roadCells = [...central.cells.values()].filter(c => isRoadAt(c.i, c.j));
+const roadSet = new Set(roadCells.map(c => c.i + ',' + c.j));
+const nbrsOf = (i, j) => [[1, 0], [-1, 0], [0, 1], [0, -1]].filter(([a, b]) => roadSet.has((i + a) + ',' + (j + b))).map(([a, b]) => [i + a, j + b]);
+const nearestRoad = (x, z) => roadCells.reduce((best, c) => { const d = Math.hypot(c.i - x, c.j - z); return !best || d < best.d ? { c, d } : best; }, null).c;
 {
-  const pz = bldList.find(b => b.bd.id === 'today'), ca = Math.cos(CAMAZ), sa = Math.sin(CAMAZ);
+  const ca = Math.cos(CAMAZ), sa = Math.sin(CAMAZ);
   FIGS.forEach((f, i) => {
+    const zb = bldList.find(b => b.bd.id === f.zone), stay = f.status === 'you' || f.status === 'bad';
+    // 起點：建築前方（朝鏡頭那側）最近的馬路格；停在原地的人各自錯開
+    const front = { x: zb.x + (1.9 + (i % 2) * 0.7) * sa + (i - 2) * 0.5 * ca, z: zb.z + (1.9 + (i % 2) * 0.7) * ca - (i - 2) * 0.5 * sa };
+    const c0 = nearestRoad(front.x, front.z);
     const bot = makeBot(f.kind, matToon, matOL, f.status);
-    bot.root.position.set(pz.x + f.lx * ca + f.lz * sa, 0.02, pz.z - f.lx * sa + f.lz * ca);
-    bot.root.rotation.y = CAMAZ; bot.root.scale.setScalar(FS);
-    scene.add(bot.root); bots.push({ bot, phase: i * 1.3 });
-    labelPts.push({ kind: 'bot', id: f.id, name: f.name, status: f.status, idx: i, x: bot.root.position.x, y: 0.02 + 0.82 * FS, z: bot.root.position.z });
+    bot.root.position.set(c0.i, 0.02, c0.j); bot.root.rotation.y = CAMAZ; bot.root.scale.setScalar(FS);
+    bot.mesh.userData.bid = 'bot:' + f.id; pickMeshes.push(bot.mesh);
+    scene.add(bot.root);
+    const lp = { kind: 'bot', id: f.id, name: f.name, status: f.status, idx: i, x: c0.i, y: 0.02 + 0.82 * FS, z: c0.j };
+    labelPts.push(lp);
+    bots.push({ bot, f, lp, phase: i * 1.3, pos: [c0.i, c0.j], ci: c0.i, cj: c0.j, from: [c0.i, c0.j], to: null, t: 0, wait: 0.5 + i * 0.6, moving: false, stay,
+      zone: { x: zb.x, z: zb.z, r: 7 }, prev: null, rot: CAMAZ, ox: (i % 3 - 1) * 0.16, oz: ((i + 1) % 3 - 1) * 0.16, hello: false });
   });
+}
+function updateBots(dt, now) {
+  const occupied = new Set(bots.flatMap(b => [b.ci + ',' + b.cj, b.to ? b.to[0] + ',' + b.to[1] : null]).filter(Boolean));
+  for (const b of bots) {
+    const paused = b.stay || selected === 'bot:' + b.f.id;
+    if (!b.moving) {
+      b.wait -= dt;
+      if (!paused && b.wait <= 0) {
+        let opts = nbrsOf(b.ci, b.cj).filter(([a, c]) => !occupied.has(a + ',' + c));
+        if (opts.length) {
+          const inZone = opts.filter(([a, c]) => Math.hypot(a - b.zone.x, c - b.zone.z) <= b.zone.r);
+          if (inZone.length) opts = inZone; else opts.sort((p, q) => Math.hypot(p[0] - b.zone.x, p[1] - b.zone.z) - Math.hypot(q[0] - b.zone.x, q[1] - b.zone.z)).splice(1);
+          const fwd = opts.filter(([a, c]) => !b.prev || a !== b.prev[0] || c !== b.prev[1]);
+          const pickFrom = fwd.length ? fwd : opts, nx = pickFrom[(Math.random() * pickFrom.length) | 0];
+          b.to = nx; b.from = [b.ci, b.cj]; b.t = 0; b.moving = true; occupied.add(nx[0] + ',' + nx[1]);
+        } else b.wait = 0.8;
+      }
+    }
+    let heading = null;
+    if (b.moving) {
+      b.t += dt * 0.85; const k = Math.min(1, b.t);
+      b.pos = [b.from[0] + (b.to[0] - b.from[0]) * k, b.from[1] + (b.to[1] - b.from[1]) * k];
+      heading = Math.atan2(b.to[0] - b.from[0], b.to[1] - b.from[1]);
+      if (b.t >= 1) { b.prev = b.from; b.ci = b.to[0]; b.cj = b.to[1]; b.to = null; b.moving = false; b.wait = Math.random() < 0.45 ? 0.15 : 1.5 + Math.random() * 3; }
+    } else b.pos = [b.ci, b.cj];
+    const x = b.pos[0] + b.ox, z = b.pos[1] + b.oz;
+    b.bot.root.position.x = x; b.bot.root.position.z = z; b.lp.x = x; b.lp.z = z;
+    const want = heading !== null ? heading : CAMAZ; let d = ((want - b.rot + Math.PI) % (Math.PI * 2) + Math.PI * 2) % (Math.PI * 2) - Math.PI;
+    b.rot += d * Math.min(1, dt * 10); b.bot.root.rotation.y = b.rot;
+    b.hello = selected === 'bot:' + b.f.id;
+    animateBot(b.bot, now, b.phase, b.moving, b.hello);
+  }
 }
 
 // water
@@ -304,6 +349,8 @@ const hovRing = new Mesh(ringGeo, new MeshBasicMaterial({ color: 0xffffff, trans
 const bById = Object.fromEntries(bldList.map(b => [b.bd.id, b]));
 let selected = null, hovered = null;
 function placeRing(r, id) { const b = id && bById[id]; if (!b) { r.visible = false; return; } r.visible = true; r.position.set(b.x, 0.05, b.z); r.scale.setScalar(b.sc * 0.95); }
+const botById = Object.fromEntries(bots.map(b => [b.f.id, b]));
+function botOf(id) { return id && id.startsWith('bot:') ? botById[id.slice(4)] : null; }
 
 // ---------- labels (DOM) ----------
 const labels = labelPts.filter(p => p.kind !== 'fig' && !p.deco).map(p => {
@@ -311,6 +358,7 @@ const labels = labelPts.filter(p => p.kind !== 'fig' && !p.deco).map(p => {
   el.className = 'li-label ' + (p.kind === 'island' ? 'li-label-island' : p.kind === 'bot' ? 'li-label-bot' : 'li-label-bldg');
   if (p.kind === 'bot') { el.dataset.s = p.status; el.title = p.name + '：' + STATUS_INFO[p.status]; const dot = document.createElement('i'); el.appendChild(dot); el.appendChild(document.createTextNode(p.name)); const st = document.createElement('span'); st.textContent = '・' + STATUS_INFO[p.status]; el.appendChild(st); } else
   el.textContent = p.name;
+  if (p.kind === 'bot') { el.setAttribute('role', 'button'); el.tabIndex = 0; el.addEventListener('click', () => api.select('bot:' + p.id, true)); el.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); api.select('bot:' + p.id, true); } }); }
   if (p.kind === 'bldg') { el.setAttribute('role', 'button'); el.tabIndex = 0; el.addEventListener('click', () => api.select(p.id, true)); el.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); api.select(p.id, true); } }); }
   labelLayer.appendChild(el); return { p, el };
 });
@@ -345,7 +393,7 @@ function pick(ev) {
 el.addEventListener('pointerdown', e => { el.setPointerCapture(e.pointerId); ptrs.set(e.pointerId, { x: e.clientX, y: e.clientY }); dragMoved = 0; downAt = { x: e.clientX, y: e.clientY }; if (ptrs.size === 2) { const [a, b2] = [...ptrs.values()]; pinch0 = Math.hypot(a.x - b2.x, a.y - b2.y); } });
 el.addEventListener('pointermove', e => {
   const p = ptrs.get(e.pointerId);
-  if (!p) { const id = pick(e); if (id !== hovered) { hovered = id; placeRing(hovRing, id === selected ? null : id); el.style.cursor = id ? 'pointer' : 'grab'; } return; }
+  if (!p) { const id = pick(e); if (id !== hovered) { hovered = id; placeRing(hovRing, id === selected || botOf(id) ? null : id); el.style.cursor = id ? 'pointer' : 'grab'; } return; }
   const dx = e.clientX - p.x, dy = e.clientY - p.y; dragMoved += Math.abs(dx) + Math.abs(dy); p.x = e.clientX; p.y = e.clientY;
   if (ptrs.size === 2) {
     const [a, b2] = [...ptrs.values()], d = Math.hypot(a.x - b2.x, a.y - b2.y); if (pinch0) { target.dist = MathUtils.clamp(target.dist * pinch0 / d, ...LIM.dist); } pinch0 = d;
@@ -370,7 +418,7 @@ function frame(now) {
   for (const key of ['az', 'el', 'dist', 'tx', 'ty', 'tz']) view[key] += (target[key] - view[key]) * k;
   placeCamera();
   water.material.uniforms.uTime.value = 3.2 + (now - t0) / 1000 * 0.6;
-  for (const b of bots) animateBot(b.bot, (now - t0) / 1000, b.phase);
+  const dtb = Math.min(0.1, (now - (frame.lastB || now)) / 1000); frame.lastB = now; updateBots(dtb, (now - t0) / 1000);
   if (selRing.visible) selRing.material.opacity = 0.75 + 0.2 * Math.sin(now / 260);
   renderer.render(scene, camera);
   const showB = view.dist < 100;
@@ -378,10 +426,11 @@ function frame(now) {
     if (p.kind === 'bldg' && !showB) { de.style.display = 'none'; continue; }
     tmp.set(p.x, p.y, p.z).project(camera);
     if (tmp.z > 1) { de.style.display = 'none'; continue; }
-    const oy = p.kind === 'bot' ? -26 * (p.idx % (view.dist > 45 ? 3 : 2)) : 0;
+    const oy = p.kind === 'bot' ? -26 * (view.dist > 45 ? [0, 1, 2, 0, 3][p.idx % 5] : p.idx % 2) : 0;
     if (p.kind === 'bot') de.classList.toggle('is-near', view.dist < 30);
     de.style.display = ''; de.style.transform = `translate(${(tmp.x * 0.5 + 0.5) * W}px, ${(-tmp.y * 0.5 + 0.5) * H + oy}px) translate(-50%, -100%)`;
     if (p.kind === 'bldg') de.classList.toggle('is-sel', p.id === selected);
+    if (p.kind === 'bot') de.classList.toggle('is-sel', 'bot:' + p.id === selected);
   }
 }
 placeCamera(); raf = requestAnimationFrame(frame);
@@ -390,6 +439,7 @@ opts.onReady && opts.onReady();
 const api = {
   select(id, fromUser) {
     selected = id || null; placeRing(selRing, selected); if (selected) hovRing.visible = false;
+    if (botOf(selected)) { selRing.visible = false; const bo = botOf(selected); target.tx = bo.pos[0]; target.tz = bo.pos[1]; target.dist = Math.min(target.dist, 26); }
     if (selected && bById[selected]) { const b = bById[selected]; target.tx = b.x * 0.6; target.tz = b.z * 0.6 + 1.5; target.dist = Math.min(target.dist, 52); }
     if (fromUser) opts.onSelect && opts.onSelect(selected);
   },
