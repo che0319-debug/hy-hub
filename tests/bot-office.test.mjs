@@ -110,3 +110,14 @@ test('index errors other than not-ready stay errors', async () => {
     e => e.kind === (status === 401 ? 'auth' : 'error'))
   }
 })
+
+test('v1 question mapping keeps attribution distinct from verified answer source', () => {
+  const out = mapOffice({ ...state, decisions: [{ id: 'v1', project: 'a', status: 'open', kind: 'intake', revision: 3,
+    questions: [{ no: 1, q: '內部流程？', why: '先對齊', options: ['A', 'B'], recommend: 'A', answer: 'A', answered_by: 'hy',
+      answer_source: 'proxy', basis: '既有紀錄', confidence: 'high', confirmed_by: 'hy' }], future: 'ignored' }] }, index)
+  assert.equal(out.decisions[0].revision, 3)
+  assert.equal(out.decisions[0].questions[0].answerSource, 'proxy')
+  assert.equal(out.decisions[0].questions[0].answeredBy, 'hy')
+  assert.equal(out.decisions[0].questions[0].confirmed, true)
+  assert.equal('future' in out.decisions[0], false)
+})
