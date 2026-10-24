@@ -14,7 +14,7 @@ const MAP_ISLANDS = [
   { id: 'biz', name: '本業島', x: 20, y: 34, built: true },
   { id: 'life', name: '人生島', x: 80, y: 30, built: true },
   { id: 'family', name: '家庭島', x: 24, y: 80, built: true },
-  { id: 'side', name: '副業島', x: 78, y: 80, built: false },
+  { id: 'side', name: '副業島', x: 78, y: 80, built: true },
 ]
 const FIG_BY_ID = Object.fromEntries(FIGURES.map(f => [f.id, f]))
 

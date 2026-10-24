@@ -100,7 +100,35 @@ export const FAMILY_ISLAND = {
   ],
 }
 
-export const ISLANDS_DATA = [CENTRAL_ISLAND, BUSINESS_ISLAND, LIFE_ISLAND, FAMILY_ISLAND];
+export const SIDE_ISLAND = {
+  id: 'side', name: '副業島', sub: 'Sam', c: [28, 6], R: 3,
+  buildings: [
+    {
+      id: 'sidehq', title: '副業總部', type: 'business', form: 'sidehq', height: 3.3, q: 0, r: 0,
+      kind: '分身總部', agent: 'Sam', status: '現有',
+      blurb: 'Sam（副業分身）的控制中心：副業待辦、補件卡、各事業進度。',
+      links: [{ label: '開啟 Sam 看板', to: '/line/sam' }],
+    },
+    {
+      id: 'phone', title: '手機店', type: 'business', form: 'phoneshop', height: 1.9, q: 1, r: 0,
+      kind: '事業', agent: 'Sam', status: '待補',
+      blurb: '手機店：庫存、訂單與補件。', links: [{ label: '開啟 Sam 看板', to: '/line/sam' }],
+      note: '目前先放在 Sam 看板，之後可拆成專屬頁。',
+    },
+    {
+      id: 'cuyu', title: '川嶼甜點店', type: 'business', form: 'cuyu', height: 1.9, q: 0, r: 1,
+      kind: '事業', agent: 'Sam', status: '待補',
+      blurb: '甜點事業（建設中）。', links: [], note: '建設中，還沒有對應頁面。',
+    },
+    {
+      id: 'chuan', title: '川泱購物', type: 'business', form: 'chuan', height: 2.6, q: 1, r: 1,
+      kind: '事業', agent: 'Sam', status: '待補',
+      blurb: '購物事業（建設中）。', links: [], note: '建設中，還沒有對應頁面。',
+    },
+  ],
+}
+
+export const ISLANDS_DATA = [CENTRAL_ISLAND, BUSINESS_ISLAND, LIFE_ISLAND, FAMILY_ISLAND, SIDE_ISLAND];
 export const ALL_BUILDINGS = ISLANDS_DATA.flatMap(isl => isl.buildings.map(b => ({ ...b, islandId: isl.id, islandName: isl.name })));
 
 // 五位 Agent。展示階段全部先在中央島活動，之後各自搬到自己的島。
@@ -112,7 +140,7 @@ export const FIGURES = [
     doing: '分派今天的工作包給各 Bot', last: '早上整理了晨會待辦' },
   { id: 'xiaoyin', island: 'family', name: '小因', kind: 'xiaoyin', status: 'wait', zone: 'home', role: '家庭島隊長', board: '/line/family',
     doing: '追蹤家裡這週的行程', last: '更新了小孩接送時間' },
-  { id: 'sam', island: 'central', name: 'Sam', kind: 'sam', status: 'you', zone: 'today', role: '副業島隊長', board: '/line/sam',
+  { id: 'sam', island: 'side', name: 'Sam', kind: 'sam', status: 'you', zone: 'sidehq', role: '副業島隊長', board: '/line/sam',
     doing: '等你確認一張補件卡', last: '整理了手機店的庫存' },
   { id: 'p950157', island: 'biz', name: '950157', kind: 'p950157', status: 'done', zone: 'hq', role: '本業島隊長（ITRI 工作分身）', board: '/line/950157',
     doing: '剛完成月報初稿', last: '整理了研究院的待辦' },
