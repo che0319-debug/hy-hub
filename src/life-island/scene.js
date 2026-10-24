@@ -23,7 +23,7 @@ const CFG = { az: 0.62 };
 const S3 = Math.sqrt(3), WATER_Y = -0.5;
 
 // ---------- world definition ----------
-const KEYPOS = { today: [0, 0], dispatch: [1, -1], meeting: [0, 1], syscenter: [-1, 0] };
+const KEYPOS = { today: [0, 0], dispatch: [1, -1], meeting: [1, 1], syscenter: [-1, 0] };
 const ISLANDS = [{ id: CENTRAL_ISLAND.id, name: CENTRAL_ISLAND.name, sub: CENTRAL_ISLAND.sub, c: [0, 0], cityR: 13, seed: 3, col: '#d9a441',
   bs: CENTRAL_ISLAND.buildings.map(b => ({ id: b.id, title: b.title, type: b.type, form: b.form, height: b.height * 1.15 })),
   keys: CENTRAL_ISLAND.buildings.map(b => ({ id: b.id, bi: KEYPOS[b.id][0], bj: KEYPOS[b.id][1], park: b.id === 'meeting' })) }];
@@ -170,7 +170,7 @@ function cityIsland(isl) {
     if (kb) continue; // 主建築街區：周邊留給主建築與少量小樓
     // 非主建築街區：只做少量低矮小房子與造景，主建築周圍留空給人偶
     const r0 = vnoise(bi * 2.3 + seed * 5, bj * 1.9);
-    const nb = r0 > 0.7 ? 2 : r0 > 0.38 ? 1 : 0;
+    const nb = r0 > 0.86 ? 2 : r0 > 0.68 ? 1 : 0;
     const spots = [[-0.7, -0.7], [0.7, 0.7], [0.7, -0.7], [-0.7, 0.7]];
     for (let q = 0; q < nb; q++) {
       const [sx, sz] = spots[(q + ((bi + bj + 8) % 4)) % 4]; if (!has(bi * 4 + Math.round(sx * 1.4), bj * 4 + Math.round(sz * 1.4))) continue;
@@ -218,12 +218,12 @@ for (const isl of ISLANDS) {
   cityIsland(isl);
   for (const bd of isl.bs) {
     const kb = (isl.keys || []).find(k => k.id === bd.id); if (!kb || kb.wx === undefined) continue;
-    const made = bd.form === 'scaffold' ? scaffold() : makeBuilding(bd, bi2++ + 3), SC = bd.form === 'tent' ? 1.5 : 1.7;
+    const made = bd.form === 'scaffold' ? scaffold() : makeBuilding(bd, bi2++ + 3), SC = bd.form === 'tent' ? 2.3 : 3.2;
     const g = new Group(), m = new Mesh(made.geo, matToon); m.castShadow = m.receiveShadow = true; g.add(m); m.userData.bid = bd.id; pickMeshes.push(m);
     g.position.set(kb.wx, 0, kb.wz); g.rotation.y = CAMAZ + 0.2 * (bi2 % 3 - 1); g.scale.setScalar(SC);
     scene.add(g); bldList.push({ bd, isl, x: kb.wx, z: kb.wz, top: made.top * SC, sc: SC });
     // 周圍的人行道小物
-    for (let k = 0; k < 4; k++) place('round', kb.wx + (k % 2 ? 1.25 : -1.25), kb.wz + (k < 2 ? 1.2 : -1.2), 0.55);
+    for (let k = 0; k < 4; k++) place('round', kb.wx + (k % 2 ? 1.7 : -1.7), kb.wz + (k < 2 ? 1.7 : -1.7), 0.55);
     labelPts.push({ kind: 'bldg', id: bd.id, name: bd.title, type: bd.type, flag: !!bd.flag, island: isl.id, x: kb.wx, y: made.top * SC + 0.2, z: kb.wz, deco: !!isl.deco });
   }
 }
@@ -238,7 +238,7 @@ for (const k of ['round', 'pine', 'cherry', 'bush', 'berry', 'rock', 'tuft']) if
 // figures
 const FS = 2.1;
 for (const f of FIGS) {
-  const w = makeWalker(matToon, matOL, TRIBE_COL[f.tribe]); const x = 2.2 + f.dx, z = 1.6 + f.dz;
+  const w = makeWalker(matToon, matOL, TRIBE_COL[f.tribe]); const x = -1.5 + f.dx, z = 2.0 + f.dz;
   w.root.position.set(x, 0.02, z); w.root.rotation.y = CAMAZ + 0.3; w.root.scale.setScalar(FS);
   if (f.wave) { w.armR.rotation.z = -2.5; }
   scene.add(w.root);
