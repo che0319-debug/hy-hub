@@ -1,11 +1,12 @@
 import { NavLink } from 'react-router-dom'
 import {
   Home, Bot,
-  MessageSquare, Settings, Target, LayoutDashboard, Boxes, Users
+  MessageSquare, Settings, Target, LayoutDashboard, Boxes, Users, Map
 } from 'lucide-react'
 
 const navItems = [
   { to: '/',           label: '首頁',     icon: Home },
+  { to: '/life-island', label: 'HY Life 島', icon: Map },
   { to: '/helpers',    label: '我的小幫手', icon: Bot },
   { to: '/ai-work-v5', label: 'AI Office', icon: LayoutDashboard },
   { to: '/bot-office', label: 'Bot Office', icon: LayoutDashboard },
