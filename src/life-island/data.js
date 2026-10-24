@@ -82,7 +82,25 @@ export const LIFE_ISLAND = {
   ],
 }
 
-export const ISLANDS_DATA = [CENTRAL_ISLAND, BUSINESS_ISLAND, LIFE_ISLAND];
+export const FAMILY_ISLAND = {
+  id: 'family', name: '家庭島', sub: '小因', c: [-14, 26], R: 3,
+  buildings: [
+    {
+      id: 'home', title: '家', type: 'personal', form: 'home', height: 2.2, q: 0, r: 0,
+      kind: '分身總部', agent: '小因', status: '現有',
+      blurb: '小因（家庭分身）的控制中心：家裡的行程、接送與待辦。',
+      links: [{ label: '開啟小因看板', to: '/line/family' }],
+    },
+    {
+      id: 'gym', title: '健身房', type: 'personal', form: 'gym', height: 2.5, q: 1, r: 0,
+      kind: '功能', agent: '小因', status: '待補',
+      blurb: '運動與健康習慣的紀錄與規劃。',
+      links: [], note: '還沒有對應頁面，先放著。',
+    },
+  ],
+}
+
+export const ISLANDS_DATA = [CENTRAL_ISLAND, BUSINESS_ISLAND, LIFE_ISLAND, FAMILY_ISLAND];
 export const ALL_BUILDINGS = ISLANDS_DATA.flatMap(isl => isl.buildings.map(b => ({ ...b, islandId: isl.id, islandName: isl.name })));
 
 // 五位 Agent。展示階段全部先在中央島活動，之後各自搬到自己的島。
@@ -92,7 +110,7 @@ export const ALL_BUILDINGS = ISLANDS_DATA.flatMap(isl => isl.buildings.map(b => 
 export const FIGURES = [
   { id: 'atlas', island: 'central', name: 'Atlas', kind: 'atlas', status: 'ai', zone: 'dispatch', role: '中央島隊長（主 Grok Bot）', board: null,
     doing: '分派今天的工作包給各 Bot', last: '早上整理了晨會待辦' },
-  { id: 'xiaoyin', island: 'central', name: '小因', kind: 'xiaoyin', status: 'wait', zone: 'syscenter', role: '家庭島隊長', board: '/line/family',
+  { id: 'xiaoyin', island: 'family', name: '小因', kind: 'xiaoyin', status: 'wait', zone: 'home', role: '家庭島隊長', board: '/line/family',
     doing: '追蹤家裡這週的行程', last: '更新了小孩接送時間' },
   { id: 'sam', island: 'central', name: 'Sam', kind: 'sam', status: 'you', zone: 'today', role: '副業島隊長', board: '/line/sam',
     doing: '等你確認一張補件卡', last: '整理了手機店的庫存' },
