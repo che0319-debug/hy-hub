@@ -248,6 +248,7 @@ const FS = 1.7, bots = [];
     bot.root.position.set(pz.x + f.lx * ca + f.lz * sa, 0.02, pz.z - f.lx * sa + f.lz * ca);
     bot.root.rotation.y = CAMAZ; bot.root.scale.setScalar(FS);
     scene.add(bot.root); bots.push({ bot, phase: i * 1.3 });
+    labelPts.push({ kind: 'bot', id: f.id, name: f.name, status: f.status, idx: i, x: bot.root.position.x, y: 0.02 + 0.82 * FS, z: bot.root.position.z });
   });
 }
 
@@ -307,7 +308,8 @@ function placeRing(r, id) { const b = id && bById[id]; if (!b) { r.visible = fal
 // ---------- labels (DOM) ----------
 const labels = labelPts.filter(p => p.kind !== 'fig' && !p.deco).map(p => {
   const el = document.createElement('div');
-  el.className = 'li-label ' + (p.kind === 'island' ? 'li-label-island' : 'li-label-bldg');
+  el.className = 'li-label ' + (p.kind === 'island' ? 'li-label-island' : p.kind === 'bot' ? 'li-label-bot' : 'li-label-bldg');
+  if (p.kind === 'bot') { el.dataset.s = p.status; const dot = document.createElement('i'); el.appendChild(dot); el.appendChild(document.createTextNode(p.name)); } else
   el.textContent = p.name;
   if (p.kind === 'bldg') { el.setAttribute('role', 'button'); el.tabIndex = 0; el.addEventListener('click', () => api.select(p.id, true)); el.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); api.select(p.id, true); } }); }
   labelLayer.appendChild(el); return { p, el };
@@ -376,7 +378,8 @@ function frame(now) {
     if (p.kind === 'bldg' && !showB) { de.style.display = 'none'; continue; }
     tmp.set(p.x, p.y, p.z).project(camera);
     if (tmp.z > 1) { de.style.display = 'none'; continue; }
-    de.style.display = ''; de.style.transform = `translate(${(tmp.x * 0.5 + 0.5) * W}px, ${(-tmp.y * 0.5 + 0.5) * H}px) translate(-50%, -100%)`;
+    const oy = p.kind === 'bot' ? -26 * (p.idx % (view.dist > 45 ? 3 : 2)) : 0;
+    de.style.display = ''; de.style.transform = `translate(${(tmp.x * 0.5 + 0.5) * W}px, ${(-tmp.y * 0.5 + 0.5) * H + oy}px) translate(-50%, -100%)`;
     if (p.kind === 'bldg') de.classList.toggle('is-sel', p.id === selected);
   }
 }
