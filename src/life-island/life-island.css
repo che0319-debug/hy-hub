@@ -50,6 +50,7 @@
 .li-page { padding-top: 0 !important; }
 .li-sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
 .li-page .li-stage { height: calc(100vh - 48px); min-height: 520px; max-height: none; border-radius: 14px; }
+@media (min-width: 768px) { .li-page .li-stage { height: 100vh; border-radius: 0; } }
 .li-hud { position: absolute; left: 12px; right: 12px; top: 12px; z-index: 4; display: flex; align-items: flex-start; gap: 10px; pointer-events: none; }
 .li-hud > * { pointer-events: auto; }
 .li-hud .li-status { margin: 0; flex: 1; }
@@ -97,7 +98,7 @@
 @media (max-width: 640px) { .li-map, .li-map-mini { bottom: 12px; } }
 
 /* 天空小標牌：日期、星期、新竹時間與天氣 */
-.li-sign { position: absolute; top: 12px; right: 118px; z-index: 4; display: flex; flex-direction: column; align-items: center; gap: 1px; padding: 6px 14px 7px; border-radius: 12px; background: #fff; border: 1px solid var(--hy-line, #dfe4ec); box-shadow: 0 2px 8px rgba(20, 40, 80, .12); pointer-events: none; line-height: 1.25; }
+.li-sign { position: absolute; top: 12px; right: 12px; z-index: 4; display: flex; flex-direction: column; align-items: center; gap: 1px; padding: 6px 14px 7px; border-radius: 12px; background: #fff; border: 1px solid var(--hy-line, #dfe4ec); box-shadow: 0 2px 8px rgba(20, 40, 80, .12); pointer-events: none; line-height: 1.25; }
 .li-sign::before, .li-sign::after { content: ''; position: absolute; top: -9px; width: 2px; height: 9px; background: #8a6a4a; }
 .li-sign::before { left: 16px; } .li-sign::after { right: 16px; }
 .li-sign-d { font-size: 15px; font-weight: 700; color: var(--hy-text, #1c2433); }
@@ -105,3 +106,23 @@
 .li-sign.is-night { background: var(--hy-header, #15213b); border-color: rgba(255, 255, 255, .15); }
 .li-sign.is-night .li-sign-d { color: #fff; } .li-sign.is-night .li-sign-t { color: #b9c6e0; }
 @media (max-width: 640px) { .li-sign { top: 64px; right: 12px; } }
+
+/* 頂欄展開面板：待辦清單、今日行程 */
+.li-caret { width: 8px; height: 8px; margin-left: 2px; border-right: 2px solid currentColor; border-bottom: 2px solid currentColor; transform: translateY(-2px) rotate(45deg); transition: transform .15s; }
+.li-chip[aria-expanded="true"] .li-caret { transform: translateY(1px) rotate(-135deg); }
+.li-chip[aria-expanded="true"] { box-shadow: 0 0 0 2px #14202a33, 0 1px 6px rgba(14, 39, 51, .22); }
+.li-chip-next { max-width: 260px; } .li-next-t { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
+.li-panel { position: absolute; left: 12px; top: 68px; z-index: 6; width: min(460px, calc(100% - 24px)); max-height: min(58vh, 480px); overflow: auto; box-shadow: 0 8px 28px rgba(14, 39, 51, .28); }
+.li-panel-sub { font-size: 13px; font-weight: 400; color: var(--hy-muted, #5d6b82); margin-left: 6px; }
+.li-rows { list-style: none; margin: 10px 0 0; padding: 0; display: grid; gap: 2px; }
+.li-rows li { display: flex; align-items: center; gap: 12px; min-height: 44px; padding: 6px 8px; border-radius: 10px; font-size: 15px; }
+.li-rows li + li { border-top: 1px solid var(--hy-line, #e3e8ef); border-radius: 0; }
+.li-row-main { flex: 1; min-width: 0; overflow-wrap: anywhere; }
+.li-row-aux { flex: none; font-size: 13px; font-variant-numeric: tabular-nums; color: var(--hy-muted, #5d6b82); }
+.li-rows[data-x] { }
+.li-rows li[data-c="bad"] .li-row-main, .li-rows li[data-c="bad"] .li-row-aux { color: var(--hy-bad); }
+.li-rows li[data-c="today"] .li-row-main, .li-rows li[data-c="today"] .li-row-aux { color: var(--hy-ai); font-weight: 600; }
+.li-rows-t li { justify-content: flex-start; } .li-rows-t .li-row-aux { width: 46px; }
+.li-rows-t li[data-past="1"] { opacity: .5; }
+.li-rows-t li[data-next="1"] { background: var(--hy-ai-bg, #e6eefc); border-radius: 10px; font-weight: 600; }
+@media (max-width: 640px) { .li-panel { top: 124px; } .li-chip-next { max-width: 100%; } }

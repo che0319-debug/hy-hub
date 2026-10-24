@@ -4,6 +4,7 @@ import '../../public/hy-ui/hy-ui.css'
 import '../life-island/life-island.css'
 import { ALL_BUILDINGS, FIGURES, STATUS_INFO, WORLD_STATUS } from '../life-island/data'
 import { createIslandScene, webglOk } from '../life-island/scene'
+import { useWorldInfo, formatDue } from '../life-island/useWorldInfo'
 
 const BUILDINGS = ALL_BUILDINGS
 const BY_ID = Object.fromEntries(BUILDINGS.map(b => [b.id, b]))
@@ -24,23 +25,20 @@ function useStored(key, init) {
   return [v, set]
 }
 
-function StatusBar({ onGo }) {
+function StatusBar({ onGo, info, panel, setPanel }) {
   const w = WORLD_STATUS
-  const [min, setMin] = useStored('li_status_min', false)
-  const worst = w.needsYou > 0 ? 'you' : (w.overdue > 0 || w.systemIssues > 0) ? 'bad' : 'done'
-  if (min) {
-    return (
-      <div className="li-status">
-        <button type="button" className="li-chip li-chip-mini" data-s={worst} onClick={() => setMin(false)} aria-label="展開今日狀態" aria-expanded="false">
-          <i className="li-dot" />今日狀態
-        </button>
-      </div>
-    )
-  }
+  const overdue = info.overdue ?? w.overdue, todayN = info.todayCount ?? w.today
+  const real = info.overdue !== null
+  const worst = w.needsYou > 0 ? 'you' : (overdue > 0 || w.systemIssues > 0) ? 'bad' : 'done'
+  const toggle = k => setPanel(panel === k ? null : k)
+  const nextText = info.schedFailed ? '行程讀取失敗' : info.sched === null ? '行程載入中' : info.next ? `下一個 ${info.next.start} ${info.next.title}` : info.sched.length ? '今天的行程結束了' : '今天沒有行程'
   return (
     <div className="li-status" role="group" aria-label="今日狀態">
-      <button type="button" className="li-chip" data-s={w.overdue > 0 ? 'bad' : 'wait'} onClick={() => onGo('today')}>
-        逾期 <b>{w.overdue}</b>・今日待辦 <b>{w.today}</b>
+      <button type="button" className="li-chip" data-panel="todo" data-s={overdue > 0 ? 'bad' : 'wait'} onClick={() => toggle('todo')} aria-expanded={panel === 'todo'} aria-controls="li-panel">
+        逾期 <b>{real ? overdue : '—'}</b>・今日待辦 <b>{real ? todayN : '—'}</b><i className="li-caret" aria-hidden="true" />
+      </button>
+      <button type="button" className="li-chip li-chip-next" data-panel="sched" data-s="wait" onClick={() => toggle('sched')} aria-expanded={panel === 'sched'} aria-controls="li-panel" title={nextText}>
+        <span className="li-next-t">{nextText}</span><i className="li-caret" aria-hidden="true" />
       </button>
       <button type="button" className="li-chip li-chip-you" data-s={w.needsYou > 0 ? 'you' : 'done'} onClick={() => onGo('dispatch')}>
         待你確認 <b>{w.needsYou}</b>
@@ -48,24 +46,56 @@ function StatusBar({ onGo }) {
       <button type="button" className="li-chip" data-s={w.systemIssues > 0 ? 'bad' : 'done'} onClick={() => onGo('syscenter')}>
         {w.systemIssues > 0 ? <>系統有異狀 <b>{w.systemIssues}</b></> : '系統正常'}
       </button>
-      <button type="button" className="li-mini-btn" onClick={() => setMin(true)} aria-label="收起今日狀態" title="收起">－</button>
       <details className="li-legend">
         <summary>狀態色說明</summary>
         <ul>
           {Object.entries(STATUS_INFO).map(([k, v]) => <li key={k}><i data-s={k} />{v}</li>)}
-          {WORLD_STATUS.demo && <li className="li-legend-note">上方狀態列的數字目前是範例，資料接上後會換成真的。</li>}
+          {WORLD_STATUS.demo && <li className="li-legend-note">「待你確認」和「系統」的數字目前是範例，資料接上後會換成真的。</li>}
         </ul>
       </details>
     </div>
   )
 }
 
+// 從頂欄往下展開的面板：待辦清單／今日行程
+function InfoPanel({ kind, info, onClose }) {
+  useEffect(() => {
+    const down = e => { if (!e.target.closest('.li-panel') && !e.target.closest('[data-panel]')) onClose() }
+    const key = e => { if (e.key === 'Escape') onClose() }
+    document.addEventListener('pointerdown', down); document.addEventListener('keydown', key)
+    return () => { document.removeEventListener('pointerdown', down); document.removeEventListener('keydown', key) }
+  }, [onClose])
+  const colorOf = due => { const d = String(due).replace(/\//g, '-'); return d < info.today ? 'bad' : d === info.today ? 'today' : 'wait' }
+  return (
+    <section className="hy-card li-panel" id="li-panel" aria-label={kind === 'todo' ? '待辦清單' : '今日行程'}>
+      <div className="hy-card-head">
+        <h2 className="hy-card-title">{kind === 'todo' ? '待辦清單' : '今日行程'} <span className="li-panel-sub">{kind === 'todo' ? '逾期＋今天＋近 3 天' : info.today.slice(5).replace('-', '/')}</span></h2>
+        <button type="button" className="hy-btn" onClick={onClose} aria-label="收起">收起</button>
+      </div>
+      {kind === 'todo' ? (
+        info.todoFailed ? <p className="hy-lede">待辦暫時讀取失敗，稍後會自動重試。</p>
+          : info.list === null ? <p className="hy-lede">載入中…</p>
+          : info.list.length === 0 ? <p className="hy-lede">近 3 天沒有待辦。</p>
+          : <ul className="li-rows">{info.list.map((m, i) => (
+              <li key={i} data-c={colorOf(m.due)}><span className="li-row-main">{m.title}</span><span className="li-row-aux">{formatDue(m.due)}</span></li>
+            ))}</ul>
+      ) : (
+        info.schedFailed ? <p className="hy-lede">行程暫時讀取失敗，稍後會自動重試。</p>
+          : info.sched === null ? <p className="hy-lede">載入中…</p>
+          : info.sched.length === 0 ? <p className="hy-lede">今天沒有行程。</p>
+          : <ul className="li-rows li-rows-t">{info.sched.map((e, i) => (
+              <li key={i} data-past={e.start && e.start < info.hm && e !== info.next ? '1' : '0'} data-next={e === info.next ? '1' : '0'}>
+                <span className="li-row-aux">{e.start || '全天'}</span><span className="li-row-main">{e.title}</span>{e === info.next && <span className="hy-pill" data-s="ai">下一個</span>}
+              </li>
+            ))}</ul>
+      )}
+    </section>
+  )
+}
+
 function MiniMap({ onGo, current }) {
-  const [min, setMin] = useStored('li_map_min', false)
-  if (min) return <button type="button" className="li-chip li-chip-mini li-map-mini" data-s="wait" onClick={() => setMin(false)} aria-expanded="false" aria-label="展開小地圖"><i className="li-dot" />小地圖</button>
   return (
     <div className="li-map" role="group" aria-label="小地圖">
-      <button type="button" className="li-mini-btn li-map-close" onClick={() => setMin(true)} aria-label="收起小地圖" title="收起">－</button>
       {MAP_ISLANDS.map(m => (
         <button key={m.id} type="button" className={'li-map-isl' + (current === m.id ? ' is-cur' : '')} data-built={m.built ? '1' : '0'} style={{ left: m.x + '%', top: m.y + '%' }}
           disabled={!m.built} onClick={() => onGo(m.id)} aria-label={m.built ? '前往' + m.name : m.name + '（建設中）'}>
@@ -161,6 +191,8 @@ export default function LifeIsland() {
   const [gl, setGl] = useState(() => webglOk())
   const [mapCur, setMapCur] = useState('central')
   const [sky, setSky] = useState(null)
+  const info = useWorldInfo()
+  const [panel, setPanel] = useState(null)
 
   useEffect(() => {
     if (!gl || !stageRef.current) return undefined
@@ -191,9 +223,9 @@ export default function LifeIsland() {
           <div ref={layerRef} className="li-layer" />
           <MiniMap onGo={id => { setSel(null); setMapCur(id); apiRef.current && apiRef.current.focus(id) }} current={mapCur} />
           <div className="li-hud">
-            <StatusBar onGo={choose} />
-            <button type="button" className="hy-btn li-reset" onClick={() => { apiRef.current && apiRef.current.home(); }}>回中央島</button>
+            <StatusBar onGo={choose} info={info} panel={panel} setPanel={setPanel} />
           </div>
+          {panel && <InfoPanel kind={panel} info={info} onClose={() => setPanel(null)} />}
           {sky && (
             <div className={'li-sign' + (sky.night > 0.6 ? ' is-night' : '')} aria-label={`新竹 ${sky.date} ${sky.weekday} ${sky.time}，${sky.phase}，${sky.weather}`}>
               <span className="li-sign-d">{sky.date} {sky.weekday}</span>
@@ -206,7 +238,8 @@ export default function LifeIsland() {
       ) : (
         <div style={{ display: 'grid', gap: 16 }}>
           <div className="hy-empty">這台裝置不支援 3D，改用下方清單。內容與 3D 相同。</div>
-          <StatusBar onGo={choose} />
+          <StatusBar onGo={choose} info={info} panel={panel} setPanel={setPanel} />
+          {panel && <InfoPanel kind={panel} info={info} onClose={() => setPanel(null)} />}
           {b && <BuildingCard b={b} onClose={() => choose(null)} />}
           <section className="hy-card">
             <h2 className="hy-card-title">中央島的建築</h2>
