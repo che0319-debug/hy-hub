@@ -27,21 +27,11 @@ function useStored(key, init) {
 
 function StatusBar({ onGo, info, panel, setPanel }) {
   const w = WORLD_STATUS
-  const [min, setMin] = useStored('li_status_min', false)
   const overdue = info.overdue ?? w.overdue, todayN = info.todayCount ?? w.today
   const real = info.overdue !== null
   const worst = w.needsYou > 0 ? 'you' : (overdue > 0 || w.systemIssues > 0) ? 'bad' : 'done'
   const toggle = k => setPanel(panel === k ? null : k)
   const nextText = info.schedFailed ? '行程讀取失敗' : info.sched === null ? '行程載入中' : info.next ? `下一個 ${info.next.start} ${info.next.title}` : info.sched.length ? '今天的行程結束了' : '今天沒有行程'
-  if (min) {
-    return (
-      <div className="li-status">
-        <button type="button" className="li-chip li-chip-mini" data-s={worst} onClick={() => { setPanel(null); setMin(false) }} aria-label="展開今日狀態" aria-expanded="false">
-          <i className="li-dot" />今日狀態
-        </button>
-      </div>
-    )
-  }
   return (
     <div className="li-status" role="group" aria-label="今日狀態">
       <button type="button" className="li-chip" data-panel="todo" data-s={overdue > 0 ? 'bad' : 'wait'} onClick={() => toggle('todo')} aria-expanded={panel === 'todo'} aria-controls="li-panel">
@@ -56,7 +46,6 @@ function StatusBar({ onGo, info, panel, setPanel }) {
       <button type="button" className="li-chip" data-s={w.systemIssues > 0 ? 'bad' : 'done'} onClick={() => onGo('syscenter')}>
         {w.systemIssues > 0 ? <>系統有異狀 <b>{w.systemIssues}</b></> : '系統正常'}
       </button>
-      <button type="button" className="li-mini-btn" onClick={() => { setPanel(null); setMin(true) }} aria-label="收起今日狀態" title="收起">－</button>
       <details className="li-legend">
         <summary>狀態色說明</summary>
         <ul>
@@ -105,11 +94,8 @@ function InfoPanel({ kind, info, onClose }) {
 }
 
 function MiniMap({ onGo, current }) {
-  const [min, setMin] = useStored('li_map_min', false)
-  if (min) return <button type="button" className="li-chip li-chip-mini li-map-mini" data-s="wait" onClick={() => setMin(false)} aria-expanded="false" aria-label="展開小地圖"><i className="li-dot" />小地圖</button>
   return (
     <div className="li-map" role="group" aria-label="小地圖">
-      <button type="button" className="li-mini-btn li-map-close" onClick={() => setMin(true)} aria-label="收起小地圖" title="收起">－</button>
       {MAP_ISLANDS.map(m => (
         <button key={m.id} type="button" className={'li-map-isl' + (current === m.id ? ' is-cur' : '')} data-built={m.built ? '1' : '0'} style={{ left: m.x + '%', top: m.y + '%' }}
           disabled={!m.built} onClick={() => onGo(m.id)} aria-label={m.built ? '前往' + m.name : m.name + '（建設中）'}>
@@ -238,7 +224,6 @@ export default function LifeIsland() {
           <MiniMap onGo={id => { setSel(null); setMapCur(id); apiRef.current && apiRef.current.focus(id) }} current={mapCur} />
           <div className="li-hud">
             <StatusBar onGo={choose} info={info} panel={panel} setPanel={setPanel} />
-            <button type="button" className="hy-btn li-reset" onClick={() => { apiRef.current && apiRef.current.home(); }}>回中央島</button>
           </div>
           {panel && <InfoPanel kind={panel} info={info} onClose={() => setPanel(null)} />}
           {sky && (

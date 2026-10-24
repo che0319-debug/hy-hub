@@ -97,7 +97,7 @@
 @media (max-width: 640px) { .li-map, .li-map-mini { bottom: 12px; } }
 
 /* 天空小標牌：日期、星期、新竹時間與天氣 */
-.li-sign { position: absolute; top: 12px; right: 118px; z-index: 4; display: flex; flex-direction: column; align-items: center; gap: 1px; padding: 6px 14px 7px; border-radius: 12px; background: #fff; border: 1px solid var(--hy-line, #dfe4ec); box-shadow: 0 2px 8px rgba(20, 40, 80, .12); pointer-events: none; line-height: 1.25; }
+.li-sign { position: absolute; top: 12px; right: 12px; z-index: 4; display: flex; flex-direction: column; align-items: center; gap: 1px; padding: 6px 14px 7px; border-radius: 12px; background: #fff; border: 1px solid var(--hy-line, #dfe4ec); box-shadow: 0 2px 8px rgba(20, 40, 80, .12); pointer-events: none; line-height: 1.25; }
 .li-sign::before, .li-sign::after { content: ''; position: absolute; top: -9px; width: 2px; height: 9px; background: #8a6a4a; }
 .li-sign::before { left: 16px; } .li-sign::after { right: 16px; }
 .li-sign-d { font-size: 15px; font-weight: 700; color: var(--hy-text, #1c2433); }
