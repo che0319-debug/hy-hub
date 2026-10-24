@@ -25,6 +25,7 @@ function StatusBar({ onGo }) {
         <summary>狀態色說明</summary>
         <ul>
           {Object.entries(STATUS_INFO).map(([k, v]) => <li key={k}><i data-s={k} />{v}</li>)}
+          {WORLD_STATUS.demo && <li className="li-legend-note">上方狀態列的數字目前是範例，資料接上後會換成真的。</li>}
         </ul>
       </details>
     </div>
@@ -83,32 +84,24 @@ export default function LifeIsland() {
 
   const b = sel ? BY_ID[sel] : null
   return (
-    <div className="hy" style={{ paddingTop: 16 }}>
-      <div className="hy-pagehead">
-        <div>
-          <h1 className="hy-title">🏝️ HY Life 島</h1>
-          <p className="hy-lede">目前只建了中央島（原型、範例內容）。點建築開卡片，舊的 2D 頁都還在。</p>
+    <div className="hy li-page">
+      <h1 className="li-sr">HY Life 島</h1>
+      {gl ? (
+        <div className="li-stage" role="group" aria-label="HY Life 島：中央島的 3D 場景">
+          <div ref={stageRef} style={{ position: 'absolute', inset: 0 }} />
+          <div ref={layerRef} className="li-layer" />
+          <div className="li-hud">
+            <StatusBar onGo={choose} />
+            <button type="button" className="hy-btn li-reset" onClick={() => { apiRef.current && apiRef.current.home(); }}>回中央島</button>
+          </div>
+          {b && <div className="li-float"><BuildingCard b={b} onClose={() => choose(null)} /></div>}
+          <div className="li-hint">拖曳旋轉、滾輪或雙指縮放、Shift＋拖曳平移</div>
         </div>
-      </div>
-      <StatusBar onGo={choose} />
-      {WORLD_STATUS.demo && <p className="hy-lede" style={{ marginTop: -6, marginBottom: 12, fontSize: 12 }}>狀態列的數字目前是範例，等資料接上後會換成真的。</p>}
-      <div className="li-grid">
-        <div>
-          {gl ? (
-            <div className="li-stage" role="img" aria-label="HY Life 島：中央島的 3D 場景，下方有同樣內容的清單">
-              <div ref={stageRef} style={{ position: 'absolute', inset: 0 }} />
-              <div ref={layerRef} className="li-layer" />
-              <button type="button" className="hy-btn li-reset" onClick={() => { apiRef.current && apiRef.current.home(); }}>回中央島</button>
-              <div className="li-hint">拖曳旋轉、滾輪或雙指縮放、Shift＋拖曳平移</div>
-            </div>
-          ) : (
-            <div className="hy-empty">這台裝置不支援 3D，改用下方清單。內容與 3D 相同。</div>
-          )}
-        </div>
+      ) : (
         <div style={{ display: 'grid', gap: 16 }}>
-          {b ? <BuildingCard b={b} onClose={() => choose(null)} /> : (
-            <div className="hy-empty">點一棟建築，這裡會顯示它的卡片。</div>
-          )}
+          <div className="hy-empty">這台裝置不支援 3D，改用下方清單。內容與 3D 相同。</div>
+          <StatusBar onGo={choose} />
+          {b && <BuildingCard b={b} onClose={() => choose(null)} />}
           <section className="hy-card">
             <h2 className="hy-card-title">中央島的建築</h2>
             <ul className="hy-list li-bldlist">
@@ -122,7 +115,7 @@ export default function LifeIsland() {
             </ul>
           </section>
         </div>
-      </div>
+      )}
     </div>
   )
 }
