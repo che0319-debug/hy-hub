@@ -1,0 +1,220 @@
+[
+  {
+    "scenario": "desktop",
+    "overflow": false,
+    "errors": [],
+    "api": [
+      [
+        "GET",
+        "/api/auth/session"
+      ],
+      [
+        "GET",
+        "/api/auth/session"
+      ],
+      [
+        "GET",
+        "/api/dispatch-sessions"
+      ],
+      [
+        "GET",
+        "/api/office/state"
+      ],
+      [
+        "GET",
+        "/api/office/index"
+      ],
+      [
+        "GET",
+        "/api/dispatch-sessions"
+      ],
+      [
+        "GET",
+        "/api/office/state"
+      ],
+      [
+        "GET",
+        "/api/office/index"
+      ]
+    ]
+  },
+  {
+    "scenario": "mobile",
+    "overflow": false,
+    "errors": [],
+    "api": [
+      [
+        "GET",
+        "/api/auth/session"
+      ],
+      [
+        "GET",
+        "/api/auth/session"
+      ],
+      [
+        "GET",
+        "/api/office/state"
+      ],
+      [
+        "GET",
+        "/api/office/index"
+      ],
+      [
+        "GET",
+        "/api/dispatch-sessions"
+      ],
+      [
+        "GET",
+        "/api/office/state"
+      ],
+      [
+        "GET",
+        "/api/office/index"
+      ],
+      [
+        "GET",
+        "/api/dispatch-sessions"
+      ]
+    ]
+  },
+  {
+    "scenario": "index-empty",
+    "overflow": false,
+    "errors": [],
+    "api": [
+      [
+        "GET",
+        "/api/auth/session"
+      ],
+      [
+        "GET",
+        "/api/auth/session"
+      ],
+      [
+        "GET",
+        "/api/dispatch-sessions"
+      ],
+      [
+        "GET",
+        "/api/office/state"
+      ],
+      [
+        "GET",
+        "/api/office/index"
+      ],
+      [
+        "GET",
+        "/api/dispatch-sessions"
+      ]
+    ]
+  },
+  {
+    "scenario": "empty",
+    "overflow": false,
+    "errors": [],
+    "api": [
+      [
+        "GET",
+        "/api/auth/session"
+      ],
+      [
+        "GET",
+        "/api/auth/session"
+      ],
+      [
+        "GET",
+        "/api/dispatch-sessions"
+      ],
+      [
+        "GET",
+        "/api/office/state"
+      ],
+      [
+        "GET",
+        "/api/office/index"
+      ],
+      [
+        "GET",
+        "/api/dispatch-sessions"
+      ]
+    ]
+  },
+  {
+    "scenario": "unauthorized",
+    "overflow": false,
+    "errors": [],
+    "api": [
+      [
+        "GET",
+        "/api/auth/session"
+      ],
+      [
+        "GET",
+        "/api/auth/session"
+      ],
+      [
+        "GET",
+        "/api/office/state"
+      ],
+      [
+        "GET",
+        "/api/office/index"
+      ],
+      [
+        "GET",
+        "/api/dispatch-sessions"
+      ],
+      [
+        "GET",
+        "/api/office/state"
+      ],
+      [
+        "GET",
+        "/api/office/index"
+      ],
+      [
+        "GET",
+        "/api/dispatch-sessions"
+      ]
+    ]
+  },
+  {
+    "scenario": "stale",
+    "overflow": false,
+    "errors": [],
+    "api": [
+      [
+        "GET",
+        "/api/auth/session"
+      ],
+      [
+        "GET",
+        "/api/auth/session"
+      ],
+      [
+        "GET",
+        "/api/office/state"
+      ],
+      [
+        "GET",
+        "/api/office/index"
+      ],
+      [
+        "GET",
+        "/api/dispatch-sessions"
+      ],
+      [
+        "GET",
+        "/api/office/state"
+      ],
+      [
+        "GET",
+        "/api/office/index"
+      ],
+      [
+        "GET",
+        "/api/dispatch-sessions"
+      ]
+    ]
+  }
+]
