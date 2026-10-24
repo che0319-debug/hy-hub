@@ -3,8 +3,9 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { authHeaders, expireSession } from '../auth'
 import { demoOffice, loadBotOffice, OFFICE_TABS, REFRESH_MS } from '../botOfficeData'
 import './bot-office.css'
+import Decisions from '../components/OfficeDecisions'
 
-const PendingWrite = ({ action }) => <button type="button" disabled title="此版本僅供檢視">{action}・待接寫入</button>
+const PendingWrite = ({ action }) => <button type="button" disabled title="此項操作暫未開放">{action}・待接寫入</button>
 const Pill = ({ project }) => <span className="hy-pill" data-s={project.tone}>{project.stageLabel}</span>
 
 function Cards({ items }) {
@@ -13,16 +14,6 @@ function Cards({ items }) {
     <p className="bo-summary">{c.summary}</p>
     {c.driveUrl ? <a href={c.driveUrl} target="_blank" rel="noopener noreferrer">開啟 Drive 原件 ↗</a> : <small>Drive 連結尚未提供</small>}
   </article>)}</div> : <div className="ao-card hy-empty">這個分頁尚無卡片，等待 Atlas 更新。</div>
-}
-
-function Decisions({ items }) {
-  if (!items.length) return null
-  return <section className="ao-card is-focus needs-you bo-decisions" aria-label="待 HY 決定">
-    <h2>待 HY 決定 <span className="hy-pill" data-s="you">{items.length}</span></h2>
-    {items.map(d => <div className="ao-decision" key={d.id}><b>{d.title}</b>
-      {d.suggestion && <p>{d.suggestion}</p>}<PendingWrite action="核准或退回" />
-    </div>)}
-  </section>
 }
 
 export default function BotOffice() {
@@ -68,7 +59,7 @@ export default function BotOffice() {
       </div><button onClick={reload} disabled={loading}>重新整理</button><PendingWrite action="新增專案" /></div>
     </header>
     {mode === 'demo' && <p className="bo-notice" role="status">示範資料・全部為虛構，不會讀寫正式專案。</p>}
-    {mode === 'real' && <p className="ao-muted">唯讀檢視・每 30 秒自動刷新</p>}
+    {mode === 'real' && <p className="ao-muted">每 30 秒自動刷新・回答後等待 Atlas 處理</p>}
     {data && <div className="bo-updated"><span>最後更新：{data.updated}</span><span>卡片索引：{data.indexUpdated}</span></div>}
     {data?.stale && <p className="bo-notice" role="status">資料過期：目前顯示後端保留的舊資料。</p>}
     {loading && <p role="status">正在讀取 Office 資料…</p>}
@@ -78,7 +69,7 @@ export default function BotOffice() {
       {error.kind === 'auth' ? <button onClick={expireSession}>重新登入</button> : <button onClick={reload}>重試讀取</button>}
     </section>}
     {data && !project && <>
-      <Decisions items={data.decisions} />
+      <Decisions items={data.decisions} readOnly={mode === 'demo'} reload={reload} />
       <div className="ao-tiles" aria-label="工作摘要">{tiles.map(([key, label, field, tone]) => <button key={key} className="ao-tile" data-s={tone} aria-pressed={filter === key} onClick={() => setFilter(key)}><small>{label}</small><strong>{data.totals[field]}</strong></button>)}</div>
       <div className="ao-home-controls"><input aria-label="搜尋專案" type="search" placeholder="搜尋專案名稱" value={query} onChange={e => setQuery(e.target.value)} />
         <div className="ao-chips">{[['all', '全部'], ['open', '待你決定'], ['active', '進行中'], ['finished', '完成或退回']].map(([key, label]) => <button key={key} aria-pressed={key === filter} onClick={() => setFilter(key)}>{label}</button>)}</div>
@@ -95,7 +86,7 @@ export default function BotOffice() {
         <div className="ao-header-meta"><span>分區 <b>{project.island}</b></span><span>執行者 <b>{project.executor}</b></span></div>
       </header>
       <nav className="ao-tabs" aria-label="Bot Office 專案分頁">{OFFICE_TABS.map(([key, label]) => <button key={key} aria-current={tab === key ? 'page' : undefined} onClick={() => setTab(key)}>{label}</button>)}</nav>
-      {tab === 'overview' && <><Decisions items={project.decisions} /><div className="ao-overview"><div className="ao-overview-main"><Cards items={project.cards.overview} /></div><section className="ao-card"><h2>專案狀態</h2><p><Pill project={project} /></p><p>執行者：{project.executor}</p><PendingWrite action="收件匣處理" /></section></div></>}
+      {tab === 'overview' && <><Decisions items={project.decisions} readOnly={mode === 'demo'} reload={reload} /><div className="ao-overview"><div className="ao-overview-main"><Cards items={project.cards.overview} /></div><section className="ao-card"><h2>專案狀態</h2><p><Pill project={project} /></p><p>執行者：{project.executor}</p><PendingWrite action="收件匣處理" /></section></div></>}
       {tab === 'meeting' && <><div className="ao-toolbar"><PendingWrite action="會議室留言" /></div><Cards items={project.cards.meeting} /></>}
       {tab === 'execution' && <Cards items={project.cards.execution} />}
       {tab === 'outputs' && <Cards items={project.cards.outputs} />}

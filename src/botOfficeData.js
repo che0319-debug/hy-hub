@@ -27,6 +27,13 @@ export function mapOffice(state = {}, index = {}, metadata = {}) {
   const projectIds = new Set(array(state.buildings).map(p => p.id))
   const decisions = array(state.decisions).filter(d => d && d.status === 'open').map(d => ({
     id: text(d.id), title: text(d.title) || '待 HY 決定', suggestion: text(d.suggestion),
+    kind: text(d.kind), revision: Number.isInteger(d.revision) ? d.revision : 0,
+    answer: d.answer, answerSource: text(d.answer_source), answeredBy: text(d.answered_by), basis: text(d.basis), confidence: text(d.confidence),
+    questions: array(d.questions).filter(q => q && Number.isInteger(q.no)).map(q => ({
+      no: q.no, q: text(q.q), why: text(q.why), options: array(q.options).filter(o => typeof o === 'string'), recommend: text(q.recommend),
+      answer: text(q.answer), answeredBy: text(q.answered_by), answerSource: text(q.answer_source),
+      basis: text(q.basis), confidence: text(q.confidence), confirmed: q.confirmed_by === 'hy',
+    })),
     projectId: (projectIds.has(d.project) ? d.project : null)
       || cards.find(c => c.id === d.card)?.projectId
       || (projectIds.has(d.ref) ? d.ref : cards.find(c => c.id === d.ref)?.projectId) || null,
@@ -92,4 +99,16 @@ export function demoOffice() {
     summary: summaries[type], date: '2026-10-24', drive_url: '',
   })))
   return mapOffice(state, { updated: state.updated, cards })
+}
+
+
+export async function answerOfficeDecision(id, payload, { headers = {}, fetcher = fetch, base = import.meta.env?.VITE_API_BASE || '' } = {}) {
+  const response = await fetcher(`${base.replace(/\/$/, '')}/api/office/decisions/${encodeURIComponent(id)}/answer`, {
+    method: 'POST', headers: { ...headers, 'Content-Type': 'application/json' }, body: JSON.stringify(payload), cache: 'no-store',
+  })
+  const data = await response.json().catch(() => ({}))
+  if (response.status === 401) throw new OfficeReadError('auth', '登入已過期，請重新登入。')
+  if (response.status === 409) throw new OfficeReadError('conflict', '資料已更新，請重新讀取後確認再送出；你的輸入會保留。')
+  if (!response.ok) throw new OfficeReadError('error', response.status === 413 ? '資料已達大小上限，請由 Atlas 整理後再試。' : '未儲存成功，請稍後重試。')
+  return data
 }

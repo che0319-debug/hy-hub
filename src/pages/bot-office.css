@@ -200,3 +200,8 @@
 .bo-page .ao-project-line{grid-template-columns:minmax(0,1fr) minmax(150px,25%) auto}
 .bo-page .bo-decisions{background:var(--hy-you-bg)}
 @media(max-width:640px){.bo-page .ao-project-line{grid-template-columns:minmax(0,1fr);gap:8px}.bo-page .ao-tabs{flex-wrap:wrap;overflow:visible}.bo-page .ao-tabs button{flex:1 1 auto}.bo-page .ao-header-actions{flex-wrap:wrap}.bo-page .bo-updated{display:grid;gap:4px}}
+
+/* P0: existing HY tokens, mobile-first answer forms. */
+.bo-page .bo-question{border-top:1px solid var(--hy-line);padding:var(--hy-gap) 0;margin-top:var(--hy-gap)}
+.bo-page .bo-decision-form+.bo-decision-form{border-top:1px solid var(--hy-line);margin-top:var(--hy-gap);padding-top:var(--hy-gap)}
+.bo-page .bo-answer{background:var(--hy-surface);border:1px solid var(--hy-line);border-radius:var(--hy-r-sm);padding:12px;margin:12px 0}
