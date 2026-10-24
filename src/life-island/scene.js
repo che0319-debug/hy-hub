@@ -12,6 +12,7 @@ import { makeWalker } from './chars.js';
 import { makePlaza } from './plaza.js';
 import { makeDispatch } from './dispatch.js';
 import { makeMeeting } from './meeting.js';
+import { makeSysCenter } from './syscenter.js';
 import { makeDistTexture, makeWater } from './water.js';
 import { CENTRAL_ISLAND, FIGURES } from './data.js';
 
@@ -221,12 +222,12 @@ for (const isl of ISLANDS) {
   cityIsland(isl);
   for (const bd of isl.bs) {
     const kb = (isl.keys || []).find(k => k.id === bd.id); if (!kb || kb.wx === undefined) continue;
-    const made = bd.form === 'scaffold' ? scaffold() : bd.form === 'plaza' ? makePlaza() : bd.form === 'dispatch' ? makeDispatch() : bd.form === 'meeting' ? makeMeeting() : makeBuilding(bd, bi2++ + 3), SC = ['plaza', 'dispatch', 'meeting'].includes(bd.form) ? 1 : bd.form === 'tent' ? 2.3 : 3.2;
+    const made = bd.form === 'scaffold' ? scaffold() : bd.form === 'plaza' ? makePlaza() : bd.form === 'dispatch' ? makeDispatch() : bd.form === 'meeting' ? makeMeeting() : bd.form === 'syscenter' ? makeSysCenter() : makeBuilding(bd, bi2++ + 3), SC = ['plaza', 'dispatch', 'meeting', 'syscenter'].includes(bd.form) ? 1 : bd.form === 'tent' ? 2.3 : 3.2;
     const g = new Group(), m = new Mesh(made.geo, matToon); m.castShadow = m.receiveShadow = true; g.add(m); m.userData.bid = bd.id; pickMeshes.push(m);
-    g.position.set(kb.wx, 0, kb.wz); g.rotation.y = CAMAZ + (['plaza', 'dispatch', 'meeting'].includes(bd.form) ? 0 : 0.2 * (bi2 % 3 - 1)); g.scale.setScalar(SC);
+    g.position.set(kb.wx, 0, kb.wz); g.rotation.y = CAMAZ + (['plaza', 'dispatch', 'meeting', 'syscenter'].includes(bd.form) ? 0 : 0.2 * (bi2 % 3 - 1)); g.scale.setScalar(SC);
     scene.add(g); bldList.push({ bd, isl, x: kb.wx, z: kb.wz, top: made.top * SC, sc: SC });
     // 周圍的人行道小物
-    if (!['plaza', 'dispatch', 'meeting'].includes(bd.form)) for (let k = 0; k < 4; k++) place('round', kb.wx + (k % 2 ? 1.7 : -1.7), kb.wz + (k < 2 ? 1.7 : -1.7), 0.55);
+    if (!['plaza', 'dispatch', 'meeting', 'syscenter'].includes(bd.form)) for (let k = 0; k < 4; k++) place('round', kb.wx + (k % 2 ? 1.7 : -1.7), kb.wz + (k < 2 ? 1.7 : -1.7), 0.55);
     labelPts.push({ kind: 'bldg', id: bd.id, name: bd.title, type: bd.type, flag: !!bd.flag, island: isl.id, x: kb.wx, y: made.top * SC + 0.2, z: kb.wz, deco: !!isl.deco });
   }
 }

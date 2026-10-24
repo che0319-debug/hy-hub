@@ -25,7 +25,7 @@ export const CENTRAL_ISLAND = {
       note: '目前晨會用對話進行，還沒有網頁；之後讀第二部分的晨會卡片。',
     },
     {
-      id: 'syscenter', title: '系統中心', type: 'system', form: 'lighthouse', height: 3.0, q: -2, r: 0,
+      id: 'syscenter', title: '系統中心', type: 'system', form: 'syscenter', height: 3.0, q: -2, r: 0,
       kind: '管理', agent: 'Atlas', status: '現有',
       blurb: '管理系統用的頁面：架構、專家團、設定、Agent 設定。',
       links: [
