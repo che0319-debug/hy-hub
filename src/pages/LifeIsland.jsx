@@ -2,11 +2,20 @@ import { useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import '../../public/hy-ui/hy-ui.css'
 import '../life-island/life-island.css'
-import { CENTRAL_ISLAND, FIGURES, STATUS_INFO, WORLD_STATUS } from '../life-island/data'
+import { ALL_BUILDINGS, FIGURES, STATUS_INFO, WORLD_STATUS } from '../life-island/data'
 import { createIslandScene, webglOk } from '../life-island/scene'
 
-const BUILDINGS = CENTRAL_ISLAND.buildings
+const BUILDINGS = ALL_BUILDINGS
 const BY_ID = Object.fromEntries(BUILDINGS.map(b => [b.id, b]))
+
+// 小地圖：五座島的大致位置（x、y 是百分比）。built=false 的還沒建，先標示建設中。
+const MAP_ISLANDS = [
+  { id: 'central', name: '中央島', x: 50, y: 56, built: true },
+  { id: 'biz', name: '本業島', x: 20, y: 34, built: true },
+  { id: 'life', name: '人生島', x: 80, y: 30, built: false },
+  { id: 'family', name: '家庭島', x: 24, y: 80, built: false },
+  { id: 'side', name: '副業島', x: 78, y: 80, built: false },
+]
 const FIG_BY_ID = Object.fromEntries(FIGURES.map(f => [f.id, f]))
 
 function useStored(key, init) {
@@ -47,6 +56,22 @@ function StatusBar({ onGo }) {
           {WORLD_STATUS.demo && <li className="li-legend-note">上方狀態列的數字目前是範例，資料接上後會換成真的。</li>}
         </ul>
       </details>
+    </div>
+  )
+}
+
+function MiniMap({ onGo, current }) {
+  const [min, setMin] = useStored('li_map_min', false)
+  if (min) return <button type="button" className="li-chip li-chip-mini li-map-mini" data-s="wait" onClick={() => setMin(false)} aria-expanded="false" aria-label="展開小地圖"><i className="li-dot" />小地圖</button>
+  return (
+    <div className="li-map" role="group" aria-label="小地圖">
+      <button type="button" className="li-mini-btn li-map-close" onClick={() => setMin(true)} aria-label="收起小地圖" title="收起">－</button>
+      {MAP_ISLANDS.map(m => (
+        <button key={m.id} type="button" className={'li-map-isl' + (current === m.id ? ' is-cur' : '')} data-built={m.built ? '1' : '0'} style={{ left: m.x + '%', top: m.y + '%' }}
+          disabled={!m.built} onClick={() => onGo(m.id)} aria-label={m.built ? '前往' + m.name : m.name + '（建設中）'}>
+          <span>{m.name}</span>{!m.built && <em>建設中</em>}
+        </button>
+      ))}
     </div>
   )
 }
@@ -112,7 +137,7 @@ function BuildingCard({ b, onClose, floating }) {
       </div>
       <p className="hy-lede" style={{ marginTop: 8 }}>{b.blurb}</p>
       <dl className="hy-kv">
-        <dt>所在島</dt><dd>{CENTRAL_ISLAND.name}</dd>
+        <dt>所在島</dt><dd>{b.islandName}</dd>
         <dt>負責</dt><dd>{b.agent}</dd>
         <dt>類型</dt><dd>{b.kind}</dd>
         <dt>頁面</dt><dd>{b.status === '現有' ? '已有 2D 頁，直接開啟' : b.status === '新做' ? '之後新做' : '待補'}</dd>
@@ -134,6 +159,7 @@ export default function LifeIsland() {
   const apiRef = useRef(null)
   const [sel, setSel] = useState(null)
   const [gl, setGl] = useState(() => webglOk())
+  const [mapCur, setMapCur] = useState('central')
 
   useEffect(() => {
     if (!gl || !stageRef.current) return undefined
@@ -162,6 +188,7 @@ export default function LifeIsland() {
         <div className="li-stage" role="group" aria-label="HY Life 島：中央島的 3D 場景">
           <div ref={stageRef} style={{ position: 'absolute', inset: 0 }} />
           <div ref={layerRef} className="li-layer" />
+          <MiniMap onGo={id => { setSel(null); setMapCur(id); apiRef.current && apiRef.current.focus(id) }} current={mapCur} />
           <div className="li-hud">
             <StatusBar onGo={choose} />
             <button type="button" className="hy-btn li-reset" onClick={() => { apiRef.current && apiRef.current.home(); }}>回中央島</button>
