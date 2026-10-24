@@ -45,7 +45,7 @@ function bodyGeo(kind) {
 export function makeBot(kind, mat, ol, status = 'wait') {
   const root = new Group(), body = new Group(); root.add(body);
   const geo = bodyGeo(kind);
-  const m = new Mesh(geo, mat); m.castShadow = true; body.add(m);
+  const m = new Mesh(geo, mat); m.castShadow = true; body.add(m); m.userData.botId = kind;
   if (ol) body.add(new Mesh(geo, ol));
   // 腳下狀態環
   const sc = STATUS_COLORS[status] ?? STATUS_COLORS.wait;
@@ -56,16 +56,17 @@ export function makeBot(kind, mat, ol, status = 'wait') {
   dot.position.y = 0.62; root.add(dot);
   const dotRing = new Mesh(new TorusGeometry(0.075, 0.012, 6, 20), new MeshBasicMaterial({ color: 0xffffff }));
   dotRing.position.y = 0.62; dotRing.rotation.x = Math.PI / 2; root.add(dotRing);
-  return { root, body, ring, dot, dotRing, status, kind };
+  return { root, body, ring, dot, dotRing, status, kind, mesh: m };
 }
 
 // 每幀動畫：待機輕輕上下、待你確認時跳動並讓光環閃爍
-export function animateBot(bot, t, phase = 0) {
-  const s = bot.status, bob = Math.sin(t * 2.2 + phase);
-  bot.body.position.y = 0.012 * (bob + 1);
-  bot.body.rotation.z = 0.025 * Math.sin(t * 1.6 + phase);
+export function animateBot(bot, t, phase = 0, moving = false, hello = false) {
+  const s = bot.status, spd = moving ? 9 : 2.2, bob = Math.sin(t * spd + phase);
+  bot.body.position.y = moving ? 0.03 * Math.abs(bob) : 0.012 * (bob + 1);
+  bot.body.rotation.z = moving ? 0.07 * Math.sin(t * spd * 0.5 + phase) : 0.025 * Math.sin(t * 1.6 + phase);
   let jump = 0;
-  if (s === 'you') { const k = (t * 1.6 + phase) % 2; jump = k < 0.5 ? Math.sin(k / 0.5 * Math.PI) * 0.09 : 0; bot.body.position.y += jump; bot.ring.material.opacity = 0.55 + 0.45 * Math.abs(Math.sin(t * 3 + phase)); }
+  if (s === 'you' || hello) { const k = (t * (hello ? 2.2 : 1.6) + phase) % 2; jump = k < 0.5 ? Math.sin(k / 0.5 * Math.PI) * (hello ? 0.06 : 0.09) : 0; bot.body.position.y += jump; }
+  if (s === 'you') bot.ring.material.opacity = 0.55 + 0.45 * Math.abs(Math.sin(t * 3 + phase));
   else if (s === 'ai') { bot.ring.rotation.y = t * 1.5; bot.ring.material.opacity = 0.9; }
   else bot.ring.material.opacity = 0.9;
   bot.dot.position.y = 0.63 + jump + 0.015 * Math.sin(t * 3 + phase);

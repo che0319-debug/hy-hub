@@ -2,11 +2,12 @@ import { useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import '../../public/hy-ui/hy-ui.css'
 import '../life-island/life-island.css'
-import { CENTRAL_ISLAND, STATUS_INFO, WORLD_STATUS } from '../life-island/data'
+import { CENTRAL_ISLAND, FIGURES, STATUS_INFO, WORLD_STATUS } from '../life-island/data'
 import { createIslandScene, webglOk } from '../life-island/scene'
 
 const BUILDINGS = CENTRAL_ISLAND.buildings
 const BY_ID = Object.fromEntries(BUILDINGS.map(b => [b.id, b]))
+const FIG_BY_ID = Object.fromEntries(FIGURES.map(f => [f.id, f]))
 
 function useStored(key, init) {
   const [v, setV] = useState(() => { try { const r = localStorage.getItem(key); return r === null ? init : r === '1' } catch { return init } })
@@ -47,6 +48,43 @@ function StatusBar({ onGo }) {
         </ul>
       </details>
     </div>
+  )
+}
+
+function BotCard({ f, onClose }) {
+  const [min, setMin] = useStored('li_card_min', false)
+  const btn = { display: 'inline-flex', alignItems: 'center', textDecoration: 'none' }
+  if (min) {
+    return (
+      <section className="hy-card li-card-min">
+        <button type="button" className="li-card-bar" onClick={() => setMin(false)} aria-expanded="false" aria-label={'展開' + f.name}>
+          <span className="hy-card-title">{f.name}</span><span className="hy-pill" data-s={f.status}>{STATUS_INFO[f.status]}</span>
+        </button>
+        <button type="button" className="hy-btn" onClick={onClose} aria-label="關閉卡片">關閉</button>
+      </section>
+    )
+  }
+  return (
+    <section className={'hy-card is-focus' + (f.status === 'you' ? ' needs-you' : '')} aria-live="polite">
+      <div className="hy-card-head">
+        <h2 className="hy-card-title">{f.name} <span className="hy-pill" data-s={f.status}>{STATUS_INFO[f.status]}</span></h2>
+        <div style={{ display: 'flex', gap: 8 }}>
+          <button type="button" className="hy-btn" onClick={() => setMin(true)} aria-label="縮小卡片">縮小</button>
+          <button type="button" className="hy-btn" onClick={onClose} aria-label="關閉卡片">關閉</button>
+        </div>
+      </div>
+      <p className="hy-lede" style={{ marginTop: 8 }}>{f.role}</p>
+      <dl className="hy-kv">
+        <dt>正在做</dt><dd>{f.doing}</dd>
+        <dt>最近完成</dt><dd>{f.last}</dd>
+      </dl>
+      <p className="hy-lede" style={{ marginTop: 12, fontSize: 12 }}>內容目前是範例，資料接上後會換成真的。</p>
+      <div className="li-links">
+        {f.status === 'you' && <Link to="/bot-office" className="hy-btn is-primary" style={btn}>去確認</Link>}
+        {f.chat && <Link to={f.chat} className={'hy-btn' + (f.status === 'you' ? '' : ' is-primary')} style={btn}>開啟對話</Link>}
+        <Link to="/bot-office" className="hy-btn" style={btn}>看他的待辦</Link>
+      </div>
+    </section>
   )
 }
 
@@ -114,7 +152,8 @@ export default function LifeIsland() {
     apiRef.current && apiRef.current.select(id, false)
   }
 
-  const b = sel ? BY_ID[sel] : null
+  const b = sel && !sel.startsWith('bot:') ? BY_ID[sel] : null
+  const fig = sel && sel.startsWith('bot:') ? FIG_BY_ID[sel.slice(4)] : null
   return (
     <div className="hy li-page">
       <h1 className="li-sr">HY Life 島</h1>
@@ -126,7 +165,7 @@ export default function LifeIsland() {
             <StatusBar onGo={choose} />
             <button type="button" className="hy-btn li-reset" onClick={() => { apiRef.current && apiRef.current.home(); }}>回中央島</button>
           </div>
-          {b && <div className="li-float"><BuildingCard floating b={b} onClose={() => choose(null)} /></div>}
+          {(b || fig) && <div className="li-float">{fig ? <BotCard f={fig} onClose={() => choose(null)} /> : <BuildingCard floating b={b} onClose={() => choose(null)} />}</div>}
           <div className="li-hint">拖曳旋轉、滾輪或雙指縮放、Shift＋拖曳平移</div>
         </div>
       ) : (

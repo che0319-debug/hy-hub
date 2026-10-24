@@ -13,7 +13,9 @@
 .li-bldlist button { width: 100%; text-align: left; min-height: 44px; }
 
 /* Agent 小人名牌：比例放大，遠景也看得到；狀態色點沿用風格 A 五色 */
-.li-label-bot { display: inline-flex; align-items: center; gap: 6px; padding: 4px 11px 4px 8px; border-radius: 999px; background: #fff; color: #14202a; font-size: 14px; font-weight: 700; line-height: 18px; box-shadow: 0 1px 6px rgba(14, 39, 51, .28); pointer-events: none; }
+.li-label-bot { display: inline-flex; align-items: center; gap: 6px; padding: 4px 11px 4px 8px; border-radius: 999px; background: #fff; color: #14202a; font-size: 14px; font-weight: 700; line-height: 18px; box-shadow: 0 1px 6px rgba(14, 39, 51, .28); pointer-events: auto; cursor: pointer; }
+.li-label-bot:focus-visible { outline: 2px solid #14202a; outline-offset: 2px; }
+.li-label-bot.is-sel { background: #ffd36b; }
 .li-label-bot i { width: 10px; height: 10px; border-radius: 50%; background: #8d99ab; flex: none; }
 .li-label-bot[data-s="ai"] i { background: #2f6bff; }
 .li-label-bot[data-s="you"] i { background: #f2a93a; box-shadow: 0 0 0 3px rgba(242, 169, 58, .35); }
