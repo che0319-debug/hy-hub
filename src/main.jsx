@@ -7,6 +7,7 @@ import App from './App'
 import Home from './pages/Home'
 import Helpers from './pages/Helpers'
 import AIOfficeV1 from './pages/AIOfficeV1'
+import BotOffice from './pages/BotOffice'
 import LineHY from './pages/LineHY'
 import LineXiaoyin from './pages/LineXiaoyin'
 import Line950157 from './pages/Line950157'
@@ -37,6 +38,7 @@ function DesktopRoutes({ onMobileVersion }) {
         <Route path="workspace/*" element={<LegacyAIWorkRedirect />} />
         <Route path="ai-work" element={<Navigate to="/ai-work-v5" replace />} />
         <Route path="ai-work-v5" element={<AIOfficeV1 />} />
+        <Route path="bot-office" element={<BotOffice />} />
         <Route path="ai-work-v3-ready" element={<Navigate to="/ai-work-v5" replace />} />
         <Route path="ai-work-test/*" element={<Navigate to="/ai-work-v5" replace />} />
         <Route path="research" element={<Navigate to="/ai-work-v5" replace />} />
@@ -81,7 +83,7 @@ function Experience() {
   }
 
   if (location.pathname === '/command-center') return <Navigate to="/ai-work" replace />
-  if (mobileWidth && mode !== 'desktop' && !['/workspace', '/ai-work', '/ai-work-test', '/expert-team', '/system-architecture'].some(path => location.pathname.startsWith(path))) {
+  if (mobileWidth && mode !== 'desktop' && !['/workspace', '/ai-work', '/ai-work-test', '/expert-team', '/system-architecture', '/bot-office'].some(path => location.pathname.startsWith(path))) {
     return <MobileAppV2 onDesktopVersion={() => choose('desktop')} />
   }
   return <DesktopRoutes onMobileVersion={mobileWidth ? () => choose('mobile') : null} />
