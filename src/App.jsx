@@ -21,7 +21,7 @@ export default function App({ onMobileVersion }) {
   }
   const location = useLocation()
   const pilotRoute = location.pathname.startsWith('/ai-work')
-  const worldRoute = location.pathname.startsWith('/life-island')   // 世界頁：桌面版不顯示頂欄，站名與手機版入口放進側欄
+  const worldRoute = location.pathname.startsWith('/life-island')   // 桌面版一律不顯示頂欄（站名與手機版入口在側欄）；世界頁內容再貼齊最上緣
 
   useEffect(() => {
     setSidebarOpen(false)
@@ -57,7 +57,7 @@ export default function App({ onMobileVersion }) {
   return (
     <SessionContext.Provider value={{ sessions, addSession, removeSession, refreshSessions }}>
       <div className="min-h-screen bg-slate-50 text-slate-800">
-        {!pilotRoute && (worldRoute ? <div className="md:hidden"><TopBar onMobileVersion={onMobileVersion} /></div> : <TopBar onMobileVersion={onMobileVersion} />)}
+        {!pilotRoute && <div className="md:hidden"><TopBar onMobileVersion={onMobileVersion} /></div>}
         <button
           className="md:hidden fixed top-2 left-2 z-50 p-2 rounded-md bg-white shadow text-slate-700"
           onClick={() => setSidebarOpen(v => !v)}
@@ -71,7 +71,7 @@ export default function App({ onMobileVersion }) {
             onClick={() => setSidebarOpen(false)}
           />
         )}
-        <Sidebar open={sidebarOpen} pilot={pilotRoute} world={worldRoute} collapsed={collapsed} onMobileVersion={onMobileVersion} />
+        <Sidebar open={sidebarOpen} pilot={pilotRoute} world={!pilotRoute} collapsed={collapsed} onMobileVersion={onMobileVersion} />
         <button
           type="button"
           onClick={toggleSide}
@@ -83,7 +83,7 @@ export default function App({ onMobileVersion }) {
         >
           {collapsed ? <ChevronRight size={14} /> : <ChevronLeft size={14} />}
         </button>
-        <main className={pilotRoute ? `pilot-main ml-0 ${collapsed ? 'md:ml-0' : 'md:ml-[216px]'} p-5 md:p-8 min-h-screen transition-[margin] duration-200` : `ml-0 ${collapsed ? 'md:ml-0' : 'md:ml-[200px]'} ${worldRoute ? 'pt-12 md:pt-0' : 'pt-12'} p-6 min-h-screen transition-[margin] duration-200`}>
+        <main className={pilotRoute ? `pilot-main ml-0 ${collapsed ? 'md:ml-0' : 'md:ml-[216px]'} p-5 md:p-8 min-h-screen transition-[margin] duration-200` : `ml-0 ${collapsed ? 'md:ml-0' : 'md:ml-[200px]'} ${worldRoute ? 'pt-12 md:pt-0' : 'pt-12 md:pt-6'} p-6 min-h-screen transition-[margin] duration-200`}>
           <Outlet />
         </main>
       </div>

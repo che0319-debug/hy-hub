@@ -1,3 +1,7 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+/* 頂欄高度：手機版 3rem，桌面版已移除（站名與手機版入口放在側欄） */
+:root { --hy-topbar: 3rem; }
+@media (min-width: 768px) { :root { --hy-topbar: 0rem; } }
