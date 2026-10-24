@@ -101,7 +101,7 @@ export const FAMILY_ISLAND = {
 }
 
 export const SIDE_ISLAND = {
-  id: 'side', name: '副業島', sub: 'Sam', c: [28, 6], R: 3,
+  id: 'side', name: '副業島', sub: 'Sam', c: [26, 5], R: 3,
   buildings: [
     {
       id: 'sidehq', title: '副業總部', type: 'business', form: 'sidehq', height: 3.3, q: 0, r: 0,

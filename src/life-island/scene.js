@@ -38,8 +38,8 @@ const CFG = { az: 0.62 };
 const S3 = Math.sqrt(3), WATER_Y = -0.5;
 
 // ---------- world definition ----------
-const KEYPOS = { today: [0, 0], dispatch: [1, -1], meeting: [2, 1], syscenter: [-1, 0], hq: [0, 0], lab: [1, 0], brain: [0, 0], dojo: [1, 0], board: [0, 1], home: [0, 0], gym: [1, 0], sidehq: [0, 0], phone: [1, 0], cuyu: [0, 1], chuan: [1, 1] };
-const ISL_CFG = { central: { cityR: 13, seed: 3, col: '#d9a441' }, biz: { cityR: 8, seed: 4, col: '#5a8fe0' }, life: { cityR: 8, seed: 6, col: '#b06ad8' }, family: { cityR: 8, seed: 8, col: '#e8845a' }, side: { cityR: 8, seed: 9, col: '#2fa58a' } };
+const KEYPOS = { today: [0, 0], dispatch: [1, -1], meeting: [2, 1], syscenter: [-1, 0], hq: [0, 0], lab: [1, 0], brain: [0, 0], dojo: [1, 0], board: [0, 1], home: [0, 0], gym: [1, 0], sidehq: [-1, -1], phone: [1, -1], cuyu: [-1, 1], chuan: [1, 1] };
+const ISL_CFG = { central: { cityR: 13, seed: 3, col: '#d9a441' }, biz: { cityR: 8, seed: 4, col: '#5a8fe0' }, life: { cityR: 8, seed: 6, col: '#b06ad8' }, family: { cityR: 8, seed: 8, col: '#e8845a' }, side: { cityR: 10, seed: 9, col: '#2fa58a' } };
 const ISLANDS = ISLANDS_DATA.map(d => ({ id: d.id, name: d.name, sub: d.sub, c: d.c, ...ISL_CFG[d.id],
   bs: d.buildings.map(b => ({ id: b.id, title: b.title, type: b.type, form: b.form, height: b.height * 1.15 })),
   keys: d.buildings.map(b => ({ id: b.id, bi: KEYPOS[b.id][0], bj: KEYPOS[b.id][1], park: false })) }));
