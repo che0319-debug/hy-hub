@@ -8,7 +8,7 @@ import { B, box, cyl, sph, cone, rng, prismTri } from './geo.js';
 import { toon, outline } from './mats.js';
 import { makeBuilding } from './buildings.js';
 import { treeGeos, instanced, fence, lamp } from './props.js';
-import { makeWalker } from './chars.js';
+import { makeBot, animateBot } from './bots.js';
 import { makePlaza } from './plaza.js';
 import { makeDispatch } from './dispatch.js';
 import { makeMeeting } from './meeting.js';
@@ -240,12 +240,15 @@ for (const k of ['round', 'pine', 'cherry', 'bush', 'berry', 'rock', 'tuft']) if
 { const fl = instanced(TG.flower, matToon, lists.flower, flowerTints); fl.castShadow = false; scene.add(fl); }
 
 // figures
-const FS = 2.1;
-for (const f of FIGS) {
-  const w = makeWalker(matToon, matOL, TRIBE_COL[f.tribe]); const x = -1.5 + f.dx, z = 2.0 + f.dz;
-  w.root.position.set(x, 0.02, z); w.root.rotation.y = CAMAZ + 0.3; w.root.scale.setScalar(FS);
-  if (f.wave) { w.armR.rotation.z = -2.5; }
-  scene.add(w.root);
+const FS = 2.0, bots = [];
+{
+  const pz = bldList.find(b => b.bd.id === 'today'), ca = Math.cos(CAMAZ), sa = Math.sin(CAMAZ);
+  FIGS.forEach((f, i) => {
+    const bot = makeBot(f.kind, matToon, matOL, f.status);
+    bot.root.position.set(pz.x + f.lx * ca + f.lz * sa, 0.02, pz.z - f.lx * sa + f.lz * ca);
+    bot.root.rotation.y = CAMAZ; bot.root.scale.setScalar(FS);
+    scene.add(bot.root); bots.push({ bot, phase: i * 1.3 });
+  });
 }
 
 // water
@@ -363,6 +366,7 @@ function frame(now) {
   for (const key of ['az', 'el', 'dist', 'tx', 'ty', 'tz']) view[key] += (target[key] - view[key]) * k;
   placeCamera();
   water.material.uniforms.uTime.value = 3.2 + (now - t0) / 1000 * 0.6;
+  for (const b of bots) animateBot(b.bot, (now - t0) / 1000, b.phase);
   if (selRing.visible) selRing.material.opacity = 0.75 + 0.2 * Math.sin(now / 260);
   renderer.render(scene, camera);
   const showB = view.dist < 100;

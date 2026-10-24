@@ -38,6 +38,11 @@ export const CENTRAL_ISLAND = {
   ],
 };
 
+// 五位 Agent。展示階段全部先站在中央島今日廣場前，之後各自搬到自己的島。status：wait / ai / you / done / bad
 export const FIGURES = [
-  { id: 'atlas', name: 'Atlas', tribe: 'grok', q: 1, r: 0, dx: 0.1, dz: 0.5, wave: true },
+  { id: 'atlas', name: 'Atlas', kind: 'atlas', status: 'ai', lx: -0.95, lz: 1.45 },
+  { id: 'xiaoyin', name: '小因', kind: 'xiaoyin', status: 'wait', lx: -0.48, lz: 1.6 },
+  { id: 'sam', name: 'Sam', kind: 'sam', status: 'you', lx: 0.0, lz: 1.65 },
+  { id: 'p950157', name: '950157', kind: 'p950157', status: 'done', lx: 0.48, lz: 1.6 },
+  { id: 'hy', name: 'HY', kind: 'hy', status: 'bad', lx: 0.95, lz: 1.45 },
 ];
