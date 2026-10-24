@@ -38,19 +38,113 @@ export const CENTRAL_ISLAND = {
   ],
 };
 
+export const BUSINESS_ISLAND = {
+  id: 'biz', name: '本業島', sub: 'ITRI · 950157', c: [-24, -8], R: 3,
+  buildings: [
+    {
+      id: 'hq', title: '本業總部', type: 'business', form: 'hq', height: 3.0, q: 0, r: 0,
+      kind: '分身總部', agent: '950157', status: '現有',
+      blurb: '950157（ITRI 工作分身）的控制中心：本業待辦、專案進度、週報。',
+      links: [{ label: '開啟 950157 看板', to: '/line/950157' }],
+      note: '建築造型取自工研院園區：帶狀玻璃、屋頂水塔、弧形退台翼樓與草地中庭。',
+    },
+    {
+      id: 'lab', title: '研究院', type: 'research', form: 'lab', height: 2.4, q: 1, r: 0,
+      kind: '功能', agent: '950157', status: '待補',
+      blurb: 'Research Lab：研究主軸、專案、題目與情報。',
+      links: [{ label: '950157 看板（含研究區）', to: '/line/950157' }],
+      note: 'Research Lab 還沒有專屬網頁，先連到 950157 看板的研究區。',
+    },
+  ],
+};
+
+export const LIFE_ISLAND = {
+  id: 'life', name: '人生島', sub: 'HY', c: [14, -26], R: 3,
+  buildings: [
+    {
+      id: 'brain', title: '大腦圖書館', type: 'system', form: 'brain', height: 3.0, q: 0, r: 0,
+      kind: '功能', agent: 'HY', status: '待補',
+      blurb: '第二大腦：筆記、文獻與想法的收納處。',
+      links: [], note: '還沒有對應頁面，等第二大腦建好再連結。',
+    },
+    {
+      id: 'dojo', title: '人生修練館', type: 'personal', form: 'dojo', height: 2.0, q: 1, r: 0,
+      kind: '功能', agent: 'HY', status: '現有',
+      blurb: '人生目標與習慣：修練的地方。',
+      links: [{ label: '開啟人生目標', to: '/goals' }],
+    },
+    {
+      id: 'board', title: '戰略盤', type: 'system', form: 'sandtable', height: 1.5, q: 0, r: 1,
+      kind: '功能', agent: 'HY', status: '現有',
+      blurb: '長期策略：棋盤上推演下一步。',
+      links: [{ label: '開啟策略', to: '/strategy' }],
+    },
+  ],
+}
+
+export const FAMILY_ISLAND = {
+  id: 'family', name: '家庭島', sub: '小因', c: [-14, 26], R: 3,
+  buildings: [
+    {
+      id: 'home', title: '家', type: 'personal', form: 'home', height: 2.2, q: 0, r: 0,
+      kind: '分身總部', agent: '小因', status: '現有',
+      blurb: '小因（家庭分身）的控制中心：家裡的行程、接送與待辦。',
+      links: [{ label: '開啟小因看板', to: '/line/family' }],
+    },
+    {
+      id: 'gym', title: '健身房', type: 'personal', form: 'gym', height: 2.5, q: 1, r: 0,
+      kind: '功能', agent: '小因', status: '待補',
+      blurb: '運動與健康習慣的紀錄與規劃。',
+      links: [], note: '還沒有對應頁面，先放著。',
+    },
+  ],
+}
+
+export const SIDE_ISLAND = {
+  id: 'side', name: '副業島', sub: 'Sam', c: [26, 5], R: 3,
+  buildings: [
+    {
+      id: 'sidehq', title: '副業總部', type: 'business', form: 'sidehq', height: 3.3, q: 0, r: 0,
+      kind: '分身總部', agent: 'Sam', status: '現有',
+      blurb: 'Sam（副業分身）的控制中心：副業待辦、補件卡、各事業進度。',
+      links: [{ label: '開啟 Sam 看板', to: '/line/sam' }],
+    },
+    {
+      id: 'phone', title: '手機店', type: 'business', form: 'phoneshop', height: 1.9, q: 1, r: 0,
+      kind: '事業', agent: 'Sam', status: '待補',
+      blurb: '手機店：庫存、訂單與補件。', links: [{ label: '開啟 Sam 看板', to: '/line/sam' }],
+      note: '目前先放在 Sam 看板，之後可拆成專屬頁。',
+    },
+    {
+      id: 'cuyu', title: '川嶼甜點店', type: 'business', form: 'cuyu', height: 1.9, q: 0, r: 1,
+      kind: '事業', agent: 'Sam', status: '待補',
+      blurb: '甜點事業（建設中）。', links: [], note: '建設中，還沒有對應頁面。',
+    },
+    {
+      id: 'chuan', title: '川泱購物', type: 'business', form: 'chuan', height: 2.6, q: 1, r: 1,
+      kind: '事業', agent: 'Sam', status: '待補',
+      blurb: '購物事業（建設中）。', links: [], note: '建設中，還沒有對應頁面。',
+    },
+  ],
+}
+
+export const ISLANDS_DATA = [CENTRAL_ISLAND, BUSINESS_ISLAND, LIFE_ISLAND, FAMILY_ISLAND, SIDE_ISLAND];
+export const ALL_BUILDINGS = ISLANDS_DATA.flatMap(isl => isl.buildings.map(b => ({ ...b, islandId: isl.id, islandName: isl.name })));
+
 // 五位 Agent。展示階段全部先在中央島活動，之後各自搬到自己的島。
 // status：wait / ai / you / done / bad。zone：平常活動的建築區。status 是 you 或 bad 的會停在原地等你。
+// board：該 Bot 專屬看板（待辦）。對話功能之後再建。
 // doing／last 目前是範例文字，等資料契約定案後換成真資料。
 export const FIGURES = [
-  { id: 'atlas', name: 'Atlas', kind: 'atlas', status: 'ai', zone: 'dispatch', role: '中央島隊長（主 Grok Bot）', chat: null,
+  { id: 'atlas', island: 'central', name: 'Atlas', kind: 'atlas', status: 'ai', zone: 'dispatch', role: '中央島隊長（主 Grok Bot）', board: null,
     doing: '分派今天的工作包給各 Bot', last: '早上整理了晨會待辦' },
-  { id: 'xiaoyin', name: '小因', kind: 'xiaoyin', status: 'wait', zone: 'syscenter', role: '家庭島隊長', chat: '/line/family',
+  { id: 'xiaoyin', island: 'family', name: '小因', kind: 'xiaoyin', status: 'wait', zone: 'home', role: '家庭島隊長', board: '/line/family',
     doing: '追蹤家裡這週的行程', last: '更新了小孩接送時間' },
-  { id: 'sam', name: 'Sam', kind: 'sam', status: 'you', zone: 'today', role: '副業島隊長', chat: '/line/sam',
+  { id: 'sam', island: 'side', name: 'Sam', kind: 'sam', status: 'you', zone: 'sidehq', role: '副業島隊長', board: '/line/sam',
     doing: '等你確認一張補件卡', last: '整理了手機店的庫存' },
-  { id: 'p950157', name: '950157', kind: 'p950157', status: 'done', zone: 'meeting', role: '本業島隊長（ITRI 工作分身）', chat: '/line/950157',
+  { id: 'p950157', island: 'biz', name: '950157', kind: 'p950157', status: 'done', zone: 'hq', role: '本業島隊長（ITRI 工作分身）', board: '/line/950157',
     doing: '剛完成月報初稿', last: '整理了研究院的待辦' },
-  { id: 'hy', name: 'HY', kind: 'hy', status: 'bad', zone: 'syscenter', role: '人生島隊長', chat: '/line/hy',
+  { id: 'hy', island: 'life', name: 'HY', kind: 'hy', status: 'bad', zone: 'dojo', role: '人生島隊長', board: '/line/hy',
     doing: '有一項任務逾期，需要處理', last: '更新了人生目標進度' },
 ];
 

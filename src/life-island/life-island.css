@@ -82,3 +82,26 @@
 /* 世界撐滿內容區（抵銷外層 padding） */
 .li-page { margin: 0 -24px -24px -24px; }
 .li-page .li-stage { border-radius: 0; }
+
+.li-btn-soon { border-style: dashed !important; color: var(--hy-muted); background: transparent; cursor: not-allowed; }
+
+/* 小地圖 */
+.li-map { position: absolute; z-index: 4; left: 12px; bottom: 56px; width: 230px; height: 150px; border-radius: 14px; background: rgba(255, 255, 255, .88); box-shadow: 0 2px 12px rgba(14, 39, 51, .25); }
+.li-map-close { position: absolute; right: 4px; top: 4px; min-width: 32px !important; min-height: 32px !important; font-size: 16px !important; box-shadow: none !important; background: transparent !important; }
+.li-map-isl { position: absolute; white-space: nowrap; transform: translate(-50%, -50%); min-height: 28px; padding: 2px 9px; border-radius: 999px; border: 0; font: inherit; font-size: 12px; font-weight: 700; display: flex; flex-direction: column; align-items: center; line-height: 1.2; cursor: pointer; background: #14202a; color: #fff; }
+.li-map-isl[data-built="0"] { background: #e6e9ee; color: #8a94a3; cursor: default; border: 1px dashed #b8c0cc; }
+.li-map-isl em { font-style: normal; font-size: 10px; font-weight: 500; }
+.li-map-isl.is-cur { background: #ffd36b; color: #14202a; }
+.li-map-isl:focus-visible { outline: 2px solid #14202a; outline-offset: 2px; }
+.li-map-mini { position: absolute; z-index: 4; left: 12px; bottom: 56px; }
+@media (max-width: 640px) { .li-map, .li-map-mini { bottom: 12px; } }
+
+/* 天空小標牌：日期、星期、新竹時間與天氣 */
+.li-sign { position: absolute; top: 12px; right: 118px; z-index: 4; display: flex; flex-direction: column; align-items: center; gap: 1px; padding: 6px 14px 7px; border-radius: 12px; background: #fff; border: 1px solid var(--hy-line, #dfe4ec); box-shadow: 0 2px 8px rgba(20, 40, 80, .12); pointer-events: none; line-height: 1.25; }
+.li-sign::before, .li-sign::after { content: ''; position: absolute; top: -9px; width: 2px; height: 9px; background: #8a6a4a; }
+.li-sign::before { left: 16px; } .li-sign::after { right: 16px; }
+.li-sign-d { font-size: 15px; font-weight: 700; color: var(--hy-text, #1c2433); }
+.li-sign-t { font-size: 12px; color: var(--hy-muted, #5d6b82); }
+.li-sign.is-night { background: var(--hy-header, #15213b); border-color: rgba(255, 255, 255, .15); }
+.li-sign.is-night .li-sign-d { color: #fff; } .li-sign.is-night .li-sign-t { color: #b9c6e0; }
+@media (max-width: 640px) { .li-sign { top: 64px; right: 12px; } }

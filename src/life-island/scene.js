@@ -5,7 +5,7 @@ import {
   BufferGeometry, Float32BufferAttribute, SphereGeometry
 } from 'three';
 import { B, box, cyl, sph, cone, rng, prismTri } from './geo.js';
-import { toon, outline } from './mats.js';
+import { toon, outline, U } from './mats.js';
 import { makeBuilding } from './buildings.js';
 import { treeGeos, instanced, fence, lamp } from './props.js';
 import { makeBot, animateBot } from './bots.js';
@@ -13,8 +13,21 @@ import { makePlaza } from './plaza.js';
 import { makeDispatch } from './dispatch.js';
 import { makeMeeting } from './meeting.js';
 import { makeSysCenter } from './syscenter.js';
+import { makeHQ } from './hq.js';
+import { makeLab } from './lab.js';
+import { makeBrain } from './brain.js';
+import { makeDojo } from './dojo.js';
+import { makeBoard } from './board.js';
+import { makeHome } from './home.js';
+import { makeGym } from './gym.js';
+import { makeSideHQ } from './sidehq.js';
+import { makePhoneShop } from './phoneshop.js';
+import { makeCuyu } from './cuyu.js';
+import { makeChuan } from './chuan.js';
 import { makeDistTexture, makeWater } from './water.js';
-import { CENTRAL_ISLAND, FIGURES, STATUS_INFO } from './data.js';
+import { createAtmosphere } from './sky.js';
+import { buildBridges, makeBoats } from './bridges.js';
+import { ISLANDS_DATA, FIGURES, STATUS_INFO } from './data.js';
 
 export function webglOk() {
   try { const c = document.createElement('canvas'); return !!(c.getContext('webgl2') || c.getContext('webgl')); } catch { return false; }
@@ -27,20 +40,19 @@ const CFG = { az: 0.62 };
 const S3 = Math.sqrt(3), WATER_Y = -0.5;
 
 // ---------- world definition ----------
-const KEYPOS = { today: [0, 0], dispatch: [1, -1], meeting: [2, 1], syscenter: [-1, 0] };
-const ISLANDS = [{ id: CENTRAL_ISLAND.id, name: CENTRAL_ISLAND.name, sub: CENTRAL_ISLAND.sub, c: [0, 0], cityR: 13, seed: 3, col: '#d9a441',
-  bs: CENTRAL_ISLAND.buildings.map(b => ({ id: b.id, title: b.title, type: b.type, form: b.form, height: b.height * 1.15 })),
-  keys: CENTRAL_ISLAND.buildings.map(b => ({ id: b.id, bi: KEYPOS[b.id][0], bj: KEYPOS[b.id][1], park: false })) }];
+const KEYPOS = { today: [0, 0], dispatch: [1, -1], meeting: [2, 1], syscenter: [-1, 0], hq: [0, 0], lab: [1, 0], brain: [0, 0], dojo: [1, 0], board: [0, 1], home: [0, 0], gym: [1, 0], sidehq: [-1, -1], phone: [1, -1], cuyu: [-1, 1], chuan: [1, 1] };
+const ISL_CFG = { central: { cityR: 13, seed: 3, col: '#d9a441' }, biz: { cityR: 8, seed: 4, col: '#5a8fe0' }, life: { cityR: 8, seed: 6, col: '#b06ad8' }, family: { cityR: 8, seed: 8, col: '#e8845a' }, side: { cityR: 10, seed: 9, col: '#2fa58a' } };
+const ISLANDS = ISLANDS_DATA.map(d => ({ id: d.id, name: d.name, sub: d.sub, c: d.c, ...ISL_CFG[d.id],
+  bs: d.buildings.map(b => ({ id: b.id, title: b.title, type: b.type, form: b.form, height: b.height * 1.15 })),
+  keys: d.buildings.map(b => ({ id: b.id, bi: KEYPOS[b.id][0], bj: KEYPOS[b.id][1], park: false })) }));
+const BESPOKE = ['plaza', 'dispatch', 'meeting', 'syscenter', 'hq', 'lab', 'brain', 'dojo', 'sandtable', 'home', 'gym', 'sidehq', 'phoneshop', 'cuyu', 'chuan'];
 const DECO = [
-  { id: 'd1', deco: true, allPark: true, seed: 5, c: [27, 7], cityR: 3, bs: [{ id: 'd1b', title: '', type: 'system', form: 'lighthouse', height: 2.4 }], keys: [{ id: 'd1b', bi: 0, bj: 0, park: true }] },
+  { id: 'd1', deco: true, allPark: true, seed: 5, c: [10, 33], cityR: 3, bs: [{ id: 'd1b', title: '', type: 'system', form: 'lighthouse', height: 2.4 }], keys: [{ id: 'd1b', bi: 0, bj: 0, park: true }] },
   { id: 'd2', deco: true, allPark: true, seed: 7, c: [-3, -27], cityR: 3, bs: [{ id: 'd2b', title: '', type: 'business', form: 'tent', height: 1.5 }], keys: [{ id: 'd2b', bi: 0, bj: 0, park: true }] },
-  { id: 'd3', deco: true, allPark: true, turbine: true, seed: 9, c: [-31, -1], cityR: 3, bs: [], keys: [] },
-  { id: 'd4', deco: true, allPark: true, turbine: true, seed: 11, c: [25, -22], cityR: 3, bs: [], keys: [] },
-  { id: 'd5', deco: true, allPark: true, seed: 13, c: [-5, 27], cityR: 3, bs: [{ id: 'd5b', title: '', type: 'business', form: 'tent', height: 1.5 }], keys: [{ id: 'd5b', bi: 0, bj: 0, park: true }] },
 ];
 ISLANDS.push(...DECO);
 const BRIDGES = [];
-const FIGS = FIGURES.map(f => ({ ...f, island: 'central' }));
+const FIGS = FIGURES;
 const TRIBE_COL = { grok: 0x3b434f, claude: 0xe0794f, gpt: 0x2a9d8f, hy: 0xff8f7a };
 const TYPE_COL = { research: '#5a8fe0', business: '#f27b66', proposal: '#9a82dc', system: '#3fb89f' };
 
@@ -58,9 +70,6 @@ Object.assign(sun.shadow.camera, { left: -34, right: 34, top: 34, bottom: -34, n
 sun.shadow.bias = -0.0004; sun.shadow.normalBias = 0.035; sun.shadow.radius = 5;
 const sunDir = new Vector3(-0.4, 0.95, 1.0).normalize(); sun.position.copy(sunDir).multiplyScalar(70); sun.target.position.set(0, 0, 0);
 scene.add(sun, sun.target);
-{ const c = document.createElement('canvas'); c.width = 4; c.height = 256; const x = c.getContext('2d'), g = x.createLinearGradient(0, 0, 0, 256);
-  g.addColorStop(0, '#8fc9ec'); g.addColorStop(0.5, '#cfe8ee'); g.addColorStop(1, '#f2eadb'); x.fillStyle = g; x.fillRect(0, 0, 4, 256);
-  const t = new CanvasTexture(c); t.colorSpace = SRGBColorSpace; scene.background = t; }
 const matToon = toon(), matOL = outline(0.011);
 
 // ---------- geometry helpers ----------
@@ -222,17 +231,18 @@ for (const isl of ISLANDS) {
   cityIsland(isl);
   for (const bd of isl.bs) {
     const kb = (isl.keys || []).find(k => k.id === bd.id); if (!kb || kb.wx === undefined) continue;
-    const made = bd.form === 'scaffold' ? scaffold() : bd.form === 'plaza' ? makePlaza() : bd.form === 'dispatch' ? makeDispatch() : bd.form === 'meeting' ? makeMeeting() : bd.form === 'syscenter' ? makeSysCenter() : makeBuilding(bd, bi2++ + 3), SC = ['plaza', 'dispatch', 'meeting', 'syscenter'].includes(bd.form) ? 1 : bd.form === 'tent' ? 2.3 : 3.2;
+    const made = bd.form === 'scaffold' ? scaffold() : bd.form === 'plaza' ? makePlaza() : bd.form === 'dispatch' ? makeDispatch() : bd.form === 'meeting' ? makeMeeting() : bd.form === 'syscenter' ? makeSysCenter() : bd.form === 'hq' ? makeHQ() : bd.form === 'lab' ? makeLab() : bd.form === 'brain' ? makeBrain() : bd.form === 'dojo' ? makeDojo() : bd.form === 'sandtable' ? makeBoard() : bd.form === 'home' ? makeHome() : bd.form === 'gym' ? makeGym() : bd.form === 'sidehq' ? makeSideHQ() : bd.form === 'phoneshop' ? makePhoneShop() : bd.form === 'cuyu' ? makeCuyu() : bd.form === 'chuan' ? makeChuan() : makeBuilding(bd, bi2++ + 3), SC = BESPOKE.includes(bd.form) ? (bd.form === 'sidehq' ? 1.3 : 1) : bd.form === 'tent' ? 2.3 : 3.2;
     const g = new Group(), m = new Mesh(made.geo, matToon); m.castShadow = m.receiveShadow = true; g.add(m); m.userData.bid = bd.id; pickMeshes.push(m);
-    g.position.set(kb.wx, 0, kb.wz); g.rotation.y = CAMAZ + (['plaza', 'dispatch', 'meeting', 'syscenter'].includes(bd.form) ? 0 : 0.2 * (bi2 % 3 - 1)); g.scale.setScalar(SC);
+    g.position.set(kb.wx, 0, kb.wz); g.rotation.y = CAMAZ + (BESPOKE.includes(bd.form) ? 0 : 0.2 * (bi2 % 3 - 1)); g.scale.setScalar(SC);
     scene.add(g); bldList.push({ bd, isl, x: kb.wx, z: kb.wz, top: made.top * SC, sc: SC });
     // 周圍的人行道小物
-    if (!['plaza', 'dispatch', 'meeting', 'syscenter'].includes(bd.form)) for (let k = 0; k < 4; k++) place('round', kb.wx + (k % 2 ? 1.7 : -1.7), kb.wz + (k < 2 ? 1.7 : -1.7), 0.55);
+    if (!BESPOKE.includes(bd.form)) for (let k = 0; k < 4; k++) place('round', kb.wx + (k % 2 ? 1.7 : -1.7), kb.wz + (k < 2 ? 1.7 : -1.7), 0.55);
     labelPts.push({ kind: 'bldg', id: bd.id, name: bd.title, type: bd.type, flag: !!bd.flag, island: isl.id, x: kb.wx, y: made.top * SC + 0.2, z: kb.wz, deco: !!isl.deco });
   }
 }
 const islById = Object.fromEntries(ISLANDS.map(i => [i.id, i]));
 
+buildBridges(props, ISLANDS, isRoadAt);
 const landMesh = new Mesh(land.build(), matToon); landMesh.receiveShadow = true; landMesh.castShadow = true; scene.add(landMesh);
 const propsMesh = new Mesh(props.build(), matToon); propsMesh.castShadow = true; propsMesh.receiveShadow = true; scene.add(propsMesh);
 const tint = [0xffffff, 0xf4fff0, 0xfffbe8, 0xeaffea];
@@ -242,25 +252,27 @@ for (const k of ['round', 'pine', 'cherry', 'bush', 'berry', 'rock', 'tuft']) if
 // figures
 const FS = 1.7, bots = [];
 // 小人走動：沿著馬路格子慢慢逛，活動範圍以各自的建築區為中心；待你確認／異常的停在原地
-const central = ISLANDS[0];
-const roadCells = [...central.cells.values()].filter(c => isRoadAt(c.i, c.j));
-const roadSet = new Set(roadCells.map(c => c.i + ',' + c.j));
-const nbrsOf = (i, j) => [[1, 0], [-1, 0], [0, 1], [0, -1]].filter(([a, b]) => roadSet.has((i + a) + ',' + (j + b))).map(([a, b]) => [i + a, j + b]);
-const nearestRoad = (x, z) => roadCells.reduce((best, c) => { const d = Math.hypot(c.i - x, c.j - z); return !best || d < best.d ? { c, d } : best; }, null).c;
+const roads = {};
+for (const isl of ISLANDS) if (!isl.deco && isl.cells) {
+  const cells = [...isl.cells.values()].filter(c => isRoadAt(c.i, c.j)).map(c => ({ i: c.i + isl.c[0], j: c.j + isl.c[1] }));
+  roads[isl.id] = { cells, set: new Set(cells.map(c => c.i + ',' + c.j)) };
+}
+const nbrsOf = (id, i, j) => [[1, 0], [-1, 0], [0, 1], [0, -1]].filter(([a, b]) => roads[id].set.has((i + a) + ',' + (j + b))).map(([a, b]) => [i + a, j + b]);
+const nearestRoad = (id, x, z) => roads[id].cells.reduce((best, c) => { const d = Math.hypot(c.i - x, c.j - z); return !best || d < best.d ? { c, d } : best; }, null).c;
 {
   const ca = Math.cos(CAMAZ), sa = Math.sin(CAMAZ);
   FIGS.forEach((f, i) => {
     const zb = bldList.find(b => b.bd.id === f.zone), stay = f.status === 'you' || f.status === 'bad';
     // 起點：建築前方（朝鏡頭那側）最近的馬路格；停在原地的人各自錯開
     const front = { x: zb.x + (1.9 + (i % 2) * 0.7) * sa + (i - 2) * 0.5 * ca, z: zb.z + (1.9 + (i % 2) * 0.7) * ca - (i - 2) * 0.5 * sa };
-    const c0 = nearestRoad(front.x, front.z);
+    const c0 = nearestRoad(f.island, front.x, front.z);
     const bot = makeBot(f.kind, matToon, matOL, f.status);
     bot.root.position.set(c0.i, 0.02, c0.j); bot.root.rotation.y = CAMAZ; bot.root.scale.setScalar(FS);
     bot.mesh.userData.bid = 'bot:' + f.id; pickMeshes.push(bot.mesh);
     scene.add(bot.root);
     const lp = { kind: 'bot', id: f.id, name: f.name, status: f.status, idx: i, x: c0.i, y: 0.02 + 0.82 * FS, z: c0.j };
     labelPts.push(lp);
-    bots.push({ bot, f, lp, phase: i * 1.3, pos: [c0.i, c0.j], ci: c0.i, cj: c0.j, from: [c0.i, c0.j], to: null, t: 0, wait: 0.5 + i * 0.6, moving: false, stay,
+    bots.push({ bot, f, lp, isl: f.island, phase: i * 1.3, pos: [c0.i, c0.j], ci: c0.i, cj: c0.j, from: [c0.i, c0.j], to: null, t: 0, wait: 0.5 + i * 0.6, moving: false, stay,
       zone: { x: zb.x, z: zb.z, r: 7 }, prev: null, rot: CAMAZ, ox: (i % 3 - 1) * 0.16, oz: ((i + 1) % 3 - 1) * 0.16, hello: false });
   });
 }
@@ -271,7 +283,7 @@ function updateBots(dt, now) {
     if (!b.moving) {
       b.wait -= dt;
       if (!paused && b.wait <= 0) {
-        let opts = nbrsOf(b.ci, b.cj).filter(([a, c]) => !occupied.has(a + ',' + c));
+        let opts = nbrsOf(b.isl, b.ci, b.cj).filter(([a, c]) => !occupied.has(a + ',' + c));
         if (opts.length) {
           const inZone = opts.filter(([a, c]) => Math.hypot(a - b.zone.x, c - b.zone.z) <= b.zone.r);
           if (inZone.length) opts = inZone; else opts.sort((p, q) => Math.hypot(p[0] - b.zone.x, p[1] - b.zone.z) - Math.hypot(q[0] - b.zone.x, q[1] - b.zone.z)).splice(1);
@@ -302,6 +314,9 @@ const dist = makeDistTexture(allTiles);
 const water = makeWater(dist, WATER_Y); scene.add(water);
 { const u = water.material.uniforms;
   u.uShallow.value.set(0xa4ecd8); u.uDeep.value.set(0x6cc6d8); u.uSky.value.set(0xe8f1ee); u.uSunDir.value.copy(sunDir); u.uSunCol.value.set(0xfff1d6).multiplyScalar(0.8); u.uTime.value = 3.2; }
+const boats = makeBoats(matToon, matOL, [[-31, 9, 0xe2564f, 2.5, 3.5, 0.05], [6, 31, 0x4a90e2, 3.5, 2.5, -0.06], [31, -17, 0xffb347, 3, 3, 0.05], [-16, -27, 0x2fa58a, 3.5, 2.5, -0.05]]);
+scene.add(boats.group);
+const atmo = createAtmosphere({ scene, hemi, sun, water, U, onSky: opts.onSky });
 
 
 // ---------- surroundings: bay ringed by hills ----------
@@ -418,6 +433,8 @@ function frame(now) {
   for (const key of ['az', 'el', 'dist', 'tx', 'ty', 'tz']) view[key] += (target[key] - view[key]) * k;
   placeCamera();
   water.material.uniforms.uTime.value = 3.2 + (now - t0) / 1000 * 0.6;
+  boats.update((now - t0) / 1000);
+  atmo.update(now, Math.min(0.1, (now - (frame.lastA || now)) / 1000), { x: view.tx, z: view.tz }, camera.position); frame.lastA = now;
   const dtb = Math.min(0.1, (now - (frame.lastB || now)) / 1000); frame.lastB = now; updateBots(dtb, (now - t0) / 1000);
   if (selRing.visible) selRing.material.opacity = 0.75 + 0.2 * Math.sin(now / 260);
   renderer.render(scene, camera);
@@ -440,12 +457,13 @@ const api = {
   select(id, fromUser) {
     selected = id || null; placeRing(selRing, selected); if (selected) hovRing.visible = false;
     if (botOf(selected)) { selRing.visible = false; const bo = botOf(selected); target.tx = bo.pos[0]; target.tz = bo.pos[1]; target.dist = Math.min(target.dist, 26); }
-    if (selected && bById[selected]) { const b = bById[selected]; target.tx = b.x * 0.6; target.tz = b.z * 0.6 + 1.5; target.dist = Math.min(target.dist, 52); }
+    if (selected && bById[selected]) { const b = bById[selected], k = b.isl.id === 'central' ? 0.6 : 1; target.tx = b.x * k; target.tz = b.z * k + 1.5; target.dist = Math.min(target.dist, 52); }
     if (fromUser) opts.onSelect && opts.onSelect(selected);
   },
   home() { Object.assign(target, HOME); },
+  focus(islandId) { const isl = ISLANDS.find(x => x.id === islandId); if (!isl) return; selected = null; placeRing(selRing, null); target.tx = isl.c[0] + (islandId === 'central' ? 0.5 : 0); target.tz = isl.c[1] + 2.5; target.dist = islandId === 'central' ? 72 : 46; opts.onSelect && opts.onSelect(null); },
   dispose() {
-    disposed = true; cancelAnimationFrame(raf); ro.disconnect();
+    disposed = true; atmo.dispose(); cancelAnimationFrame(raf); ro.disconnect();
     scene.traverse(o => { if (o.geometry) o.geometry.dispose(); if (o.material) (Array.isArray(o.material) ? o.material : [o.material]).forEach(m => m.dispose()); });
     renderer.dispose(); renderer.domElement.remove(); labels.forEach(l => l.el.remove());
   },
