@@ -4,8 +4,8 @@ import { authHeaders, expireSession } from '../auth'
 const NAMES = {hy: 'HY', sam: 'Sam', family: '小因', '950157': '950157'}
 const LABELS = {spec_change: '規格變更', message: '會議室留言', new_project: '新增專案', reassign: '改派'}
 
-export function OfficeRequest({ type, projects, projectId, readOnly, reload }) {
-  const [open, setOpen] = useState(false), [busy, setBusy] = useState(false), [error, setError] = useState(null), [notice, setNotice] = useState('')
+export function OfficeRequest({ type, projects, projectId, readOnly, reload, inline = false }) {
+  const [open, setOpen] = useState(inline), [busy, setBusy] = useState(false), [error, setError] = useState(null), [notice, setNotice] = useState('')
   const [form, setForm] = useState({project: projectId || '', content: '', title: '', goal: '', owner_bot: 'hy', executor: 'grok-build', reviewer: 'claude'})
   const requestId = useRef(null)
   const set = field => e => { requestId.current = null; setForm(old => ({...old, [field]: e.target.value})) }
@@ -16,18 +16,18 @@ export function OfficeRequest({ type, projects, projectId, readOnly, reload }) {
     if (type === 'new_project') Object.assign(payload, {title: form.title.trim(), goal: form.goal.trim(), owner_bot: form.owner_bot})
     else payload.project = form.project
     if (type === 'reassign') Object.assign(payload, {executor: form.executor, reviewer: form.reviewer})
-    try { await writeOffice('requests', payload, {headers: authHeaders()}); requestId.current = null; setNotice('已送出，等待 Atlas 巡視處理。'); setOpen(false); setForm(old => ({...old, content: '', title: '', goal: ''})); await reload() }
+    try { await writeOffice('requests', payload, {headers: authHeaders()}); requestId.current = null; setNotice('已送出，處理結果會顯示在此專案。'); setOpen(inline); setForm(old => ({...old, content: '', title: '', goal: ''})); await reload() }
     catch (e) { setError(e) } finally { setBusy(false) }
   }
-  return <div className="bo-action"><button disabled={readOnly || busy} aria-expanded={open} onClick={() => setOpen(v => !v)}>{LABELS[type]}</button>
+  return <div className="bo-action">{!inline && <button disabled={readOnly || busy} aria-expanded={open} onClick={() => setOpen(v => !v)}>{LABELS[type]}</button>}
     {open && <form className="ao-card bo-request-form" aria-label={LABELS[type]} onSubmit={send}>
-      <h2>{LABELS[type]}</h2><fieldset disabled={busy}>
+      {!inline && <h2>{LABELS[type]}</h2>}<fieldset disabled={busy}>
       {type !== 'new_project' && <label>專案<select aria-label={`${LABELS[type]}專案`} value={form.project} onChange={set('project')} required><option value="">請選專案</option>{projects.map(p => <option key={p.id} value={p.id}>{p.title}・{NAMES[p.ownerBot] || '待補 owner'}</option>)}</select></label>}
       {type === 'new_project' && <><label>名稱<input value={form.title} onChange={set('title')} required /></label><label>目標<textarea value={form.goal} onChange={set('goal')} required /></label><label>負責 Bot<select value={form.owner_bot} onChange={set('owner_bot')}>{Object.entries(NAMES).map(([id, name]) => <option key={id} value={id}>{name}</option>)}</select></label></>}
       {type === 'reassign' && <><label>執行者<select value={form.executor} onChange={set('executor')}>{['grok-build', 'gpt', 'claude'].map(n => <option key={n}>{n}</option>)}</select></label><label>審查者<select value={form.reviewer} onChange={set('reviewer')}>{['claude', 'gpt', 'grok-build'].map(n => <option key={n}>{n}</option>)}</select></label>{form.executor === form.reviewer && <p role="alert">執行者與審查者必須不同。</p>}</>}
       <label>說明<textarea value={form.content} onChange={set('content')} required /></label>
-      <p className="ao-muted">送出後等待 Atlas 處理；目前的專案資料會在處理完成後更新。</p>
-      <div className="ao-toolbar"><button type="submit" disabled={!form.content.trim() || type === 'reassign' && form.executor === form.reviewer}>送給 Atlas</button><button type="button" onClick={() => setOpen(false)}>取消</button></div>
+      <p className="ao-muted">送出後會交給專案流程處理，處理完成後更新專案。</p>
+      <div className="ao-toolbar"><button type="submit" disabled={!form.content.trim() || type === 'reassign' && form.executor === form.reviewer}>{type === 'message' ? '送給 PI' : '送出請求'}</button>{!inline && <button type="button" onClick={() => setOpen(false)}>取消</button>}</div>
       </fieldset>
     </form>}
     {busy && <p role="status">正在儲存…</p>}{notice && <p role="status">{notice}</p>}{error && <p role="alert">{error.message}{error.kind === 'auth' && <button onClick={expireSession}>重新登入</button>}</p>}
@@ -42,11 +42,16 @@ export function OfficeLog({ project, readOnly, reload }) {
     try { await writeOffice('log', {project: project.id, content: content.trim(), request_id: requestId.current}, {headers: authHeaders()}); requestId.current = null; setContent(''); setNotice('留言已儲存。'); await reload() }
     catch (e) { setError(e) } finally { setBusy(false) }
   }
-  return <section className="ao-card"><h2>工作紀錄</h2><form onSubmit={send}><label>HY 留言<textarea aria-label="HY 留言" disabled={readOnly || busy} value={content} onChange={e => { requestId.current = null; setContent(e.target.value) }} /></label><button disabled={readOnly || busy || !content.trim()}>新增留言</button></form>
+  return <section className="ao-card"><h2>工作日誌</h2><form onSubmit={send}><label>HY 留言<textarea aria-label="HY 留言" disabled={readOnly || busy} value={content} onChange={e => { requestId.current = null; setContent(e.target.value) }} /></label><button disabled={readOnly || busy || !content.trim()}>新增留言</button></form>
     {notice && <p role="status">{notice}</p>}{error && <p role="alert">{error.message}{error.kind === 'auth' && <button onClick={expireSession}>重新登入</button>}</p>}
     <ol className="ao-journal">{project.logs.slice().reverse().map(l => <li key={l.id}><time>{l.at}</time><b>{l.actor === 'hy' ? 'HY' : l.answered_by === 'hy' ? 'HY Bot' : NAMES[l.answered_by] || 'Bot'}</b><p className="bo-summary">{l.content}</p></li>)}</ol>
     {!project.logs.length && <p className="ao-muted">尚無留言。</p>}
   </section>
+}
+
+export function OfficeFollowUps({ project }) {
+  const names = {open: '待辦', done: '已完成', resolved: '已完成', cancelled: '已取消'}
+  return <section className="ao-card bo-follow-ups"><h2>執行前待辦</h2>{project.followUps.length ? <ul className="ao-bullets">{project.followUps.map((f,i) => <li key={f.id || i}><span className="hy-pill" data-s={['done','resolved'].includes(f.status) ? 'done' : 'wait'}>{names[f.status] || f.status || '狀態待補'}</span><p>{f.text}</p>{f.sourceUrl ? <a href={f.sourceUrl} target="_blank" rel="noopener noreferrer">來源 {f.source} ↗</a> : f.source && <small>來源：{f.source}</small>}</li>)}</ul> : <p className="ao-muted">尚未登錄執行前待辦。</p>}</section>
 }
 
 export function OfficeReview({ project }) {

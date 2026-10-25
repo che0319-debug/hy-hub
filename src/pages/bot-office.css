@@ -218,3 +218,13 @@
 
 .bo-page .bo-action>button,.bo-page .bo-request-form button{min-height:44px}
 .bo-page .bo-decisions:not(.needs-you){background:var(--hy-surface)}
+
+/* Align with AIOfficeV1: compact project header and five task-oriented tabs. */
+.bo-page .bo-team-row{display:contents}
+.bo-page .bo-execution-view{display:grid;gap:var(--hy-gap)}
+.bo-page .bo-execution-split{grid-template-columns:minmax(0,1fr) minmax(0,1fr)}
+.bo-page .bo-document-preview{width:100%;height:650px;border:1px solid var(--hy-line);margin-top:var(--hy-gap)}
+.bo-page .bo-last-updated{margin:var(--hy-gap) 0 0;font-size:var(--hy-fs-tiny)}
+.bo-page .bo-edit-actions{display:flex;flex-wrap:wrap;gap:var(--hy-gap)}
+.bo-page .ao-thread-card .bo-request-form{border:0;padding:0;width:100%}
+@media(max-width:640px){.bo-page .bo-execution-split{grid-template-columns:1fr}.bo-page .bo-document-preview{height:480px}.bo-page .ao-header-actions{width:auto;margin-left:auto}}
