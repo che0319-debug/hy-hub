@@ -149,6 +149,7 @@ export async function answerOfficeDecision(id, payload, { headers = {}, fetcher 
   })
   const data = await response.json().catch(() => ({}))
   if (response.status === 401) throw new OfficeReadError('auth', '登入已過期，請重新登入。')
+  if (response.status === 409 && data?.error === 'office_project_deleting') throw new OfficeReadError('conflict', officeFailureMessage(409, data), data.error)
   if (response.status === 409) throw new OfficeReadError('conflict', '資料已更新，請重新讀取後確認再送出；你的輸入會保留。')
   if (!response.ok) throw new OfficeReadError('error', response.status === 413 ? '資料已達大小上限，請由 Atlas 整理後再試。' : '未儲存成功，請稍後重試。')
   return data
@@ -161,6 +162,7 @@ export async function writeOffice(path, payload, { headers = {}, fetcher = fetch
   })
   const data = await response.json().catch(() => ({}))
   if (response.status === 401) throw new OfficeReadError('auth', '登入已過期，請重新登入。')
+  if (response.status === 409 && data?.error === 'office_project_deleting') throw new OfficeReadError('conflict', officeFailureMessage(409, data), data.error)
   if (response.status === 409) throw new OfficeReadError('conflict', '資料已更新，請重新讀取後再送出；輸入已保留。')
   if (!response.ok) throw new OfficeReadError('error', response.status === 413 ? '資料已達大小上限，請由 Atlas 整理後再試。' : '未儲存成功，請稍後重試。')
   return data

@@ -31,3 +31,24 @@ test('office requests and logs use human session and one POST without snapshot k
     assert.equal(call[1].headers.Authorization,'session');assert.equal(call[1].headers['X-Brain-Write-Token'],undefined)
   }
 })
+
+test('409 office_project_deleting shows deleting, not "data updated"', async () => {
+  const deleting = async () => new Response('{"error":"office_project_deleting"}', { status: 409 })
+  for (const call of [
+    () => answerOfficeDecision('d', {}, { fetcher: deleting }),
+    () => writeOffice('log', { project: 'p' }, { fetcher: deleting }),
+  ]) {
+    await assert.rejects(call(), e => {
+      assert.equal(e.kind, 'conflict')
+      assert.equal(e.code, 'office_project_deleting')
+      assert.match(e.message, /正在刪除中/)
+      assert.doesNotMatch(e.message, /資料已更新/)
+      return true
+    })
+  }
+  // 其他 409 維持原文案。
+  await assert.rejects(writeOffice('log', {}, { fetcher: async () => new Response('{"error":"brain_write_conflict"}', { status: 409 }) }),
+    e => /資料已更新/.test(e.message))
+  await assert.rejects(answerOfficeDecision('d', {}, { fetcher: async () => new Response('{}', { status: 409 }) }),
+    e => /資料已更新/.test(e.message))
+})
