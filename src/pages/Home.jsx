@@ -1,25 +1,14 @@
 import { useState, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { ClipboardList, RefreshCw, Pencil } from 'lucide-react'
+import { ClipboardList, Pencil } from 'lucide-react'
 import { homeSummary } from '../mock/data'
-import { useSessionContext } from '../App'
-import PixelCity from '../mobile/PixelCity'
-import { fetchTodaySchedule, fetchAllMilestones, fetchMobileState, fetchWeeklyChange, postWeeklyChange, fetchLifeOSContext } from '../api'
-import { fetchDailyOS } from '../lifeOSApi'
+import { fetchTodaySchedule, fetchAllMilestones, fetchWeeklyChange, postWeeklyChange } from '../api'
 import { useAIWork, refreshAIWork } from '../aiWorkStore'
 import AIWorkHomeSummary from '../components/AIWorkHomeSummary'
 
-let homeDataCache = null
 let weeklyChangeCache
 let todoCache
 let scheduleCache
-
-const BOT_ROUTE = {
-  hy:      '/line/hy',
-  '950157':'/line/950157',
-  family:  '/line/xiaoyin',
-  sam:     '/line/sam',
-}
 
 function todayTaipei() {
   return new Date(Date.now() + 8 * 3600 * 1000).toISOString().slice(0, 10)
@@ -326,42 +315,8 @@ function WeeklyChangeCard() {
 }
 
 export default function Home() {
-  const [view, setView]           = useState('data')
-  const [worldState, setWorldState] = useState(homeDataCache?.worldState || null)
-  const [dailyOS, setDailyOS] = useState(homeDataCache?.dailyOS || null)
   const aiWork = useAIWork()
-  const [workspaceCore, setWorkspaceCore] = useState(homeDataCache?.workspaceCore || null)
-  const [refreshing, setRefreshing] = useState(false)
-  const { refreshSessions } = useSessionContext()
   const navigate  = useNavigate()
-
-  async function loadWorld() {
-    const results = await Promise.allSettled([fetchMobileState(), fetchDailyOS(), fetchLifeOSContext()])
-    const next = { ...(homeDataCache || {}) }
-    if (results[0].status === 'fulfilled') { next.worldState = results[0].value; setWorldState(results[0].value) }
-    else console.warn('[Home] fetchMobileState failed:', results[0].reason)
-    if (results[1].status === 'fulfilled') { next.dailyOS = results[1].value; setDailyOS(results[1].value) }
-    else console.warn('[Home] fetchDailyOS failed:', results[1].reason)
-    if (results[2].status === 'fulfilled') { next.workspaceCore = results[2].value; setWorkspaceCore(results[2].value) }
-    homeDataCache = next
-  }
-
-  async function handleRefresh() {
-    setRefreshing(true)
-    await Promise.allSettled([loadWorld(), refreshSessions()])
-    setRefreshing(false)
-  }
-
-  // 像素視圖才需要這三支 API；停在「資料」視圖時不載入，避免拖慢首頁。
-  useEffect(() => {
-    if (view === 'pixel' && !homeDataCache) loadWorld()
-  }, [view]) // eslint-disable-line react-hooks/exhaustive-deps
-
-  function handleBotClick(botId) {
-    const route = BOT_ROUTE[botId]
-    if (route) navigate(route)
-    else navigate('/line/hy')
-  }
 
   return (
     <div>
@@ -370,26 +325,9 @@ export default function Home() {
           <h1 className="text-xl font-bold text-slate-800">{homeSummary.greeting}</h1>
           <p className="text-slate-500 text-sm">{todayTaipei()}</p>
         </div>
-        <div className="flex items-center gap-3">
-          <div className="flex rounded-md overflow-hidden border border-slate-200">
-            <button
-              onClick={() => setView('data')}
-              className={`px-4 py-1.5 text-sm transition-colors ${view === 'data' ? 'bg-blue-600 text-white' : 'bg-white text-slate-500 hover:bg-slate-100'}`}
-            >
-              資料
-            </button>
-            <button
-              onClick={() => setView('pixel')}
-              className={`px-4 py-1.5 text-sm transition-colors ${view === 'pixel' ? 'bg-blue-600 text-white' : 'bg-white text-slate-500 hover:bg-slate-100'}`}
-            >
-              像素
-            </button>
-          </div>
-        </div>
       </div>
 
-      {view === 'data' ? (
-        <div>
+      <div>
           <WeeklyChangeCard />
           <section className="mb-4">
             <h2 className="mb-3 text-sm font-semibold text-slate-600">AI Work</h2>
@@ -402,27 +340,6 @@ export default function Home() {
             <ScheduleSection />
           </div>
         </div>
-      ) : (
-        <div>
-          <div className="flex justify-end mb-2">
-            <button
-              onClick={handleRefresh}
-              disabled={refreshing}
-              className="flex items-center gap-1.5 px-3 py-1.5 text-xs text-slate-500 bg-white border border-slate-200 rounded-lg hover:bg-slate-50 disabled:opacity-50 transition-colors"
-            >
-              <RefreshCw size={12} className={refreshing ? 'animate-spin' : ''} />
-              刷新
-            </button>
-          </div>
-          <PixelCity
-            dailyOS={dailyOS}
-            state={worldState}
-            variant="desktop"
-            onOpenDistrict={handleBotClick}
-            onOpenWork={() => navigate('/ai-work-v5')}
-          />
-        </div>
-      )}
     </div>
   )
 }
