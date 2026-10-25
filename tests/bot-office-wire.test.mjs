@@ -3,9 +3,9 @@ import assert from 'node:assert/strict'
 import {
   REPORT_FRAME, isHyOwnerSession, officeMilestones, currentMilestoneId, milestoneProgress,
   reportSummaryLines, reportIsStale, reportVersions, normalizeOfficeReport, normalizeOfficeDocument,
-  normalizeOfficeFiles, deleteErrorMessage, officeFailureMessage, reviewRounds, officeJournal, executionRounds,
+  normalizeOfficeFiles, deleteErrorMessage, officeDeleteOutcome, officeFailureMessage, reviewRounds, officeJournal, executionRounds,
 } from '../src/lib/botOfficeView.mjs'
-import { loadOfficeReport, loadOfficeReportHtml, loadOfficeDocument, loadOfficeFiles, deleteOfficeProject, uploadOfficeFile, importOfficeReference, mapOffice } from '../src/botOfficeData.js'
+import { loadOfficeReport, loadOfficeReportHtml, loadOfficeDocument, loadOfficeFiles, deleteOfficeProject, uploadOfficeFile, importOfficeReference, mapOffice, officeDeleteHold } from '../src/botOfficeData.js'
 
 const token = payload => `${btoa(JSON.stringify(payload))}.test`
 const json = (status, body) => new Response(JSON.stringify(body), { status, headers: { 'content-type': 'application/json' } })
@@ -112,8 +112,30 @@ test('delete and office failures stay in Chinese and do not invent a success', (
   assert.match(deleteErrorMessage(503, { error: 'drive_write_unavailable' }), /專案未刪除/)
   assert.match(deleteErrorMessage(503, { error: 'archive_folder_not_configured' }), /尚未設定/)
   assert.match(deleteErrorMessage(409, { error: 'project_running' }), /正在執行/)
+  assert.match(deleteErrorMessage(409, { error: 'project_review' }), /審查中/)
+  assert.match(deleteErrorMessage(409, { error: 'project_review' }), /專案未刪除/)
+  assert.match(deleteErrorMessage(409, { error: 'state_conflict' }), /重新讀取/)
+  const removed = deleteErrorMessage(502, { committed: true, error: 'index_write', step: 'index', backup_file_id: 'bak' })
+  assert.match(removed, /專案已刪除（備份已保留）/)
+  assert.match(removed, /再按一次刪除/)
+  assert.doesNotMatch(removed, /專案未刪除/)
+  const unknown = deleteErrorMessage(502, { committed: null, reason: '結果不明，備份已保留，請重新讀取確認' })
+  assert.match(unknown, /結果不明，備份已保留，請重新讀取確認專案是否已刪除/)
+  assert.doesNotMatch(unknown, /專案未刪除/)
+  assert.doesNotMatch(unknown, /專案已刪除/)
+  assert.match(deleteErrorMessage(502, { committed: false, step: 'backup', reason: '搬移失敗' }), /專案未刪除/)
+  assert.match(deleteErrorMessage(502, { error: 'backup_failed', step: 'archive' }), /專案未刪除/)
+  assert.match(deleteErrorMessage(502, { committed: true, error: 'drive_write_unavailable' }), /專案已刪除/)
+  assert.doesNotMatch(deleteErrorMessage(502, { committed: true, error: 'drive_write_unavailable' }), /專案未刪除/)
   assert.match(deleteErrorMessage(400, { error: 'confirm_title' }), /名稱不一致/)
   assert.match(deleteErrorMessage(0, {}), /無法連線/)
+  const removedOutcome = officeDeleteOutcome({ status: 502, body: { committed: true, backup_file_id: 'bak' }, message: removed })
+  assert.equal(removedOutcome.removed, true)
+  assert.match(removedOutcome.message, /看板收尾未完成/)
+  const unknownOutcome = officeDeleteOutcome({ status: 502, body: { committed: null }, message: unknown })
+  assert.equal(unknownOutcome.removed, false)
+  assert.doesNotMatch(unknownOutcome.message, /專案未刪除|專案已刪除/)
+  assert.equal(officeDeleteOutcome({ status: 502, body: { committed: false }, message: '備份或搬移失敗，專案未刪除。' }).removed, false)
   assert.match(officeFailureMessage(422, { error: 'report_unsafe', reason: 'script' }, 'report'), /安全檢查/)
   assert.match(officeFailureMessage(404, { error: 'no_document' }), /沒有可讀/)
   assert.match(officeFailureMessage(404, { error: 'missing' }, 'report'), /找不到專案或這份報告/)
@@ -176,6 +198,33 @@ test('mapped office state keeps the raw updated time and optional review criteri
     { cards: [{ id: 'r', project: 'p', type: 'review', verdict: 'pass', criteria: ['C1'], round: 2 }] },
   )
   assert.equal(mapped.updatedRaw, '2026-10-25T01:00:00+08:00')
+  assert.equal(mapped.updatedAt, '2026-10-25T01:00:00+08:00')
   assert.deepEqual(mapped.projects[0].cards.outputs[0].criteria, ['C1'])
   assert.equal(mapped.projects[0].cards.outputs[0].verdict, 'pass')
+})
+
+test('review stage is the normalized stage value and blocks delete like running', () => {
+  const review = mapOffice({ buildings: [{ id: 'r', title: '審查案', stage: 'review' }] }, {})
+  assert.equal(review.projects[0].stage, 'review')
+  assert.equal(review.projects[0].stageLabel, '待審')
+  assert.equal(officeDeleteHold(review.projects[0]), '目前專案在審查中，需等審查結束後才能刪除。')
+  assert.equal(officeDeleteHold({ ...review.projects[0], stage: review.projects[0].stageLabel }), '')
+  const running = mapOffice({ buildings: [{ id: 'a', title: '執行案', stage: 'running' }] }, {})
+  assert.equal(officeDeleteHold(running.projects[0]), '目前專案執行中，需等結束後才能刪除。')
+  assert.equal(officeDeleteHold(mapOffice({ buildings: [{ id: 'd', title: '完成案', stage: 'done' }] }, {}).projects[0]), '')
+})
+
+test('delete client exposes status and committed body without calling the project deleted', async () => {
+  const cases = [
+    [409, { error: 'project_review' }, error => error.status === 409 && error.body.error === 'project_review' && /審查中/.test(error.message) && /專案未刪除/.test(error.message)],
+    [502, { committed: true, error: 'index_write', step: 'index', backup_file_id: 'bak' }, error => error.status === 502 && error.body.committed === true && error.body.backup_file_id === 'bak' && /專案已刪除/.test(error.message) && !/專案未刪除/.test(error.message) && officeDeleteOutcome(error).removed === true],
+    [502, { committed: null, error: 'state_unknown', reason: '結果不明' }, error => error.status === 502 && error.body.committed === null && /結果不明/.test(error.message) && !/專案未刪除/.test(error.message) && !/專案已刪除/.test(error.message) && officeDeleteOutcome(error).removed === false],
+    [502, { committed: false, error: 'backup_failed', step: 'backup', reason: '搬移失敗' }, error => error.status === 502 && error.body.committed === false && /專案未刪除/.test(error.message) && officeDeleteOutcome(error).removed === false],
+    [502, { error: 'backup_failed' }, error => error.status === 502 && error.body.committed === undefined && /專案未刪除/.test(error.message)],
+  ]
+  for (const [status, body, check] of cases) {
+    await assert.rejects(deleteOfficeProject('p/1', { confirm_title: '專案', expected_state_updated: '2026-10-25T09:00:00+08:00' }, {
+      fetcher: async () => json(status, body), base: 'https://example.test',
+    }), check)
+  }
 })

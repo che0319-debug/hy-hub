@@ -8,9 +8,19 @@ const STAGES = {
   unassigned: ['待派', 'wait'], assigned: ['已派', 'wait'], running: ['執行中', 'ai'],
   review: ['待審', 'ai'], hy_decision: ['待 HY 決定', 'you'], done: ['完成', 'done'], returned: ['退回', 'bad'],
 }
+const DELETE_HOLD = {
+  running: '目前專案執行中，需等結束後才能刪除。',
+  review: '目前專案在審查中，需等審查結束後才能刪除。',
+}
 const CARD_GROUP = { meeting: 'meeting', note: 'meeting', execution: 'execution', plan: 'execution', output: 'outputs', log: 'log', decision: 'overview', review: 'outputs' }
 const array = value => Array.isArray(value) ? value : []
 const text = value => typeof value === 'string' ? value : ''
+// project.stage 是 text(p.stage)，與 STAGES 的鍵相同；審查階段是 'review'，不是 stageLabel「待審」。
+export function officeDeleteHold(project) {
+  const stage = text(project?.stage)
+  if (!Object.prototype.hasOwnProperty.call(STAGES, stage)) return ''
+  return DELETE_HOLD[stage] || ''
+}
 export const safeDriveUrl = value => {
   try { const url = new URL(value); return url.protocol === 'https:' ? url.href : null } catch { return null }
 }
@@ -156,6 +166,14 @@ export async function writeOffice(path, payload, { headers = {}, fetcher = fetch
   return data
 }
 
+const httpError = (kind, message, status, body, code = '') => {
+  const data = body && typeof body === 'object' ? body : {}
+  const error = new OfficeReadError(kind, message, code || (typeof data.error === 'string' ? data.error : ''))
+  error.status = status
+  error.body = data
+  return error
+}
+
 export async function officeApi(path, { method = 'GET', headers = {}, body, fetcher = fetch, base = import.meta.env?.VITE_API_BASE || '', signal, expect = 'json', topic = 'office' } = {}) {
   const root = String(base || '').replace(/\/$/, '')
   let response
@@ -166,19 +184,19 @@ export async function officeApi(path, { method = 'GET', headers = {}, body, fetc
     response = await fetcher(`${root}/api/office/${path}`, init)
   } catch (error) {
     if (error?.name === 'AbortError') throw error
-    throw new OfficeReadError('network', officeFailureMessage(0, {}, topic))
+    throw httpError('network', officeFailureMessage(0, {}, topic), 0, {})
   }
-  if (response.status === 401) throw new OfficeReadError('auth', '登入已過期，請重新登入。')
+  if (response.status === 401) throw httpError('auth', '登入已過期，請重新登入。', 401, {})
   const type = response.headers?.get?.('content-type') || ''
   if (expect === 'html') {
     if (!response.ok || type.includes('json')) {
       const data = await response.json().catch(() => ({}))
-      throw new OfficeReadError('error', officeFailureMessage(response.status, data, topic), data?.error || '')
+      throw httpError('error', officeFailureMessage(response.status, data, topic), response.status, data, data?.error || '')
     }
     return response.text()
   }
   const data = await response.json().catch(() => null)
-  if (!response.ok || data == null) throw new OfficeReadError(response.status === 409 ? 'conflict' : 'error', officeFailureMessage(response.status, data || {}, topic), data?.error || '')
+  if (!response.ok || data == null) throw httpError(response.status === 409 ? 'conflict' : 'error', officeFailureMessage(response.status, data || {}, topic), response.status, data || {}, data?.error || '')
   return data
 }
 

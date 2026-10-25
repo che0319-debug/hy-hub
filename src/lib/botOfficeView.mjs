@@ -138,9 +138,13 @@ export function deleteErrorMessage(status, body = {}) {
   const error = textOf(body?.error)
   const reason = textOf(body?.reason)
   const step = textOf(body?.step)
+  // 502 的 committed 優先於 body.error：已提交或結果不明時不能再說「未刪除」。
+  if (status === 502 && body?.committed === true) return '專案已刪除（備份已保留），但看板收尾未完成，請重新整理；若卡片還在，再按一次刪除即可清掉。'
+  if (status === 502 && body?.committed === null) return '結果不明，備份已保留，請重新讀取確認專案是否已刪除。'
   if (error === 'drive_write_unavailable') return `沒有 Drive 寫入權，專案未刪除。${reason ? `（${reason}）` : ''}`
   if (error === 'archive_folder_not_configured') return '尚未設定「已刪除專案備份」資料夾，專案未刪除。'
   if (error === 'project_running') return '專案正在執行，現在不能刪除。專案未刪除。'
+  if (error === 'project_review') return '專案在審查中，現在不能刪除。專案未刪除。'
   if (status === 400) return '輸入的專案名稱不一致，未刪除。'
   if (status === 409) return '專案資料已更新，請重新讀取後再刪除。專案未刪除。'
   if (status === 404) return '找不到這個專案，或刪除功能尚未部署。專案未刪除。'
@@ -149,6 +153,13 @@ export function deleteErrorMessage(status, body = {}) {
   if (status === 502) return `備份或搬移失敗，專案未刪除。${step ? `停在：${step}。` : ''}${reason}`
   if (!status) return '無法連線，專案未刪除。'
   return `刪除失敗（${status}${error ? ` ${error}` : ''}），專案未刪除。`
+}
+
+export function officeDeleteOutcome(error) {
+  const body = error?.body && typeof error.body === 'object' ? error.body : {}
+  const status = Number.isInteger(error?.status) ? error.status : 0
+  const message = typeof error?.message === 'string' && error.message ? error.message : deleteErrorMessage(status, body)
+  return { message, removed: status === 502 && body.committed === true }
 }
 
 export function officeFailureMessage(status, body = {}, topic = 'office') {

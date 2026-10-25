@@ -3,9 +3,9 @@ import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import {PlanSummary,PlanDocument} from '../pages/PlanViews'
 import {milestones,PACKAGE_STATUS,safeUrl} from '../lib/aiOffice.mjs'
-import {officeEvents,officeTime,officeJournal,reportSummaryLines,reportIsStale,reportVersions,normalizeOfficeReport,normalizeOfficeDocument,normalizeOfficeFiles,reviewRounds,reviewFieldLabel,openFollowUpCount,REPORT_FRAME} from '../lib/botOfficeView.mjs'
+import {officeEvents,officeTime,officeJournal,reportSummaryLines,reportIsStale,reportVersions,normalizeOfficeReport,normalizeOfficeDocument,normalizeOfficeFiles,reviewRounds,reviewFieldLabel,openFollowUpCount,REPORT_FRAME,officeDeleteOutcome} from '../lib/botOfficeView.mjs'
 import {OfficeRequest,OfficeLog,OfficeFollowUps} from './OfficeActions'
-import {OFFICE_NAMES,OFFICE_TABS,loadOfficeReport,loadOfficeReportHtml,loadOfficeDocument,loadOfficeFiles,deleteOfficeProject,uploadOfficeFile,importOfficeReference} from '../botOfficeData'
+import {OFFICE_NAMES,OFFICE_TABS,loadOfficeReport,loadOfficeReportHtml,loadOfficeDocument,loadOfficeFiles,deleteOfficeProject,uploadOfficeFile,importOfficeReference,officeDeleteHold} from '../botOfficeData'
 import {authHeaders} from '../auth'
 import './project-report.css'
 import '../pages/control-center-v5.css'
@@ -221,21 +221,21 @@ export function OfficeJournal({project,reload,onOverview,onExecution,state,index
 
 export function OfficeDelete({project,updatedRaw,onDeleted}) {
   const [open,setOpen]=useState(false),[confirm,setConfirm]=useState(''),[busy,setBusy]=useState(false),[message,setMessage]=useState('')
-  const running=project.stage==='running'
-  async function remove(){setBusy(true);setMessage('');try{await deleteOfficeProject(project.id,{confirm_title:confirm.trim(),expected_state_updated:updatedRaw},{headers:authHeaders()});await onDeleted()}catch(error){setMessage(error.message||'刪除失敗，專案未刪除。')}finally{setBusy(false)}}
+  const hold=officeDeleteHold(project)
+  async function remove(){setBusy(true);setMessage('');try{await deleteOfficeProject(project.id,{confirm_title:confirm.trim(),expected_state_updated:updatedRaw},{headers:authHeaders()});await onDeleted()}catch(error){const outcome=officeDeleteOutcome(error);setMessage(outcome.message||'刪除失敗，專案未刪除。');if(outcome.removed)await onDeleted(outcome.message)}finally{setBusy(false)}}
   if(!open)return <div className="cc5-danger-row"><button type="button" className="cc5-btn cc5-danger" onClick={()=>setOpen(true)}>刪除專案</button></div>
   return <section className="cc5-panel cc5-danger-panel" role="alertdialog" aria-labelledby="bo-del-title" aria-describedby="bo-del-desc">
     <h2 className="cc5-h" id="bo-del-title">永久刪除「{project.title}」？</h2>
     <div id="bo-del-desc" className="cc5-stack-tight">
       <p>刪除後，這個專案的規劃、決策、執行回合與工作紀錄都會從 HY Life OS 移除，<b>無法復原</b>。</p>
       <p>刪除前會自動備份：專案所有資料匯出成 JSON 放進專案的 Drive 資料夾，整個資料夾（含所有產出檔案）移到 HY Life OS／<b>_已刪除專案備份</b>，Drive 上不刪任何檔案。備份失敗就不會刪除。</p>
-      {running&&<p className="cc5-warn">目前專案執行中，需等結束後才能刪除。</p>}
+      {hold&&<p className="cc5-warn">{hold}</p>}
     </div>
     <label className="cc5-field">輸入專案名稱「{project.title}」確認<input className="cc5-input" value={confirm} onChange={e=>setConfirm(e.target.value)} autoComplete="off"/></label>
     {message&&<p role="alert" className="cc5-warn">{message}</p>}
     <div className="cc5-two">
       <button type="button" className="cc5-btn" disabled={busy} onClick={()=>{setOpen(false);setConfirm('');setMessage('')}}>取消</button>
-      <button type="button" className="cc5-btn cc5-danger-solid" disabled={busy||running||confirm.trim()!==project.title.trim()} onClick={remove}>{busy?'備份並刪除中…':'永久刪除'}</button>
+      <button type="button" className="cc5-btn cc5-danger-solid" disabled={busy||!!hold||confirm.trim()!==project.title.trim()} onClick={remove}>{busy?'備份並刪除中…':'永久刪除'}</button>
     </div>
   </section>
 }
