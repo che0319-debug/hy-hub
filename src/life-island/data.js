@@ -1,4 +1,5 @@
 // HY Life 島：世界定義（V5.1 第三部分「世界定義表」）。目前只建「中央島」。
+import { ROSTER } from '../botRoster'
 // route = 現有的 2D 頁；沒有的寫 null 並在 note 說明。沒有真資料的欄位一律「待補」，不編造。
 export const CENTRAL_ISLAND = {
   id: 'central', name: '中央島', sub: '派工 · Atlas', c: [0, 0], R: 4,
@@ -30,7 +31,7 @@ export const CENTRAL_ISLAND = {
       blurb: '管理系統用的頁面：架構、專家團、設定、Agent 設定。',
       links: [
         { label: '系統架構', to: '/system-architecture' },
-        { label: '專家團', to: '/expert-team' },
+        { label: 'AI 軍團', to: '/ai-army' },
         { label: '設定', to: '/settings' },
       ],
       note: '還沒連上的頁先放這裡，慢慢接。',
@@ -134,25 +135,8 @@ export const ALL_BUILDINGS = ISLANDS_DATA.flatMap(isl => isl.buildings.map(b => 
 // 五位 Agent。展示階段全部先在中央島活動，之後各自搬到自己的島。
 // status：wait / ai / you / done / bad。zone：平常活動的建築區。status 是 you 或 bad 的會停在原地等你。
 // board：該 Bot 專屬看板（待辦）。對話功能之後再建。
-// doing／last 目前是範例文字，等資料契約定案後換成真資料。
-export const FIGURES = [
-  { id: 'atlas', island: 'central', name: 'Atlas', kind: 'atlas', status: 'ai', zone: 'dispatch', role: '中央島隊長（主 Grok Bot）', board: null,
-    doing: '分派今天的工作包給各 Bot', last: '早上整理了晨會待辦' },
-  { id: 'xiaoyin', island: 'family', name: '小因', kind: 'xiaoyin', status: 'wait', zone: 'home', role: '棲園島隊長', board: '/line/family',
-    doing: '追蹤家裡這週的行程', last: '更新了小孩接送時間' },
-  { id: 'sam', island: 'side', name: 'Sam', kind: 'sam', status: 'you', zone: 'sidehq', role: '金融島隊長', board: '/line/sam',
-    doing: '等你確認一張補件卡', last: '整理了手機店的庫存' },
-  { id: 'p950157', island: 'biz', name: '950157', kind: 'p950157', status: 'done', zone: 'hq', role: '科研島隊長（ITRI 工作分身）', board: '/line/950157',
-    doing: '剛完成月報初稿', last: '整理了研究院的待辦' },
-  { id: 'claude', island: 'central', name: 'Claude', kind: 'claude', status: 'ai', zone: 'dispatch', role: 'AI 執行者（Claude）', board: null,
-    doing: '寫程式工作包，改完會附截圖', last: '剛交出一個前端工作包' },
-  { id: 'gpt', island: 'central', name: 'GPT', kind: 'gpt', status: 'wait', zone: 'meeting', role: 'AI 執行者（GPT）', board: null,
-    doing: '等下一個分析工作包', last: '整理了一份文獻摘要' },
-  { id: 'grokbuild', island: 'central', name: 'Grok Build', kind: 'grokbuild', status: 'ai', zone: 'syscenter', role: 'AI 執行者（Grok Build）', board: null,
-    doing: '建置與檢查程式碼', last: '跑完一輪測試' },
-  { id: 'hy', island: 'life', name: 'HY', kind: 'hy', status: 'bad', zone: 'dojo', role: '隱地島隊長', board: '/line/hy',
-    doing: '有一項任務逾期，需要處理', last: '更新了人生目標進度' },
-];
+// 名稱、角色、位置來自 src/botRoster.js（全站唯一名冊）。狀態與數字由 useBotRoster 讀真資料；status 只是還沒載入時的預設值。
+export const FIGURES = ROSTER.map(r => ({ id: r.id, island: r.island, name: r.name, kind: r.kind, status: 'wait', zone: r.zone, role: r.post, board: r.board }))
 
 // 狀態色的意義（全站一致，見 hy-ui 風格 A）
 export const STATUS_INFO = {
@@ -161,13 +145,4 @@ export const STATUS_INFO = {
   you: '待你確認',
   done: '完成',
   bad: '逾期／失敗／危險',
-};
-
-// 頂部狀態列的數字。目前是範例數字，等資料契約（Part 2）定案後換成真資料。
-export const WORLD_STATUS = {
-  overdue: 2,      // A：逾期待辦（首頁待辦清單）
-  today: 3,        // A：今日到期待辦
-  needsYou: 1,     // B：Bot Office 待你確認
-  systemIssues: 0, // C：系統異狀
-  demo: true,
 };

@@ -90,7 +90,7 @@ export function mapOffice(state = {}, index = {}, metadata = {}) {
       pendingAdvances: allDecisions.filter(d => d.projectId === p.id && d.needsAdvance),
       logs: array(state.logs).filter(l => l && l.project === p.id), requests: array(state.requests).filter(r => r && r.project === p.id),
       allDecisions: allDecisions.filter(d => d.projectId === p.id),
-      stage: text(p.stage), stageLabel, tone, executor: text(p.executor) || '尚未指定',
+      stage: text(p.stage), stageLabel, tone, executor: text(p.executor) || '尚未指定', ownerBot: text(p.owner_bot),
       decisions: decisions.filter(d => d.projectId === p.id), cards: groups,
       finished: p.stage === 'done' || p.stage === 'returned', active: ['running', 'review'].includes(p.stage),
       pending: decisions.some(d => d.projectId === p.id),

@@ -204,7 +204,7 @@ export default function AgentConfig() {
       <div className="bg-white rounded-xl p-8 border border-slate-200 shadow-sm text-center">
         <p className="text-slate-500 mb-4">找不到此 agent：<code className="bg-slate-100 px-1.5 py-0.5 rounded text-slate-700">{id}</code></p>
         <button
-          onClick={() => navigate('/helpers')}
+          onClick={() => navigate('/ai-army?tab=helpers')}
           className="px-3 py-1 text-xs border border-slate-300 text-slate-600 rounded hover:bg-slate-100 transition-colors"
         >
           ← 返回我的小幫手
@@ -217,7 +217,7 @@ export default function AgentConfig() {
     <div>
       {/* 頂部返回 + 標頭 */}
       <button
-        onClick={() => navigate('/helpers')}
+        onClick={() => navigate('/ai-army?tab=helpers')}
         className="mb-4 text-xs text-slate-400 hover:text-slate-700 transition-colors flex items-center gap-1"
       >
         ← 返回我的小幫手

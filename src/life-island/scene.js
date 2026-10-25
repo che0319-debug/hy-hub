@@ -8,7 +8,7 @@ import { B, box, cyl, sph, cone, rng, prismTri } from './geo.js';
 import { toon, outline, U } from './mats.js';
 import { makeBuilding } from './buildings.js';
 import { treeGeos, instanced, fence, lamp } from './props.js';
-import { makeBot, animateBot } from './bots.js';
+import { makeBot, animateBot, STATUS_COLORS } from './bots.js';
 import { makePlaza } from './plaza.js';
 import { makeDispatch } from './dispatch.js';
 import { makeMeeting } from './meeting.js';
@@ -272,7 +272,7 @@ const nearestRoad = (id, x, z) => roads[id].cells.reduce((best, c) => { const d 
     scene.add(bot.root);
     const lp = { kind: 'bot', id: f.id, name: f.name, status: f.status, idx: i, x: c0.i, y: 0.02 + 0.82 * FS, z: c0.j };
     labelPts.push(lp);
-    bots.push({ bot, f, lp, isl: f.island, phase: i * 1.3, pos: [c0.i, c0.j], ci: c0.i, cj: c0.j, from: [c0.i, c0.j], to: null, t: 0, wait: 0.5 + i * 0.6, moving: false, stay,
+    bots.push({ bot, f, lp, isl: f.island, phase: i * 1.3, pos: [c0.i, c0.j], ci: c0.i, cj: c0.j, from: [c0.i, c0.j], to: null, t: 0, wait: 0.5 + i * 0.6, moving: false, stay, wantStay: stay, wantStay: stay,
       zone: { x: zb.x, z: zb.z, r: 7 }, homeIsl: f.island, homeZone: { x: zb.x, z: zb.z, r: 7 }, legs: [], bridge: null, away: false, nextTrip: 25 + i * 9 + Math.random() * 25, prev: null, rot: CAMAZ, ox: (i % 3 - 1) * 0.16, oz: ((i + 1) % 3 - 1) * 0.16, hello: false });
   });
 }
@@ -301,6 +301,7 @@ function updateBots(dt, now) {
   if (TRIPDBG) dt *= 8;   // 除錯：加速
   const occupied = new Set(bots.flatMap(b => [b.ci + ',' + b.cj, b.to ? b.to[0] + ',' + b.to[1] : null]).filter(Boolean));
   for (const b of bots) {
+    b.stay = b.wantStay && !b.away && !b.bridge && !b.legs.length;   // 狀態要停下的人，出門在外時先走回自己的島
     const paused = b.stay || selected === 'bot:' + b.f.id;
     let heading = null, onBridge = 0;
     if (b.bridge) {          // 正在橋上
@@ -507,6 +508,15 @@ const api = {
     if (botOf(selected)) { selRing.visible = false; const bo = botOf(selected); target.tx = bo.pos[0]; target.tz = bo.pos[1]; target.dist = Math.min(target.dist, 26); }
     if (selected && bById[selected]) { const b = bById[selected], k = b.isl.id === 'central' ? 0.6 : 1; target.tx = b.x * k; target.tz = b.z * k + 1.5; target.dist = Math.min(target.dist, 52); }
     if (fromUser) opts.onSelect && opts.onSelect(selected);
+  },
+  // 即時更新小人狀態（光環顏色、標籤、是否停在原地）。資料由 React 端的 useWorldData 提供。
+  setBotStatus(id, status) {
+    const b = botById[id]; if (!b || !STATUS_COLORS[status] || b.bot.status === status) return;
+    const col = STATUS_COLORS[status];
+    b.bot.status = status; b.bot.ring.material.color.setHex(col); b.bot.dot.material.color.setHex(col);
+    b.lp.status = status; b.wantStay = status === 'you' || status === 'bad';
+    const l = labels.find(x => x.p === b.lp);
+    if (l) { l.el.dataset.s = status; l.el.title = b.lp.name + '：' + STATUS_INFO[status]; const st = l.el.querySelector('span'); if (st) st.textContent = '・' + STATUS_INFO[status]; }
   },
   home() { Object.assign(target, HOME); },
   focus(islandId) { const isl = ISLANDS.find(x => x.id === islandId); if (!isl) return; selected = null; placeRing(selRing, null); target.tx = isl.c[0] + (islandId === 'central' ? 0.5 : 0); target.tz = isl.c[1] + 2.5; target.dist = islandId === 'central' ? 72 : 46; opts.onSelect && opts.onSelect(null); },
