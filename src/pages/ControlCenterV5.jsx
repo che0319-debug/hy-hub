@@ -1,5 +1,5 @@
 import ReviewBlockers from '../components/ReviewBlockers'
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import { useSearchParams } from 'react-router-dom'
@@ -127,15 +127,24 @@ export default function ControlCenterV5({ renderProject, renderHome, renderCreat
   const [tab, setTab] = useState('overview')
   const [creating, setCreating] = useState(false)
 
+  const loadGeneration = useRef(0)
+  const hasLoadedProjects = useRef(false)
   const loadAll = useCallback(async () => {
-    try {
-      const data = await loadData()
+    const generation = ++loadGeneration.current
+    const publish = data => {
+      if (generation !== loadGeneration.current) return
       setProjects(data.projects)
       setInbox(data.inbox)
-      setDetails(data.details)
+      if (data.details) setDetails(data.details)
+      hasLoadedProjects.current = data.projects.length > 0
+      setLoaded(true)
       setError('')
-    } catch (reason) { if (loadData !== loadControlCenter) { setProjects([]); setInbox([]); setDetails({}) }; setError(reason.message) }
-    finally { setLoaded(true) }
+    }
+    try { publish(await loadData(publish)) }
+    catch (reason) {
+      if (generation === loadGeneration.current) setError(reason.message +
+        (hasLoadedProjects.current ? ' 仍顯示上次成功載入的專案，請重試更新。' : ''))
+    } finally { if (generation === loadGeneration.current) setLoaded(true) }
   }, [loadData])
 
   const reloadProject = useCallback(async id => {
@@ -150,7 +159,7 @@ export default function ControlCenterV5({ renderProject, renderHome, renderCreat
   useEffect(() => {
     loadAll()
     const timer = window.setInterval(() => { if (document.visibilityState === 'visible') loadAll() }, 60000)
-    return () => window.clearInterval(timer)
+    return () => { window.clearInterval(timer); loadGeneration.current++ }
   }, [loadAll])
 
   const openByProject = useMemo(() => openCountByProject(inbox), [inbox])
