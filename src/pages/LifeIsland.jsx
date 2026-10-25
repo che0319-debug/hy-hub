@@ -6,7 +6,7 @@ import { ALL_BUILDINGS, FIGURES, STATUS_INFO } from '../life-island/data'
 import { createIslandScene, webglOk } from '../life-island/scene'
 import { useWorldInfo, formatDue } from '../life-island/useWorldInfo'
 import { useBotRoster } from '../life-island/useBotRoster'
-import { LIVE_FIGS } from '../life-island/worldData'
+import { LIVE_FIGS, deriveAttention } from '../life-island/worldData'
 import { rosterById } from '../botRoster'
 
 const BUILDINGS = ALL_BUILDINGS
@@ -217,7 +217,7 @@ export default function LifeIsland() {
   useEffect(() => {
     const api = apiRef.current
     if (!api) return
-    for (const [id, v] of Object.entries(data.bots)) if (v) api.setBotStatus(id, v.status)
+    for (const [id, v] of Object.entries(data.bots)) if (v) { api.setBotStatus(id, v.status); const a = deriveAttention(v); api.setBotAttention(id, a.level, a.reasons) }
   }, [data.bots, gl])
 
   function choose(id) {

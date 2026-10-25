@@ -16,6 +16,12 @@
 .li-label-bot { display: inline-flex; align-items: center; gap: 6px; padding: 4px 11px 4px 8px; border-radius: 999px; background: #fff; color: #14202a; font-size: 14px; font-weight: 700; line-height: 18px; box-shadow: 0 1px 6px rgba(14, 39, 51, .28); pointer-events: auto; cursor: pointer; }
 .li-label-bot:focus-visible { outline: 2px solid #14202a; outline-offset: 2px; }
 .li-label-bot.is-sel { background: #ffd36b; }
+/* 頭上提醒標：有問題（紅）或待你處理（琥珀）；原因寫在標籤的 title */
+.li-label-bot[data-alert]::after { content: '!'; position: absolute; top: -15px; right: -8px; width: 22px; height: 22px; box-sizing: border-box; border-radius: 50%; border: 2px solid #fff; color: #fff; font-size: 13px; font-weight: 800; line-height: 18px; text-align: center; box-shadow: 0 1px 4px rgba(14, 39, 51, .35); animation: li-alert-hop 1.3s ease-in-out infinite; }
+.li-label-bot[data-alert="you"]::after { background: #f2a93a; }
+.li-label-bot[data-alert="bad"]::after { background: #e5484d; animation-duration: .85s; }
+@keyframes li-alert-hop { 0%, 55%, 100% { transform: translateY(0); } 25% { transform: translateY(-5px); } }
+@media (prefers-reduced-motion: reduce) { .li-label-bot[data-alert]::after { animation: none; } }
 .li-label-bot i { width: 10px; height: 10px; border-radius: 50%; background: #8d99ab; flex: none; }
 .li-label-bot[data-s="ai"] i { background: #2f6bff; }
 .li-label-bot[data-s="you"] i { background: #f2a93a; box-shadow: 0 0 0 3px rgba(242, 169, 58, .35); }

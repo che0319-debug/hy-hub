@@ -1,6 +1,6 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { deriveOffice, deriveTodos, deriveRunners, deriveSummary, RUNNER_FIG, LIVE_FIGS } from '../src/life-island/worldData.js'
+import { deriveOffice, deriveTodos, deriveRunners, deriveSummary, deriveAttention, RUNNER_FIG, LIVE_FIGS } from '../src/life-island/worldData.js'
 import { ROSTER, HELPERS } from '../src/botRoster.js'
 import { mapOffice } from '../src/botOfficeData.js'
 
@@ -90,4 +90,18 @@ test('deriveSummary：待你確認取 Bot Office；系統數讀取失敗的來�
   assert.deepEqual(deriveSummary({ pending: 4, failedCount: 0, loaded: true }), { needsYou: 4, systemIssues: 0 })
   assert.deepEqual(deriveSummary({ pending: null, failedCount: 0, loaded: false }), { needsYou: null, systemIssues: null })
   assert.equal(deriveSummary({ pending: 0, failedCount: 2, loaded: true }).systemIssues, 2)
+})
+
+test('deriveAttention：問題→紅、待處理→琥珀、無事→不顯示', () => {
+  const now = Date.parse('2026-10-25T01:00:00Z'), day = n => new Date(now - n * 86400e3).toISOString()
+  assert.deepEqual(deriveAttention(null), { level: null, reasons: [] })
+  assert.equal(deriveAttention({ status: 'wait', office: { asks: 0, returned: 0 }, todos: { overdue: 0, today: 0 }, memory: { memory_last: day(1) } }, now).level, null)
+  const you = deriveAttention({ status: 'you', office: { asks: 2, returned: 0 }, todos: { overdue: 0, today: 1 } }, now)
+  assert.equal(you.level, 'you'); assert.deepEqual(you.reasons, ['待你確認 2', '今日待辦 1 件'])
+  assert.equal(deriveAttention({ status: 'wait', todos: { overdue: 1, today: 0 } }, now).level, 'bad')
+  assert.equal(deriveAttention({ status: 'wait', office: { returned: 1 } }, now).level, 'bad')
+  const stale = deriveAttention({ status: 'wait', memory: { memory_last: day(25) } }, now)
+  assert.equal(stale.level, 'bad'); assert.deepEqual(stale.reasons, ['長期記憶 25 天沒更新'])
+  assert.equal(deriveAttention({ status: 'bad' }, now).level, 'bad')
+  assert.equal(deriveAttention({ status: 'you', todos: { overdue: 1, today: 0 } }, now).level, 'bad')   // 紅色優先
 })
