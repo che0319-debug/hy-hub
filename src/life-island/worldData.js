@@ -49,7 +49,7 @@ export function deriveTodos(list, today) {
 // ---- 執行者：後端 runner → 3D 小人 id ----
 // GPT Chat 與 GPT Work 合為一位（GPT 小人含工作）；Grok 先接到 Grok Build；Atlas 還沒接。
 export const RUNNER_FIG = { 'gpt-chat': 'gpt', 'chatgpt-work': 'gpt', 'claude-worker': 'claude', 'claude-review': 'claude', grok: 'grokbuild', 'grok-review': 'grokbuild' }
-export const LIVE_FIGS = new Set([...HELPERS.map(h => h.id), ...Object.values(RUNNER_FIG)])
+export const LIVE_FIGS = new Set([...HELPERS.map(h => h.id), 'atlas', ...Object.values(RUNNER_FIG)])
 
 // 工作中＝有工作包執行中；其他＝等待。沒有資料就回空物件，不編造。
 export function deriveRunners(activity) {
@@ -82,6 +82,7 @@ export function deriveRunners(activity) {
 // 紅：被退回、逾期待辦、長期記憶超過 7 天沒更新、執行者異常。琥珀：待你確認、今日待辦。
 export function deriveAttention(bot, now = Date.now()) {
   if (!bot) return { level: null, reasons: [], items: [] }
+  if (bot.attention) return { level: bot.attention.some(i => i.level === 'bad') ? 'bad' : bot.attention.length ? 'you' : null, reasons: bot.attention.map(i => i.text), items: bot.attention }
   const items = []   // { level, text, go }：go = 'office' | 'board' | 'memory'，由畫面決定連到哪
   const o = bot.office, t = bot.todos
   if (o?.returned > 0) items.push({ level: 'bad', text: `專案被退回 ${o.returned} 件`, go: 'office' })
@@ -96,4 +97,29 @@ export function deriveAttention(bot, now = Date.now()) {
 
 export function deriveSummary({ pending, failedCount, loaded }) {
   return { needsYou: Number.isFinite(pending) ? pending : null, systemIssues: loaded ? failedCount : null }
+}
+
+
+// Atlas＝營運長（COO）：維運 HY Life OS。不做專案工作，只看「系統有沒有問題」。
+// 只用前端讀得到的資料判斷；沒有問題就是待命（灰），有問題就是紅（會停在原地並出現「!」）。
+export const ATLAS_STALE_HOURS = 24   // Bot Office 超過這麼久沒更新，視為 Atlas 沒在維護
+
+export function deriveAtlas({ office, officeEmpty, failed = {}, todoFailed = false, unowned = 0, loaded = true }, now = Date.now()) {
+  const checks = []   // { label, ok, detail }：卡片上完整列出，包含正常的項目
+  const check = (label, ok, detail, go) => checks.push({ label, ok, detail, go })
+  if (!loaded) return { status: 'wait', doing: '正在檢查系統…', attention: [], checks: [], updatedAt: null }
+  const ageH = office?.updatedAt ? (now - new Date(office.updatedAt).getTime()) / 3600e3 : null
+  check('Bot Office 讀取', !failed.office, failed.office ? '讀取失敗' : officeEmpty ? 'Atlas 尚未產生第一份狀態' : '正常', 'office')
+  check('Bot Office 更新', !officeEmpty && !failed.office && !office?.stale && (ageH === null || ageH <= ATLAS_STALE_HOURS),
+    officeEmpty ? '尚無資料' : failed.office ? '無法判斷' : office?.stale ? '資料標示為過期' : ageH === null ? '沒有更新時間' : ageH <= ATLAS_STALE_HOURS ? (ageH < 1 ? '剛剛' : `${Math.round(ageH)} 小時前`) : `${Math.round(ageH)} 小時沒更新`, 'office')
+  check('專案歸屬', !(unowned > 0), unowned > 0 ? `${unowned} 個專案沒有指定 owner_bot` : '全部有歸屬', 'office')
+  check('記憶健康資料', !failed.memory, failed.memory ? '讀取失敗' : '正常')
+  check('AI 工作包活動', !failed.runners, failed.runners ? '讀取失敗' : '正常', 'models')
+  check('待辦資料', !todoFailed, todoFailed ? '讀取失敗' : '正常')
+  const attention = checks.filter(c => !c.ok).map(c => ({ level: 'bad', text: `${c.label}：${c.detail}`, go: c.go }))
+  return {
+    status: attention.length ? 'bad' : 'wait',
+    doing: attention.length ? `${attention.length} 項系統問題待處理` : '系統運作正常，持續巡檢',
+    attention, checks, updatedAt: office?.updatedAt || null,
+  }
 }

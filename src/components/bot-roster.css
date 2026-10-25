@@ -15,3 +15,13 @@
 .bot-links{display:flex;flex-wrap:wrap;gap:8px}
 .bot-links .hy-btn{display:inline-flex;align-items:center;text-decoration:none}
 .bot-soon{color:var(--hy-muted)}
+
+/* Atlas（COO）卡片：系統健康清單 */
+.atlas-card { display: grid; gap: 10px; }
+.atlas-card.is-bad { border-left: 4px solid var(--hy-bad); }
+.atlas-note { margin: 0; font-size: 13px; }
+.atlas-checks { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.atlas-checks li { display: flex; align-items: center; gap: 8px; min-height: 44px; padding: 6px 10px; border-radius: 10px; background: var(--hy-bg); flex-wrap: wrap; }
+.atlas-check-label { font-weight: 600; font-size: 15px; }
+.atlas-check-detail { flex: 1; font-size: 13px; color: var(--hy-muted); min-width: 8ch; }
+.atlas-checks .li-attn-go { margin-left: auto; min-height: 32px; display: inline-flex; align-items: center; padding: 0 10px; font-size: 13px; font-weight: 600; color: var(--hy-brand); text-decoration: none; }

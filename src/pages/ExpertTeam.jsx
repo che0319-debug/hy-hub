@@ -1,3 +1,4 @@
+import AtlasCard from '../components/AtlasCard'
 import { useState, useEffect, useRef } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { authHeaders } from '../auth'
@@ -170,6 +171,7 @@ export default function ExpertTeam({ embedded = false, tab: forcedTab, onTab } =
 
     {!embedded && <nav className="hy-tabs" role="tablist">{[['experts', '專家'], ['skills', 'Skill 庫'], ['models', 'AI 派工'], ['requests', '能力請求']].map(([id, label]) => <button className="hy-tab" role="tab" key={id} aria-current={tab === id ? 'page' : undefined} onClick={() => { setTab(id); setSearch(''); setEditor(null) }}>{label}</button>)}</nav>}
 
+    {embedded && tab === 'experts' && <AtlasCard />}
     {(tab === 'experts' || tab === 'skills') && <label className="pi-search">搜尋{tab === 'experts' ? '專家' : 'Skill'}<input value={search} onChange={e => setSearch(e.target.value)} placeholder="輸入名稱或能力" /></label>}
 
     {tab === 'experts' && data && <>

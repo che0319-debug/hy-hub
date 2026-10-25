@@ -111,7 +111,7 @@ function BotCard({ f: fig, live, loaded, onClose }) {
   const f = { ...fig, status: live?.status ?? 'wait', doing: live?.doing || '—' }
   const note = !LIVE_FIGS.has(fig.id) ? '這位的狀態還沒接資料。' : live ? (live.inferred ? '依工作通道推測，後端尚無派工紀錄。' : '') : loaded ? '讀不到這位的狀態資料。' : '正在讀取狀態…'
   const attn = deriveAttention(live)
-  const goTo = { office: '/bot-office', board: fig.board, memory: rosterById(fig.id)?.persona ? '/agent/' + rosterById(fig.id).persona : null }
+  const goTo = { office: '/bot-office', models: '/ai-army?tab=models', board: fig.board, memory: rosterById(fig.id)?.persona ? '/agent/' + rosterById(fig.id).persona : null }
   const [min, setMin] = useStored('li_card_min', false)
   const btn = { display: 'inline-flex', alignItems: 'center', textDecoration: 'none' }
   if (min) {
@@ -157,6 +157,7 @@ function BotCard({ f: fig, live, loaded, onClose }) {
         <Link to="/bot-office" className="hy-btn" style={btn}>專案</Link>
         {f.board && <Link to={f.board} className="hy-btn" style={btn}>待辦</Link>}
         {rosterById(fig.id)?.group === 'helper' && <Link to="/ai-army?tab=helpers" className="hy-btn" style={btn}>詳細</Link>}
+        {fig.id === 'atlas' && <Link to="/ai-army?tab=experts" className="hy-btn" style={btn}>系統健康</Link>}
         <button type="button" className="hy-btn li-btn-soon" disabled title="對話功能建置中">對話（建置中）</button>
       </div>
     </section>
