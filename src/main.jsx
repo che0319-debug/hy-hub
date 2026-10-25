@@ -39,8 +39,9 @@ function DesktopRoutes({ onMobileVersion }) {
   return (
     <Routes>
       <Route path="/" element={<App onMobileVersion={onMobileVersion} />}>
-        <Route index element={<Home />} />
-        <Route path="life-os" element={<Navigate to="/" replace />} />
+        <Route index element={<Navigate to="/life-island" replace />} />
+        <Route path="home" element={<Home />} />
+        <Route path="life-os" element={<Navigate to="/home" replace />} />
         <Route path="ai-army" element={<AIArmy />} />
         <Route path="helpers" element={<Navigate to="/ai-army?tab=helpers" replace />} />
         <Route path="memory" element={<Navigate to="/ai-army?tab=helpers" replace />} />

@@ -33,7 +33,7 @@ function StatusBar({ onGo, info, data, panel, setPanel }) {
   const real = overdue !== null
   const needs = data.needsYou, sysN = data.systemIssues
   const toggle = k => setPanel(panel === k ? null : k)
-  const nextText = info.schedFailed ? '行程讀取失敗' : info.sched === null ? '行程載入中' : info.next ? `下一個 ${info.next.start} ${info.next.title}` : info.sched.length ? '今天的行程結束了' : '今天沒有行程'
+  const nextText = info.schedFailed ? '行程讀取失敗' : info.sched === null ? '行程載入中' : info.next ? `${info.next.start} ${info.next.title}` : info.sched.length ? '今天的行程結束了' : '今天沒有行程'
   return (
     <div className="li-status" role="group" aria-label="今日狀態">
       <button type="button" className="li-chip" data-panel="todo" data-s={overdue > 0 ? 'bad' : 'wait'} onClick={() => toggle('todo')} aria-expanded={panel === 'todo'} aria-controls="li-panel">

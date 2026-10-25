@@ -5,8 +5,8 @@ import {
 } from 'lucide-react'
 
 const navItems = [
-  { to: '/',           label: '首頁',     icon: Home },
   { to: '/life-island', label: 'HY Life 島', icon: Map },
+  { to: '/home',       label: '首頁',     icon: Home },
   { to: '/ai-army',    label: 'AI 軍團', icon: Bot },
   { to: '/ai-work-v5', label: 'AI Office', icon: LayoutDashboard },
   { to: '/bot-office', label: 'Bot Office', icon: LayoutDashboard },
@@ -30,7 +30,6 @@ function NavItem({ to, label, Icon }) {
   return (
     <NavLink
       to={to}
-      end={to === '/'}
       className={({ isActive }) =>
         `flex items-center gap-2.5 px-3 py-2 rounded-md text-sm transition-colors ${
           isActive
