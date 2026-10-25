@@ -20,7 +20,7 @@ export default function App({ onMobileVersion }) {
     setCollapsed(v => { const n = !v; try { localStorage.setItem('hy_sidebar_collapsed', n ? '1' : '0') } catch { /* 無痕模式等，忽略 */ } return n })
   }
   const location = useLocation()
-  const pilotRoute = location.pathname.startsWith('/ai-work')
+  const pilotRoute = location.pathname.startsWith('/ai-work') || location.pathname.startsWith('/bot-office')
   const worldRoute = location.pathname.startsWith('/life-island')   // 桌面版一律不顯示頂欄（站名與手機版入口在側欄）；世界頁內容再貼齊最上緣
 
   useEffect(() => {
@@ -90,4 +90,5 @@ export default function App({ onMobileVersion }) {
     </SessionContext.Provider>
   )
 }
+
 

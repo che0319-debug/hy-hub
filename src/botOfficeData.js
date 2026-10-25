@@ -78,7 +78,7 @@ export function mapOffice(state = {}, index = {}, metadata = {}) {
     const planCard = cards.find(c => c.id === p.plan_card) || null
     const groups = Object.fromEntries(OFFICE_TABS.map(([key]) => [key, cards.filter(c => c.projectId === p.id && c.tab === key)]))
     return {
-      id: text(p.id), title: text(p.title) || '未命名專案', island: islands.get(p.island) || text(p.island) || '未分區',
+      source: p, id: text(p.id), title: text(p.title) || '未命名專案', island: islands.get(p.island) || text(p.island) || '未分區',
       latestCardId: text(p.card), team: officeTeam(p, state.figures), reviewer: text(p.reviewer), planCard,
       ownerBot: text(p.owner_bot), planUrl: cardLink(p.plan_card), folderUrl: safeDriveUrl(p.drive_folder_url),
       review: { verdict: text(p.last_review?.verdict) || text(p.last_review) || 'none',
