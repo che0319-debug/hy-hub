@@ -157,7 +157,7 @@ function BotCard({ f: fig, live, loaded, onClose }) {
         <Link to="/bot-office" className="hy-btn" style={btn}>專案</Link>
         {f.board && <Link to={f.board} className="hy-btn" style={btn}>待辦</Link>}
         {rosterById(fig.id)?.group === 'helper' && <Link to="/ai-army?tab=helpers" className="hy-btn" style={btn}>詳細</Link>}
-        {fig.id === 'atlas' && <Link to="/ai-army?tab=experts" className="hy-btn" style={btn}>系統健康</Link>}
+        {fig.id === 'atlas' && <Link to="/ai-army?tab=helpers" className="hy-btn" style={btn}>系統健康</Link>}
         <button type="button" className="hy-btn li-btn-soon" disabled title="對話功能建置中">對話（建置中）</button>
       </div>
     </section>

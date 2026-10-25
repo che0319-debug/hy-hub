@@ -1,20 +1,16 @@
-// Atlas＝營運長（COO）：維運 HY Life OS，不做專案工作。放在 AI 軍團的「專家團」最上面。
-// 資料與 HY Life 島共用（useBotRoster 的 atlas），這裡不打 API。
+// Atlas＝營運長（COO）：維運 HY Life OS，不做專案工作。放在 AI 軍團「小幫手」分頁的最上面。
+// 資料與 HY Life 島共用（由小幫手頁傳入 useBotRoster 的結果），這裡不打 API。
 import { Link } from 'react-router-dom'
 import '../../public/hy-ui/hy-ui.css'
 import './bot-roster.css'
 import { rosterById, avatarUrl } from '../botRoster'
 import { STATUS_INFO } from '../life-island/data'
 import { ATLAS_STALE_HOURS } from '../life-island/worldData'
-import { useWorldInfo } from '../life-island/useWorldInfo'
-import { useBotRoster } from '../life-island/useBotRoster'
 
 const GO = { office: '/bot-office', models: '/ai-army?tab=models' }
 
-export default function AtlasCard() {
-  const info = useWorldInfo()
-  const roster = useBotRoster(info)
-  const a = roster.bots.atlas
+export default function AtlasCard({ roster }) {
+  const a = roster?.bots?.atlas
   const me = rosterById('atlas')
   const status = a?.status ?? 'wait'
   return (
