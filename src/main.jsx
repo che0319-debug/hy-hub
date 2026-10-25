@@ -39,8 +39,9 @@ function DesktopRoutes({ onMobileVersion }) {
   return (
     <Routes>
       <Route path="/" element={<App onMobileVersion={onMobileVersion} />}>
-        <Route index element={<Home />} />
-        <Route path="life-os" element={<Navigate to="/" replace />} />
+        <Route index element={<Navigate to="/life-island" replace />} />
+        <Route path="home" element={<Home />} />
+        <Route path="life-os" element={<Navigate to="/home" replace />} />
         <Route path="ai-army" element={<AIArmy />} />
         <Route path="helpers" element={<Navigate to="/ai-army?tab=helpers" replace />} />
         <Route path="memory" element={<Navigate to="/ai-army?tab=helpers" replace />} />
@@ -93,7 +94,7 @@ function Experience() {
   }
 
   if (location.pathname === '/command-center') return <Navigate to="/ai-work" replace />
-  if (mobileWidth && mode !== 'desktop' && !['/workspace', '/ai-work', '/ai-work-test', '/expert-team', '/system-architecture', '/bot-office', '/life-island'].some(path => location.pathname.startsWith(path))) {
+  if (mobileWidth && mode !== 'desktop' && !['/workspace', '/ai-work', '/ai-work-test', '/expert-team', '/ai-army', '/system-architecture', '/bot-office', '/life-island'].some(path => location.pathname.startsWith(path))) {
     return <MobileAppV2 onDesktopVersion={() => choose('desktop')} />
   }
   return <DesktopRoutes onMobileVersion={mobileWidth ? () => choose('mobile') : null} />

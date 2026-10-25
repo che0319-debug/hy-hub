@@ -1,6 +1,6 @@
 # Bot Office：沿用 AI Office 畫面（GUI 階段）
 
-基準：hy-hub master `d4f093c`（包含 #122）。本 PR 不合併、不部署。
+基準：hy-hub master `9d96d1a`（包含 #122、#123、#124）。GUI 原始 commit 為 `f285ff1`；合併前同步最新主分支，測試檔採 #123 完整版本。
 
 目標：HY 用與 AI Office 相同的首頁及五個分頁查看專案。概況唯一主要重點為「待你決定」；順序依正式 AIOfficeV1：一頁摘要、里程碑、待你決定、AI 正在做什麼、收合的 AI 執行配置。手機沿用同一斷點與橫向分頁。
 
@@ -40,6 +40,6 @@
 - 單元測試 132 項、Vite build；完整 UI 回歸結果以 PR 描述最新記錄為準。
 - tests/bot-office-layout-ui.cjs：同一組隔離工程資料，分別開真正 AIOfficeV1 與 Bot Office，390/1280 截圖；核對主題、頁首背景／邊框／圓角／字體／留白、main 邊距一致。驗證五分頁、雙欄、文件章節、HTML 版本與完整閱讀、script 隔離、日誌篩選、不呼叫舊 API、不寫正式資料。
 - 截圖：`docs/quality/ui/office-renderer-parity/ai-*`、`bot-*`。工程 fixture 不代表 p-002 正式資料；缺資料、未接後端及已要求保留的 P0 功能造成的內容差異如上，不宣稱像素完全一致。
-- 上游 #122 將專家團改成 AI 軍團；原 pi-ui-smoke 仍等待舊 heading/tab，原 base 也失敗。本 PR 更新該測試兩個標籤，並明確選桌面版在 390px 測試（避免新網址自動切成 MobileApp）；沒有修改 AI 軍團產品功能。
+- 上游 #123 已完整修正 AI 軍團手機導向與 pi-ui-smoke。本 PR 同步主分支並保留該測試完整版本；不再額外修改這份測試，也未修改 AI 軍團產品功能。
 
 回退：revert 本 PR。沒有後端、排程、正式 hy-data 或 Drive 修改。
