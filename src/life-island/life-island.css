@@ -132,3 +132,9 @@
 .li-rows-t li[data-past="1"] { opacity: .5; }
 .li-rows-t li[data-next="1"] { background: var(--hy-ai-bg, #e6eefc); border-radius: 10px; font-weight: 600; }
 @media (max-width: 640px) { .li-panel { top: 124px; } .li-chip-next { max-width: 100%; } }
+
+/* 小人卡片：需要注意的事（有問題＝紅、待處理＝琥珀），放在最上面 */
+.li-attn { list-style: none; margin: 12px 0 4px; padding: 0; display: grid; gap: 6px; }
+.li-attn li { display: flex; align-items: center; gap: 8px; min-height: 44px; padding: 6px 10px; border-radius: 10px; background: var(--hy-bg); }
+.li-attn-text { flex: 1; font-size: 15px; font-weight: 600; }
+.li-attn-go { flex: none; min-height: 32px; display: inline-flex; align-items: center; padding: 0 10px; font-size: 13px; font-weight: 600; color: var(--hy-brand); text-decoration: none; }
