@@ -43,8 +43,8 @@ roles:[
   mkdirSync('docs/quality/ui',{recursive:true});
   for(const w of [390,1280]){
     await p.setViewportSize({width:w,height:900});
-    await p.goto('http://127.0.0.1:5173/#/expert-team');
-    await p.getByRole('heading',{name:'專家團',exact:true}).waitFor();
+    await p.goto('http://127.0.0.1:5173/#/ai-army?tab=experts');
+    await p.getByRole('heading',{name:'AI 軍團',exact:true}).waitFor();
     await p.getByRole('heading',{name:'全部專家 3'}).waitFor();
     assert.equal(await p.locator('.expert-card').count(),3);
     assert.equal(await p.locator('.expert-card.needs-you').count(),1);
@@ -67,13 +67,13 @@ roles:[
     await p.getByRole('heading',{name:'舊版凍結 1'}).waitFor();
     await p.screenshot({path:`docs/quality/ui/expert-skills-${w}.png`,fullPage:true});
     assert.equal(await p.evaluate(()=>document.documentElement.scrollWidth>innerWidth),false,`skills overflow ${w}`);
-    await p.getByRole('tab',{name:'AI 派工'}).click();
+    await p.getByRole('tab',{name:'AI 派工',exact:true}).click();
     assert.equal(await p.getByRole('heading',{name:'派工方式與緊急停用'}).count(),0);
     await p.getByRole('heading',{name:'AI 派工',exact:true}).waitFor();
     assert.equal(await p.getByRole('heading',{name:'角色與模型',exact:true}).count(),0);
     await p.screenshot({path:`docs/quality/ui/expert-models-${w}.png`,fullPage:true});
     assert.equal(await p.evaluate(()=>document.documentElement.scrollWidth>innerWidth),false,`models overflow ${w}`);
-    await p.getByRole('tab',{name:'專家'}).click();
+    await p.getByRole('tab',{name:'專家團',exact:true}).click();
     await p.getByRole('button',{name:'新增專家',exact:true}).click();
     await p.getByLabel('識別代碼').fill('new-expert');
     await p.getByRole('button',{name:'取消',exact:true}).click();
