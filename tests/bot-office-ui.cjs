@@ -9,9 +9,9 @@ const state={updated:'2026-10-24T14:30:00+08:00',islands:[{id:'company',name:'�
 const index={updated:state.updated,cards:state.buildings.flatMap(p=>['decision','meeting','execution','output','log'].map(type=>({id:p.id+type,project:p.id,type,title:p.title+'・'+type,summary:'先核對方向與範圍，再整理工作摘要。完整內容請查看 Drive 原件。',drive_url:'https://drive.google.com/file/d/example/view',date:'2026-10-24'})))};
 (async()=>{let reports=[];
 for(const spec of [{name:'desktop',width:1280,height:900},{name:'mobile',width:390,height:844},{name:'index-empty',width:390,height:844,indexMissing:true},{name:'empty',width:390,height:844,status:404},{name:'unauthorized',width:1280,height:900,status:401},{name:'stale',width:1280,height:900,stale:true},{name:'delete-rules',width:1280,height:900,hy:true,delete:{mode:'null'}}]){
- const browser=await pw.launch({headless:true,...(process.env.CHROME_BIN?{executablePath:process.env.CHROME_BIN,args:['--no-sandbox']}: {})});const context=await browser.newContext({viewport:{width:spec.width,height:spec.height},deviceScaleFactor:1});let api=[],errors=[],holdRefresh=false,releaseRefresh;const refreshGate=new Promise(resolve=>{releaseRefresh=resolve});
+ const browser=await pw.launch({headless:true,...(process.env.CHROME_BIN?{executablePath:process.env.CHROME_BIN,args:['--no-sandbox']}: {})});const context=await browser.newContext({viewport:{width:spec.width,height:spec.height},deviceScaleFactor:1});let api=[],errors=[],holdRefresh=false,releaseRefresh,removedProjects=new Set();const refreshGate=new Promise(resolve=>{releaseRefresh=resolve});
  await context.addInitScript(hy=>{if(window.top!==window.self)return;const payload={exp:Math.floor(Date.now()/1000)+3600};if(hy)payload.sub='hy';sessionStorage.setItem('hy_life_os_access_token',btoa(JSON.stringify(payload))+'.test');},spec.hy===true);
- await context.route('**/api/**',async route=>{const req=route.request(),u=new URL(req.url());api.push([req.method(),u.pathname]);let data={};let status=200;const headers={'Content-Type':'application/json'};if(req.method()==='POST'&&u.pathname.endsWith('/delete')&&spec.delete){const mode=spec.delete.mode;const body=mode==='true'?{committed:true,error:'index_write',step:'index',backup_file_id:'bak'}:mode==='null'?{committed:null,error:'state_unknown',reason:'結果不明'}:{committed:false,error:'backup_failed',step:'backup',reason:'搬移失敗'};await route.fulfill({status:502,headers,body:JSON.stringify(body)});return}if(u.pathname.startsWith('/api/office/')){if(holdRefresh)await refreshGate;status=spec.indexMissing&&u.pathname.endsWith('index')?404:spec.status||200;data=status===404?{error:'brain_data_not_ready'}:status===401?{error:'unauthorized'}:u.pathname.endsWith('state')?state:index;headers['X-Brain-Updated']=state.updated;if(spec.stale)headers['X-Brain-Stale']='1';}else if(u.pathname.includes('dispatch-sessions'))data=[];else if(u.pathname.includes('/api/ai-office/'))data=[];await route.fulfill({status,headers,body:JSON.stringify(data)});});
+ await context.route('**/api/**',async route=>{const req=route.request(),u=new URL(req.url());api.push([req.method(),u.pathname]);let data={};let status=200;const headers={'Content-Type':'application/json'};if(req.method()==='POST'&&u.pathname.endsWith('/delete')&&spec.delete){const mode=spec.delete.mode;const body=mode==='true'?{committed:true,error:'index_write',step:'index',backup_file_id:'bak'}:mode==='null'?{committed:null,error:'state_unknown',reason:'結果不明'}:{committed:false,error:'backup_failed',step:'backup',reason:'搬移失敗'};if(mode==='true'){const parts=u.pathname.split('/');removedProjects.add(decodeURIComponent(parts.at(-2)));}await route.fulfill({status:spec.delete.status||502,headers,body:JSON.stringify(body)});return}if(u.pathname.startsWith('/api/office/')){if(holdRefresh)await refreshGate;status=spec.indexMissing&&u.pathname.endsWith('index')?404:spec.status||200;data=status===404?{error:'brain_data_not_ready'}:status===401?{error:'unauthorized'}:u.pathname.endsWith('state')?{...state,buildings:state.buildings.filter(b=>!removedProjects.has(b.id))}:index;headers['X-Brain-Updated']=state.updated;if(spec.stale)headers['X-Brain-Stale']='1';}else if(u.pathname.includes('dispatch-sessions'))data=[];else if(u.pathname.includes('/api/ai-office/'))data=[];await route.fulfill({status,headers,body:JSON.stringify(data)});});
  await context.route('https://drive.google.com/**',r=>r.fulfill({contentType:'text/html; charset=utf-8',body:'<!doctype html><h1>Isolated preview</h1>'}));
  const page=await context.newPage();if(spec.name==='desktop')await page.clock.install();page.on('pageerror',e=>errors.push(e.message));await page.goto('http://127.0.0.1:5173/#/bot-office');await page.addStyleTag({content:font+' body{font-family:"Noto Sans TC",sans-serif}'});await page.evaluate(()=>document.fonts.ready);await page.getByRole('heading',{name:'Bot Office',exact:true}).waitFor();
  if(spec.status===404)await page.getByRole('heading',{name:'尚無資料',exact:true}).waitFor();else if(spec.status===401)await page.getByRole('heading',{name:'請重新登入',exact:true}).waitFor();else await page.getByRole('button').filter({hasText:'年度方向'}).waitFor();
@@ -22,9 +22,17 @@ for(const spec of [{name:'desktop',width:1280,height:900},{name:'mobile',width:3
 
  }
  if(spec.name==='delete-rules'){
+  const deleted='專案已刪除（備份已保留），但看板收尾未完成，請重新整理；若卡片還在，再按一次刪除即可清掉。';
+  const unknownText='結果不明，備份已保留，請重新讀取確認專案是否已刪除。';
   const back=()=>page.getByRole('button',{name:'‹ Bot Office',exact:true}).click();
   const openProject=async name=>{await page.getByRole('button').filter({hasText:name}).first().click();await page.getByRole('heading',{name,exact:true}).waitFor()};
   const openDelete=async()=>{await page.getByRole('button',{name:'刪除專案',exact:true}).click();await page.getByRole('alertdialog').waitFor()};
+  const expectRemoved=async name=>{
+    await page.getByRole('heading',{name:'Bot Office',exact:true}).waitFor();
+    await page.getByRole('status').getByText(deleted,{exact:true}).waitFor();
+    await page.getByRole('button').filter({hasText:name}).waitFor({state:'hidden'});
+    assert.equal(await page.getByRole('status').getByText(deleted,{exact:true}).count(),1);
+  };
   await openProject('健康課表');await openDelete();
   await page.getByText('目前專案在審查中，需等審查結束後才能刪除。',{exact:true}).waitFor();
   const reviewDelete=page.getByRole('button',{name:'永久刪除',exact:true});
@@ -40,7 +48,7 @@ for(const spec of [{name:'desktop',width:1280,height:900},{name:'mobile',width:3
   await page.getByRole('alertdialog').getByRole('textbox').fill('研究整理');
   spec.delete.mode='null';await page.getByRole('button',{name:'永久刪除',exact:true}).click();
   const unknown=page.getByRole('alert');
-  await unknown.getByText('結果不明，備份已保留，請重新讀取確認專案是否已刪除。',{exact:true}).waitFor();
+  await unknown.getByText(unknownText,{exact:true}).waitFor();
   assert.equal(await page.getByRole('heading',{name:'研究整理',exact:true}).count(),1);
   assert.equal(await page.getByText('專案未刪除',{exact:false}).count(),0);
   assert.equal(await page.getByText('專案已刪除',{exact:false}).count(),0);
@@ -48,9 +56,27 @@ for(const spec of [{name:'desktop',width:1280,height:900},{name:'mobile',width:3
   await page.getByRole('alert').getByText('專案未刪除',{exact:false}).waitFor();
   assert.equal(await page.getByRole('heading',{name:'研究整理',exact:true}).count(),1);
   spec.delete.mode='true';await page.getByRole('button',{name:'永久刪除',exact:true}).click();
-  await page.getByRole('heading',{name:'Bot Office',exact:true}).waitFor();
-  await page.getByRole('status').getByText('專案已刪除（備份已保留），但看板收尾未完成，請重新整理；若卡片還在，再按一次刪除即可清掉。',{exact:true}).waitFor();
-  assert.equal(api.filter(([m,p])=>m==='POST'&&p.endsWith('/delete')).length,3);
+  await expectRemoved('研究整理');
+  spec.delete.status=409;spec.delete.mode='true';
+  await openProject('包裝修訂');await openDelete();
+  await page.getByRole('alertdialog').getByRole('textbox').fill('包裝修訂');
+  await page.getByRole('button',{name:'永久刪除',exact:true}).click();
+  await expectRemoved('包裝修訂');
+  spec.delete.status=500;spec.delete.mode='true';
+  await openProject('品牌落地');await openDelete();
+  await page.getByRole('alertdialog').getByRole('textbox').fill('品牌落地');
+  await page.getByRole('button',{name:'永久刪除',exact:true}).click();
+  await expectRemoved('品牌落地');
+  spec.delete.status=409;spec.delete.mode='null';
+  await openProject('技術簡報');await openDelete();
+  await page.getByRole('alertdialog').getByRole('textbox').fill('技術簡報');
+  await page.getByRole('button',{name:'永久刪除',exact:true}).click();
+  await page.getByRole('alert').getByText(unknownText,{exact:true}).waitFor();
+  assert.equal(await page.getByRole('heading',{name:'技術簡報',exact:true}).count(),1);
+  assert.equal(await page.getByText('專案未刪除',{exact:false}).count(),0);
+  assert.equal(await page.getByText('專案已刪除',{exact:false}).count(),0);
+  assert.equal(await page.getByText('專案資料已更新',{exact:false}).count(),0);
+  assert.equal(api.filter(([m,p])=>m==='POST'&&p.endsWith('/delete')).length,6);
  }
  else assert(!api.some(([m,p])=>p.startsWith('/api/office/')&&m!=='GET'));
  assert.equal(errors.length,0,errors.join('\n'));reports.push({scenario:spec.name,overflow:false,errors,api});await browser.close();

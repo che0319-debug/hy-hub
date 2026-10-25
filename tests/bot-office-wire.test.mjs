@@ -127,6 +127,26 @@ test('delete and office failures stay in Chinese and do not invent a success', (
   assert.match(deleteErrorMessage(502, { error: 'backup_failed', step: 'archive' }), /專案未刪除/)
   assert.match(deleteErrorMessage(502, { committed: true, error: 'drive_write_unavailable' }), /專案已刪除/)
   assert.doesNotMatch(deleteErrorMessage(502, { committed: true, error: 'drive_write_unavailable' }), /專案未刪除/)
+  for (const status of [409, 500]) {
+    const message = deleteErrorMessage(status, { committed: true, error: 'brain_write_conflict', step: 'index', backup_file_id: 'bak', archive_folder_id: 'arc' })
+    assert.match(message, /專案已刪除（備份已保留）/)
+    assert.match(message, /看板收尾未完成/)
+    assert.doesNotMatch(message, /專案未刪除/)
+    assert.doesNotMatch(message, /專案資料已更新/)
+    const outcome = officeDeleteOutcome({ status, body: { committed: true, backup_file_id: 'bak' }, message })
+    assert.equal(outcome.removed, true)
+    assert.match(outcome.message, /看板收尾未完成/)
+  }
+  for (const status of [409, 500, 400]) {
+    const message = deleteErrorMessage(status, { committed: null, error: 'state_unknown', reason: '結果不明，備份已保留，請重新讀取確認' })
+    assert.match(message, /結果不明，備份已保留，請重新讀取確認專案是否已刪除/)
+    assert.doesNotMatch(message, /專案未刪除/)
+    assert.doesNotMatch(message, /專案已刪除/)
+    assert.equal(officeDeleteOutcome({ status, body: { committed: null }, message }).removed, false)
+  }
+  assert.match(deleteErrorMessage(409, { committed: null, error: 'project_review' }), /結果不明/)
+  assert.doesNotMatch(deleteErrorMessage(409, { committed: null, error: 'project_review' }), /審查中|專案未刪除/)
+  assert.match(deleteErrorMessage(409, { committed: false, error: 'state_conflict' }), /專案資料已更新/)
   assert.match(deleteErrorMessage(400, { error: 'confirm_title' }), /名稱不一致/)
   assert.match(deleteErrorMessage(0, {}), /無法連線/)
   const removedOutcome = officeDeleteOutcome({ status: 502, body: { committed: true, backup_file_id: 'bak' }, message: removed })
@@ -136,6 +156,11 @@ test('delete and office failures stay in Chinese and do not invent a success', (
   assert.equal(unknownOutcome.removed, false)
   assert.doesNotMatch(unknownOutcome.message, /專案未刪除|專案已刪除/)
   assert.equal(officeDeleteOutcome({ status: 502, body: { committed: false }, message: '備份或搬移失敗，專案未刪除。' }).removed, false)
+  assert.equal(officeDeleteOutcome({ status: 409, body: { committed: false }, message: '專案資料已更新，請重新讀取後再刪除。專案未刪除。' }).removed, false)
+  assert.equal(officeDeleteOutcome({ status: 409, body: { committed: true } }).removed, true)
+  assert.match(officeDeleteOutcome({ status: 500, body: { committed: true } }).message, /看板收尾未完成/)
+  assert.match(officeDeleteOutcome({ status: 409, body: { committed: null } }).message, /結果不明/)
+  assert.equal(officeDeleteOutcome({ status: 500, body: { committed: null } }).removed, false)
   assert.match(officeFailureMessage(422, { error: 'report_unsafe', reason: 'script' }, 'report'), /安全檢查/)
   assert.match(officeFailureMessage(404, { error: 'no_document' }), /沒有可讀/)
   assert.match(officeFailureMessage(404, { error: 'missing' }, 'report'), /找不到專案或這份報告/)
@@ -221,6 +246,10 @@ test('delete client exposes status and committed body without calling the projec
     [502, { committed: null, error: 'state_unknown', reason: '結果不明' }, error => error.status === 502 && error.body.committed === null && /結果不明/.test(error.message) && !/專案未刪除/.test(error.message) && !/專案已刪除/.test(error.message) && officeDeleteOutcome(error).removed === false],
     [502, { committed: false, error: 'backup_failed', step: 'backup', reason: '搬移失敗' }, error => error.status === 502 && error.body.committed === false && /專案未刪除/.test(error.message) && officeDeleteOutcome(error).removed === false],
     [502, { error: 'backup_failed' }, error => error.status === 502 && error.body.committed === undefined && /專案未刪除/.test(error.message)],
+    [409, { committed: true, error: 'brain_write_conflict', step: 'index', backup_file_id: 'bak' }, error => error.status === 409 && error.body.committed === true && error.body.backup_file_id === 'bak' && /專案已刪除（備份已保留）/.test(error.message) && /看板收尾未完成/.test(error.message) && !/專案未刪除/.test(error.message) && !/專案資料已更新/.test(error.message) && officeDeleteOutcome(error).removed === true],
+    [500, { committed: true, error: 'index_write', step: 'index', backup_file_id: 'bak' }, error => error.status === 500 && error.body.committed === true && /專案已刪除（備份已保留）/.test(error.message) && !/專案未刪除/.test(error.message) && officeDeleteOutcome(error).removed === true],
+    [409, { committed: null, error: 'state_unknown', reason: '結果不明' }, error => error.status === 409 && error.body.committed === null && /結果不明/.test(error.message) && !/專案未刪除/.test(error.message) && !/專案已刪除/.test(error.message) && !/專案資料已更新/.test(error.message) && officeDeleteOutcome(error).removed === false],
+    [500, { committed: null, error: 'state_unknown', reason: '結果不明' }, error => error.status === 500 && error.body.committed === null && /結果不明/.test(error.message) && !/專案未刪除/.test(error.message) && !/專案已刪除/.test(error.message) && officeDeleteOutcome(error).removed === false],
   ]
   for (const [status, body, check] of cases) {
     await assert.rejects(deleteOfficeProject('p/1', { confirm_title: '專案', expected_state_updated: '2026-10-25T09:00:00+08:00' }, {
