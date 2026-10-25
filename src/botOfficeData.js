@@ -1,6 +1,7 @@
 // Contract v0: Drive 專案卡.md / 工作卡.md, 2026-10-24; HY's Office/Brain separation applies.
 // All external field mapping lives here. Unknown fields are tolerated and not rendered.
 import { OFFICE_TABS as AI_OFFICE_TABS } from './lib/aiOffice.mjs'
+import { officeFailureMessage } from './lib/botOfficeView.mjs'
 export const OFFICE_TABS = AI_OFFICE_TABS
 export const REFRESH_MS = 30000
 const STAGES = {
@@ -45,6 +46,9 @@ export function mapOffice(state = {}, index = {}, metadata = {}) {
     title: text(c.title) || '未命名卡片', summary: text(c.summary) || '尚無摘要',
     date: reviewIds.has(c.id) || c.type === 'review' ? (text(c.drive_created_at) ? `Drive 建立：${when(c.drive_created_at)}` : 'Drive 建立時間待補') : text(c.date),
     driveCreatedAt: text(c.drive_created_at), driveUrl: safeDriveUrl(c.drive_url), type: text(c.type),
+    reviewCard: text(c.review_card), createdAt: text(c.created_at) || text(c.date),
+    verdict: text(c.verdict), round: Number.isInteger(c.round) ? c.round : null,
+    criteria: array(c.criteria).map(item => typeof item === 'string' ? item : (item && typeof item.label === 'string' ? item.label : '')).filter(Boolean),
   }))
   const projectIds = new Set(array(state.buildings).map(p => p.id))
   const allDecisions = array(state.decisions).filter(d => d && ['open', 'answered'].includes(d.status)).map(d => ({
@@ -53,8 +57,11 @@ export function mapOffice(state = {}, index = {}, metadata = {}) {
     id: text(d.id), title: text(d.title) || '待 HY 決定', suggestion: text(d.suggestion),
     kind: text(d.kind), revision: Number.isInteger(d.revision) ? d.revision : 0,
     answer: d.answer, answerSource: text(d.answer_source), answeredBy: text(d.answered_by), basis: text(d.basis), confidence: text(d.confidence),
+    why: text(d.why), askedAt: text(d.asked_at), deadline: text(d.deadline),
+    evidence: array(d.evidence).filter(v => typeof v === 'string'),
+    choiceOptions: array(d.options).map(o => typeof o === 'string' ? { label: o, impact: '' } : (o && typeof o.label === 'string' ? { label: o.label, impact: text(o.impact) } : null)).filter(Boolean),
     questions: array(d.questions).filter(q => q && Number.isInteger(q.no)).map(q => ({
-      no: q.no, q: text(q.q), why: text(q.why), options: array(q.options).filter(o => typeof o === 'string'), recommend: text(q.recommend),
+      no: q.no, q: text(q.q), why: text(q.why), options: array(q.options).map(o => typeof o === 'string' ? o : (o && typeof o.label === 'string' ? o.label : '')).filter(Boolean), recommend: text(q.recommend),
       answer: text(q.answer), answeredBy: text(q.answered_by), answerSource: text(q.answer_source),
       basis: text(q.basis), confidence: text(q.confidence), confirmed: q.confirmed_by === 'hy',
       answeredAt: text(q.answered_at), confirmedAt: text(q.confirmed_at),
@@ -85,7 +92,7 @@ export function mapOffice(state = {}, index = {}, metadata = {}) {
         url: cardLink(p.review_card) || cards.filter(c => c.projectId === p.id).map(c => array(index.cards).find(raw => raw.id === c.id)?.review_card).map(cardLink).find(Boolean) || null,
         requiredChanges: array(p.required_changes || p.must_fix || p.last_review?.required_changes).filter(v => typeof v === 'string'),
         returnedCount: Number.isInteger(p.returned_count) && p.returned_count >= 0 ? p.returned_count : 0 },
-      figures: array(state.figures).filter(f => f && f.project === p.id).map(f => ({ id: text(f.id), owner: text(f.owner), project: text(f.project), island: text(f.island), lookAs: text(f.look_as), status: text(f.status) })),
+      figures: array(state.figures).filter(f => f && f.project === p.id).map(f => ({ id: text(f.id), owner: text(f.owner), project: text(f.project), island: text(f.island), lookAs: text(f.look_as), status: text(f.status), role: text(f.role), name: text(f.name), startedAt: text(f.started_at), finishedAt: text(f.finished_at), card: text(f.card) })),
       followUps: array(p.follow_ups).filter(v => v && typeof v === 'object').map(v => ({id: text(v.id), text: text(v.text), status: text(v.status), source: text(v.source), sourceUrl: cardLink(v.source)})),
       pendingAdvances: allDecisions.filter(d => d.projectId === p.id && d.needsAdvance),
       logs: array(state.logs).filter(l => l && l.project === p.id), requests: array(state.requests).filter(r => r && r.project === p.id),
@@ -98,13 +105,14 @@ export function mapOffice(state = {}, index = {}, metadata = {}) {
   }).sort((a, b) => Number(b.pending) - Number(a.pending))
   return {
     projects, decisions, allDecisions, requests: array(state.requests), stale: Boolean(metadata.stale),
+    state, index, updatedRaw: text(state.updated),
     updated: when(metadata.stateUpdated || state.updated), indexUpdated: when(metadata.indexUpdated || index.updated),
     totals: { pending: decisions.length, running: projects.filter(p => p.active).length, finished: projects.filter(p => p.finished).length, all: projects.length },
   }
 }
 
 export class OfficeReadError extends Error {
-  constructor(kind, message) { super(message); this.kind = kind }
+  constructor(kind, message, code = '') { super(message); this.kind = kind; this.code = code }
 }
 
 export async function loadBotOffice({ headers = {}, signal, fetcher = fetch, base = import.meta.env?.VITE_API_BASE || '' } = {}) {
@@ -147,3 +155,38 @@ export async function writeOffice(path, payload, { headers = {}, fetcher = fetch
   if (!response.ok) throw new OfficeReadError('error', response.status === 413 ? '資料已達大小上限，請由 Atlas 整理後再試。' : '未儲存成功，請稍後重試。')
   return data
 }
+
+export async function officeApi(path, { method = 'GET', headers = {}, body, fetcher = fetch, base = import.meta.env?.VITE_API_BASE || '', signal, expect = 'json', topic = 'office' } = {}) {
+  const root = String(base || '').replace(/\/$/, '')
+  let response
+  try {
+    const init = { method, headers: { ...headers }, signal, cache: 'no-store' }
+    if (body instanceof FormData) init.body = body
+    else if (body !== undefined) { init.headers = { ...init.headers, 'Content-Type': 'application/json' }; init.body = JSON.stringify(body) }
+    response = await fetcher(`${root}/api/office/${path}`, init)
+  } catch (error) {
+    if (error?.name === 'AbortError') throw error
+    throw new OfficeReadError('network', officeFailureMessage(0, {}, topic))
+  }
+  if (response.status === 401) throw new OfficeReadError('auth', '登入已過期，請重新登入。')
+  const type = response.headers?.get?.('content-type') || ''
+  if (expect === 'html') {
+    if (!response.ok || type.includes('json')) {
+      const data = await response.json().catch(() => ({}))
+      throw new OfficeReadError('error', officeFailureMessage(response.status, data, topic), data?.error || '')
+    }
+    return response.text()
+  }
+  const data = await response.json().catch(() => null)
+  if (!response.ok || data == null) throw new OfficeReadError(response.status === 409 ? 'conflict' : 'error', officeFailureMessage(response.status, data || {}, topic), data?.error || '')
+  return data
+}
+
+const projectPath = id => `projects/${encodeURIComponent(id)}`
+export const loadOfficeReport = (id, opts) => officeApi(`${projectPath(id)}/report`, { ...opts, topic: 'report' })
+export const loadOfficeReportHtml = (id, fileId, opts) => officeApi(`${projectPath(id)}/report/html${fileId ? `?file_id=${encodeURIComponent(fileId)}` : ''}`, { ...opts, expect: 'html', topic: 'report' })
+export const loadOfficeDocument = (cardId, opts) => officeApi(`cards/${encodeURIComponent(cardId)}/document`, opts)
+export const loadOfficeFiles = (id, opts) => officeApi(`${projectPath(id)}/files`, opts)
+export const deleteOfficeProject = (id, payload, opts) => officeApi(`${projectPath(id)}/delete`, { ...opts, method: 'POST', body: payload, topic: 'delete' })
+export const uploadOfficeFile = (id, file, opts) => { const body = new FormData(); body.append('file', file); return officeApi(`${projectPath(id)}/files`, { ...opts, method: 'POST', body }) }
+export const importOfficeReference = (id, fileId, opts) => officeApi(`${projectPath(id)}/drive-reference`, { ...opts, method: 'POST', body: { file_id: fileId } })
