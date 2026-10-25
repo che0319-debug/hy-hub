@@ -94,14 +94,19 @@ test('deriveSummary：待你確認取 Bot Office；系統數讀取失敗的來�
 
 test('deriveAttention：問題→紅、待處理→琥珀、無事→不顯示', () => {
   const now = Date.parse('2026-10-25T01:00:00Z'), day = n => new Date(now - n * 86400e3).toISOString()
-  assert.deepEqual(deriveAttention(null), { level: null, reasons: [] })
+  assert.deepEqual(deriveAttention(null), { level: null, reasons: [], items: [] })
   assert.equal(deriveAttention({ status: 'wait', office: { asks: 0, returned: 0 }, todos: { overdue: 0, today: 0 }, memory: { memory_last: day(1) } }, now).level, null)
   const you = deriveAttention({ status: 'you', office: { asks: 2, returned: 0 }, todos: { overdue: 0, today: 1 } }, now)
-  assert.equal(you.level, 'you'); assert.deepEqual(you.reasons, ['待你確認 2', '今日待辦 1 件'])
+  assert.equal(you.level, 'you'); assert.deepEqual(you.reasons, ['待你確認 2 件', '今日待辦 1 件'])
   assert.equal(deriveAttention({ status: 'wait', todos: { overdue: 1, today: 0 } }, now).level, 'bad')
   assert.equal(deriveAttention({ status: 'wait', office: { returned: 1 } }, now).level, 'bad')
   const stale = deriveAttention({ status: 'wait', memory: { memory_last: day(25) } }, now)
   assert.equal(stale.level, 'bad'); assert.deepEqual(stale.reasons, ['長期記憶 25 天沒更新'])
   assert.equal(deriveAttention({ status: 'bad' }, now).level, 'bad')
   assert.equal(deriveAttention({ status: 'you', todos: { overdue: 1, today: 0 } }, now).level, 'bad')   // 紅色優先
+})
+
+test('deriveAttention：items 帶層級與去處，供卡片列出原因', () => {
+  const a = deriveAttention({ status: 'you', office: { asks: 1, returned: 1 }, todos: { overdue: 2, today: 0 } })
+  assert.deepEqual(a.items.map(i => [i.level, i.text, i.go]), [['bad', '專案被退回 1 件', 'office'], ['bad', '逾期待辦 2 件', 'board'], ['you', '待你確認 1 件', 'office']])
 })

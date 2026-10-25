@@ -81,17 +81,17 @@ export function deriveRunners(activity) {
 // 頭上提醒標：有問題（紅 bad）或待你處理（琥珀 you）才出現；reasons 供提示文字。
 // 紅：被退回、逾期待辦、長期記憶超過 7 天沒更新、執行者異常。琥珀：待你確認、今日待辦。
 export function deriveAttention(bot, now = Date.now()) {
-  if (!bot) return { level: null, reasons: [] }
-  const bad = [], you = []
+  if (!bot) return { level: null, reasons: [], items: [] }
+  const items = []   // { level, text, go }：go = 'office' | 'board' | 'memory'，由畫面決定連到哪
   const o = bot.office, t = bot.todos
-  if (o?.returned > 0) bad.push(`被退回 ${o.returned} 件`)
-  if (t?.overdue > 0) bad.push(`逾期待辦 ${t.overdue} 件`)
+  if (o?.returned > 0) items.push({ level: 'bad', text: `專案被退回 ${o.returned} 件`, go: 'office' })
+  if (t?.overdue > 0) items.push({ level: 'bad', text: `逾期待辦 ${t.overdue} 件`, go: 'board' })
   const lt = bot.memory?.memory_last ? freshness(bot.memory.memory_last, now) : null
-  if (lt?.level === 'stale') bad.push(`長期記憶 ${lt.days} 天沒更新`)
-  if (bot.status === 'bad') bad.push('執行異常')
-  if (bot.status === 'you' || o?.asks > 0 || o?.hyDecision > 0) you.push(`待你確認 ${o?.asks || o?.hyDecision || ''}`.trim())
-  if (t?.today > 0) you.push(`今日待辦 ${t.today} 件`)
-  return { level: bad.length ? 'bad' : you.length ? 'you' : null, reasons: [...bad, ...you] }
+  if (lt?.level === 'stale') items.push({ level: 'bad', text: `長期記憶 ${lt.days} 天沒更新`, go: 'memory' })
+  if (bot.status === 'bad') items.push({ level: 'bad', text: '執行異常', go: 'office' })
+  if (bot.status === 'you' || o?.asks > 0 || o?.hyDecision > 0) { const n = o?.asks || o?.hyDecision; items.push({ level: 'you', text: n ? `待你確認 ${n} 件` : '待你確認', go: 'office' }) }
+  if (t?.today > 0) items.push({ level: 'you', text: `今日待辦 ${t.today} 件`, go: 'board' })
+  return { level: items.some(i => i.level === 'bad') ? 'bad' : items.length ? 'you' : null, reasons: items.map(i => i.text), items }
 }
 
 export function deriveSummary({ pending, failedCount, loaded }) {
