@@ -51,8 +51,9 @@ function OfficeCreate({onCancel,onCreated}) {
   </form>
 }
 
-async function loadOffice() {
+async function loadOffice(publishList) {
   const [projects,inbox]=await Promise.all([office('/projects'),office('/actions')])
+  publishList?.({projects,inbox})
   const results=await Promise.allSettled(projects.map(p=>readProjectSummary(office, ppath(p.id))))
   const details=Object.fromEntries(results.map((r,i)=>[projects[i].id,r.status==='fulfilled'?r.value:null]))
   return {projects,inbox,details}

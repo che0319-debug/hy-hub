@@ -1,0 +1,38 @@
+name: AI Office list visibility
+on:
+  pull_request:
+    paths:
+      - 'src/pages/AIOfficeV1.jsx'
+      - 'src/pages/ControlCenterV5.jsx'
+      - 'tests/ai-office-ui.cjs'
+      - 'tests/ai-office-visibility-ui.cjs'
+      - '.github/workflows/ai-office-visibility-ui.yml'
+permissions:
+  contents: read
+jobs:
+  office-list:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+      - run: node --test tests/*.test.mjs
+      - run: npm run build
+      - run: npm install --no-save playwright@1.51.1 @fontsource/noto-sans-tc@5.3.1
+      - run: npx playwright install --with-deps chromium
+      - name: AI Office list and existing UI
+        run: |
+          npm run dev -- --host 127.0.0.1 --port 5173 --strictPort > /tmp/ai-office-vite.log 2>&1 &
+          node -e "(async()=>{for(let n=0;n<40;n++){try{if((await fetch('http://127.0.0.1:5173/')).ok)return}catch{}await new Promise(r=>setTimeout(r,250))}throw new Error('Vite not ready')})().catch(e=>{console.error(e);process.exit(1)})"
+          node tests/ai-office-visibility-ui.cjs
+          node tests/ai-office-ui.cjs
+          node tests/ai-office-startup-ui.cjs
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: ai-office-visibility
+          path: docs/quality/ui/**/*.png
+          retention-days: 14
