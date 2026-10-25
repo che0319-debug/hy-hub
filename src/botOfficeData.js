@@ -106,7 +106,7 @@ export function mapOffice(state = {}, index = {}, metadata = {}) {
   return {
     projects, decisions, allDecisions, requests: array(state.requests), stale: Boolean(metadata.stale),
     state, index, updatedRaw: text(state.updated),
-    updated: when(metadata.stateUpdated || state.updated), indexUpdated: when(metadata.indexUpdated || index.updated),
+    updated: when(metadata.stateUpdated || state.updated), updatedAt: metadata.stateUpdated || state.updated || null, indexUpdated: when(metadata.indexUpdated || index.updated),
     totals: { pending: decisions.length, running: projects.filter(p => p.active).length, finished: projects.filter(p => p.finished).length, all: projects.length },
   }
 }

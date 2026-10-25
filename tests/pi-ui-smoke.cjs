@@ -49,9 +49,8 @@ roles:[
     assert.equal(await p.locator('.expert-card').count(),3);
     assert.equal(await p.locator('.expert-card.needs-you').count(),1);
     await p.getByText('另有 v2.1.0 供舊專案使用',{exact:false}).waitFor();
-    await p.getByText('Claude 程式通道',{exact:true}).first().waitFor();
-    // GPT_CHAT already labels GPT Chat; verify the stored executor rather than the retired Claude wording.
-    await p.locator('.expert-card',{hasText:'PI｜Project Integrator'}).getByText('GPT Chat 對話通道',{exact:true}).first().waitFor();
+    // 專家只是 Skill 的組合：卡片不再顯示 AI 通道或模型等級，AI 由「AI 派工」決定。
+    assert.equal(await p.getByText('GPT Chat 對話通道').count(),0);assert.equal(await p.getByText('Claude 程式通道').count(),0)
     await p.getByText('待你確認 2',{exact:true}).waitFor();
     await p.screenshot({path:`docs/quality/ui/expert-team-${w}.png`,fullPage:true});
     assert.equal(await p.evaluate(()=>document.documentElement.scrollWidth>innerWidth),false,`experts overflow ${w}`);

@@ -80,9 +80,9 @@ test('deriveRunners：沒有資料就是空物件；未知 runner 忽略', () =>
   assert.equal(r.gpt.status, 'wait'); assert.equal(r.claude.status, 'wait')
 })
 
-test('LIVE_FIGS：四位小幫手與三位執行者，不含 Atlas', () => {
-  for (const id of ['hy', 'p950157', 'xiaoyin', 'sam', 'gpt', 'claude', 'grokbuild']) assert.ok(LIVE_FIGS.has(id), id)
-  assert.ok(!LIVE_FIGS.has('atlas'))
+test('LIVE_FIGS：四位小幫手、Atlas（營運長）與三位執行者', () => {
+  for (const id of ['hy', 'p950157', 'xiaoyin', 'sam', 'atlas', 'gpt', 'claude', 'grokbuild']) assert.ok(LIVE_FIGS.has(id), id)
+  assert.ok(!Object.values(RUNNER_FIG).includes('atlas'))   // Atlas 不再對應任何工作通道
   assert.equal(RUNNER_FIG['chatgpt-work'], 'gpt')
 })
 
@@ -94,14 +94,37 @@ test('deriveSummary：待你確認取 Bot Office；系統數讀取失敗的來�
 
 test('deriveAttention：問題→紅、待處理→琥珀、無事→不顯示', () => {
   const now = Date.parse('2026-10-25T01:00:00Z'), day = n => new Date(now - n * 86400e3).toISOString()
-  assert.deepEqual(deriveAttention(null), { level: null, reasons: [] })
+  assert.deepEqual(deriveAttention(null), { level: null, reasons: [], items: [] })
   assert.equal(deriveAttention({ status: 'wait', office: { asks: 0, returned: 0 }, todos: { overdue: 0, today: 0 }, memory: { memory_last: day(1) } }, now).level, null)
   const you = deriveAttention({ status: 'you', office: { asks: 2, returned: 0 }, todos: { overdue: 0, today: 1 } }, now)
-  assert.equal(you.level, 'you'); assert.deepEqual(you.reasons, ['待你確認 2', '今日待辦 1 件'])
+  assert.equal(you.level, 'you'); assert.deepEqual(you.reasons, ['待你確認 2 件', '今日待辦 1 件'])
   assert.equal(deriveAttention({ status: 'wait', todos: { overdue: 1, today: 0 } }, now).level, 'bad')
   assert.equal(deriveAttention({ status: 'wait', office: { returned: 1 } }, now).level, 'bad')
   const stale = deriveAttention({ status: 'wait', memory: { memory_last: day(25) } }, now)
   assert.equal(stale.level, 'bad'); assert.deepEqual(stale.reasons, ['長期記憶 25 天沒更新'])
   assert.equal(deriveAttention({ status: 'bad' }, now).level, 'bad')
   assert.equal(deriveAttention({ status: 'you', todos: { overdue: 1, today: 0 } }, now).level, 'bad')   // 紅色優先
+})
+
+test('deriveAttention：items 帶層級與去處，供卡片列出原因', () => {
+  const a = deriveAttention({ status: 'you', office: { asks: 1, returned: 1 }, todos: { overdue: 2, today: 0 } })
+  assert.deepEqual(a.items.map(i => [i.level, i.text, i.go]), [['bad', '專案被退回 1 件', 'office'], ['bad', '逾期待辦 2 件', 'board'], ['you', '待你確認 1 件', 'office']])
+})
+
+test('deriveAtlas：系統健康清單；有異常就是紅、全部正常是待命', async () => {
+  const { deriveAtlas, deriveAttention: attn } = await import('../src/life-island/worldData.js')
+  const now = Date.parse('2026-10-25T04:00:00Z'), hrs = n => new Date(now - n * 3600e3).toISOString()
+  const base = { office: { updatedAt: hrs(2), stale: false }, officeEmpty: false, failed: {}, todoFailed: false, unowned: 0, loaded: true }
+  const ok = deriveAtlas(base, now)
+  assert.equal(ok.status, 'wait'); assert.deepEqual(ok.attention, []); assert.equal(ok.checks.length, 6); assert.ok(ok.checks.every(c => c.ok))
+  assert.equal(deriveAtlas({ ...base, loaded: false }, now).checks.length, 0)
+  const old = deriveAtlas({ ...base, office: { updatedAt: hrs(30), stale: false } }, now)
+  assert.equal(old.status, 'bad'); assert.match(old.attention[0].text, /30 小時沒更新/)
+  assert.equal(deriveAtlas({ ...base, unowned: 2 }, now).attention[0].text, '專案歸屬：2 個專案沒有指定 owner_bot')
+  const failed = deriveAtlas({ ...base, failed: { office: true, memory: true, runners: true }, todoFailed: true }, now)
+  assert.ok(failed.attention.length >= 4 && failed.status === 'bad')
+  assert.equal(deriveAtlas({ ...base, office: null, officeEmpty: true }, now).status, 'bad')
+  // 紅色提醒標與卡片共用同一份項目
+  const a = attn({ status: 'bad', attention: failed.attention }, now)
+  assert.equal(a.level, 'bad'); assert.equal(a.items, failed.attention)
 })

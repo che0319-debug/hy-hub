@@ -2,7 +2,6 @@ import { useState, useEffect, useRef } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { authHeaders } from '../auth'
 import './expert-team.css'
-import { laneLabel } from '../lib/lanes'
 import {RouterControls} from '../components/RouterControls'
 import { routerRequest } from '../lib/routerApi'
 import { registerRouterCutoverTools } from '../lib/routerCutoverTools.mjs'
@@ -33,7 +32,6 @@ function ExpertIcon({ expert }) {
     : <span className="et-icon-text">{expert.name?.slice(0, 2)}</span>}</span>
 }
 
-const TIER = { high: '高級 · Opus 級', mid: '中級 · Sonnet 級' }
 const stateLabel = { PUBLISHED: '已發布', CANDIDATE: '待你確認', DISABLED: '已停用' }
 const GITHUB_SKILLS = new Set(['test-driven-development', 'systematic-debugging', 'verification-before-completion', 'receiving-code-review'])
 function skillSource(id) {
@@ -91,7 +89,7 @@ function CandidateForm({ editor, skills, busy, onCancel, onSubmit }) {
     if (isSkill) {
       body = skillBodyFromContent(draft, editor.body)
     } else {
-      body = { id: draft.id, name: draft.name, version: draft.version, description: draft.description, executor: editor.body.executor || 'GPT_CHAT', ...(editor.body.model_tier ? { model_tier: editor.body.model_tier } : {}), capabilities: draft.capabilities.split('\n').map(x => x.trim()).filter(Boolean), visual: editor.body.visual || { kind: 'abstract', symbol: 'compass', real_person: false }, skills: available.filter(s => chosen.includes(pinKey(s))).map(({ id, version, content_hash }) => ({ id, version, content_hash })) }
+      body = { id: draft.id, name: draft.name, version: draft.version, description: draft.description, capabilities: draft.capabilities.split('\n').map(x => x.trim()).filter(Boolean), visual: editor.body.visual || { kind: 'abstract', symbol: 'compass', real_person: false }, skills: available.filter(s => chosen.includes(pinKey(s))).map(({ id, version, content_hash }) => ({ id, version, content_hash })) }
     }
     onSubmit(body)
   }
@@ -185,10 +183,10 @@ export default function ExpertTeam({ embedded = false, tab: forcedTab, onTab } =
           {e.capabilities?.length > 0 && <div className="et-caps">{e.capabilities.map(c => <span key={c}>{c}</span>)}</div>}
           <div className="et-label">Skill {e.skills.length}</div>
           <div className="et-chips">{e.skills.map(s => <button className="et-chip" key={s.id} onClick={() => { setTab('skills'); openSkill(s.id) }}>{skillName(s.id)}<span>v{s.version}</span></button>)}</div>
-          <div className="et-meta">{TIER[e.model_tier] && <span className="hy-pill" data-s="ai">{TIER[e.model_tier]}</span>}<span>{laneLabel(e.executor)}</span><span>v{e.version}</span></div>
+          <div className="et-meta"><span>v{e.version}</span></div>
           {pending.map(v => <div className="et-pending" key={v.version}><p><b>v{v.version} 等你核准</b>：綁定 {v.skills.map(s => `${skillName(s.id)} v${s.version}`).join('、')}</p>{decisions(expertAction(v), true)}</div>)}
           <details className="et-versions"><summary>版本與管理（{rows.length}）</summary><div className="hy-stack">
-            {rows.map(v => <section className="pi-version" key={v.version}><div className="hy-card-head"><h3>版本 {v.version}</h3><Status state={v.state} /></div><p>{laneLabel(v.executor)}{TIER[v.model_tier] ? ` · ${TIER[v.model_tier]}` : ''}</p><p className="hy-note">Skill：{v.skills.map(s => `${skillName(s.id)} v${s.version}`).join('、')}</p></section>)}
+            {rows.map(v => <section className="pi-version" key={v.version}><div className="hy-card-head"><h3>版本 {v.version}</h3><Status state={v.state} /></div><p className="hy-note">Skill：{v.skills.map(s => `${skillName(s.id)} v${s.version}`).join('、')}</p></section>)}
             <button className="hy-btn" disabled={busy} onClick={() => openEditor('expert', e)}>新增專家版本</button>
             {editor?.kind === 'expert' && editor.id === e.id && renderEditor()}
           </div></details>
