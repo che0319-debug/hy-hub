@@ -516,7 +516,14 @@ const api = {
     b.bot.status = status; b.bot.ring.material.color.setHex(col); b.bot.dot.material.color.setHex(col);
     b.lp.status = status; b.wantStay = status === 'you' || status === 'bad';
     const l = labels.find(x => x.p === b.lp);
-    if (l) { l.el.dataset.s = status; l.el.title = b.lp.name + '：' + STATUS_INFO[status]; const st = l.el.querySelector('span'); if (st) st.textContent = '・' + STATUS_INFO[status]; }
+    if (l) { l.el.dataset.s = status; l.el.title = b.lp.name + '：' + STATUS_INFO[status] + (b.reasons && b.reasons.length ? '\n' + b.reasons.join('\n') : ''); const st = l.el.querySelector('span'); if (st) st.textContent = '・' + STATUS_INFO[status]; }
+  },
+  // 頭上提醒標：level = 'bad'（有問題，紅）｜'you'（待你處理，琥珀）｜null（不顯示）；reasons 顯示在標籤提示
+  setBotAttention(id, level, reasons = []) {
+    const b = botById[id]; if (!b) return;
+    b.reasons = reasons;
+    const l = labels.find(x => x.p === b.lp);
+    if (l) { if (level) l.el.dataset.alert = level; else delete l.el.dataset.alert; l.el.title = b.lp.name + '：' + STATUS_INFO[b.lp.status] + (reasons.length ? '\n' + reasons.join('\n') : ''); }
   },
   home() { Object.assign(target, HOME); },
   focus(islandId) { const isl = ISLANDS.find(x => x.id === islandId); if (!isl) return; selected = null; placeRing(selRing, null); target.tx = isl.c[0] + (islandId === 'central' ? 0.5 : 0); target.tz = isl.c[1] + 2.5; target.dist = islandId === 'central' ? 72 : 46; opts.onSelect && opts.onSelect(null); },

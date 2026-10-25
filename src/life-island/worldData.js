@@ -2,6 +2,7 @@
 // 來源：Bot Office（專案與決策，由 Atlas 寫入）、首頁待辦、memory-health、AI Work runner 活動。
 // 「我的小幫手」分頁與 3D 世界都讀這裡整理好的格式；後端欄位改了只要改這裡。
 import { HELPERS } from '../botRoster.js'
+import { freshness } from '../lib/memoryFreshness.js'
 
 const clip = (text, n) => { const t = String(text || '').trim().replace(/\s+/g, ' '); return t.length > n ? t.slice(0, n - 1) + '…' : t }
 const num = v => { const n = Number(v); return Number.isFinite(n) ? n : 0 }
@@ -77,6 +78,22 @@ export function deriveRunners(activity) {
 // ---- 狀態列：兩個數字 ----
 //   待你確認：Bot Office 待你決定的題數（與 Bot Office 頁「待你決定」同一個數字）
 //   系統：讀不到資料的來源數，0 代表正常；還沒載入完成時是 null
+// 頭上提醒標：有問題（紅 bad）或待你處理（琥珀 you）才出現；reasons 供提示文字。
+// 紅：被退回、逾期待辦、長期記憶超過 7 天沒更新、執行者異常。琥珀：待你確認、今日待辦。
+export function deriveAttention(bot, now = Date.now()) {
+  if (!bot) return { level: null, reasons: [] }
+  const bad = [], you = []
+  const o = bot.office, t = bot.todos
+  if (o?.returned > 0) bad.push(`被退回 ${o.returned} 件`)
+  if (t?.overdue > 0) bad.push(`逾期待辦 ${t.overdue} 件`)
+  const lt = bot.memory?.memory_last ? freshness(bot.memory.memory_last, now) : null
+  if (lt?.level === 'stale') bad.push(`長期記憶 ${lt.days} 天沒更新`)
+  if (bot.status === 'bad') bad.push('執行異常')
+  if (bot.status === 'you' || o?.asks > 0 || o?.hyDecision > 0) you.push(`待你確認 ${o?.asks || o?.hyDecision || ''}`.trim())
+  if (t?.today > 0) you.push(`今日待辦 ${t.today} 件`)
+  return { level: bad.length ? 'bad' : you.length ? 'you' : null, reasons: [...bad, ...you] }
+}
+
 export function deriveSummary({ pending, failedCount, loaded }) {
   return { needsYou: Number.isFinite(pending) ? pending : null, systemIssues: loaded ? failedCount : null }
 }
