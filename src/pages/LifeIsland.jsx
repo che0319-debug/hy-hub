@@ -5,8 +5,9 @@ import '../life-island/life-island.css'
 import { ALL_BUILDINGS, FIGURES, STATUS_INFO } from '../life-island/data'
 import { createIslandScene, webglOk } from '../life-island/scene'
 import { useWorldInfo, formatDue } from '../life-island/useWorldInfo'
-import { useWorldData } from '../life-island/useWorldData'
+import { useBotRoster } from '../life-island/useBotRoster'
 import { LIVE_FIGS } from '../life-island/worldData'
+import { rosterById } from '../botRoster'
 
 const BUILDINGS = ALL_BUILDINGS
 const BY_ID = Object.fromEntries(BUILDINGS.map(b => [b.id, b]))
@@ -107,7 +108,7 @@ function MiniMap({ onGo, current }) {
 }
 
 function BotCard({ f: fig, live, loaded, onClose }) {
-  const f = { ...fig, status: live?.status ?? 'wait', doing: live?.doing ?? '—', last: live?.last || '—' }
+  const f = { ...fig, status: live?.status ?? 'wait', doing: live?.doing || '—' }
   const note = !LIVE_FIGS.has(fig.id) ? '這位的狀態還沒接資料。' : live ? (live.inferred ? '依工作通道推測，後端尚無派工紀錄。' : '') : loaded ? '讀不到這位的狀態資料。' : '正在讀取狀態…'
   const [min, setMin] = useStored('li_card_min', false)
   const btn = { display: 'inline-flex', alignItems: 'center', textDecoration: 'none' }
@@ -133,13 +134,15 @@ function BotCard({ f: fig, live, loaded, onClose }) {
       <p className="hy-lede" style={{ marginTop: 8 }}>{f.role}</p>
       <dl className="hy-kv">
         <dt>正在做</dt><dd>{f.doing}</dd>
-        <dt>最近完成</dt><dd>{f.last}</dd>
+        {live?.office && <><dt>完成的專案</dt><dd>{live.office.done}</dd></>}
+        {live?.todos && <><dt>待辦</dt><dd>逾期 {live.todos.overdue}・今日 {live.todos.today}</dd></>}
       </dl>
       {note && <p className="hy-lede" style={{ marginTop: 12, fontSize: 12 }}>{note}</p>}
       <div className="li-links">
         {f.status === 'you' && <Link to="/bot-office" className="hy-btn is-primary" style={btn}>去確認</Link>}
         <Link to="/bot-office" className="hy-btn" style={btn}>專案</Link>
         {f.board && <Link to={f.board} className="hy-btn" style={btn}>待辦</Link>}
+        {rosterById(fig.id)?.group === 'helper' && <Link to="/ai-army?tab=helpers" className="hy-btn" style={btn}>詳細</Link>}
         <button type="button" className="hy-btn li-btn-soon" disabled title="對話功能建置中">對話（建置中）</button>
       </div>
     </section>
@@ -194,7 +197,7 @@ export default function LifeIsland() {
   const [mapCur, setMapCur] = useState('central')
   const [sky, setSky] = useState(null)
   const info = useWorldInfo()
-  const data = useWorldData()
+  const data = useBotRoster(info)
   const [panel, setPanel] = useState(null)
 
   useEffect(() => {

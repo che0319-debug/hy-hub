@@ -1,4 +1,5 @@
 // HY Life 島：世界定義（V5.1 第三部分「世界定義表」）。目前只建「中央島」。
+import { ROSTER } from '../botRoster'
 // route = 現有的 2D 頁；沒有的寫 null 並在 note 說明。沒有真資料的欄位一律「待補」，不編造。
 export const CENTRAL_ISLAND = {
   id: 'central', name: '中央島', sub: '派工 · Atlas', c: [0, 0], R: 4,
@@ -134,17 +135,8 @@ export const ALL_BUILDINGS = ISLANDS_DATA.flatMap(isl => isl.buildings.map(b => 
 // 五位 Agent。展示階段全部先在中央島活動，之後各自搬到自己的島。
 // status：wait / ai / you / done / bad。zone：平常活動的建築區。status 是 you 或 bad 的會停在原地等你。
 // board：該 Bot 專屬看板（待辦）。對話功能之後再建。
-// 這裡只放「不會變的設定」（名稱、角色、位置）。狀態、正在做、最近完成一律由 useWorldData 讀真資料；status 只是還沒載入時的預設值。
-export const FIGURES = [
-  { id: 'atlas', island: 'central', name: 'Atlas', kind: 'atlas', status: 'wait', zone: 'dispatch', role: '中央島隊長（Grok 對話通道）', board: null },
-  { id: 'xiaoyin', island: 'family', name: '小因', kind: 'xiaoyin', status: 'wait', zone: 'home', role: '棲園島隊長', board: '/line/family' },
-  { id: 'sam', island: 'side', name: 'Sam', kind: 'sam', status: 'wait', zone: 'sidehq', role: '金融島隊長', board: '/line/sam' },
-  { id: 'p950157', island: 'biz', name: '950157', kind: 'p950157', status: 'wait', zone: 'hq', role: '科研島隊長（ITRI 工作分身）', board: '/line/950157' },
-  { id: 'claude', island: 'central', name: 'Claude', kind: 'claude', status: 'wait', zone: 'dispatch', role: 'AI 執行者（Claude）', board: null },
-  { id: 'gpt', island: 'central', name: 'GPT', kind: 'gpt', status: 'wait', zone: 'meeting', role: 'AI 執行者（GPT Chat，含工作）', board: null },
-  { id: 'grokbuild', island: 'central', name: 'Grok Build', kind: 'grokbuild', status: 'wait', zone: 'syscenter', role: 'AI 執行者（Grok Build 工作通道）', board: null },
-  { id: 'hy', island: 'life', name: 'HY', kind: 'hy', status: 'wait', zone: 'dojo', role: '隱地島隊長', board: '/line/hy' },
-];
+// 名稱、角色、位置來自 src/botRoster.js（全站唯一名冊）。狀態與數字由 useBotRoster 讀真資料；status 只是還沒載入時的預設值。
+export const FIGURES = ROSTER.map(r => ({ id: r.id, island: r.island, name: r.name, kind: r.kind, status: 'wait', zone: r.zone, role: r.post, board: r.board }))
 
 // 狀態色的意義（全站一致，見 hy-ui 風格 A）
 export const STATUS_INFO = {
