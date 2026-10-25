@@ -5,7 +5,7 @@ import './index.css'
 import './mobile/mobile-v2.css'
 import App from './App'
 import Home from './pages/Home'
-import Helpers from './pages/Helpers'
+import AIArmy from './pages/AIArmy'
 import AIOfficeV1 from './pages/AIOfficeV1'
 import BotOffice from './pages/BotOffice'
 import LineHY from './pages/LineHY'
@@ -15,7 +15,6 @@ import LineFamily from './pages/LineFamily'
 import LineSam from './pages/LineSam'
 import Settings from './pages/Settings'
 import SystemArchitecture from './pages/SystemArchitecture'
-import ExpertTeam from './pages/ExpertTeam'
 import AgentConfig from './pages/AgentConfig'
 import Goals from './pages/Goals'
 import Strategy from './pages/Strategy'
@@ -28,14 +27,23 @@ function LegacyAIWorkRedirect() {
   return <Navigate to={'/ai-work-v5' + location.search} replace />
 }
 
+// 舊網址 /expert-team?tab=… → /ai-army?tab=…（其他參數如 owner-cutover 一併保留）
+function ExpertTeamRedirect() {
+  const location = useLocation()
+  const params = new URLSearchParams(location.search)
+  if (!params.get('tab')) params.set('tab', 'experts')
+  return <Navigate to={'/ai-army?' + params.toString()} replace />
+}
+
 function DesktopRoutes({ onMobileVersion }) {
   return (
     <Routes>
       <Route path="/" element={<App onMobileVersion={onMobileVersion} />}>
         <Route index element={<Home />} />
         <Route path="life-os" element={<Navigate to="/" replace />} />
-        <Route path="helpers" element={<Helpers />} />
-        <Route path="memory" element={<Navigate to="/helpers" replace />} />
+        <Route path="ai-army" element={<AIArmy />} />
+        <Route path="helpers" element={<Navigate to="/ai-army?tab=helpers" replace />} />
+        <Route path="memory" element={<Navigate to="/ai-army?tab=helpers" replace />} />
         <Route path="workspace/*" element={<LegacyAIWorkRedirect />} />
         <Route path="ai-work" element={<Navigate to="/ai-work-v5" replace />} />
         <Route path="ai-work-v5" element={<AIOfficeV1 />} />
@@ -53,7 +61,7 @@ function DesktopRoutes({ onMobileVersion }) {
         <Route path="goals" element={<Goals />} />
         <Route path="strategy" element={<Strategy />} />
         <Route path="system-architecture" element={<SystemArchitecture />} />
-        <Route path="expert-team" element={<ExpertTeam />} />
+        <Route path="expert-team" element={<ExpertTeamRedirect />} />
         <Route path="settings" element={<Settings />} />
         <Route path="life-island" element={<Suspense fallback={<p className="hy-lede">載入 HY Life 島…</p>}><LifeIsland /></Suspense>} />
       </Route>
