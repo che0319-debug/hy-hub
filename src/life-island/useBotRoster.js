@@ -6,7 +6,7 @@ import { fetchMemoryHealth, fetchRunnerActivity } from '../api'
 import { authHeaders } from '../auth'
 import { loadBotOffice } from '../botOfficeData'
 import { HELPERS } from '../botRoster'
-import { deriveOffice, deriveRunners, deriveSummary, deriveTodos } from './worldData'
+import { deriveAtlas, deriveOffice, deriveRunners, deriveSummary, deriveTodos } from './worldData'
 
 const EVERY = 60 * 1000
 
@@ -42,6 +42,8 @@ export function useBotRoster(info) {
   // 以小人 id 為 key。沒有資料的欄位是 null，由畫面顯示「—」。
   const bots = useMemo(() => {
     const out = { ...exec }
+    const loadedAll = done.office || done.memory || done.runners
+    out.atlas = deriveAtlas({ office, officeEmpty, failed, todoFailed: !!info?.todoFailed, unowned: off.unowned, loaded: loadedAll })
     for (const h of HELPERS) {
       const o = off.byAgent[h.agent]
       out[h.id] = {
@@ -53,7 +55,7 @@ export function useBotRoster(info) {
       }
     }
     return out
-  }, [off, todos, memory, exec])
+  }, [off, todos, memory, exec, office, officeEmpty, failed, done, info?.todoFailed])
 
   const loaded = done.office || done.memory || done.runners
   const failedCount = Object.values(failed).filter(Boolean).length + (info?.todoFailed ? 1 : 0)

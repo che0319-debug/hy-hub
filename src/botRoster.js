@@ -13,7 +13,7 @@ export const ROSTER = [
     agent: 'family', persona: 'xiaoyin', source: '家庭', board: '/line/family' },
   { id: 'sam', group: 'helper', name: 'Sam', role: '副業統籌', post: '金融島隊長', island: 'side', zone: 'sidehq', kind: 'sam',
     agent: 'sam', persona: 'sam', source: 'Sam', board: '/line/sam' },
-  { id: 'atlas', group: 'executor', name: 'Atlas', role: 'Grok 對話通道', post: '中央島隊長（Grok 對話通道）', island: 'central', zone: 'dispatch', kind: 'atlas', agent: null, board: null },
+  { id: 'atlas', group: 'coo', name: 'Atlas', role: '營運長 COO・系統維運（Grok bot）', post: '中央島營運長（COO）', island: 'central', zone: 'dispatch', kind: 'atlas', agent: null, board: null },
   { id: 'claude', group: 'executor', name: 'Claude', role: 'AI 執行者', post: 'AI 執行者（Claude）', island: 'central', zone: 'dispatch', kind: 'claude', agent: null, board: null },
   { id: 'gpt', group: 'executor', name: 'GPT', role: 'AI 執行者', post: 'AI 執行者（GPT Chat，含工作）', island: 'central', zone: 'meeting', kind: 'gpt', agent: null, board: null },
   { id: 'grokbuild', group: 'executor', name: 'Grok Build', role: 'AI 執行者', post: 'AI 執行者（Grok Build 工作通道）', island: 'central', zone: 'syscenter', kind: 'grokbuild', agent: null, board: null },
