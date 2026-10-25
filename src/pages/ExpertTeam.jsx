@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { authHeaders } from '../auth'
 import './expert-team.css'
@@ -111,14 +111,18 @@ function CandidateForm({ editor, skills, busy, onCancel, onSubmit }) {
 
 function ModelsTab(){return <RouterControls/>}
 
-export default function ExpertTeam() {
+// embedded：放進「AI 軍團」時使用。分頁列由外層提供；forcedTab 由外層決定目前分頁，onTab 通知外層（頁內按鈕切分頁時）。
+export default function ExpertTeam({ embedded = false, tab: forcedTab, onTab } = {}) {
   const [params] = useSearchParams(), initialTab = ['experts','skills','models','requests'].includes(params.get('tab')) ? params.get('tab') : 'experts'
   const ownerCutover = params.get('owner-cutover') === '1'
   useEffect(() => {
     if (!ownerCutover) return
     return registerRouterCutoverTools(document.modelContext || navigator.modelContext, routerRequest)
   }, [ownerCutover])
-  const [data, setData] = useState(null), [tab, setTab] = useState(initialTab), [error, setError] = useState(''), [busy, setBusy] = useState(false), [contents, setContents] = useState({}), [projects, setProjects] = useState([]), [project, setProject] = useState(''), [requests, setRequests] = useState([]), [search, setSearch] = useState(''), [editor, setEditor] = useState(null), [panel, setPanel] = useState(null)
+  const [data, setData] = useState(null), [tab, setTabState] = useState(forcedTab || initialTab), [error, setError] = useState(''), [busy, setBusy] = useState(false), [contents, setContents] = useState({}), [projects, setProjects] = useState([]), [project, setProject] = useState(''), [requests, setRequests] = useState([]), [search, setSearch] = useState(''), [editor, setEditor] = useState(null), [panel, setPanel] = useState(null)
+  const setTab = t => { setTabState(t); onTab && onTab(t) }
+  const tabRef = useRef(tab); tabRef.current = tab
+  useEffect(() => { if (forcedTab && forcedTab !== tabRef.current) { setTabState(forcedTab); setSearch(''); setEditor(null) } }, [forcedTab])
   async function load() { setData(await api('/experts/registry')) }
   useEffect(() => { load().catch(e => setError(e.message)) }, [])
   useEffect(() => { if (tab === 'requests') api('/projects').then(setProjects).catch(e => setError(e.message)) }, [tab])
@@ -154,9 +158,9 @@ export default function ExpertTeam() {
   const publishedSkills = grouped(data?.skills).filter(rows => rows.some(s => s.state === 'PUBLISHED') && skillSource(rows[0].id) !== 'legacy').length
   const panelRows = panel && grouped(data?.skills).find(r => r[0].id === panel)
 
-  return <div className="hy expert-team hy-stack">
+  return <div className={"hy expert-team hy-stack" + (embedded ? " is-embedded" : "")}>
     <div className="hy-pagehead">
-      <div><h1 className="hy-title">專家團</h1><p className="hy-lede">PI 帶隊規劃，各專家依 Skill 與工作包凍結路由執行。既有專案保留原配置。</p></div>
+      {embedded ? <div><p className="hy-lede">PI 帶隊規劃，各專家依 Skill 與工作包凍結路由執行。既有專案保留原配置。</p></div> : <div><h1 className="hy-title">專家團</h1><p className="hy-lede">PI 帶隊規劃，各專家依 Skill 與工作包凍結路由執行。既有專案保留原配置。</p></div>}
       <div className="et-head-end">
         {data && <div className="hy-summary"><span className="hy-pill" data-s="done">{publishedExperts} 位專家已上線</span><span className="hy-pill" data-s="done">{publishedSkills} 份 Skill 已發布</span><span className="hy-pill" data-s={actions.length ? 'you' : 'wait'}>待你確認 {actions.length}</span></div>}
         <button className="hy-btn" disabled={busy} onClick={() => act(load)}>重新整理</button>
@@ -166,7 +170,7 @@ export default function ExpertTeam() {
     {!data && !error && <p className="hy-empty">讀取中…</p>}
     {actions.length > 0 && <p className="hy-alert">{actions.length} 個版本等你核准發布，已在對應的專家卡或 Skill 標示「待你確認」。</p>}
 
-    <nav className="hy-tabs" role="tablist">{[['experts', '專家'], ['skills', 'Skill 庫'], ['models', 'AI 派工'], ['requests', '能力請求']].map(([id, label]) => <button className="hy-tab" role="tab" key={id} aria-current={tab === id ? 'page' : undefined} onClick={() => { setTab(id); setSearch(''); setEditor(null) }}>{label}</button>)}</nav>
+    {!embedded && <nav className="hy-tabs" role="tablist">{[['experts', '專家'], ['skills', 'Skill 庫'], ['models', 'AI 派工'], ['requests', '能力請求']].map(([id, label]) => <button className="hy-tab" role="tab" key={id} aria-current={tab === id ? 'page' : undefined} onClick={() => { setTab(id); setSearch(''); setEditor(null) }}>{label}</button>)}</nav>}
 
     {(tab === 'experts' || tab === 'skills') && <label className="pi-search">搜尋{tab === 'experts' ? '專家' : 'Skill'}<input value={search} onChange={e => setSearch(e.target.value)} placeholder="輸入名稱或能力" /></label>}
 

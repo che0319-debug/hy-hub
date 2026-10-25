@@ -26,11 +26,11 @@ function Decision({ item, readOnly, reload }) {
       const saved = await answerOfficeDecision(item.id, {
         action, expected_revision: draftRevision ?? item.revision,
         ...(question ? { question_no: question.no } : {}),
-        ...(action === 'answer' ? { answer } : {}), ...(action === 'return' ? { feedback } : {}),
+        ...(['answer', 'confirm'].includes(action) && answer ? { answer } : {}), ...(action === 'return' ? { feedback } : {}),
       }, { headers: authHeaders() })
-      const otherDrafts = Object.entries(drafts).some(([no, value]) => !(question && action === 'answer' && no === String(question.no)) && value.trim()) || feedback.trim()
+      const otherDrafts = Object.entries(drafts).some(([no, value]) => !(question && ['answer', 'confirm'].includes(action) && no === String(question.no)) && value.trim()) || feedback.trim()
       setDraftRevision(otherDrafts ? saved.decision.revision : null)
-      if (question && action === 'answer') setDrafts(old => { const next = { ...old }; delete next[question.no]; return next })
+      if (question && ['answer', 'confirm'].includes(action)) setDrafts(old => { const next = { ...old }; delete next[question.no]; return next })
       setNotice(action === 'defer' ? '已記錄先不決定，題目保持開放。' : '已儲存，等待 Atlas 巡視處理。')
       await reload()
     } catch (e) {
@@ -39,6 +39,7 @@ function Decision({ item, readOnly, reload }) {
     } finally { setBusy(false) }
   }
   const disabled = busy || readOnly
+  const closed = item.status === 'answered'
   return <article className="ao-decision bo-decision-form" aria-label={item.title}>
     <h3>{item.title}</h3>{item.suggestion && <p>{item.suggestion}</p>}
     {readOnly && <p className="ao-muted">示範檢視不提供寫入。</p>}
@@ -47,40 +48,48 @@ function Decision({ item, readOnly, reload }) {
       {question.why && <p className="ao-muted">為什麼要問：{question.why}</p>}
       {question.recommend && <p>建議：{question.recommend}</p>}
       <Attribution item={question} />
-      {question.confirmed && <p className="ao-muted">已確認；仍可填入新回答修改。</p>}
-      {question.options.length > 0 && <div className="ao-toolbar" aria-label={`第 ${question.no} 題選項`}>
+      {question.suggestions?.map((s, i) => <aside className="bo-answer" key={i} aria-label="Bot 建議"><b>{NAMES[s.answeredBy] || 'Bot'} 建議・僅供參考</b><p className="bo-summary">{s.answer}</p><p className="ao-muted">根據：{s.basis}・把握度 {CONFIDENCE[s.confidence] || '未提供'}</p></aside>)}
+      {!closed && question.answerSource === 'proxy' && /待\s*HY|待確認|未決/.test(question.answer) && <p className="bo-notice" role="status">代答仍有待確認內容，請先補充或改答，再確認。</p>}
+      {closed && <p className="ao-muted">作答：{question.answeredAt || '時間未提供'}{question.confirmed ? `・HY 確認：${question.confirmedAt || '時間未提供'}` : ''}</p>}
+
+      {!closed && question.confirmed && <p className="ao-muted">已確認；仍可填入新回答修改。</p>}
+      {!closed && question.options.length > 0 && <div className="ao-toolbar" aria-label={`第 ${question.no} 題選項`}>
         {question.options.map(option => <button key={option} disabled={disabled} aria-pressed={drafts[question.no] === option}
           onClick={() => { setDraftRevision(old => old ?? item.revision); setDrafts(old => ({ ...old, [question.no]: option })) }}>{option}</button>)}
       </div>}
-      <form onSubmit={e => { e.preventDefault(); submit('answer', question, drafts[question.no]) }}>
+      {!closed && <form onSubmit={e => { e.preventDefault(); submit('answer', question, drafts[question.no]) }}>
         <label>你的回答<textarea aria-label={`第 ${question.no} 題回答`} disabled={disabled} value={drafts[question.no] ?? ''}
           onChange={e => { setDraftRevision(old => old ?? item.revision); setDrafts(old => ({ ...old, [question.no]: e.target.value })) }} /></label>
         <div className="ao-toolbar">
           <button type="submit" disabled={disabled || !drafts[question.no]?.trim()}>{question.answer ? '改答' : '送出回答'}</button>
-          {question.answerSource === 'proxy' && question.answer && !question.confirmed && <button type="button" disabled={disabled} onClick={() => submit('confirm', question)}>確認代答</button>}
+          {question.answerSource === 'proxy' && question.answer && !question.confirmed && <button type="button" disabled={disabled} onClick={() => submit('confirm', question, drafts[question.no]?.trim() ? `${question.answer}\n補充：${drafts[question.no].trim()}` : undefined)}>{drafts[question.no]?.trim() ? '確認並補充' : '確認代答'}</button>}
           <button type="button" disabled={disabled} onClick={() => submit('defer', question)}>先不決定</button>
         </div>
-      </form>
+      </form>}
     </section>)}
     {!item.questions.length && item.kind === 'approval' && <>
+      {closed ? <Attribution item={item} /> : <>
       <Attribution item={item} />
       <label>修改意見（退回時必填）<textarea aria-label="退回意見" value={feedback} disabled={disabled} onChange={e => { setDraftRevision(old => old ?? item.revision); setFeedback(e.target.value) }} /></label>
       <div className="ao-toolbar"><button disabled={disabled} onClick={() => submit('approve')}>核准</button>
         <button disabled={disabled || !feedback.trim()} onClick={() => submit('return')}>退回修改</button>
         {item.answerSource === 'proxy' && item.answer && <button disabled={disabled} onClick={() => submit('confirm')}>確認代答</button>}
         <button disabled={disabled} onClick={() => submit('defer')}>先不決定</button>
-      </div>
+      </div></>}
     </>}
-    {!item.questions.length && item.kind !== 'approval' && <p className="ao-muted">等待 Atlas 補齊結構化題目，暫不能作答。</p>}
+    {closed && !item.questions.length && item.kind !== 'approval' && <Attribution item={item} />}
+    {!closed && !item.questions.length && item.kind !== 'approval' && <p className="ao-muted">等待 Atlas 補齊結構化題目，暫不能作答。</p>}
+    {item.history?.length > 0 && <details><summary>歷史紀錄（{item.history.length}）</summary><ol>{item.history.map((h, i) => <li key={i}><b>{h.actor === 'hy' ? 'HY' : NAMES[h.answered_by] || 'Bot'}</b>・{({answer: '作答', confirm: '確認', suggest: '建議', defer: '先不決定', approve: '核准', return: '退回'})[h.action] || h.action}・{h.at}<p className="bo-summary">{typeof h.answer === 'string' ? h.answer : h.answer?.feedback || h.note}</p></li>)}</ol></details>}
     {busy && <p role="status">正在儲存…</p>}{notice && <p role="status">{notice}</p>}
     {error && <div role="alert"><p>{error.message}</p>{error.kind === 'auth' && <button onClick={expireSession}>重新登入</button>}{error.kind === 'conflict' && <button onClick={() => { setDraftRevision(item.revision); setError(null) }}>已核對最新題目，保留輸入</button>}</div>}
   </article>
 }
 
-export default function OfficeDecisions({ items, readOnly, reload }) {
+export default function OfficeDecisions({ items, readOnly, reload, title = '待 HY 決定' }) {
   if (!items.length) return null
-  return <section className="ao-card is-focus needs-you bo-decisions" aria-label="待 HY 決定">
-    <h2>待 HY 決定 <span className="hy-pill" data-s="you">{items.length}</span></h2>
+  const pending = items.some(d => d.status !== 'answered')
+  return <section className={`ao-card bo-decisions${pending ? ' is-focus needs-you' : ''}`} aria-label={title}>
+    <h2>{title} <span className="hy-pill" data-s={pending ? 'you' : 'done'}>{items.length}</span></h2>
     {items.map(item => <Decision key={item.id} item={item} readOnly={readOnly} reload={reload} />)}
   </section>
 }

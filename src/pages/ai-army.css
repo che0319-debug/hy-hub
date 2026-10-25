@@ -1,0 +1,3 @@
+/* AI 軍團外框：與專家團頁同一套版面寬度。分頁、標題、卡片都用 hy-ui 既有元件。 */
+.ai-army{color:var(--hy-ink);font-size:var(--hy-fs-body);max-width:var(--hy-max);margin:auto;padding-top:16px;padding-bottom:24px;font-family:'Noto Sans TC',system-ui,sans-serif}
+.expert-team.is-embedded{margin:0;width:100%;padding-top:0;padding-bottom:0;max-width:none}

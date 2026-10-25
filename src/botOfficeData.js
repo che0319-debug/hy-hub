@@ -1,12 +1,12 @@
 // Contract v0: Drive 專案卡.md / 工作卡.md, 2026-10-24; HY's Office/Brain separation applies.
 // All external field mapping lives here. Unknown fields are tolerated and not rendered.
-export const OFFICE_TABS = [['overview', '概況'], ['meeting', '會議室'], ['execution', '執行計畫'], ['outputs', '成果與審查'], ['log', '工作日誌']]
+export const OFFICE_TABS = [['overview', '概況'], ['inbox', '待確認'], ['plan', '規劃書'], ['outputs', '產出'], ['log', '工作紀錄'], ['quality', '品質與審查']]
 export const REFRESH_MS = 30000
 const STAGES = {
   unassigned: ['待派', 'wait'], assigned: ['已派', 'wait'], running: ['執行中', 'ai'],
   review: ['待審', 'ai'], hy_decision: ['待 HY 決定', 'you'], done: ['完成', 'done'], returned: ['退回', 'bad'],
 }
-const CARD_GROUP = { meeting: 'meeting', execution: 'execution', output: 'outputs', log: 'log', decision: 'overview' }
+const CARD_GROUP = { meeting: 'overview', execution: 'plan', plan: 'plan', output: 'outputs', log: 'log', decision: 'inbox', review: 'quality' }
 const array = value => Array.isArray(value) ? value : []
 const text = value => typeof value === 'string' ? value : ''
 export const safeDriveUrl = value => {
@@ -25,7 +25,8 @@ export function mapOffice(state = {}, index = {}, metadata = {}) {
     date: text(c.date), driveUrl: safeDriveUrl(c.drive_url), type: text(c.type),
   }))
   const projectIds = new Set(array(state.buildings).map(p => p.id))
-  const decisions = array(state.decisions).filter(d => d && d.status === 'open').map(d => ({
+  const allDecisions = array(state.decisions).filter(d => d && ['open', 'answered'].includes(d.status)).map(d => ({
+    status: d.status, answeredAt: text(d.answered_at), history: array(d.history).filter(h => h && typeof h === 'object'),
     id: text(d.id), title: text(d.title) || '待 HY 決定', suggestion: text(d.suggestion),
     kind: text(d.kind), revision: Number.isInteger(d.revision) ? d.revision : 0,
     answer: d.answer, answerSource: text(d.answer_source), answeredBy: text(d.answered_by), basis: text(d.basis), confidence: text(d.confidence),
@@ -33,24 +34,43 @@ export function mapOffice(state = {}, index = {}, metadata = {}) {
       no: q.no, q: text(q.q), why: text(q.why), options: array(q.options).filter(o => typeof o === 'string'), recommend: text(q.recommend),
       answer: text(q.answer), answeredBy: text(q.answered_by), answerSource: text(q.answer_source),
       basis: text(q.basis), confidence: text(q.confidence), confirmed: q.confirmed_by === 'hy',
+      answeredAt: text(q.answered_at), confirmedAt: text(q.confirmed_at),
+      suggestions: array(q.bot_suggestions).filter(v => v && typeof v === 'object').map(v => ({answer: text(v.answer), answeredBy: text(v.answered_by), basis: text(v.basis), confidence: text(v.confidence), at: text(v.at)})),
     })),
     projectId: (projectIds.has(d.project) ? d.project : null)
       || cards.find(c => c.id === d.card)?.projectId
       || (projectIds.has(d.ref) ? d.ref : cards.find(c => c.id === d.ref)?.projectId) || null,
   }))
+  const decisions = allDecisions.filter(d => d.status === 'open')
+  // Decision summaries come from state; index may lag behind an answer.
+  for (const c of cards) {
+    const raw = array(state.decisions).find(d => d && (d.card === c.id || d.ref === c.id))
+    const d = raw && allDecisions.find(d => d.id === raw.id)
+    if (d) { c.title = d.title; c.summary = d.questions.length ? d.questions.map(q => `${q.no}. ${q.q}\n${q.answer || '尚未回答'}${q.confirmed ? '（HY 已確認）' : ''}`).join('\n\n') : typeof d.answer === 'string' ? d.answer : d.suggestion || '尚未回答' }
+  }
+  const cardLink = value => safeDriveUrl(value) || cards.find(c => c.id === value)?.driveUrl || null
   const projects = array(state.buildings).filter(p => p && typeof p === 'object').map(p => {
-    const [stageLabel, tone] = STAGES[p.stage] || ['狀態待確認', 'wait']
+    let [stageLabel, tone] = STAGES[p.stage] || ['狀態待確認', 'wait']
+    if (p.stage === 'assigned' && decisions.some(d => d.projectId === p.id && d.kind === 'intake')) { stageLabel = '等 HY 回答'; tone = 'you' }
     const groups = Object.fromEntries(OFFICE_TABS.map(([key]) => [key, cards.filter(c => c.projectId === p.id && c.tab === key)]))
     return {
       id: text(p.id), title: text(p.title) || '未命名專案', island: islands.get(p.island) || text(p.island) || '未分區',
+      ownerBot: text(p.owner_bot), planUrl: cardLink(p.plan_card), folderUrl: safeDriveUrl(p.drive_folder_url),
+      review: { verdict: text(p.last_review?.verdict) || text(p.last_review) || 'none',
+        url: cardLink(p.review_card) || cards.filter(c => c.projectId === p.id).map(c => array(index.cards).find(raw => raw.id === c.id)?.review_card).map(cardLink).find(Boolean) || null,
+        requiredChanges: array(p.required_changes || p.must_fix || p.last_review?.required_changes).filter(v => typeof v === 'string'),
+        returnedCount: Number.isInteger(p.returned_count) && p.returned_count >= 0 ? p.returned_count : 0 },
+      figures: array(state.figures).filter(f => f && f.project === p.id).map(f => ({ id: text(f.id), owner: text(f.owner), project: text(f.project), island: text(f.island), lookAs: text(f.look_as), status: text(f.status) })),
+      logs: array(state.logs).filter(l => l && l.project === p.id), requests: array(state.requests).filter(r => r && r.project === p.id),
+      allDecisions: allDecisions.filter(d => d.projectId === p.id),
       stage: text(p.stage), stageLabel, tone, executor: text(p.executor) || '尚未指定',
       decisions: decisions.filter(d => d.projectId === p.id), cards: groups,
-      finished: p.stage === 'done' || p.stage === 'returned', active: p.stage === 'running',
+      finished: p.stage === 'done' || p.stage === 'returned', active: ['running', 'review'].includes(p.stage),
       pending: decisions.some(d => d.projectId === p.id),
     }
   }).sort((a, b) => Number(b.pending) - Number(a.pending))
   return {
-    projects, decisions, stale: Boolean(metadata.stale),
+    projects, decisions, allDecisions, requests: array(state.requests), stale: Boolean(metadata.stale),
     updated: when(metadata.stateUpdated || state.updated), indexUpdated: when(metadata.indexUpdated || index.updated),
     totals: { pending: decisions.length, running: projects.filter(p => p.active).length, finished: projects.filter(p => p.finished).length, all: projects.length },
   }
@@ -109,6 +129,18 @@ export async function answerOfficeDecision(id, payload, { headers = {}, fetcher 
   const data = await response.json().catch(() => ({}))
   if (response.status === 401) throw new OfficeReadError('auth', '登入已過期，請重新登入。')
   if (response.status === 409) throw new OfficeReadError('conflict', '資料已更新，請重新讀取後確認再送出；你的輸入會保留。')
+  if (!response.ok) throw new OfficeReadError('error', response.status === 413 ? '資料已達大小上限，請由 Atlas 整理後再試。' : '未儲存成功，請稍後重試。')
+  return data
+}
+
+
+export async function writeOffice(path, payload, { headers = {}, fetcher = fetch, base = import.meta.env?.VITE_API_BASE || '' } = {}) {
+  const response = await fetcher(`${base.replace(/\/$/, '')}/api/office/${path}`, {
+    method: 'POST', headers: {...headers, 'Content-Type': 'application/json'}, body: JSON.stringify(payload), cache: 'no-store',
+  })
+  const data = await response.json().catch(() => ({}))
+  if (response.status === 401) throw new OfficeReadError('auth', '登入已過期，請重新登入。')
+  if (response.status === 409) throw new OfficeReadError('conflict', '資料已更新，請重新讀取後再送出；輸入已保留。')
   if (!response.ok) throw new OfficeReadError('error', response.status === 413 ? '資料已達大小上限，請由 Atlas 整理後再試。' : '未儲存成功，請稍後重試。')
   return data
 }

@@ -30,7 +30,7 @@ export const CENTRAL_ISLAND = {
       blurb: '管理系統用的頁面：架構、專家團、設定、Agent 設定。',
       links: [
         { label: '系統架構', to: '/system-architecture' },
-        { label: '專家團', to: '/expert-team' },
+        { label: 'AI 軍團', to: '/ai-army' },
         { label: '設定', to: '/settings' },
       ],
       note: '還沒連上的頁先放這裡，慢慢接。',

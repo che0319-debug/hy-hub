@@ -56,7 +56,7 @@ function BotCard({ botId, health }) {
   )
 }
 
-export default function Helpers() {
+export default function Helpers({ embedded = false } = {}) {
   const [bots, setBots]       = useState(null)
   const [loading, setLoading] = useState(true)
   const [error, setError]     = useState(null)
@@ -69,11 +69,17 @@ export default function Helpers() {
 
   return (
     <div>
-      <div className="flex items-center gap-2 mb-1">
-        <span className="inline-block w-3 h-3 rounded-full bg-blue-600" />
-        <h1 className="text-xl font-bold text-slate-800">我的小幫手</h1>
-      </div>
-      <div className="mb-6 ml-5 flex items-center gap-3"><p className="text-sm text-slate-400">Bot 狀態、記憶與學習狀況</p></div>
+      {embedded ? (
+        <p className="mb-6 text-sm text-slate-400">Bot 狀態、記憶與學習狀況</p>
+      ) : (
+        <>
+          <div className="flex items-center gap-2 mb-1">
+            <span className="inline-block w-3 h-3 rounded-full bg-blue-600" />
+            <h1 className="text-xl font-bold text-slate-800">我的小幫手</h1>
+          </div>
+          <div className="mb-6 ml-5 flex items-center gap-3"><p className="text-sm text-slate-400">Bot 狀態、記憶與學習狀況</p></div>
+        </>
+      )}
 
       {loading && <p className="text-sm text-slate-400">載入中…</p>}
       {error   && <p className="text-sm text-red-400">無法載入：{error}</p>}
