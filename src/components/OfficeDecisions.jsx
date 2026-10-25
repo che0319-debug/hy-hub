@@ -31,7 +31,7 @@ function Decision({ item, readOnly, reload }) {
       const otherDrafts = Object.entries(drafts).some(([no, value]) => !(question && ['answer', 'confirm'].includes(action) && no === String(question.no)) && value.trim()) || feedback.trim()
       setDraftRevision(otherDrafts ? saved.decision.revision : null)
       if (question && ['answer', 'confirm'].includes(action)) setDrafts(old => { const next = { ...old }; delete next[question.no]; return next })
-      setNotice(action === 'defer' ? '已記錄先不決定，題目保持開放。' : '已儲存，等待 Atlas 巡視處理。')
+      setNotice(action === 'defer' ? '已記錄先不決定，題目保持開放。' : '已儲存。')
       await reload()
     } catch (e) {
       setError(e)
@@ -42,13 +42,12 @@ function Decision({ item, readOnly, reload }) {
   const closed = item.status === 'answered'
   return <article className="ao-decision bo-decision-form" aria-label={item.title}>
     <h3>{item.title}</h3>{item.suggestion && <p>{item.suggestion}</p>}
-    {readOnly && <p className="ao-muted">示範檢視不提供寫入。</p>}
     {item.questions.map(question => <section key={question.no} className="bo-question" aria-label={`第 ${question.no} 題`}>
       <h3>{question.no}. {question.q}</h3>
       {question.why && <p className="ao-muted">為什麼要問：{question.why}</p>}
       {question.recommend && <p>建議：{question.recommend}</p>}
       <Attribution item={question} />
-      {question.suggestions?.map((s, i) => <aside className="bo-answer" key={i} aria-label="Bot 建議"><b>{NAMES[s.answeredBy] || 'Bot'} 建議・僅供參考</b><p className="bo-summary">{s.answer}</p><p className="ao-muted">根據：{s.basis}・把握度 {CONFIDENCE[s.confidence] || '未提供'}</p></aside>)}
+      {question.suggestions?.map((s, i) => <aside className="bo-answer" key={i} aria-label="Bot 建議"><b>{NAMES[s.answeredBy] || 'Bot'} 建議・僅供參考</b><p className="bo-summary">{s.answer}</p><p className="ao-muted">根據：{s.basis}・把握度 {CONFIDENCE[s.confidence] || '未提供'}</p>{!closed && <button type="button" disabled={disabled || !s.answer.trim()} onClick={() => submit('answer', question, s.answer)}>採用建議並作答</button>}</aside>)}
       {!closed && question.answerSource === 'proxy' && /待\s*HY|待確認|未決/.test(question.answer) && <p className="bo-notice" role="status">代答仍有待確認內容，請先補充或改答，再確認。</p>}
       {closed && <p className="ao-muted">作答：{question.answeredAt || '時間未提供'}{question.confirmed ? `・HY 確認：${question.confirmedAt || '時間未提供'}` : ''}</p>}
 
@@ -78,7 +77,7 @@ function Decision({ item, readOnly, reload }) {
       </div></>}
     </>}
     {closed && !item.questions.length && item.kind !== 'approval' && <Attribution item={item} />}
-    {!closed && !item.questions.length && item.kind !== 'approval' && <p className="ao-muted">等待 Atlas 補齊結構化題目，暫不能作答。</p>}
+    {!closed && !item.questions.length && item.kind !== 'approval' && <p className="ao-muted">提問內容尚未補齊，暫不能作答。</p>}
     {item.history?.length > 0 && <details><summary>歷史紀錄（{item.history.length}）</summary><ol>{item.history.map((h, i) => <li key={i}><b>{h.actor === 'hy' ? 'HY' : NAMES[h.answered_by] || 'Bot'}</b>・{({answer: '作答', confirm: '確認', suggest: '建議', defer: '先不決定', approve: '核准', return: '退回'})[h.action] || h.action}・{h.at}<p className="bo-summary">{typeof h.answer === 'string' ? h.answer : h.answer?.feedback || h.note}</p></li>)}</ol></details>}
     {busy && <p role="status">正在儲存…</p>}{notice && <p role="status">{notice}</p>}
     {error && <div role="alert"><p>{error.message}</p>{error.kind === 'auth' && <button onClick={expireSession}>重新登入</button>}{error.kind === 'conflict' && <button onClick={() => { setDraftRevision(item.revision); setError(null) }}>已核對最新題目，保留輸入</button>}</div>}

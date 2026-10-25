@@ -1,12 +1,13 @@
 // Contract v0: Drive 專案卡.md / 工作卡.md, 2026-10-24; HY's Office/Brain separation applies.
 // All external field mapping lives here. Unknown fields are tolerated and not rendered.
-export const OFFICE_TABS = [['overview', '概況'], ['inbox', '待確認'], ['plan', '規劃書'], ['outputs', '產出'], ['log', '工作紀錄'], ['quality', '品質與審查']]
+import { OFFICE_TABS as AI_OFFICE_TABS } from './lib/aiOffice.mjs'
+export const OFFICE_TABS = AI_OFFICE_TABS
 export const REFRESH_MS = 30000
 const STAGES = {
   unassigned: ['待派', 'wait'], assigned: ['已派', 'wait'], running: ['執行中', 'ai'],
   review: ['待審', 'ai'], hy_decision: ['待 HY 決定', 'you'], done: ['完成', 'done'], returned: ['退回', 'bad'],
 }
-const CARD_GROUP = { meeting: 'overview', execution: 'plan', plan: 'plan', output: 'outputs', log: 'log', decision: 'inbox', review: 'quality' }
+const CARD_GROUP = { meeting: 'meeting', note: 'meeting', execution: 'execution', plan: 'execution', output: 'outputs', log: 'log', decision: 'overview', review: 'outputs' }
 const array = value => Array.isArray(value) ? value : []
 const text = value => typeof value === 'string' ? value : ''
 export const safeDriveUrl = value => {
@@ -17,15 +18,37 @@ const when = value => {
   return value && !Number.isNaN(date.getTime()) ? date.toLocaleString('zh-TW', { timeZone: 'Asia/Taipei', hour12: false }) : '尚未提供'
 }
 
+export const OFFICE_NAMES = {hy: 'HY Bot', sam: 'Sam', family: '小因', '950157': '950157', 'grok-build': 'Grok Build', claude: 'Claude', gpt: 'GPT'}
+
+export function officeTeam(building, figures = []) {
+  const names = new Map(array(figures).filter(f => f && f.id && f.name).map(f => [f.id, text(f.name)]))
+  const result = [], seen = new Set()
+  const add = (role, id, name) => {
+    if (!id || seen.has(`${role}:${id}`)) return
+    seen.add(`${role}:${id}`)
+    result.push({role, id, name: name || names.get(id) || OFFICE_NAMES[id] || id})
+  }
+  add('負責 Bot', text(building.owner_bot))
+  for (const f of array(figures)) if (f && f.project === building.id && f.role === 'pi') add('PI', text(f.id), text(f.name))
+  add('執行者', text(building.executor))
+  add('審查者', text(building.reviewer))
+  return result
+}
+
 export function mapOffice(state = {}, index = {}, metadata = {}) {
   const islands = new Map(array(state.islands).map(i => [i.id, text(i.name) || text(i.id)]))
+  const reviewIds = new Set([...array(state.buildings).map(p => p?.review_card), ...array(index.cards).map(c => c?.review_card)].filter(v => typeof v === 'string'))
+  const decisionIds = new Set(array(state.decisions).flatMap(d => [d?.card, d?.ref]).filter(v => typeof v === 'string'))
   const cards = array(index.cards).filter(c => c && typeof c === 'object').map(c => ({
-    id: text(c.id), projectId: text(c.project), tab: CARD_GROUP[c.type] || null,
+    id: text(c.id), projectId: text(c.project), tab: decisionIds.has(c.id) ? 'overview' : reviewIds.has(c.id) ? 'outputs' : CARD_GROUP[c.type] || null,
+    isReview: reviewIds.has(c.id) || c.type === 'review',
     title: text(c.title) || '未命名卡片', summary: text(c.summary) || '尚無摘要',
-    date: text(c.date), driveUrl: safeDriveUrl(c.drive_url), type: text(c.type),
+    date: reviewIds.has(c.id) || c.type === 'review' ? (text(c.drive_created_at) ? `Drive 建立：${when(c.drive_created_at)}` : 'Drive 建立時間待補') : text(c.date),
+    driveCreatedAt: text(c.drive_created_at), driveUrl: safeDriveUrl(c.drive_url), type: text(c.type),
   }))
   const projectIds = new Set(array(state.buildings).map(p => p.id))
   const allDecisions = array(state.decisions).filter(d => d && ['open', 'answered'].includes(d.status)).map(d => ({
+    needsAdvance: d.needs_advance === true, advance: d.advance && typeof d.advance === 'object' ? d.advance : null,
     status: d.status, answeredAt: text(d.answered_at), history: array(d.history).filter(h => h && typeof h === 'object'),
     id: text(d.id), title: text(d.title) || '待 HY 決定', suggestion: text(d.suggestion),
     kind: text(d.kind), revision: Number.isInteger(d.revision) ? d.revision : 0,
@@ -52,15 +75,19 @@ export function mapOffice(state = {}, index = {}, metadata = {}) {
   const projects = array(state.buildings).filter(p => p && typeof p === 'object').map(p => {
     let [stageLabel, tone] = STAGES[p.stage] || ['狀態待確認', 'wait']
     if (p.stage === 'assigned' && decisions.some(d => d.projectId === p.id && d.kind === 'intake')) { stageLabel = '等 HY 回答'; tone = 'you' }
+    const planCard = cards.find(c => c.id === p.plan_card) || null
     const groups = Object.fromEntries(OFFICE_TABS.map(([key]) => [key, cards.filter(c => c.projectId === p.id && c.tab === key)]))
     return {
       id: text(p.id), title: text(p.title) || '未命名專案', island: islands.get(p.island) || text(p.island) || '未分區',
+      latestCardId: text(p.card), team: officeTeam(p, state.figures), reviewer: text(p.reviewer), planCard,
       ownerBot: text(p.owner_bot), planUrl: cardLink(p.plan_card), folderUrl: safeDriveUrl(p.drive_folder_url),
       review: { verdict: text(p.last_review?.verdict) || text(p.last_review) || 'none',
         url: cardLink(p.review_card) || cards.filter(c => c.projectId === p.id).map(c => array(index.cards).find(raw => raw.id === c.id)?.review_card).map(cardLink).find(Boolean) || null,
         requiredChanges: array(p.required_changes || p.must_fix || p.last_review?.required_changes).filter(v => typeof v === 'string'),
         returnedCount: Number.isInteger(p.returned_count) && p.returned_count >= 0 ? p.returned_count : 0 },
       figures: array(state.figures).filter(f => f && f.project === p.id).map(f => ({ id: text(f.id), owner: text(f.owner), project: text(f.project), island: text(f.island), lookAs: text(f.look_as), status: text(f.status) })),
+      followUps: array(p.follow_ups).filter(v => v && typeof v === 'object').map(v => ({id: text(v.id), text: text(v.text), status: text(v.status), source: text(v.source), sourceUrl: cardLink(v.source)})),
+      pendingAdvances: allDecisions.filter(d => d.projectId === p.id && d.needsAdvance),
       logs: array(state.logs).filter(l => l && l.project === p.id), requests: array(state.requests).filter(r => r && r.project === p.id),
       allDecisions: allDecisions.filter(d => d.projectId === p.id),
       stage: text(p.stage), stageLabel, tone, executor: text(p.executor) || '尚未指定',
@@ -97,30 +124,6 @@ export async function loadBotOffice({ headers = {}, signal, fetcher = fetch, bas
     stateUpdated: results[0].updated, indexUpdated: results[1].updated, stale: results.some(r => r.stale),
   })
 }
-
-// Entirely fictional, local demo. Never submitted to an API or mixed into real responses.
-export function demoOffice() {
-  const stages = Object.keys(STAGES)
-  const titles = ['川嶼品牌落地', '觸覺技術簡報', '家庭週末安排', '健康課表', '年度方向確認', '研究摘要整理', '包裝提案修訂']
-  const state = { updated: '2026-10-24T14:30:00+08:00', islands: [{ id: 'demo', name: '示範專案' }],
-    buildings: stages.map((stage, i) => ({ id: `demo-${i}`, title: titles[i], island: 'demo', stage, executor: i % 2 ? 'gpt' : 'grok-build' })),
-    decisions: [{ id: 'decision-demo', status: 'open', ref: 'demo-4', title: '確認年度方向與優先順序', suggestion: '先完成驗收，再安排下一階段。' },
-      { id: 'answered-demo', status: 'answered', ref: 'demo-1', title: '已回答的示範決策' }],
-  }
-  const summaries = {
-    meeting: '已整理本週討論重點：先核對方向、再確認工作範圍，所有意見留待正式寫入介面接上。',
-    execution: '本階段先確認交付範圍與驗收條件，接著整理初稿，最後交獨立審查。',
-    output: '示範成果摘要：內容與呈現已整理完成，等待對照驗收條件；此處只顯示卡片摘要。',
-    log: '已完成示範資料整理。這是本機展示紀錄，沒有寫入任何正式專案。',
-    decision: '建議先完成本階段核對，正式核准與驗收仍由 HY 決定。',
-  }
-  const cards = state.buildings.flatMap(p => Object.keys(CARD_GROUP).map(type => ({
-    id: `${p.id}-${type}`, project: p.id, type, title: `${p.title}・${{ meeting: '討論重點', execution: '執行安排', output: '成果摘要', log: '工作紀錄', decision: '決策摘要' }[type]}`,
-    summary: summaries[type], date: '2026-10-24', drive_url: '',
-  })))
-  return mapOffice(state, { updated: state.updated, cards })
-}
-
 
 export async function answerOfficeDecision(id, payload, { headers = {}, fetcher = fetch, base = import.meta.env?.VITE_API_BASE || '' } = {}) {
   const response = await fetcher(`${base.replace(/\/$/, '')}/api/office/decisions/${encodeURIComponent(id)}/answer`, {
