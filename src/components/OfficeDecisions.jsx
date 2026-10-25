@@ -40,8 +40,8 @@ function Decision({ item, readOnly, reload }) {
   }
   const disabled = busy || readOnly
   const closed = item.status === 'answered'
-  return <article className="ao-decision bo-decision-form" aria-label={item.title}>
-    <h3>{item.title}</h3>{item.suggestion && <p>{item.suggestion}</p>}
+  return <article className="bo-decision-form cc5-panel" aria-label={item.title}>
+    <div className="cc5-tags"><span className="cc5-tag">{({intake:'補資料',approval:'待核准',pi_decision:'PI 決策'})[item.kind]||'待確認'}</span></div><h2 className="cc5-q">{item.title}</h2>{item.suggestion && <p>{item.suggestion}</p>}
     {item.questions.map(question => <section key={question.no} className="bo-question" aria-label={`第 ${question.no} 題`}>
       <h3>{question.no}. {question.q}</h3>
       {question.why && <p className="ao-muted">為什麼要問：{question.why}</p>}
@@ -60,7 +60,7 @@ function Decision({ item, readOnly, reload }) {
         <label>你的回答<textarea aria-label={`第 ${question.no} 題回答`} disabled={disabled} value={drafts[question.no] ?? ''}
           onChange={e => { setDraftRevision(old => old ?? item.revision); setDrafts(old => ({ ...old, [question.no]: e.target.value })) }} /></label>
         <div className="ao-toolbar">
-          <button type="submit" disabled={disabled || !drafts[question.no]?.trim()}>{question.answer ? '改答' : '送出回答'}</button>
+          <button type="submit" className="ao-primary" disabled={disabled || !drafts[question.no]?.trim()}>{question.answer ? '改答' : '送出回答'}</button>
           {question.answerSource === 'proxy' && question.answer && !question.confirmed && <button type="button" disabled={disabled} onClick={() => submit('confirm', question, drafts[question.no]?.trim() ? `${question.answer}\n補充：${drafts[question.no].trim()}` : undefined)}>{drafts[question.no]?.trim() ? '確認並補充' : '確認代答'}</button>}
           <button type="button" disabled={disabled} onClick={() => submit('defer', question)}>先不決定</button>
         </div>
@@ -70,7 +70,7 @@ function Decision({ item, readOnly, reload }) {
       {closed ? <Attribution item={item} /> : <>
       <Attribution item={item} />
       <label>修改意見（退回時必填）<textarea aria-label="退回意見" value={feedback} disabled={disabled} onChange={e => { setDraftRevision(old => old ?? item.revision); setFeedback(e.target.value) }} /></label>
-      <div className="ao-toolbar"><button disabled={disabled} onClick={() => submit('approve')}>核准</button>
+      <div className="ao-toolbar"><button className="ao-primary" disabled={disabled} onClick={() => submit('approve')}>核准</button>
         <button disabled={disabled || !feedback.trim()} onClick={() => submit('return')}>退回修改</button>
         {item.answerSource === 'proxy' && item.answer && <button disabled={disabled} onClick={() => submit('confirm')}>確認代答</button>}
         <button disabled={disabled} onClick={() => submit('defer')}>先不決定</button>
@@ -84,11 +84,11 @@ function Decision({ item, readOnly, reload }) {
   </article>
 }
 
-export default function OfficeDecisions({ items, readOnly, reload, title = '待 HY 決定' }) {
+export default function OfficeDecisions({ items, readOnly, reload, title = '待 HY 決定', toolbar }) {
   if (!items.length) return null
   const pending = items.some(d => d.status !== 'answered')
   return <section className={`ao-card bo-decisions${pending ? ' is-focus needs-you' : ''}`} aria-label={title}>
-    <h2>{title} <span className="hy-pill" data-s={pending ? 'you' : 'done'}>{items.length}</span></h2>
-    {items.map(item => <Decision key={item.id} item={item} readOnly={readOnly} reload={reload} />)}
+    <div className="ao-card-head"><h2>{title}</h2><span className="hy-pill" data-s={pending ? 'you' : 'done'}>{items.length} 項</span></div>
+    <div className="cc5">{items.map(item => <Decision key={item.id} item={item} readOnly={readOnly} reload={reload} />)}</div>{toolbar}
   </section>
 }

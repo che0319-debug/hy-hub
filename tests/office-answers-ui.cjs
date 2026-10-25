@@ -28,6 +28,7 @@ const makeState=()=>({updated:'2026-10-24T16:44:00+08:00',buildings:[{id:'qa-pil
  await route.fulfill({status,contentType:'application/json',body:JSON.stringify(data)});
  });
  await page.goto('http://127.0.0.1:5173/#/bot-office');await page.addStyleTag({content:font+' body{font-family:"Noto Sans TC",sans-serif}'});await page.evaluate(()=>document.fonts.ready);
+ await page.getByRole('button',{name:/P0 工程驗證專案/}).click();
  const intake=page.getByRole('article',{name:'開案提問・工程示範 12 題',exact:true});await intake.waitFor();
  assert.equal(await intake.locator('.bo-question').count(),12);await intake.getByText('Sam 代答・把握度 高',{exact:true}).first().waitFor();
  assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth),false);
