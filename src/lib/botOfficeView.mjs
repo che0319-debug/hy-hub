@@ -145,6 +145,7 @@ export function deleteErrorMessage(status, body = {}) {
   if (error === 'archive_folder_not_configured') return '尚未設定「已刪除專案備份」資料夾，專案未刪除。'
   if (error === 'project_running') return '專案正在執行，現在不能刪除。專案未刪除。'
   if (error === 'project_review') return '專案在審查中，現在不能刪除。專案未刪除。'
+  if (error === 'office_project_deleting') return '這個專案正在刪除中，請稍後重新讀取。專案未刪除。'
   if (status === 400) return '輸入的專案名稱不一致，未刪除。'
   if (status === 409) return '專案資料已更新，請重新讀取後再刪除。專案未刪除。'
   if (status === 404) return '找不到這個專案，或刪除功能尚未部署。專案未刪除。'
@@ -170,6 +171,7 @@ export function officeFailureMessage(status, body = {}, topic = 'office') {
   if (status === 422 && error === 'report_unsafe') return `報告未通過安全檢查。${reason}`
   if (status === 413) return '內容超過大小上限，沒有載入。'
   if (error === 'drive_write_unavailable') return `沒有 Drive 寫入權，沒有寫入。${reason ? `（${reason}）` : ''}`
+  if (error === 'office_project_deleting') return '這個專案正在刪除中，請稍後重新讀取。沒有寫入。'
   if (status === 404) return topic === 'report' ? '找不到專案或這份報告。' : '找不到對應資料，或這項功能尚未部署。'
   if (status === 401) return '登入已過期，請重新登入。'
   if (status === 409) return '資料剛更新過，請重新讀取後再試。沒有寫入。'
