@@ -17,7 +17,7 @@ import SystemArchitecture from './pages/SystemArchitecture'
 import AgentConfig from './pages/AgentConfig'
 import Goals from './pages/Goals'
 import Strategy from './pages/Strategy'
-import Decide from './pages/Decide'
+import Inbox from './pages/Inbox'
 import More from './pages/More'
 import AuthGate from './components/AuthGate'
 const LifeIsland = lazy(() => import('./pages/LifeIsland'))
@@ -41,7 +41,8 @@ function AppRoutes() {
       <Route path="/" element={<App />}>
         <Route index element={<Navigate to="/life-island" replace />} />
         <Route path="home" element={<Home />} />
-        <Route path="decide" element={<Decide />} />
+        <Route path="inbox" element={<Inbox />} />
+        <Route path="decide" element={<Navigate to="/inbox" replace />} />
         <Route path="more" element={<More />} />
         <Route path="life-os" element={<Navigate to="/home" replace />} />
         <Route path="ai-army" element={<AIArmy />} />
