@@ -1,7 +1,7 @@
 import { useState, useEffect, createContext, useContext } from 'react'
 import { Outlet, useLocation } from 'react-router-dom'
-import { Menu, X, ChevronLeft, ChevronRight } from 'lucide-react'
-import TopBar from './layout/TopBar'
+import { ChevronLeft, ChevronRight } from 'lucide-react'
+import BottomNav from './layout/BottomNav'
 import Sidebar from './layout/Sidebar'
 import { fetchDispatchSessions } from './api'
 
@@ -11,9 +11,8 @@ export function useSessionContext() {
   return useContext(SessionContext)
 }
 
-export default function App({ onMobileVersion }) {
+export default function App() {
   const [sessions, setSessions] = useState([])
-  const [sidebarOpen, setSidebarOpen] = useState(false)
   // 桌面版左側欄可收起／展開，記住上次的選擇
   const [collapsed, setCollapsed] = useState(() => { try { return localStorage.getItem('hy_sidebar_collapsed') === '1' } catch { return false } })
   function toggleSide() {
@@ -22,10 +21,6 @@ export default function App({ onMobileVersion }) {
   const location = useLocation()
   const pilotRoute = location.pathname.startsWith('/ai-work') || location.pathname.startsWith('/bot-office')
   const worldRoute = location.pathname.startsWith('/life-island')   // 桌面版一律不顯示頂欄（站名與手機版入口在側欄）；世界頁內容再貼齊最上緣
-
-  useEffect(() => {
-    setSidebarOpen(false)
-  }, [location])
 
   useEffect(() => {
     let active = true
@@ -57,21 +52,8 @@ export default function App({ onMobileVersion }) {
   return (
     <SessionContext.Provider value={{ sessions, addSession, removeSession, refreshSessions }}>
       <div className="min-h-screen bg-slate-50 text-slate-800">
-        {!pilotRoute && <div className="md:hidden"><TopBar onMobileVersion={onMobileVersion} /></div>}
-        <button
-          className="md:hidden fixed top-2 left-2 z-50 p-2 rounded-md bg-white shadow text-slate-700"
-          onClick={() => setSidebarOpen(v => !v)}
-          aria-label="選單"
-        >
-          {sidebarOpen ? <X size={20} /> : <Menu size={20} />}
-        </button>
-        {sidebarOpen && (
-          <div
-            className="md:hidden fixed inset-0 bg-black/40 z-30"
-            onClick={() => setSidebarOpen(false)}
-          />
-        )}
-        <Sidebar open={sidebarOpen} pilot={pilotRoute} world={!pilotRoute} collapsed={collapsed} onMobileVersion={onMobileVersion} />
+        <Sidebar pilot={pilotRoute} world={!pilotRoute} collapsed={collapsed} />
+        <BottomNav />
         <button
           type="button"
           onClick={toggleSide}
@@ -83,7 +65,7 @@ export default function App({ onMobileVersion }) {
         >
           {collapsed ? <ChevronRight size={14} /> : <ChevronLeft size={14} />}
         </button>
-        <main className={pilotRoute ? `pilot-main ml-0 ${collapsed ? 'md:ml-0' : 'md:ml-[216px]'} p-5 md:p-8 min-h-screen transition-[margin] duration-200` : `ml-0 ${collapsed ? 'md:ml-0' : 'md:ml-[200px]'} ${worldRoute ? 'pt-12 md:pt-0' : 'pt-12 md:pt-6'} p-6 min-h-screen transition-[margin] duration-200`}>
+        <main className={pilotRoute ? `pilot-main ml-0 ${collapsed ? 'md:ml-0' : 'md:ml-[216px]'} p-4 pb-24 md:p-8 min-h-screen transition-[margin] duration-200` : `ml-0 ${collapsed ? 'md:ml-0' : 'md:ml-[200px]'} ${worldRoute ? 'pt-0 md:pt-0 p-0 md:p-6' : 'pt-4 md:pt-6 p-4 md:p-6'} pb-24 md:pb-6 min-h-screen transition-[margin] duration-200`}>
           <Outlet />
         </main>
       </div>

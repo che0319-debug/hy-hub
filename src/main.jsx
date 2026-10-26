@@ -1,8 +1,7 @@
-import { StrictMode, Suspense, lazy, useEffect, useState } from 'react'
+import { StrictMode, Suspense, lazy } from 'react'
 import { createRoot } from 'react-dom/client'
 import { HashRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom'
 import './index.css'
-import './mobile/mobile-v2.css'
 import App from './App'
 import Home from './pages/Home'
 import AIArmy from './pages/AIArmy'
@@ -18,8 +17,9 @@ import SystemArchitecture from './pages/SystemArchitecture'
 import AgentConfig from './pages/AgentConfig'
 import Goals from './pages/Goals'
 import Strategy from './pages/Strategy'
+import Decide from './pages/Decide'
+import More from './pages/More'
 import AuthGate from './components/AuthGate'
-import MobileAppV2 from './mobile/MobileAppV2'
 const LifeIsland = lazy(() => import('./pages/LifeIsland'))
 
 function LegacyAIWorkRedirect() {
@@ -35,12 +35,14 @@ function ExpertTeamRedirect() {
   return <Navigate to={'/ai-army?' + params.toString()} replace />
 }
 
-function DesktopRoutes({ onMobileVersion }) {
+function AppRoutes() {
   return (
     <Routes>
-      <Route path="/" element={<App onMobileVersion={onMobileVersion} />}>
+      <Route path="/" element={<App />}>
         <Route index element={<Navigate to="/life-island" replace />} />
         <Route path="home" element={<Home />} />
+        <Route path="decide" element={<Decide />} />
+        <Route path="more" element={<More />} />
         <Route path="life-os" element={<Navigate to="/home" replace />} />
         <Route path="ai-army" element={<AIArmy />} />
         <Route path="helpers" element={<Navigate to="/ai-army?tab=helpers" replace />} />
@@ -72,32 +74,8 @@ function DesktopRoutes({ onMobileVersion }) {
 
 function Experience() {
   const location = useLocation()
-  const [mobileWidth, setMobileWidth] = useState(() => window.matchMedia('(max-width: 767px)').matches)
-  const [mode, setMode] = useState(() => {
-    const current = sessionStorage.getItem('hy_life_os_view')
-    const legacy = sessionStorage.getItem('hy_world_view')
-    if (!current && legacy) sessionStorage.setItem('hy_life_os_view', legacy)
-    sessionStorage.removeItem('hy_world_view')
-    return current || legacy || 'auto'
-  })
-
-  useEffect(() => {
-    const media = window.matchMedia('(max-width: 767px)')
-    const update = () => setMobileWidth(media.matches)
-    media.addEventListener('change', update)
-    return () => media.removeEventListener('change', update)
-  }, [])
-
-  function choose(next) {
-    setMode(next)
-    sessionStorage.setItem('hy_life_os_view', next)
-  }
-
   if (location.pathname === '/command-center') return <Navigate to="/ai-work" replace />
-  if (mobileWidth && mode !== 'desktop' && !['/workspace', '/ai-work', '/ai-work-test', '/expert-team', '/ai-army', '/system-architecture', '/bot-office', '/life-island'].some(path => location.pathname.startsWith(path))) {
-    return <MobileAppV2 onDesktopVersion={() => choose('desktop')} />
-  }
-  return <DesktopRoutes onMobileVersion={mobileWidth ? () => choose('mobile') : null} />
+  return <AppRoutes />
 }
 
 createRoot(document.getElementById('root')).render(
