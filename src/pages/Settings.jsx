@@ -297,7 +297,7 @@ function ToolRegistry() {
     <Section icon={Wrench} title="Tool 註冊" badge="彙整自各 agent">
       <ul className="space-y-2">
         {Object.entries(toolMap).map(([tool, agents]) => (
-          <li key={tool} className="flex items-start gap-2 text-xs">
+          <li key={tool} className="flex flex-wrap items-start gap-x-2 gap-y-1 text-xs">
             <span className="text-slate-300 mt-0.5 flex-shrink-0">·</span>
             <span className="text-slate-700 flex-shrink-0">{tool}</span>
             <AgentTags names={agents} />
@@ -359,7 +359,7 @@ function ModelList() {
     <Section icon={Cpu} title="模型清單" badge="現況模型 · 目標態待拍板">
       <ul className="space-y-2 mb-4">
         {Object.entries(modelMap).map(([model, agents]) => (
-          <li key={model} className="flex items-start gap-2 text-xs">
+          <li key={model} className="flex flex-wrap items-start gap-x-2 gap-y-1 text-xs">
             <span className="text-slate-300 mt-0.5 flex-shrink-0">·</span>
             <span className="text-slate-700 flex-shrink-0">{model}</span>
             <AgentTags names={agents} />

@@ -240,6 +240,14 @@ header { background:var(--header-bg); padding:0 24px; display:flex; align-items:
 .fit-add-btns { display:flex; gap:8px; margin-top:14px; flex-wrap:wrap; }
 .fit-add-btn { background:#f8f9fa; border:1.5px solid var(--border); border-radius:6px; padding:7px 14px; font-size:12px; color:var(--text-muted); cursor:pointer; font-family:'Noto Sans TC',sans-serif; transition:all .15s; white-space:nowrap; }
 .fit-add-btn:hover { border-color:var(--blue); color:var(--blue); background:#f0f4ff; }
+/* 手機共用：頁首只留標章與動作鈕、可點區域 ≥44px、分頁列可橫向捲動（2026-10 手機版 PR3） */
+@media (max-width:640px) {
+  header { padding:0 12px; gap:8px; }
+  .logo-sub, .last-updated { display:none; }
+  header .btn { min-height:44px; white-space:nowrap; }
+  .tabs { padding:0 8px; overflow-x:auto; }
+  .tab { padding:14px 12px; white-space:nowrap; }
+}
 </style>
 </head>
 <body>

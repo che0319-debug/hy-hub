@@ -5,3 +5,7 @@
 /* 頂欄高度：手機版 3rem，桌面版已移除（站名與手機版入口放在側欄） */
 :root { --hy-topbar: 3rem; }
 @media (min-width: 768px) { :root { --hy-topbar: 0rem; } }
+
+/* 各 Bot 看板（iframe）的外框：手機撐滿「底部導覽以上」的高度；桌面維持原樣 */
+.line-frame{display:flex;flex-direction:column;margin:-1rem -1rem -6rem;height:calc(100dvh - 56px - env(safe-area-inset-bottom))}
+@media (min-width:768px){.line-frame{margin:-1.5rem;height:calc(100vh - var(--hy-topbar,3rem))}}
