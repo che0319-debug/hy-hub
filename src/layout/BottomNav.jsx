@@ -4,14 +4,18 @@ import { NavLink, useLocation } from 'react-router-dom'
 import { Map, BellRing, ClipboardList, Menu } from 'lucide-react'
 import { authHeaders } from '../auth'
 import { loadBotOffice } from '../botOfficeData'
+import { loadOfficeActions } from '../lib/officeActions'
 import './bottom-nav.css'
 
-// 「待我決定」的數字：Bot Office 待 HY 決定的件數（與 /decide 頁同一來源）
+// 「待我決定」的數字：Bot Office 待決定 ＋ AI Office 待確認（與 /decide 頁同一來源；讀不到的一邊當 0）
 export function usePendingCount() {
   const [n, setN] = useState(null)
   useEffect(() => {
     let alive = true
-    const load = () => loadBotOffice({ headers: authHeaders() }).then(d => { if (alive) setN(d?.totals?.pending ?? 0) }).catch(() => {})
+    const load = () => Promise.all([
+      loadBotOffice({ headers: authHeaders() }).then(d => d?.totals?.pending ?? 0).catch(() => 0),
+      loadOfficeActions().then(a => a.length).catch(() => 0),
+    ]).then(([a, b]) => { if (alive) setN(a + b) })
     load()
     const t = setInterval(load, 60000)
     return () => { alive = false; clearInterval(t) }
