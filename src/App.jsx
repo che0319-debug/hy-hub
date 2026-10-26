@@ -2,6 +2,7 @@ import { useState, useEffect, createContext, useContext } from 'react'
 import { Outlet, useLocation } from 'react-router-dom'
 import { ChevronLeft, ChevronRight } from 'lucide-react'
 import BottomNav from './layout/BottomNav'
+import { InboxProvider } from './inbox/InboxContext'
 import Sidebar from './layout/Sidebar'
 import { fetchDispatchSessions } from './api'
 
@@ -51,6 +52,7 @@ export default function App() {
 
   return (
     <SessionContext.Provider value={{ sessions, addSession, removeSession, refreshSessions }}>
+      <InboxProvider>
       <div className="app-shell min-h-screen bg-slate-50 text-slate-800">
         <Sidebar pilot={pilotRoute} world={!pilotRoute} collapsed={collapsed} />
         <BottomNav />
@@ -69,6 +71,7 @@ export default function App() {
           <Outlet />
         </main>
       </div>
+      </InboxProvider>
     </SessionContext.Provider>
   )
 }

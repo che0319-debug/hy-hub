@@ -4,8 +4,8 @@ import '../../public/hy-ui/hy-ui.css'
 import '../life-island/life-island.css'
 import { ALL_BUILDINGS, FIGURES, STATUS_INFO } from '../life-island/data'
 import { createIslandScene, webglOk } from '../life-island/scene'
-import { useWorldInfo, formatDue } from '../life-island/useWorldInfo'
-import { useBotRoster } from '../life-island/useBotRoster'
+import { formatDue } from '../life-island/useWorldInfo'
+import { useInbox } from '../inbox/InboxContext'
 import { LIVE_FIGS, deriveAttention } from '../life-island/worldData'
 import { rosterById } from '../botRoster'
 
@@ -28,6 +28,17 @@ function useStored(key, init) {
   return [v, set]
 }
 
+function Legend() {
+  return (
+    <details className="li-legend">
+      <summary>狀態色說明</summary>
+      <ul>
+        {Object.entries(STATUS_INFO).map(([k, v]) => <li key={k}><i data-s={k} />{v}</li>)}
+      </ul>
+    </details>
+  )
+}
+
 function StatusBar({ onGo, info, data, panel, setPanel }) {
   const overdue = info.overdue, todayN = info.todayCount
   const real = overdue !== null
@@ -48,18 +59,66 @@ function StatusBar({ onGo, info, data, panel, setPanel }) {
       <button type="button" className="li-chip li-chip-sys" data-s={sysN > 0 ? 'bad' : sysN === 0 ? 'done' : 'wait'} onClick={() => onGo('syscenter')}>
         {sysN === null ? '系統載入中' : sysN > 0 ? <>資料讀取異常 <b>{sysN}</b></> : '系統正常'}
       </button>
-      <details className="li-legend">
-        <summary>狀態色說明</summary>
-        <ul>
-          {Object.entries(STATUS_INFO).map(([k, v]) => <li key={k}><i data-s={k} />{v}</li>)}
-        </ul>
-      </details>
+      <Legend />
+    </div>
+  )
+}
+
+// 手機版頂部：只有一顆「Inbox N」，按一下展開細項、再按一次收起。細項各自連到 Inbox 的分頁。
+function MobileHud({ counts, loaded }) {
+  const [open, setOpen] = useState(false)
+  const tone = !loaded ? 'wait' : counts.problem + counts.overdue > 0 ? 'bad' : counts.decide > 0 ? 'you' : 'done'
+  const rows = [['decide', '待我處理'], ['problem', '問題回報'], ['overdue', '過期'], ['today', '今日任務']]
+  return (
+    <div className="li-m-hud li-m-only">
+      <div className="li-m-top">
+        <button type="button" className="li-chip" data-s={tone} onClick={() => setOpen(v => !v)} aria-expanded={open} aria-controls="li-m-inbox">
+          Inbox <b>{loaded ? counts.total : '—'}</b><i className="li-caret" aria-hidden="true" />
+        </button>
+        <Legend />
+      </div>
+      {open && (
+        <section className="hy-card li-m-pop" id="li-m-inbox" aria-label="Inbox 摘要">
+          <ul className="li-rows">
+            {rows.map(([k, l]) => (
+              <li key={k} data-c={k === 'problem' || k === 'overdue' ? (counts[k] ? 'bad' : '') : ''}>
+                <Link className="li-row-link" to={'/inbox?tab=' + k}><span className="li-row-main">{l}</span><span className="li-row-aux">{counts[k]}</span></Link>
+              </li>
+            ))}
+          </ul>
+          <Link className="hy-btn is-primary" style={{ minHeight: 44, display: 'inline-flex', alignItems: 'center', marginTop: 8 }} to="/inbox">打開 Inbox</Link>
+        </section>
+      )}
+    </div>
+  )
+}
+
+// 手機版底部的日期膠囊：按一下往上展開今日行程、再按一次收起
+function MobileSched({ sky, info }) {
+  const [open, setOpen] = useState(false)
+  return (
+    <div className="li-m-sched li-m-only">
+      {open && (
+        <section className="hy-card li-m-pop" id="li-m-sched" aria-label="今日行程">
+          <h2 className="hy-card-title">今日行程 <span className="li-panel-sub">{info.today.slice(5).replace('-', '/')}</span></h2>
+          {info.schedFailed ? <p className="hy-lede">行程暫時讀取失敗，稍後會自動重試。</p>
+            : info.sched === null ? <p className="hy-lede">載入中…</p>
+            : info.sched.length === 0 ? <p className="hy-lede">今天沒有行程。</p>
+            : <ul className="li-rows li-rows-t">{info.sched.map((e, i) => (
+                <li key={i} data-past={e.start && e.start < info.hm && e !== info.next ? '1' : undefined} data-next={e === info.next ? '1' : undefined}>
+                  <span className="li-row-aux">{e.start || '全天'}</span><span className="li-row-main">{e.title}</span>{e === info.next && <span className="hy-pill" data-s="ai">下一個</span>}
+                </li>))}</ul>}
+        </section>
+      )}
+      <button type="button" className={'li-m-date' + (sky?.night > 0.6 ? ' is-night' : '')} onClick={() => setOpen(v => !v)} aria-expanded={open} aria-controls="li-m-sched">
+        {sky ? <>{sky.date} {sky.weekday} · {sky.time}{sky.temp != null ? ` · ${sky.temp}°` : ''}</> : '今日行程'}<i className="li-caret" aria-hidden="true" />
+      </button>
     </div>
   )
 }
 
 // 從頂欄往下展開的面板：待辦清單／今日行程
-function InfoPanel({ kind, info, onClose, onSwitch }) {
+function InfoPanel({ kind, info, onClose }) {
   useEffect(() => {
     const down = e => { if (!e.target.closest('.li-panel') && !e.target.closest('[data-panel]')) onClose() }
     const key = e => { if (e.key === 'Escape') onClose() }
@@ -71,10 +130,7 @@ function InfoPanel({ kind, info, onClose, onSwitch }) {
     <section className="hy-card li-panel" id="li-panel" aria-label={kind === 'todo' ? '待辦清單' : '今日行程'}>
       <div className="hy-card-head">
         <h2 className="hy-card-title">{kind === 'todo' ? '待辦清單' : '今日行程'} <span className="li-panel-sub">{kind === 'todo' ? '逾期＋今天＋近 3 天' : info.today.slice(5).replace('-', '/')}</span></h2>
-        <span className="li-panel-act">
-          <button type="button" className="hy-btn li-only-m" onClick={() => onSwitch(kind === 'todo' ? 'sched' : 'todo')}>{kind === 'todo' ? '看行程' : '看待辦'}</button>
-          <button type="button" className="hy-btn" onClick={onClose} aria-label="收起">收起</button>
-        </span>
+        <button type="button" className="hy-btn" onClick={onClose} aria-label="收起">收起</button>
       </div>
       {kind === 'todo' ? (
         info.todoFailed ? <p className="hy-lede">待辦暫時讀取失敗，稍後會自動重試。</p>
@@ -218,8 +274,7 @@ export default function LifeIsland() {
   const [gl, setGl] = useState(() => webglOk())
   const [mapCur, setMapCur] = useState('central')
   const [sky, setSky] = useState(null)
-  const info = useWorldInfo()
-  const data = useBotRoster(info)
+  const { info, roster: data, counts, loaded: inboxLoaded } = useInbox()
   const [panel, setPanel] = useState(null)
 
   useEffect(() => {
@@ -257,12 +312,14 @@ export default function LifeIsland() {
           <div ref={stageRef} style={{ position: 'absolute', inset: 0 }} />
           <div ref={layerRef} className="li-layer" />
           <MiniMap onGo={id => { setSel(null); setMapCur(id); apiRef.current && apiRef.current.focus(id) }} current={mapCur} />
-          <div className="li-hud">
+          <div className="li-hud li-d-only">
             <StatusBar onGo={choose} info={info} data={data} panel={panel} setPanel={setPanel} />
           </div>
-          {panel && <InfoPanel kind={panel} info={info} onClose={() => setPanel(null)} onSwitch={setPanel} />}
+          <MobileHud counts={counts} loaded={inboxLoaded} />
+          <MobileSched sky={sky} info={info} />
+          {panel && <InfoPanel kind={panel} info={info} onClose={() => setPanel(null)} />}
           {sky && (
-            <div className={'li-sign' + (sky.night > 0.6 ? ' is-night' : '')} aria-label={`新竹 ${sky.date} ${sky.weekday} ${sky.time}，${sky.phase}，${sky.weather}`}>
+            <div className={'li-sign li-d-only' + (sky.night > 0.6 ? ' is-night' : '')} aria-label={`新竹 ${sky.date} ${sky.weekday} ${sky.time}，${sky.phase}，${sky.weather}`}>
               <span className="li-sign-d">{sky.date} {sky.weekday}</span>
               <span className="li-sign-t">{sky.time} · {sky.phase} · {sky.weather}{sky.temp != null ? ` ${sky.temp}°` : ''}</span>
             </div>
@@ -274,7 +331,7 @@ export default function LifeIsland() {
         <div style={{ display: 'grid', gap: 16 }}>
           <div className="hy-empty">這台裝置不支援 3D，改用下方清單。內容與 3D 相同。</div>
           <StatusBar onGo={choose} info={info} data={data} panel={panel} setPanel={setPanel} />
-          {panel && <InfoPanel kind={panel} info={info} onClose={() => setPanel(null)} onSwitch={setPanel} />}
+          {panel && <InfoPanel kind={panel} info={info} onClose={() => setPanel(null)} />}
           {b && <BuildingCard b={b} onClose={() => choose(null)} />}
           <section className="hy-card">
             <h2 className="hy-card-title">中央島的建築</h2>
