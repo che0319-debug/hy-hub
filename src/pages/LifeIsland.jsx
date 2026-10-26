@@ -64,21 +64,30 @@ function StatusBar({ onGo, info, data, panel, setPanel }) {
   )
 }
 
-// 手機版頂部：只有一顆「Inbox N」，按一下展開細項、再按一次收起。細項各自連到 Inbox 的分頁。
-function MobileHud({ counts, loaded }) {
-  const [open, setOpen] = useState(false)
+// 手機版頂部一列：「Inbox N」＋日期膠囊＋?。按一下展開（Inbox 細項／今日行程），再按一次收起；一次只開一個。
+function MobileHud({ counts, loaded, sky, info }) {
+  const [open, setOpen] = useState(null)   // null | 'inbox' | 'sched'
+  const toggle = k => setOpen(v => (v === k ? null : k))
   const tone = !loaded ? 'wait' : counts.problem + counts.overdue > 0 ? 'bad' : counts.decide > 0 ? 'you' : 'done'
   const rows = [['decide', '待我處理'], ['problem', '問題回報'], ['overdue', '過期'], ['today', '今日任務']]
   return (
     <div className="li-m-hud li-m-only">
       <div className="li-m-top">
-        <button type="button" className="li-chip" data-s={tone} onClick={() => setOpen(v => !v)} aria-expanded={open} aria-controls="li-m-inbox">
+        <button type="button" className="li-chip" data-s={tone} onClick={() => toggle('inbox')} aria-expanded={open === 'inbox'} aria-controls="li-m-pop">
           Inbox <b>{loaded ? counts.total : '—'}</b><i className="li-caret" aria-hidden="true" />
+        </button>
+        <button type="button" className="li-chip" data-s={info.overdue > 0 ? 'bad' : 'wait'} onClick={() => toggle('todo')} aria-expanded={open === 'todo'} aria-controls="li-m-pop">
+          逾期 <b>{info.overdue !== null ? info.overdue : '—'}</b>・今日 <b>{info.todayCount !== null ? info.todayCount : '—'}</b><i className="li-caret" aria-hidden="true" />
         </button>
         <Legend />
       </div>
-      {open && (
-        <section className="hy-card li-m-pop" id="li-m-inbox" aria-label="Inbox 摘要">
+      <div className="li-m-top li-m-row2">
+        <button type="button" className={'li-chip li-m-date' + (sky?.night > 0.6 ? ' is-night' : '')} data-s="wait" onClick={() => toggle('sched')} aria-expanded={open === 'sched'} aria-controls="li-m-pop">
+          {sky ? <>{sky.date} {sky.weekday}・{sky.time}</> : '今日行程'}<i className="li-caret" aria-hidden="true" />
+        </button>
+      </div>
+      {open === 'inbox' && (
+        <section className="hy-card li-m-pop" id="li-m-pop" aria-label="Inbox 摘要">
           <ul className="li-rows">
             {rows.map(([k, l]) => (
               <li key={k} data-c={k === 'problem' || k === 'overdue' ? (counts[k] ? 'bad' : '') : ''}>
@@ -89,17 +98,20 @@ function MobileHud({ counts, loaded }) {
           <Link className="hy-btn is-primary" style={{ minHeight: 44, display: 'inline-flex', alignItems: 'center', marginTop: 8 }} to="/inbox">打開 Inbox</Link>
         </section>
       )}
-    </div>
-  )
-}
-
-// 手機版底部的日期膠囊：按一下往上展開今日行程、再按一次收起
-function MobileSched({ sky, info }) {
-  const [open, setOpen] = useState(false)
-  return (
-    <div className="li-m-sched li-m-only">
-      {open && (
-        <section className="hy-card li-m-pop" id="li-m-sched" aria-label="今日行程">
+      {open === 'todo' && (
+        <section className="hy-card li-m-pop" id="li-m-pop" aria-label="待辦清單">
+          <h2 className="hy-card-title">待辦清單 <span className="li-panel-sub">逾期＋今天＋近 3 天</span></h2>
+          {info.todoFailed ? <p className="hy-lede">待辦暫時讀取失敗，稍後會自動重試。</p>
+            : info.list === null ? <p className="hy-lede">載入中…</p>
+            : info.list.length === 0 ? <p className="hy-lede">近 3 天沒有待辦。</p>
+            : <ul className="li-rows">{info.list.map((m, i) => {
+                const d = String(m.due).replace(/\//g, '-')
+                return <li key={i} data-c={d < info.today ? 'bad' : d === info.today ? 'today' : 'wait'}><span className="li-row-main">{m.title}</span><span className="li-row-aux">{formatDue(m.due)}</span></li>
+              })}</ul>}
+        </section>
+      )}
+      {open === 'sched' && (
+        <section className="hy-card li-m-pop" id="li-m-pop" aria-label="今日行程">
           <h2 className="hy-card-title">今日行程 <span className="li-panel-sub">{info.today.slice(5).replace('-', '/')}</span></h2>
           {info.schedFailed ? <p className="hy-lede">行程暫時讀取失敗，稍後會自動重試。</p>
             : info.sched === null ? <p className="hy-lede">載入中…</p>
@@ -110,9 +122,6 @@ function MobileSched({ sky, info }) {
                 </li>))}</ul>}
         </section>
       )}
-      <button type="button" className={'li-m-date' + (sky?.night > 0.6 ? ' is-night' : '')} onClick={() => setOpen(v => !v)} aria-expanded={open} aria-controls="li-m-sched">
-        {sky ? <>{sky.date} {sky.weekday} · {sky.time}{sky.temp != null ? ` · ${sky.temp}°` : ''}</> : '今日行程'}<i className="li-caret" aria-hidden="true" />
-      </button>
     </div>
   )
 }
@@ -315,8 +324,7 @@ export default function LifeIsland() {
           <div className="li-hud li-d-only">
             <StatusBar onGo={choose} info={info} data={data} panel={panel} setPanel={setPanel} />
           </div>
-          <MobileHud counts={counts} loaded={inboxLoaded} />
-          <MobileSched sky={sky} info={info} />
+          <MobileHud counts={counts} loaded={inboxLoaded} sky={sky} info={info} />
           {panel && <InfoPanel kind={panel} info={info} onClose={() => setPanel(null)} />}
           {sky && (
             <div className={'li-sign li-d-only' + (sky.night > 0.6 ? ' is-night' : '')} aria-label={`新竹 ${sky.date} ${sky.weekday} ${sky.time}，${sky.phase}，${sky.weather}`}>
