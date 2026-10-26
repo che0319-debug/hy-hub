@@ -55,7 +55,7 @@
 /* ---- 全幅世界：資訊浮在場景上 ---- */
 .li-page { padding-top: 0 !important; }
 .li-sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
-.li-page .li-stage { height: calc(100vh - 48px); min-height: 520px; max-height: none; border-radius: 14px; }
+.li-page .li-stage { height: calc(100dvh - 56px - env(safe-area-inset-bottom)); min-height: 480px; max-height: none; border-radius: 14px; }
 @media (min-width: 768px) { .li-page .li-stage { height: 100vh; border-radius: 0; } }
 .li-hud { position: absolute; left: 12px; right: 12px; top: 12px; z-index: 4; display: flex; align-items: flex-start; gap: 10px; pointer-events: none; }
 .li-hud > * { pointer-events: auto; }
@@ -71,7 +71,7 @@
 .li-float .hy-card { margin: 0; }
 .li-page .li-hint { bottom: 12px; }
 @media (max-width: 640px) {
-  .li-page .li-stage { height: calc(100vh - 48px); }
+  .li-page .li-stage { height: calc(100dvh - 56px - env(safe-area-inset-bottom)); }
   .li-hud { flex-wrap: wrap; }
   .li-hud .li-reset { order: 2; }
   .li-float { left: 12px; right: 12px; width: auto; max-height: 55%; }
