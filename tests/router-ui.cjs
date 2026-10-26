@@ -28,6 +28,8 @@ const {chromium}=require('playwright');const assert=require('node:assert/strict'
   }else if(p==='/api/ai-work-packages/router/policy'){
    if(mode==='conflict')status=409;
    else {const body=req.postDataJSON();assert.equal(body.expected_revision,view.policy.revision);assert.deepEqual(Object.keys(body).sort(),['authority_ref','document','expected_revision','reason']);view.policy={...view.policy,revision:view.policy.revision+1,document:body.document};view.as_of+=1;data=view.policy;}
+  }else if(p==='/api/ai-work-packages/projects/p/quality/restart-review'){
+   const b=req.postDataJSON();assert.equal(b.review_package_id,'review-old');const item=view.packages.find(x=>x.id==='review-old');if(item)item.route_snapshot=item.current_route;data={previous_review_package_id:'review-old',review_package_id:'review-new',kind:'PLAN',milestone_id:'',round:1};
   }else if(p==='/api/ai-work-packages/router/control'){
    const b=req.postDataJSON();assert.equal(b.confirmed,true);assert.equal(b.expected_revision,view.control.revision);view.control={revision:view.control.revision+1,mode:b.mode,pilot_project_id:b.pilot_project_id};view.as_of+=1;data=view.control;
   }else if(p==='/api/ai-work-packages/router/preview'){
@@ -84,11 +86,14 @@ const {chromium}=require('playwright');const assert=require('node:assert/strict'
   assert.deepEqual(view.policy.document.rules.find(r=>r.selector==='REVIEW').route.fallbacks,[]);
   // Unrelated custom rules and their models/health remain untouched.
   assert.deepEqual(view.policy.document.rules.find(r=>r.selector==='GENERAL'),original.policy.document.rules[0]);
-  reset();await page.goto('http://127.0.0.1:5173/#/ai-work-v5');await page.locator('.ao-project-line').click();
+  reset();view.packages.push({id:'review-old',project_id:'p',task:'獨立審查 PLAN',status:'READY',type:'QUALITY_REVIEW',runner_id:'claude-review',assignment_revision:1,route_snapshot:{route:{primary:'claude-review',fallbacks:[]}},current_route:{route:{primary:'grok',fallbacks:[]}},current_route_error:null});await page.goto('http://127.0.0.1:5173/#/ai-work-v5');await page.locator('.ao-project-line').click();
   const nav=page.getByRole('navigation',{name:'AI Office 專案分頁'});
   // The overview configuration has been collapsed since #107; open it as a user would.
   await page.locator('summary').filter({hasText:'AI 執行配置'}).click();
   await page.getByRole('heading',{name:'此專案主力與備案',exact:true}).waitFor();
+  await page.getByText('目前審查包仍使用 Claude',{exact:true}).waitFor();await page.getByText('專案現在設定為 Grok。要讓這個尚未開始的審查套用新設定，需重新送審。',{exact:true}).waitFor();
+  await page.getByRole('button',{name:'重新送審套用目前配置',exact:true}).click();await page.getByText('已重新送審，新審查包已套用目前專案 AI 配置。',{exact:true}).waitFor();
+  assert.equal(writes.find(x=>x.path.endsWith('/quality/restart-review')).body.review_package_id,'review-old');
   assert.equal(await page.getByLabel('套用範圍',{exact:true}).count(),0,'project scope is fixed by project page');
   await page.getByLabel('審查備案',{exact:true}).selectOption('');await page.getByLabel('審查主力',{exact:true}).selectOption('gpt');
   await nav.getByRole('button',{name:'工作日誌'}).click();await page.getByText('冷卻、恢復與備援改派紀錄',{exact:true}).click();await page.getByRole('heading',{name:'路由工作紀錄',exact:true}).waitFor();
@@ -96,7 +101,7 @@ const {chromium}=require('playwright');const assert=require('node:assert/strict'
   await save().click();await page.getByText('已儲存，僅影響之後建立的新包。',{exact:true}).waitFor();
   const projectRule=view.policy.document.rules.find(r=>r.scope==='project'&&r.scope_id==='p'&&r.selector==='REVIEW');
   assert.equal(projectRule.route.primary,'gpt-chat');assert.deepEqual(projectRule.route.fallbacks,[]);
-  assert.deepEqual(view.packages,original.packages);
+  assert.deepEqual(view.packages.filter(x=>x.id!=='review-old'),original.packages);
   await nav.getByRole('button',{name:'執行計畫'}).click();assert.equal(await page.getByText('AI 執行配置',{exact:true}).isVisible(),false,'project Router is hidden outside overview');
  }
  reset();await global();mode='conflict';await page.getByLabel('一般執行專家備案',{exact:true}).selectOption('claude');await save().click();await page.getByRole('alert').filter({hasText:'不會覆蓋新版'}).waitFor();assert(await save().isDisabled());
@@ -108,7 +113,7 @@ const {chromium}=require('playwright');const assert=require('node:assert/strict'
  reset();mode='unready';await global();assert.equal(await page.locator('.rt-simple-route select').count(),8);for(const select of await page.locator('.rt-simple-route select').all())assert.deepEqual(await select.locator('option').allTextContents(),['無','GPT','Claude','Grok']);
  reset();view.runners.forEach(r=>r.execution_verified=false);await global();assert.equal(await page.locator('.rt-simple-route select').count(),8);for(const select of await page.locator('.rt-simple-route select').all())assert.deepEqual(await select.locator('option').allTextContents(),['無','GPT','Claude','Grok']);
  reset();mode='error';await page.goto('about:blank');await page.goto('http://127.0.0.1:5173/#/expert-team?tab=models');await page.getByRole('button',{name:'重試讀取路由'}).waitFor();mode='normal';await page.getByRole('button',{name:'重試讀取路由'}).click();await page.getByRole('heading',{name:'AI 派工',exact:true}).waitFor();
- assert.deepEqual(errors,[]);assert(writes.every(x=>x.path==='/api/ai-work-packages/router/policy'));
+ assert.deepEqual(errors,[]);assert(writes.every(x=>x.path==='/api/ai-work-packages/router/policy'||x.path.endsWith('/quality/restart-review')));
  await browser.close();console.log('Simplified Router UI: 1280/390, AI-only choices, real readiness, explicit save, frozen packages, inheritance, conflicts and errors passed');
 })().catch(e=>{console.error(e);process.exit(1)});
 
