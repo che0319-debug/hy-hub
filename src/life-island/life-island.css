@@ -138,3 +138,27 @@
 .li-attn li { display: flex; align-items: center; gap: 8px; min-height: 44px; padding: 6px 10px; border-radius: 10px; background: var(--hy-bg); }
 .li-attn-text { flex: 1; font-size: 15px; font-weight: 600; }
 .li-attn-go { flex: none; min-height: 32px; display: inline-flex; align-items: center; padding: 0 10px; font-size: 13px; font-weight: 600; color: var(--hy-brand); text-decoration: none; }
+
+/* 手機（≤640px）專用排版：頂部只留兩顆最重要的狀態、其餘收進面板或移到底部 */
+.li-only-m { display: none; }
+.li-panel-act { display: inline-flex; gap: 8px; }
+.li-map-mini { padding: 0 14px; font-size: 14px; font-weight: 700; color: #14202a; }
+@media (max-width: 767px) {
+  .app-main .li-page { margin: 0; height: 100%; }
+  .app-main .li-page .li-stage { height: 100%; min-height: 0; border-radius: 0; }
+}
+@media (max-width: 640px) {
+  .li-hud { top: 8px; left: 8px; right: 8px; gap: 8px; }
+  .li-hud .li-status { gap: 8px; }
+  .li-chip-next { display: none; }                                   /* 行程：進「今日」面板看 */
+  .li-chip-sys[data-s="done"], .li-chip-sys[data-s="wait"] { display: none; }   /* 系統正常時不佔位，有異常才出現 */
+  .li-wide { display: none; }
+  .li-only-m { display: inline-flex; }
+  .li-hud .li-legend summary { font-size: 0; width: 44px; padding: 0; justify-content: center; }
+  .li-hud .li-legend summary::before { content: '?'; font-size: 17px; font-weight: 700; color: var(--hy-muted); }
+  .li-sign { top: auto; bottom: 12px; right: 12px; flex-direction: row; gap: 8px; padding: 4px 12px; border-radius: 999px; }
+  .li-sign::before, .li-sign::after { display: none; }
+  .li-sign-d, .li-sign-t { font-size: 12px; }
+}
+.li-panel-act .hy-btn { white-space: nowrap; }
+@media (max-width: 640px) { .li-panel-sub { display: none; } }

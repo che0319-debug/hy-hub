@@ -51,7 +51,7 @@ export default function App() {
 
   return (
     <SessionContext.Provider value={{ sessions, addSession, removeSession, refreshSessions }}>
-      <div className="min-h-screen bg-slate-50 text-slate-800">
+      <div className="app-shell min-h-screen bg-slate-50 text-slate-800">
         <Sidebar pilot={pilotRoute} world={!pilotRoute} collapsed={collapsed} />
         <BottomNav />
         <button
@@ -65,7 +65,7 @@ export default function App() {
         >
           {collapsed ? <ChevronRight size={14} /> : <ChevronLeft size={14} />}
         </button>
-        <main className={pilotRoute ? `pilot-main ml-0 ${collapsed ? 'md:ml-0' : 'md:ml-[216px]'} p-4 pb-24 md:p-8 min-h-screen transition-[margin] duration-200` : `ml-0 ${collapsed ? 'md:ml-0' : 'md:ml-[200px]'} ${worldRoute ? 'pt-0 md:pt-0 p-0 md:p-6' : 'pt-4 md:pt-6 p-4 md:p-6'} pb-24 md:pb-6 min-h-screen transition-[margin] duration-200`}>
+        <main className={'app-main' + (worldRoute ? ' is-world' : '') + ' ' + (pilotRoute ? `pilot-main ml-0 ${collapsed ? 'md:ml-0' : 'md:ml-[216px]'} p-4 pb-24 md:p-8 min-h-screen transition-[margin] duration-200` : `ml-0 ${collapsed ? 'md:ml-0' : 'md:ml-[200px]'} ${worldRoute ? 'pt-0 md:pt-0 p-0 md:p-6' : 'pt-4 md:pt-6 p-4 md:p-6'} pb-24 md:pb-6 min-h-screen transition-[margin] duration-200`)}>
           <Outlet />
         </main>
       </div>
