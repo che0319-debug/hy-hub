@@ -36,6 +36,8 @@ test('stale header from either file propagates and updated headers override payl
   }) })
   assert.equal(result.stale, true)
   assert.match(result.updated, /12:00:00/)
+  assert.equal(result.updatedAt, '2026-10-24T12:00:00+08:00')
+  assert.equal(result.updatedRaw, state.updated)
 })
 
 test('404 is explicit empty data, never replaced with demo content', async () => {
