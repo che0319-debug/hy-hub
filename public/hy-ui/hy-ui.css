@@ -105,7 +105,7 @@ body.hy{margin:0;background:var(--hy-bg);color:var(--hy-ink);font-family:'Noto S
 /* 手機 */
 @media (max-width:640px){
   .hy-header{padding:0 16px}.hy-header-sub,.hy-sync,.hy-hbtn:not(.is-primary){display:none}
-  .hy-tabs{padding:0 8px}.hy-main{padding:16px}
+  .hy-tabs{padding:0 8px}.hy-tab{padding:0 10px}.hy-main{padding:16px}
   .hy-pagehead{flex-direction:column;align-items:flex-start;gap:4px}
   .hy-split,.hy-board{grid-template-columns:1fr}
   .hy-board .hy-col.is-needs-you{order:-1}

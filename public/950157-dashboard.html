@@ -346,6 +346,14 @@ header { background:var(--header-bg); padding:0 24px; display:flex; align-items:
 .research-src a, .research-refs a { color:var(--blue); text-decoration:underline; word-break:break-all; }
 .research-refs { list-style:none; display:flex; flex-direction:column; gap:8px; font-size:13px; }
 @media (max-width:767px) { .research-wrap { padding:14px 12px 40px; } .tabs { padding:0 8px; overflow-x:auto; } }
+/* 手機共用：頁首只留標章與動作鈕、可點區域 ≥44px、分頁列可橫向捲動（2026-10 手機版 PR3） */
+@media (max-width:640px) {
+  header { padding:0 12px; gap:8px; }
+  .logo-sub, .last-updated { display:none; }
+  header .btn { min-height:44px; white-space:nowrap; }
+  .tabs { padding:0 8px; overflow-x:auto; }
+  .tab { padding:14px 12px; white-space:nowrap; }
+}
 </style>
 </head>
 <body>

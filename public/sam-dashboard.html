@@ -649,6 +649,14 @@ input[type="date"] { color-scheme: light; }
   .board-wrap { scroll-snap-type:x mandatory; -webkit-overflow-scrolling:touch; padding:12px; }
   .column { scroll-snap-align:start; min-width:85vw; width:85vw; }
 }
+/* 手機共用：頁首只留標章與動作鈕、可點區域 ≥44px、分頁列可橫向捲動（2026-10 手機版 PR3） */
+@media (max-width:640px) {
+  header { padding:0 12px; gap:8px; }
+  .logo-sub, .last-updated { display:none; }
+  header .btn { min-height:44px; white-space:nowrap; }
+  .tabs { padding:0 8px; overflow-x:auto; }
+  .tab { padding:14px 12px; white-space:nowrap; }
+}
 </style>
 </head>
 <body>
