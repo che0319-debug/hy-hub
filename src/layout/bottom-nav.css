@@ -6,3 +6,11 @@
 .bn-badge{position:absolute;top:-6px;right:-10px;min-width:18px;height:18px;padding:0 5px;box-sizing:border-box;border-radius:9px;background:var(--hy-you-line,#e5a43a);color:#3d2500;font-size:12px;line-height:18px;text-align:center;font-weight:700}
 .bn-item:focus-visible{outline:3px solid var(--hy-brand,#1d4ed8);outline-offset:-3px}
 @media (min-width:768px){.bn{display:none}}
+
+/* 手機：整個 App 固定在可視範圍內，底部導覽是版面的一部分（不浮動），一定看得到；內容區自己捲動 */
+@media (max-width:767px){
+  .app-shell{position:fixed;inset:0;display:flex;flex-direction:column;min-height:0!important;overflow:hidden}
+  .app-main{flex:1 1 auto;min-height:0!important;overflow-y:auto;overscroll-behavior:contain;padding-bottom:16px!important}
+  .bn{position:static;flex:none;order:99}
+  .app-main.is-world{padding:0!important}
+}

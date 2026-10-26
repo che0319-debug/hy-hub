@@ -37,7 +37,7 @@ function StatusBar({ onGo, info, data, panel, setPanel }) {
   return (
     <div className="li-status" role="group" aria-label="今日狀態">
       <button type="button" className="li-chip" data-panel="todo" data-s={overdue > 0 ? 'bad' : 'wait'} onClick={() => toggle('todo')} aria-expanded={panel === 'todo'} aria-controls="li-panel">
-        逾期 <b>{real ? overdue : '—'}</b>・今日待辦 <b>{real ? todayN : '—'}</b><i className="li-caret" aria-hidden="true" />
+        逾期 <b>{real ? overdue : '—'}</b>・今日<span className="li-wide">待辦</span> <b>{real ? todayN : '—'}</b><i className="li-caret" aria-hidden="true" />
       </button>
       <button type="button" className="li-chip li-chip-next" data-panel="sched" data-s="wait" onClick={() => toggle('sched')} aria-expanded={panel === 'sched'} aria-controls="li-panel" title={nextText}>
         <span className="li-next-t">{nextText}</span><i className="li-caret" aria-hidden="true" />
@@ -45,7 +45,7 @@ function StatusBar({ onGo, info, data, panel, setPanel }) {
       <button type="button" className="li-chip li-chip-you" data-s={needs > 0 ? 'you' : needs === 0 ? 'done' : 'wait'} onClick={() => onGo('dispatch')}>
         待你確認 <b>{needs ?? '—'}</b>
       </button>
-      <button type="button" className="li-chip" data-s={sysN > 0 ? 'bad' : sysN === 0 ? 'done' : 'wait'} onClick={() => onGo('syscenter')}>
+      <button type="button" className="li-chip li-chip-sys" data-s={sysN > 0 ? 'bad' : sysN === 0 ? 'done' : 'wait'} onClick={() => onGo('syscenter')}>
         {sysN === null ? '系統載入中' : sysN > 0 ? <>資料讀取異常 <b>{sysN}</b></> : '系統正常'}
       </button>
       <details className="li-legend">
@@ -59,7 +59,7 @@ function StatusBar({ onGo, info, data, panel, setPanel }) {
 }
 
 // 從頂欄往下展開的面板：待辦清單／今日行程
-function InfoPanel({ kind, info, onClose }) {
+function InfoPanel({ kind, info, onClose, onSwitch }) {
   useEffect(() => {
     const down = e => { if (!e.target.closest('.li-panel') && !e.target.closest('[data-panel]')) onClose() }
     const key = e => { if (e.key === 'Escape') onClose() }
@@ -71,7 +71,10 @@ function InfoPanel({ kind, info, onClose }) {
     <section className="hy-card li-panel" id="li-panel" aria-label={kind === 'todo' ? '待辦清單' : '今日行程'}>
       <div className="hy-card-head">
         <h2 className="hy-card-title">{kind === 'todo' ? '待辦清單' : '今日行程'} <span className="li-panel-sub">{kind === 'todo' ? '逾期＋今天＋近 3 天' : info.today.slice(5).replace('-', '/')}</span></h2>
-        <button type="button" className="hy-btn" onClick={onClose} aria-label="收起">收起</button>
+        <span className="li-panel-act">
+          <button type="button" className="hy-btn li-only-m" onClick={() => onSwitch(kind === 'todo' ? 'sched' : 'todo')}>{kind === 'todo' ? '看行程' : '看待辦'}</button>
+          <button type="button" className="hy-btn" onClick={onClose} aria-label="收起">收起</button>
+        </span>
       </div>
       {kind === 'todo' ? (
         info.todoFailed ? <p className="hy-lede">待辦暫時讀取失敗，稍後會自動重試。</p>
@@ -95,8 +98,12 @@ function InfoPanel({ kind, info, onClose }) {
 }
 
 function MiniMap({ onGo, current }) {
+  // 手機預設收起（畫面小），桌面預設展開
+  const [open, setOpen] = useState(() => !(typeof window !== 'undefined' && window.matchMedia && window.matchMedia('(max-width: 640px)').matches))
+  if (!open) return <button type="button" className="li-mini-btn li-map-mini" onClick={() => setOpen(true)} aria-label="展開小地圖">地圖</button>
   return (
     <div className="li-map" role="group" aria-label="小地圖">
+      <button type="button" className="li-mini-btn li-map-close" onClick={() => setOpen(false)} aria-label="收起小地圖">✕</button>
       {MAP_ISLANDS.map(m => (
         <button key={m.id} type="button" className={'li-map-isl' + (current === m.id ? ' is-cur' : '')} data-built={m.built ? '1' : '0'} style={{ left: m.x + '%', top: m.y + '%' }}
           disabled={!m.built} onClick={() => onGo(m.id)} aria-label={m.built ? '前往' + m.name : m.name + '（建設中）'}>
@@ -253,7 +260,7 @@ export default function LifeIsland() {
           <div className="li-hud">
             <StatusBar onGo={choose} info={info} data={data} panel={panel} setPanel={setPanel} />
           </div>
-          {panel && <InfoPanel kind={panel} info={info} onClose={() => setPanel(null)} />}
+          {panel && <InfoPanel kind={panel} info={info} onClose={() => setPanel(null)} onSwitch={setPanel} />}
           {sky && (
             <div className={'li-sign' + (sky.night > 0.6 ? ' is-night' : '')} aria-label={`新竹 ${sky.date} ${sky.weekday} ${sky.time}，${sky.phase}，${sky.weather}`}>
               <span className="li-sign-d">{sky.date} {sky.weekday}</span>
@@ -267,7 +274,7 @@ export default function LifeIsland() {
         <div style={{ display: 'grid', gap: 16 }}>
           <div className="hy-empty">這台裝置不支援 3D，改用下方清單。內容與 3D 相同。</div>
           <StatusBar onGo={choose} info={info} data={data} panel={panel} setPanel={setPanel} />
-          {panel && <InfoPanel kind={panel} info={info} onClose={() => setPanel(null)} />}
+          {panel && <InfoPanel kind={panel} info={info} onClose={() => setPanel(null)} onSwitch={setPanel} />}
           {b && <BuildingCard b={b} onClose={() => choose(null)} />}
           <section className="hy-card">
             <h2 className="hy-card-title">中央島的建築</h2>
