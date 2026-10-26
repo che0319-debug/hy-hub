@@ -59,5 +59,5 @@ export function useBotRoster(info) {
 
   const loaded = done.office || done.memory || done.runners
   const failedCount = Object.values(failed).filter(Boolean).length + (info?.todoFailed ? 1 : 0)
-  return { bots, loaded, officeEmpty, unowned: off.unowned, ...deriveSummary({ pending: off.pending, failedCount, loaded }) }
+  return { bots, loaded, office, officeEmpty, unowned: off.unowned, ...deriveSummary({ pending: off.pending, failedCount, loaded }) }
 }

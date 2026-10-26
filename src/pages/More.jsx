@@ -12,10 +12,10 @@ const GROUPS = [
 export default function More() {
   return (
     <div className="hy hy-stack" style={{ maxWidth: 720, margin: '0 auto' }}>
-      <div className="hy-pagehead"><h1 style={{ fontSize: 22 }}>更多</h1></div>
+      <div className="hy-pagehead"><h1 style={{ fontSize: 22, fontWeight: 700 }}>更多</h1></div>
       {GROUPS.map(([name, links]) => (
         <section key={name} className="hy-card">
-          <h2 style={{ fontSize: 17, marginBottom: 4 }}>{name}</h2>
+          <h2 style={{ fontSize: 17, fontWeight: 700, marginBottom: 4 }}>{name}</h2>
           {links.map(([to, label]) => <Link key={to} to={to} style={{ display: 'flex', alignItems: 'center', minHeight: 48, borderTop: '1px solid var(--hy-line)', color: 'var(--hy-ink)', textDecoration: 'none' }}>{label}</Link>)}
         </section>
       ))}
