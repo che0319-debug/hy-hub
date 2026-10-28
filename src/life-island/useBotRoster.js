@@ -1,12 +1,13 @@
 // 小人資料入口：「我的小幫手」分頁與 HY Life 島共用，不新增 endpoint。
 // 來源：Bot Office（專案、決策）、首頁待辦（由外層的 useWorldInfo 傳入）、memory-health。
 // 畫面只讀這裡整理好的格式，不直接打 API。
-import { useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { fetchMemoryHealth } from '../api'
 import { authHeaders } from '../auth'
 import { loadBotOffice } from '../botOfficeData'
 import { HELPERS } from '../botRoster'
 import { deriveAtlas, deriveOffice, deriveSummary, deriveTodos } from './worldData'
+import { createLatestRead, readOfficeLatest } from '../lib/latestRead.js'
 
 const EVERY = 60 * 1000
 
@@ -16,22 +17,34 @@ export function useBotRoster(info) {
   const [memory, setMemory] = useState(null)
   const [failed, setFailed] = useState({ office: false, memory: false })
   const [done, setDone] = useState({ office: false, memory: false })
+  const reloadOfficeRef = useRef(() => Promise.resolve())
 
   useEffect(() => {
     let alive = true
     const mark = (k, bad) => { if (!alive) return; setFailed(f => (f[k] === bad ? f : { ...f, [k]: bad })); setDone(d => (d[k] ? d : { ...d, [k]: true })) }
+    const reads = createLatestRead()
+    // 輪詢自己吞掉拒絕，failed.office 的亮法不變。reloadOffice 失敗要 reject，選擇器才不會當成成功。
+    // empty 已經寫進 state 就 resolve，不再往外丟。
+    const loadOffice = () => readOfficeLatest(reads, {
+      isActive: isCurrent => alive && isCurrent(),
+      load: () => loadBotOffice({ headers: authHeaders() }),
+      onApply(data) { setOffice(data); setOfficeEmpty(false); mark('office', false) },
+      onEmpty() { setOffice(null); setOfficeEmpty(true); mark('office', false) },
+      onFail() { mark('office', true) },
+    })
+    reloadOfficeRef.current = loadOffice
     const load = () => {
-      loadBotOffice({ headers: authHeaders() })
-        .then(d => { if (alive) { setOffice(d); setOfficeEmpty(false); mark('office', false) } })
-        .catch(e => { if (e?.kind === 'empty') { if (alive) { setOffice(null); setOfficeEmpty(true) } mark('office', false) } else mark('office', true) })
+      loadOffice().catch(() => {})
       fetchMemoryHealth().then(d => { if (alive) { setMemory(d?.bots || null); mark('memory', false) } }).catch(() => mark('memory', true))
     }
     load()
     const every = setInterval(load, EVERY)
     const onVis = () => { if (document.visibilityState === 'visible') load() }
     document.addEventListener('visibilitychange', onVis); window.addEventListener('focus', onVis)
-    return () => { alive = false; clearInterval(every); document.removeEventListener('visibilitychange', onVis); window.removeEventListener('focus', onVis) }
+    return () => { alive = false; reads.bump(); reloadOfficeRef.current = () => Promise.resolve(); clearInterval(every); document.removeEventListener('visibilitychange', onVis); window.removeEventListener('focus', onVis) }
   }, [])
+
+  const reloadOffice = useCallback(() => reloadOfficeRef.current(), [])
 
   const off = useMemo(() => deriveOffice(office), [office])
   const todos = useMemo(() => deriveTodos(info?.list, info?.today), [info?.list, info?.today])
@@ -56,5 +69,5 @@ export function useBotRoster(info) {
 
   const loaded = done.office || done.memory
   const failedCount = Object.values(failed).filter(Boolean).length + (info?.todoFailed ? 1 : 0)
-  return { bots, loaded, office, officeEmpty, unowned: off.unowned, ...deriveSummary({ pending: off.pending, failedCount, loaded }) }
+  return { bots, loaded, office, officeEmpty, unowned: off.unowned, reloadOffice, ...deriveSummary({ pending: off.pending, failedCount, loaded }) }
 }

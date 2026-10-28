@@ -10,3 +10,5 @@
 .bo-page .bo-request-form fieldset{display:contents;min-width:0;border:0;padding:0;margin:0}
 .bo-page .bo-request-form{min-width:0}
 .bo-page .bo-notice{color:var(--hy-you);background:var(--hy-you-bg);padding:12px 14px;border-radius:var(--hy-r-sm)}
+/* 蓋過 .ao select 的 14px，避免手機聚焦時把整頁放大。 */
+.ao select.owner-bot-select{font-size:16px}
