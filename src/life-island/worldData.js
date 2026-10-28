@@ -11,6 +11,29 @@ const normDue = due => (due ? String(due).replace(/\//g, '-') : '')
 // ---- 小幫手：Bot Office ----
 // 狀態與 Bot Office 一致：有待你決定的 → 待你確認（橘）；專案執行中／待審 → AI 執行中（藍）；其他 → 等待（灰）。
 // 專案歸屬看 owner_bot（hy／950157／family／sam）；沒有歸屬的專案不算在任何一位身上，另外回報 unowned。
+// 選單順序：Sam、小因、950157、HY。名稱跟 botRoster 的小幫手一致。
+export const OWNER_BOT_ORDER = ['sam', 'family', '950157', 'hy']
+
+export function ownerBotChoices() {
+  return OWNER_BOT_ORDER.map(agent => ({ value: agent, label: HELPERS.find(h => h.agent === agent)?.name || agent }))
+}
+
+export function canonicalOwnerBot(value) {
+  return OWNER_BOT_ORDER.includes(value) ? value : ''
+}
+
+export function unownedProjects(projects = []) {
+  const list = Array.isArray(projects) ? projects : []
+  return list.filter(p => p && typeof p === 'object' && !OWNER_BOT_ORDER.includes(p.ownerBot)).map(p => ({
+    id: typeof p.id === 'string' ? p.id : '',
+    title: typeof p.title === 'string' && p.title ? p.title : '未命名專案',
+    stage: typeof p.stage === 'string' ? p.stage : '',
+    stageLabel: typeof p.stageLabel === 'string' ? p.stageLabel : '',
+    ownerBot: canonicalOwnerBot(p.ownerBot),
+    revision: Number.isInteger(p.revision) && p.revision >= 0 ? p.revision : 0,
+  }))
+}
+
 export function deriveOffice(office) {
   const byAgent = {}
   if (!office) return { byAgent, pending: null, unowned: 0 }
@@ -31,8 +54,7 @@ export function deriveOffice(office) {
         : counts.total ? '目前沒有進行中的專案' : '名下還沒有專案',
     }
   }
-  const knownBots = new Set(HELPERS.map(h => h.agent))
-  return { byAgent, pending: num(office.totals?.pending), unowned: projects.filter(p => !knownBots.has(p.ownerBot)).length }
+  return { byAgent, pending: num(office.totals?.pending), unowned: unownedProjects(projects).length }
 }
 
 // ---- 小幫手：待辦（逾期／今日） ----
@@ -106,17 +128,17 @@ export const ATLAS_STALE_HOURS = 24   // Bot Office 超過這麼久沒更新，�
 
 export function deriveAtlas({ office, officeEmpty, failed = {}, todoFailed = false, unowned = 0, loaded = true }, now = Date.now()) {
   const checks = []   // { label, ok, detail }：卡片上完整列出，包含正常的項目
-  const check = (label, ok, detail, go) => checks.push({ label, ok, detail, go })
+  const check = (label, ok, detail, go, handle) => checks.push({ label, ok, detail, go, ...(handle ? { handle } : {}) })
   if (!loaded) return { status: 'wait', doing: '正在檢查系統…', attention: [], checks: [], updatedAt: null }
   const ageH = office?.updatedAt ? (now - new Date(office.updatedAt).getTime()) / 3600e3 : null
   check('Bot Office 讀取', !failed.office, failed.office ? '讀取失敗' : officeEmpty ? 'Atlas 尚未產生第一份狀態' : '正常', 'office')
   check('Bot Office 更新', !officeEmpty && !failed.office && !office?.stale && (ageH === null || ageH <= ATLAS_STALE_HOURS),
     officeEmpty ? '尚無資料' : failed.office ? '無法判斷' : office?.stale ? '資料標示為過期' : ageH === null ? '沒有更新時間' : ageH <= ATLAS_STALE_HOURS ? (ageH < 1 ? '剛剛' : `${Math.round(ageH)} 小時前`) : `${Math.round(ageH)} 小時沒更新`, 'office')
-  check('專案歸屬', !(unowned > 0), unowned > 0 ? `${unowned} 個專案沒有指定 owner_bot` : '全部有歸屬', 'office')
+  check('專案歸屬', !(unowned > 0), unowned > 0 ? `${unowned} 個專案沒有指定 owner_bot` : '全部有歸屬', 'office', 'assign-owner')
   check('記憶健康資料', !failed.memory, failed.memory ? '讀取失敗' : '正常')
   check('AI 工作包活動', !failed.runners, failed.runners ? '讀取失敗' : '正常', 'models')
   check('待辦資料', !todoFailed, todoFailed ? '讀取失敗' : '正常')
-  const attention = checks.filter(c => !c.ok).map(c => ({ level: 'bad', text: `${c.label}：${c.detail}`, go: c.go }))
+  const attention = checks.filter(c => !c.ok).map(c => ({ level: 'bad', text: `${c.label}：${c.detail}`, go: c.go, ...(c.handle ? { handle: c.handle } : {}) }))
   return {
     status: attention.length ? 'bad' : 'wait',
     doing: attention.length ? `${attention.length} 項系統問題待處理` : '系統運作正常，持續巡檢',

@@ -1,39 +1,67 @@
 // 小人資料入口：「我的小幫手」分頁與 HY Life 島共用，不新增 endpoint。
 // 來源：Bot Office（專案、決策）、首頁待辦（由外層的 useWorldInfo 傳入）、memory-health、AI Work runner 活動。
 // 畫面只讀這裡整理好的格式，不直接打 API。
-import { useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { fetchMemoryHealth, fetchRunnerActivity } from '../api'
 import { authHeaders } from '../auth'
 import { loadBotOffice } from '../botOfficeData'
 import { HELPERS } from '../botRoster'
 import { deriveAtlas, deriveOffice, deriveRunners, deriveSummary, deriveTodos } from './worldData'
+import { createLatestRead, readOfficeLatest } from '../lib/latestRead.js'
 
 const EVERY = 60 * 1000
 
-export function useBotRoster(info) {
+export function useBotRoster(info, { runnerActivity = true } = {}) {
   const [office, setOffice] = useState(null)      // mapOffice 的結果
   const [officeEmpty, setOfficeEmpty] = useState(false)   // Atlas 還沒產生第一份狀態：不是錯誤
   const [memory, setMemory] = useState(null)
   const [runners, setRunners] = useState(null)
   const [failed, setFailed] = useState({ office: false, memory: false, runners: false })
   const [done, setDone] = useState({ office: false, memory: false, runners: false })
+  const reloadOfficeRef = useRef(() => Promise.resolve())
 
   useEffect(() => {
     let alive = true
     const mark = (k, bad) => { if (!alive) return; setFailed(f => (f[k] === bad ? f : { ...f, [k]: bad })); setDone(d => (d[k] ? d : { ...d, [k]: true })) }
+    const reads = createLatestRead()
+    // 輪詢自己吞掉拒絕，failed.office 的亮法不變。reloadOffice 失敗要 reject，選擇器才不會當成成功。
+    // empty 已經寫進 state 就 resolve，不再往外丟。
+    const loadOffice = () => readOfficeLatest(reads, {
+      isActive: isCurrent => alive && isCurrent(),
+      load: () => loadBotOffice({ headers: authHeaders() }),
+      onApply(data) { setOffice(data); setOfficeEmpty(false); mark('office', false) },
+      onEmpty() { setOffice(null); setOfficeEmpty(true); mark('office', false) },
+      onFail() { mark('office', true) },
+    })
+    reloadOfficeRef.current = loadOffice
     const load = () => {
-      loadBotOffice({ headers: authHeaders() })
-        .then(d => { if (alive) { setOffice(d); setOfficeEmpty(false); mark('office', false) } })
-        .catch(e => { if (e?.kind === 'empty') { if (alive) { setOffice(null); setOfficeEmpty(true) } mark('office', false) } else mark('office', true) })
+      loadOffice().catch(() => {})
       fetchMemoryHealth().then(d => { if (alive) { setMemory(d?.bots || null); mark('memory', false) } }).catch(() => mark('memory', true))
-      fetchRunnerActivity().then(d => { if (alive) { setRunners(d); mark('runners', false) } }).catch(() => mark('runners', true))
+    }
+    load()
+    const every = setInterval(load, EVERY)
+    const onVis = () => { if (document.visibilityState === 'visible') load() }
+    document.addEventListener('visibilitychange', onVis); window.addEventListener('focus', onVis)
+    return () => { alive = false; reads.bump(); reloadOfficeRef.current = () => Promise.resolve(); clearInterval(every); document.removeEventListener('visibilitychange', onVis); window.removeEventListener('focus', onVis) }
+  }, [])
+
+  // runner 活動走舊的 /api/ai-work-packages。Bot Office 傳 runnerActivity: false，這頁就不發。
+  // 跟 Office 讀取分開，離開 Bot Office 時立刻補讀，不必等下一輪 60 秒。
+  useEffect(() => {
+    if (!runnerActivity) return undefined
+    let alive = true
+    const mark = bad => { if (!alive) return; setFailed(f => (f.runners === bad ? f : { ...f, runners: bad })); setDone(d => (d.runners ? d : { ...d, runners: true })) }
+    const load = () => {
+      fetchRunnerActivity().then(d => { if (alive) { setRunners(d); mark(false) } }).catch(() => mark(true))
     }
     load()
     const every = setInterval(load, EVERY)
     const onVis = () => { if (document.visibilityState === 'visible') load() }
     document.addEventListener('visibilitychange', onVis); window.addEventListener('focus', onVis)
     return () => { alive = false; clearInterval(every); document.removeEventListener('visibilitychange', onVis); window.removeEventListener('focus', onVis) }
-  }, [])
+  }, [runnerActivity])
+
+  const reloadOffice = useCallback(() => reloadOfficeRef.current(), [])
 
   const off = useMemo(() => deriveOffice(office), [office])
   const todos = useMemo(() => deriveTodos(info?.list, info?.today), [info?.list, info?.today])
@@ -59,5 +87,5 @@ export function useBotRoster(info) {
 
   const loaded = done.office || done.memory || done.runners
   const failedCount = Object.values(failed).filter(Boolean).length + (info?.todoFailed ? 1 : 0)
-  return { bots, loaded, office, officeEmpty, unowned: off.unowned, ...deriveSummary({ pending: off.pending, failedCount, loaded }) }
+  return { bots, loaded, office, officeEmpty, unowned: off.unowned, reloadOffice, ...deriveSummary({ pending: off.pending, failedCount, loaded }) }
 }

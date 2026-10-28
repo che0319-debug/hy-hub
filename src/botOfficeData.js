@@ -108,6 +108,7 @@ export function mapOffice(state = {}, index = {}, metadata = {}) {
       logs: array(state.logs).filter(l => l && l.project === p.id), requests: array(state.requests).filter(r => r && r.project === p.id),
       allDecisions: allDecisions.filter(d => d.projectId === p.id),
       stage: text(p.stage), stageLabel, tone, executor: text(p.executor) || '尚未指定', ownerBot: text(p.owner_bot),
+      revision: Number.isInteger(p.revision) && p.revision >= 0 ? p.revision : 0,
       decisions: decisions.filter(d => d.projectId === p.id), cards: groups,
       finished: p.stage === 'done' || p.stage === 'returned', active: ['running', 'review'].includes(p.stage),
       pending: decisions.some(d => d.projectId === p.id),
@@ -155,6 +156,55 @@ export async function answerOfficeDecision(id, payload, { headers = {}, fetcher 
   return data
 }
 
+
+// 只給 GUI 已登入的 HY 設定負責 Bot。不帶 X-Brain-Write-Token，也不走 MCP。
+export function ownerBotFailureMessage(status, body = {}) {
+  const error = typeof body?.error === 'string' ? body.error : ''
+  if (status === 401) return '登入已過期，請重新登入。'
+  if (error === 'office_owner_changed' || error === 'office_revision_conflict') return '資料已被更新，請重新讀取'
+  // 同一個 request_id 已寫入過；這次內容不同，後端不會覆寫。
+  if (error === 'office_request_conflict') return '同一個要求編號已經寫入過，但這次內容不同，所以沒有再寫。請重新讀取。'
+  if (status === 404 || status === 405) return '此功能尚未上線或專案不存在'
+  if (status === 409) return officeFailureMessage(status, body)
+  if (status === 400) {
+    if (error === 'office_owner_bot_invalid') return '負責 Bot 不在可選名單裡，沒有寫入。'
+    return '內容不符合規定，沒有寫入。'
+  }
+  // brain_write_failed 含連線中斷，結果可能已經寫入，不能說成沒有寫入。其餘 502 在寫入前就拒絕。
+  if (status === 502) {
+    if (error === 'brain_write_failed') return '儲存沒有完成確認，不確定有沒有寫入。請重新讀取確認。'
+    return '後端資料異常，沒有寫入。'
+  }
+  if (!status) return '無法連線，請稍後重試。'
+  return '沒有儲存成功，請稍後重試。'
+}
+
+export async function assignProjectOwnerBot(projectId, payload = {}, { headers = {}, fetcher = fetch, base = import.meta.env?.VITE_API_BASE || '' } = {}) {
+  const body = {
+    request_id: payload.request_id,
+    owner_bot: payload.owner_bot,
+    expected_owner_bot: typeof payload.expected_owner_bot === 'string' ? payload.expected_owner_bot : '',
+    expected_revision: Number.isInteger(payload.expected_revision) && payload.expected_revision >= 0 ? payload.expected_revision : 0,
+  }
+  let response
+  try {
+    response = await fetcher(`${String(base || '').replace(/\/$/, '')}/api/office/hy/projects/${encodeURIComponent(projectId)}/owner-bot`, {
+      method: 'POST', headers: { ...headers, 'Content-Type': 'application/json' }, body: JSON.stringify(body), cache: 'no-store',
+    })
+  } catch (error) {
+    if (error?.name === 'AbortError') throw error
+    throw new OfficeReadError('network', ownerBotFailureMessage(0, {}))
+  }
+  const data = await response.json().catch(() => ({}))
+  if (!response.ok) {
+    const code = typeof data?.error === 'string' ? data.error : ''
+    // 結果不明時留重新讀取，不要當成一般失敗把按鈕拿掉。
+    const uncertain = response.status === 502 && code === 'brain_write_failed'
+    const kind = response.status === 401 ? 'auth' : (response.status === 409 || uncertain) ? 'conflict' : 'error'
+    throw new OfficeReadError(kind, ownerBotFailureMessage(response.status, data), code)
+  }
+  return data
+}
 
 export async function writeOffice(path, payload, { headers = {}, fetcher = fetch, base = import.meta.env?.VITE_API_BASE || '' } = {}) {
   const response = await fetcher(`${base.replace(/\/$/, '')}/api/office/${path}`, {
