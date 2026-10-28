@@ -39,7 +39,7 @@ function Card({ it, projects, onSaved }) {
 }
 
 export default function Inbox() {
-  const { items, counts, loaded, actionsFailed, officeFailed, roster, reloadOffice } = useInbox()
+  const { items, counts, loaded, officeFailed, roster, reloadOffice } = useInbox()
   const [params, setParams] = useSearchParams()
   const tab = INBOX_KINDS.some(([k]) => k === params.get('tab')) ? params.get('tab') : 'all'
   const shown = tab === 'all' ? items : items.filter(i => i.kind === tab)
@@ -52,7 +52,6 @@ export default function Inbox() {
         {tabs.map(([k, l, n]) => <button key={k} type="button" role="tab" className="hy-tab" aria-current={tab === k ? 'page' : undefined} onClick={() => go(k)} style={{ padding: '0 12px' }}>{l}{n > 0 ? ` ${n}` : ''}</button>)}
       </nav>
       {!loaded && <p className="hy-lede">讀取中…</p>}
-      {actionsFailed && <div className="hy-card"><p>讀不到 AI Office，待確認事項可能不完整。</p></div>}
       {officeFailed && <div className="hy-card"><p>讀不到 Bot Office，待決定事項可能不完整。</p></div>}
       {loaded && !shown.length && <div className="hy-card"><p>{tab === 'all' ? '目前沒有任何訊息。' : EMPTY[tab]}</p></div>}
       {shown.map(it => <Card key={it.id} it={it} projects={roster?.office?.projects || []} onSaved={reloadOffice} />)}

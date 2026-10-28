@@ -7,7 +7,7 @@ import { rosterById, avatarUrl } from '../botRoster'
 import { STATUS_INFO } from '../life-island/data'
 import { ATLAS_STALE_HOURS } from '../life-island/worldData'
 
-const GO = { office: '/bot-office', models: '/ai-army?tab=models' }
+const GO = { office: '/bot-office' }
 
 export default function AtlasCard({ roster }) {
   const a = roster?.bots?.atlas

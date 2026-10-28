@@ -5,7 +5,6 @@ import './index.css'
 import App from './App'
 import Home from './pages/Home'
 import AIArmy from './pages/AIArmy'
-import AIOfficeV1 from './pages/AIOfficeV1'
 import BotOffice from './pages/BotOffice'
 import LineHY from './pages/LineHY'
 import LineXiaoyin from './pages/LineXiaoyin'
@@ -13,7 +12,6 @@ import Line950157 from './pages/Line950157'
 import LineFamily from './pages/LineFamily'
 import LineSam from './pages/LineSam'
 import Settings from './pages/Settings'
-import SystemArchitecture from './pages/SystemArchitecture'
 import AgentConfig from './pages/AgentConfig'
 import Goals from './pages/Goals'
 import Strategy from './pages/Strategy'
@@ -27,12 +25,9 @@ function LegacyAIWorkRedirect() {
   return <Navigate to={'/ai-work-v5' + location.search} replace />
 }
 
-// 舊網址 /expert-team?tab=… → /ai-army?tab=…（其他參數如 owner-cutover 一併保留）
+// 舊網址 /expert-team → /ai-army（專家團等分頁已下線，只剩小幫手）
 function ExpertTeamRedirect() {
-  const location = useLocation()
-  const params = new URLSearchParams(location.search)
-  if (!params.get('tab')) params.set('tab', 'experts')
-  return <Navigate to={'/ai-army?' + params.toString()} replace />
+  return <Navigate to="/ai-army" replace />
 }
 
 function AppRoutes() {
@@ -50,7 +45,7 @@ function AppRoutes() {
         <Route path="memory" element={<Navigate to="/ai-army?tab=helpers" replace />} />
         <Route path="workspace/*" element={<LegacyAIWorkRedirect />} />
         <Route path="ai-work" element={<Navigate to="/ai-work-v5" replace />} />
-        <Route path="ai-work-v5" element={<AIOfficeV1 />} />
+        <Route path="ai-work-v5" element={<Navigate to="/bot-office" replace />} />
         <Route path="bot-office" element={<BotOffice />} />
         <Route path="ai-work-v3-ready" element={<Navigate to="/ai-work-v5" replace />} />
         <Route path="ai-work-test/*" element={<Navigate to="/ai-work-v5" replace />} />
@@ -64,7 +59,7 @@ function AppRoutes() {
         <Route path="agent/:id" element={<AgentConfig />} />
         <Route path="goals" element={<Goals />} />
         <Route path="strategy" element={<Strategy />} />
-        <Route path="system-architecture" element={<SystemArchitecture />} />
+        <Route path="system-architecture" element={<Navigate to="/" replace />} />
         <Route path="expert-team" element={<ExpertTeamRedirect />} />
         <Route path="settings" element={<Settings />} />
         <Route path="life-island" element={<Suspense fallback={<p className="hy-lede">載入 HY Life 島…</p>}><LifeIsland /></Suspense>} />

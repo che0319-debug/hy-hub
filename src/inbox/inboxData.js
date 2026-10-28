@@ -1,5 +1,5 @@
 // Inbox：把散在各處的訊息整理成一張一張的卡片。純函式，不碰網路也不碰畫面。
-// 四類：decide 待我處理（Bot Office 待決定＋AI Office 待確認）、problem 問題回報（Atlas 與各 Bot 的紅色警示）、
+// 四類：decide 待我處理（Bot Office 待決定）、problem 問題回報（Atlas 與各 Bot 的紅色警示）、
 //       overdue 過期（逾期待辦）、today 今日任務（今日待辦＋今日行程）。
 // 數字（total）＝需要你動手的：decide ＋ problem ＋ overdue。今日任務是提醒，不算進數字。
 import { ROSTER, HELPERS } from '../botRoster.js'
@@ -8,7 +8,7 @@ import { deriveAttention } from '../life-island/worldData.js'
 export const INBOX_KINDS = [['decide', '待我處理'], ['problem', '問題回報'], ['overdue', '過期'], ['today', '今日任務']]
 const normDue = due => (due ? String(due).replace(/\//g, '-') : '')
 const nameOf = id => ROSTER.find(r => r.id === id)?.name || id
-const GO = { office: '/bot-office', models: '/ai-army?tab=models' }
+const GO = { office: '/bot-office' }
 // 後援只認 Atlas 現在這句。其他「專案歸屬：」開頭的紅字仍走原本的連結。
 const ASSIGN_OWNER_TEXT = /^專案歸屬：\d+ 個專案沒有指定 owner_bot$/
 
@@ -22,11 +22,10 @@ export function assignOwnerPanelId(cardId) {
   return `assign-owner-${cardId}`
 }
 
-export function buildInbox({ decisions = [], projects = [], actions = [], bots = {}, todos = null, sched = null, today = '' } = {}) {
+export function buildInbox({ decisions = [], projects = [], bots = {}, todos = null, sched = null, today = '' } = {}) {
   const items = []
   const projectTitle = id => projects.find(p => p.id === id)?.title || ''
   for (const d of decisions) items.push({ id: 'bo:' + d.id, kind: 'decide', source: 'Bot Office', meta: projectTitle(d.projectId), title: d.title, detail: d.suggestion ? '建議：' + d.suggestion : '', to: '/bot-office', action: '到 Bot Office 回答' })
-  for (const a of actions) items.push({ id: 'ao:' + a.id, kind: 'decide', source: 'AI Office', meta: a.projectTitle, title: a.title, detail: a.question && a.question !== a.title ? a.question : '', to: '/ai-work-v5?filter=open', action: '到 AI Office 處理' })
   // 問題：只收紅色（有問題）。「待你確認」與逾期／今日待辦各有自己的卡片，不重複列。
   for (const id of ['atlas', ...HELPERS.map(h => h.id)]) {
     const bot = bots[id]

@@ -4,7 +4,7 @@ import {progress, activityLabel} from '../lib/aiOffice.mjs'
 const FILTERS=[['all','全部'],['open','待你決定'],['active','進行中'],['completed','已完成']]
 const OWNER={hy:'HY',sam:'Sam',family:'小因','950157':'950157'}
 const date=value=>value?new Date(value*1000).toLocaleString('zh-TW',{hour12:false}):'尚未記錄'
-export default function OfficeHome({projects,details,inbox,loaded,error,creating,onReload,onCreate,onSelect,creation,registry,title = 'AI Office', showModelsLink = true, activeTileLabel = 'AI 執行中工作包', activeCount = undefined, progressOf = null, progressEmpty = '工作包詳情未讀取', hidePackageGap = false}){
+export default function OfficeHome({projects,details,inbox,loaded,error,creating,onReload,onCreate,onSelect,creation,registry,title = 'Bot Office', activeTileLabel = 'AI 執行中工作包', activeCount = undefined, progressOf = null, progressEmpty = '工作包詳情未讀取', hidePackageGap = false}){
   const [query,setQuery]=useState(''),[filter,setFilter]=useState('all')
   const actions=inbox.filter(a=>a.project_id && ['owner','HY'].includes(a.assigned_to))
   const pending=id=>actions.filter(a=>a.project_id===id).length
@@ -18,7 +18,7 @@ export default function OfficeHome({projects,details,inbox,loaded,error,creating
   const ready=loaded&&!error
   const tiles=[['open','待你決定',actions.length,'you'],['active',activeTileLabel,activeCount === undefined ? (missing?null:running) : activeCount,'ai'],['completed','已完成專案',completed,'done'],['all','專案總數',projects.length,'wait']]
   return <section className="ao-home" aria-label={`${title} 專案總表`}>
-    <header className="ao-home-head"><div><small>HY Life OS</small><h1>{title}</h1></div><div className="ao-home-actions">{showModelsLink && <a className="ao-btn" href="#/expert-team?tab=models">執行者與模型</a>}<button className="ao-btn" aria-label="重新整理專案" onClick={onReload}>重新整理</button><button className="ao-btn ao-primary" aria-expanded={creating} onClick={onCreate}>新增專案</button></div></header>
+    <header className="ao-home-head"><div><small>HY Life OS</small><h1>{title}</h1></div><div className="ao-home-actions"><button className="ao-btn" aria-label="重新整理專案" onClick={onReload}>重新整理</button><button className="ao-btn ao-primary" aria-expanded={creating} onClick={onCreate}>新增專案</button></div></header>
     <div className="ao-tiles" role="group" aria-label="工作摘要">{tiles.map(([key,name,value,tone])=><button key={name} className={`ao-tile${key==='open'&&value?' needs-you':''}`} data-s={tone} aria-pressed={filter===key} onClick={()=>setFilter(key)}><small>{name}</small><strong>{ready&&value!=null?value:'—'}</strong></button>)}</div>
     {missing>0&&!error&&!hidePackageGap&&<p className="ao-muted">有 {missing} 個專案詳情未讀取；工作包數量尚不完整。</p>}
     {error&&<div role="alert"><p>{error}</p><button className="ao-btn" onClick={onReload}>重試讀取</button></div>}

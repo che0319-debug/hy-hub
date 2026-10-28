@@ -4,7 +4,7 @@ import { Map, Inbox as InboxIcon, ClipboardList, Menu } from 'lucide-react'
 import { useInbox } from '../inbox/InboxContext'
 import './bottom-nav.css'
 
-const MORE_PATHS = ['/more', '/home', '/ai-army', '/ai-work', '/goals', '/strategy', '/line', '/agent', '/system-architecture', '/settings']
+const MORE_PATHS = ['/more', '/home', '/ai-army', '/ai-work', '/goals', '/strategy', '/line', '/agent', '/settings']
 
 export default function BottomNav() {
   const { pathname } = useLocation()

@@ -116,7 +116,7 @@ test('deriveAtlas：系統健康清單；有異常就是紅、全部正常是待
   const now = Date.parse('2026-10-25T04:00:00Z'), hrs = n => new Date(now - n * 3600e3).toISOString()
   const base = { office: { updatedAt: hrs(2), stale: false }, officeEmpty: false, failed: {}, todoFailed: false, unowned: 0, loaded: true }
   const ok = deriveAtlas(base, now)
-  assert.equal(ok.status, 'wait'); assert.deepEqual(ok.attention, []); assert.equal(ok.checks.length, 6); assert.ok(ok.checks.every(c => c.ok))
+  assert.equal(ok.status, 'wait'); assert.deepEqual(ok.attention, []); assert.equal(ok.checks.length, 5); assert.ok(ok.checks.every(c => c.ok))
   assert.equal(deriveAtlas({ ...base, loaded: false }, now).checks.length, 0)
   const old = deriveAtlas({ ...base, office: { updatedAt: hrs(30), stale: false } }, now)
   assert.equal(old.status, 'bad'); assert.match(old.attention[0].text, /30 小時沒更新/)

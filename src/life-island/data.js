@@ -15,8 +15,8 @@ export const CENTRAL_ISLAND = {
       id: 'dispatch', title: '派工坊', type: 'system', form: 'dispatch', height: 2.6, q: 2, r: -2,
       kind: '功能', agent: 'Atlas', status: '現有',
       blurb: '全部專案的派工、執行、審查與驗收。',
-      links: [{ label: '開啟 AI Office', to: '/ai-work-v5' }],
-      note: '之後 AI Office 會改名為 Bot Office。',
+      links: [{ label: '開啟 Bot Office', to: '/bot-office' }],
+      note: '舊的 AI Office 頁面已移除，派工坊使用 Bot Office。',
     },
     {
       id: 'meeting', title: '會議帳篷', type: 'business', form: 'meeting', height: 1.5, q: 0, r: 2,
@@ -28,9 +28,8 @@ export const CENTRAL_ISLAND = {
     {
       id: 'syscenter', title: '系統中心', type: 'system', form: 'syscenter', height: 3.0, q: -2, r: 0,
       kind: '管理', agent: 'Atlas', status: '現有',
-      blurb: '管理系統用的頁面：架構、專家團、設定、Agent 設定。',
+      blurb: '管理系統用的頁面：AI 軍團、設定、Agent 設定。',
       links: [
-        { label: '系統架構', to: '/system-architecture' },
         { label: 'AI 軍團', to: '/ai-army' },
         { label: '設定', to: '/settings' },
       ],

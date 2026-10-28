@@ -19,10 +19,8 @@ test('Office journal preserves human/Bot distinction, actual event categories an
 test('Execution keeps the AI Office modes and reads the plan through the new document API',async()=>{
  const {readFile}=await import('node:fs/promises')
  const {REPORT_FRAME}=await import('../src/lib/botOfficeView.mjs')
- const ai=await readFile(new URL('../src/pages/AIOfficeV1.jsx',import.meta.url),'utf8')
  const bot=await readFile(new URL('../src/components/BotOfficePanels.jsx',import.meta.url),'utf8')
- const original=ai.slice(ai.indexOf('function Execution('),ai.indexOf('function Results('))
- for(const label of ['規劃摘要','時程＋文件','時程與執行','完整文件','PlanDocument','ao-splitter']){assert.ok(original.includes(label));assert.ok(bot.includes(label))}
+ for(const label of ['規劃摘要','時程＋文件','時程與執行','完整文件','PlanDocument','ao-splitter']){assert.ok(bot.includes(label))}
  assert.match(bot,/規劃書全文讀取未接上/)
  assert.equal(REPORT_FRAME.sandbox,'allow-popups allow-popups-to-escape-sandbox')
  assert.equal(REPORT_FRAME.sandbox.includes('allow-scripts'),false)
