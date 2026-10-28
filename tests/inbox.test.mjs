@@ -23,7 +23,9 @@ test('問題只收紅色；「待你確認」與逾期待辦不重複列在問�
   const items = buildInbox(base).filter(i => i.kind === 'problem')
   assert.equal(items.length, 1)
   assert.equal(items[0].source, 'Atlas')
-  assert.equal(items[0].to, '/bot-office')
+  assert.equal(items[0].assignOwner, true)
+  assert.equal(items[0].action, '處理')
+  assert.equal(items[0].to, null)
 })
 test('資料還沒載入（null）時不產生卡片，也不出錯', () => {
   const items = buildInbox({ ...base, todos: null, sched: null, actions: [], decisions: [], bots: {} })

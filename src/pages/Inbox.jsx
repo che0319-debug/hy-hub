@@ -1,7 +1,9 @@
 // Inbox：所有訊息集中在這裡，一則一張卡片。分類：待我處理／問題回報／過期／今日任務。
+import { useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import { useInbox } from '../inbox/InboxContext'
 import { INBOX_KINDS } from '../inbox/inboxData.js'
+import OwnerBotPicker from '../components/OwnerBotPicker'
 import '../../public/hy-ui/hy-ui.css'
 
 const TONE = { decide: 'you', problem: 'bad', overdue: 'bad', today: 'wait' }
@@ -11,8 +13,10 @@ const EMPTY = { decide: '目前沒有需要你決定的事。', problem: '沒有
 const fmtDue = d => d.slice(5).replace('-', '/')
 const btn = { minHeight: 44, display: 'inline-flex', alignItems: 'center' }
 
-function Card({ it }) {
+function Card({ it, projects, onSaved }) {
+  const [open, setOpen] = useState(false)
   const needs = it.kind === 'decide'
+  const panelId = 'assign-owner-panel'
   return (
     <section className={'hy-card' + (needs ? ' needs-you' : '')}>
       <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
@@ -23,13 +27,19 @@ function Card({ it }) {
       </div>
       <h2 style={{ fontSize: 17, fontWeight: 700, marginTop: 6 }}>{it.title}</h2>
       {it.detail && <p style={{ whiteSpace: 'pre-line', marginTop: 4 }}>{it.detail.length > 140 ? it.detail.slice(0, 139) + '…' : it.detail}</p>}
-      {it.to && it.action && <p style={{ marginTop: 8 }}><Link className="hy-btn" style={btn} to={it.to}>{it.action}</Link></p>}
+      {it.assignOwner && it.action && (
+        <p style={{ marginTop: 8 }}>
+          <button type="button" className="hy-btn" style={btn} aria-expanded={open} aria-controls={panelId} onClick={() => setOpen(v => !v)}>{open ? '收合' : it.action}</button>
+        </p>
+      )}
+      {it.assignOwner && open && <div id={panelId}><OwnerBotPicker projects={projects} onSaved={onSaved} heading={false} /></div>}
+      {!it.assignOwner && it.to && it.action && <p style={{ marginTop: 8 }}><Link className="hy-btn" style={btn} to={it.to}>{it.action}</Link></p>}
     </section>
   )
 }
 
 export default function Inbox() {
-  const { items, counts, loaded, actionsFailed, officeFailed } = useInbox()
+  const { items, counts, loaded, actionsFailed, officeFailed, roster, reloadOffice } = useInbox()
   const [params, setParams] = useSearchParams()
   const tab = INBOX_KINDS.some(([k]) => k === params.get('tab')) ? params.get('tab') : 'all'
   const shown = tab === 'all' ? items : items.filter(i => i.kind === tab)
@@ -45,7 +55,7 @@ export default function Inbox() {
       {actionsFailed && <div className="hy-card"><p>讀不到 AI Office，待確認事項可能不完整。</p></div>}
       {officeFailed && <div className="hy-card"><p>讀不到 Bot Office，待決定事項可能不完整。</p></div>}
       {loaded && !shown.length && <div className="hy-card"><p>{tab === 'all' ? '目前沒有任何訊息。' : EMPTY[tab]}</p></div>}
-      {shown.map(it => <Card key={it.id} it={it} />)}
+      {shown.map(it => <Card key={it.id} it={it} projects={roster?.office?.projects || []} onSaved={reloadOffice} />)}
     </div>
   )
 }

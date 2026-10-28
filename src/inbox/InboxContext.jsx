@@ -27,5 +27,5 @@ export function InboxProvider({ children }) {
   }), [roster.office, roster.bots, actions, info.list, info.sched, info.today])
   const counts = useMemo(() => inboxCounts(items), [items])
   const loaded = roster.loaded && actions !== undefined
-  return <Ctx.Provider value={{ info, roster, items, counts, loaded, actionsFailed: actions === null, officeFailed: roster.loaded && !roster.office && !roster.officeEmpty }}>{children}</Ctx.Provider>
+  return <Ctx.Provider value={{ info, roster, items, counts, loaded, reloadOffice: roster.reloadOffice, actionsFailed: actions === null, officeFailed: roster.loaded && !roster.office && !roster.officeEmpty }}>{children}</Ctx.Provider>
 }

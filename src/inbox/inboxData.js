@@ -23,7 +23,8 @@ export function buildInbox({ decisions = [], projects = [], actions = [], bots =
       if (it.level !== 'bad' || it.go === 'board') continue
       const r = ROSTER.find(x => x.id === id)
       const to = GO[it.go] || (it.go === 'memory' && r?.persona ? '/agent/' + r.persona : null)
-      items.push({ id: `pb:${id}:${it.text}`, kind: 'problem', source: nameOf(id), meta: '', title: it.text, detail: '', to, action: to ? '處理' : '' })
+      const assignOwner = it.handle === 'assign-owner' || String(it.text || '').startsWith('專案歸屬：')
+      items.push({ id: assignOwner ? `pb:${id}:assign-owner` : `pb:${id}:${it.text}`, kind: 'problem', source: nameOf(id), meta: '', title: it.text, detail: '', to: assignOwner ? null : to, action: (to || assignOwner) ? '處理' : '', assignOwner })
     }
   }
   if (Array.isArray(todos)) {

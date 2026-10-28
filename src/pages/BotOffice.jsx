@@ -9,6 +9,8 @@ import { OfficeSnapshot, OfficeJournal, OfficeMeeting, OfficeExecution, OfficeRe
 import { TAB_NOTES, milestones } from '../lib/aiOffice.mjs'
 import OfficeHome from './OfficeHome'
 import {officeView, officeMilestones, officePlan, currentMilestoneId, milestoneProgress, executionRounds, isHyOwnerSession, openFollowUpCount} from '../lib/botOfficeView.mjs'
+import { useInbox } from '../inbox/InboxContext'
+import OwnerBotPicker from '../components/OwnerBotPicker'
 
 const NOTES = TAB_NOTES
 const when = value => value ? new Date(value*1000).toLocaleString('zh-TW',{timeZone:'Asia/Taipei',hour12:false}) : '尚未記錄'
@@ -21,6 +23,7 @@ function DecisionList({items, filter, setFilter, reload}) {
 const progressLabel = rows => { const count = milestoneProgress(rows); return count.total ? { ...count, label: `里程碑 ${count.done}／${count.total}` } : null }
 
 export default function BotOffice() {
+  const hub = useInbox()
   const [data, setData] = useState(null), [error, setError] = useState(null), [loading, setLoading] = useState(true), [deleteNote, setDeleteNote] = useState('')
   const [projectId, setProjectId] = useState(null), [tab, setTab] = useState('overview'), [decisionFilter, setDecisionFilter] = useState('open'), [editing, setEditing] = useState(false), [creating,setCreating] = useState(false), [selectedWork,setSelectedWork] = useState(null)
   const generation = useRef(0), controller = useRef(null), initialLoad = useRef(true)
@@ -63,7 +66,10 @@ export default function BotOffice() {
     {data?.stale && <p className="bo-notice" role="status">資料過期：目前顯示後端保留的舊資料。</p>}
     {deleteNote && <p className="bo-notice" role="status">{deleteNote}</p>}
     {error && <section className="ao-card" role={error.kind==='empty'?'status':'alert'}><h2>{error.kind==='empty'?'尚無資料':error.kind==='auth'?'請重新登入':'暫時無法更新'}</h2><p>{error.message}</p><button onClick={error.kind==='auth'?expireSession:reload}>{error.kind==='auth'?'重新登入':'重試讀取'}</button></section>}
-    {!project && <OfficeHome title="Bot Office" projects={views} details={details} inbox={inbox} loaded={!loading} error={null} creating={creating} onReload={reload} onCreate={()=>setCreating(v=>!v)} onSelect={id=>{setDeleteNote('');setProjectId(id);setTab('overview');setDecisionFilter('open');setEditing(false);setSelectedWork(null)}} creation={creating&&<OfficeRequest type="new_project" projects={data?.projects || []} inline reload={reload}/>} showModelsLink={false} activeTileLabel="執行中專案" activeCount={(data?.projects || []).filter(item => item.stage === 'running').length} progressOf={item => progressLabel(item._milestoneRows)} progressEmpty="里程碑尚未提供" hidePackageGap/>} 
+    {!project && <>
+      <OwnerBotPicker projects={data?.projects || []} onSaved={async () => { await reload(); await hub?.reloadOffice?.() }} />
+      <OfficeHome title="Bot Office" projects={views} details={details} inbox={inbox} loaded={!loading} error={null} creating={creating} onReload={reload} onCreate={()=>setCreating(v=>!v)} onSelect={id=>{setDeleteNote('');setProjectId(id);setTab('overview');setDecisionFilter('open');setEditing(false);setSelectedWork(null)}} creation={creating&&<OfficeRequest type="new_project" projects={data?.projects || []} inline reload={reload}/>} showModelsLink={false} activeTileLabel="執行中專案" activeCount={(data?.projects || []).filter(item => item.stage === 'running').length} progressOf={item => progressLabel(item._milestoneRows)} progressEmpty="里程碑尚未提供" hidePackageGap/>
+    </>} 
     {project && view && <section className="ao ao-project">
       <button className="ao-back" onClick={()=>{setProjectId(null);setEditing(false)}}>‹ Bot Office</button>
       <header className="ao-header"><div className="ao-header-top"><h1>{project.title}</h1><span className="ao-type">{project.island}</span><Pill project={project.pending ? {...project,tone:'you',stageLabel:project.stage==='assigned'&&project.decisions.some(d=>d.kind==='intake')?'等 HY 回答':'待你決定'} : project}/><div className="ao-header-actions"><button aria-expanded={editing} onClick={()=>setEditing(v=>!v)}>編輯專案</button>{hy ? <div className="cc5"><OfficeDelete project={project} updatedRaw={data.updatedRaw} onDeleted={async note => { setDeleteNote(typeof note === 'string' ? note : ''); setProjectId(null); await reload() }} /></div> : <span className="ao-muted">刪除專案僅限 HY 本人</span>}</div></div><p className="ao-goal" title={view.goal}>{view.goal||'目標尚未記錄'}</p><div className="ao-header-meta"><span>階段 <b>{view.phase} {view.milestone_id||''}</b></span><span>里程碑 <b>{milestoneRows.length ? `${milestoneProgress(milestoneRows).done}／${milestoneRows.length}` : '尚未提供'}</b></span><span>開始 <b>{when(view.started_at)}</b></span><span>最近紀錄 <b>{when(view.updated_at)}</b></span>{project.folderUrl&&<span>Drive <a href={project.folderUrl} target="_blank" rel="noopener noreferrer">專案資料夾 ↗</a></span>}</div></header>
