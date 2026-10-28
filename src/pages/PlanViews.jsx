@@ -1,8 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
-import { request } from '../aiWorkV5Data'
-import { digestPlan, splitSections, docStats, capacityView } from '../lib/planDigest.mjs'
+import { digestPlan, splitSections, docStats } from '../lib/planDigest.mjs'
 import { laneLabel } from '../lib/lanes'
 
 const Empty = ({ children }) => <p className="ao-empty">{children}</p>
@@ -101,15 +100,3 @@ export function PlanDocument({ project, plan, focus }) {
 }
 
 // 資料空間（後端單檔上限）。70% 以上才出現；舊版後端沒有這個端點就什麼都不顯示。
-export function CapacityBanner() {
-  const [view, setView] = useState(null)
-  useEffect(() => {
-    let alive = true
-    request('/capacity').then(c => { if (alive) setView(capacityView(c)) }).catch(() => {})
-    return () => { alive = false }
-  }, [])
-  if (!view) return null
-  return <div className={view.tone === 'bad' ? 'ao-capacity is-bad' : 'ao-capacity'} role={view.tone === 'bad' ? 'alert' : 'status'}>
-    <span className="hy-pill" data-s={view.tone}>{view.tone === 'bad' ? '已滿' : '快滿了'} {view.percent}%</span> {view.text}
-  </div>
-}

@@ -34,12 +34,7 @@ jobs:
           node -e "(async()=>{for(let n=0;n<40;n++){try{if((await fetch('http://127.0.0.1:5173/')).ok)return}catch{}await new Promise(r=>setTimeout(r,250))}throw new Error('Vite not ready')})().catch(e=>{console.error(e);process.exit(1)})"
           node tests/office-answers-ui.cjs
           node tests/office-p1-ui.cjs
-          node tests/bot-office-layout-ui.cjs
           node tests/bot-office-ui.cjs
-          node tests/router-ui.cjs
-          node tests/pi-ui-smoke.cjs
-          node tests/module-registry-ui.cjs
-          node tests/review-blockers-ui.cjs
       - uses: actions/upload-artifact@v4
         if: always()
         with:

@@ -1,6 +1,9 @@
 import { useState, useEffect, useRef } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { ClipboardList, Pencil } from 'lucide-react'
 import { homeSummary } from '../mock/data'
+import OfficeHomeSummary from '../components/OfficeHomeSummary'
+import { useInbox } from '../inbox/InboxContext'
 import { fetchTodaySchedule, fetchAllMilestones, fetchWeeklyChange, postWeeklyChange } from '../api'
 
 let weeklyChangeCache
@@ -312,7 +315,8 @@ function WeeklyChangeCard() {
 }
 
 export default function Home() {
-
+  const navigate = useNavigate()
+  const { roster, officeFailed } = useInbox()
   return (
     <div>
       <div className="flex items-center justify-between mb-6">
@@ -324,6 +328,10 @@ export default function Home() {
 
       <div>
           <WeeklyChangeCard />
+          <section className="mb-4">
+            <h2 className="mb-3 text-sm font-semibold text-slate-600">Bot Office</h2>
+            <OfficeHomeSummary totals={roster.office?.totals} failed={officeFailed} onOpen={() => navigate('/bot-office')} />
+          </section>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <TodoSection />
             <ScheduleSection />

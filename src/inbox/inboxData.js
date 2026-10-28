@@ -8,7 +8,7 @@ import { deriveAttention } from '../life-island/worldData.js'
 export const INBOX_KINDS = [['decide', '待我處理'], ['problem', '問題回報'], ['overdue', '過期'], ['today', '今日任務']]
 const normDue = due => (due ? String(due).replace(/\//g, '-') : '')
 const nameOf = id => ROSTER.find(r => r.id === id)?.name || id
-const GO = { office: '/bot-office', models: '/ai-army?tab=models' }
+const GO = { office: '/bot-office' }
 
 export function buildInbox({ decisions = [], projects = [], bots = {}, todos = null, sched = null, today = '' } = {}) {
   const items = []

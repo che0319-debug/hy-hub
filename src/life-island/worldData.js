@@ -1,5 +1,5 @@
 // 小人資料的轉換層：純函式，不碰網路也不碰畫面。
-// 來源：Bot Office（專案與決策，由 Atlas 寫入）、首頁待辦、memory-health、AI Work runner 活動。
+// 來源：Bot Office（專案與決策，由 Atlas 寫入）、首頁待辦、memory-health。
 // 「我的小幫手」分頁與 3D 世界都讀這裡整理好的格式；後端欄位改了只要改這裡。
 import { HELPERS } from '../botRoster.js'
 import { freshness } from '../lib/memoryFreshness.js'
@@ -114,7 +114,6 @@ export function deriveAtlas({ office, officeEmpty, failed = {}, todoFailed = fal
     officeEmpty ? '尚無資料' : failed.office ? '無法判斷' : office?.stale ? '資料標示為過期' : ageH === null ? '沒有更新時間' : ageH <= ATLAS_STALE_HOURS ? (ageH < 1 ? '剛剛' : `${Math.round(ageH)} 小時前`) : `${Math.round(ageH)} 小時沒更新`, 'office')
   check('專案歸屬', !(unowned > 0), unowned > 0 ? `${unowned} 個專案沒有指定 owner_bot` : '全部有歸屬', 'office')
   check('記憶健康資料', !failed.memory, failed.memory ? '讀取失敗' : '正常')
-  check('AI 工作包活動', !failed.runners, failed.runners ? '讀取失敗' : '正常', 'models')
   check('待辦資料', !todoFailed, todoFailed ? '讀取失敗' : '正常')
   const attention = checks.filter(c => !c.ok).map(c => ({ level: 'bad', text: `${c.label}：${c.detail}`, go: c.go }))
   return {

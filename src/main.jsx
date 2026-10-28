@@ -26,12 +26,9 @@ function LegacyAIWorkRedirect() {
   return <Navigate to={'/ai-work-v5' + location.search} replace />
 }
 
-// 舊網址 /expert-team?tab=… → /ai-army?tab=…（其他參數如 owner-cutover 一併保留）
+// 舊網址 /expert-team → /ai-army（專家團等分頁已下線，只剩小幫手）
 function ExpertTeamRedirect() {
-  const location = useLocation()
-  const params = new URLSearchParams(location.search)
-  if (!params.get('tab')) params.set('tab', 'experts')
-  return <Navigate to={'/ai-army?' + params.toString()} replace />
+  return <Navigate to="/ai-army" replace />
 }
 
 function AppRoutes() {
