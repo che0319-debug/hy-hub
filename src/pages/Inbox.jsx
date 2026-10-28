@@ -2,7 +2,7 @@
 import { useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import { useInbox } from '../inbox/InboxContext'
-import { INBOX_KINDS } from '../inbox/inboxData.js'
+import { INBOX_KINDS, assignOwnerPanelId } from '../inbox/inboxData.js'
 import OwnerBotPicker from '../components/OwnerBotPicker'
 import '../../public/hy-ui/hy-ui.css'
 
@@ -16,7 +16,7 @@ const btn = { minHeight: 44, display: 'inline-flex', alignItems: 'center' }
 function Card({ it, projects, onSaved }) {
   const [open, setOpen] = useState(false)
   const needs = it.kind === 'decide'
-  const panelId = 'assign-owner-panel'
+  const panelId = assignOwnerPanelId(it.id)
   return (
     <section className={'hy-card' + (needs ? ' needs-you' : '')}>
       <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>

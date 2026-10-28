@@ -1,7 +1,7 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import { assignProjectOwnerBot, mapOffice, ownerBotFailureMessage } from '../src/botOfficeData.js'
-import { buildInbox } from '../src/inbox/inboxData.js'
+import { assignOwnerPanelId, buildInbox, isAssignOwnerAttention } from '../src/inbox/inboxData.js'
 import { deriveAtlas, deriveOffice, ownerBotChoices, unownedProjects } from '../src/life-island/worldData.js'
 
 const buildings = [
@@ -90,8 +90,13 @@ test('負責 Bot 的錯誤碼有白話訊息', async () => {
     [401, { error: 'unauthorized' }, '登入已過期，請重新登入。', 'auth'],
     [409, { error: 'office_owner_changed' }, '資料已被更新，請重新讀取', 'conflict'],
     [409, { error: 'office_revision_conflict' }, '資料已被更新，請重新讀取', 'conflict'],
-    [404, { error: 'not_found' }, '此功能尚未上線或專案不存在', 'error'],
+    [404, { error: 'office_project_not_found' }, '此功能尚未上線或專案不存在', 'error'],
     [405, { error: 'method_not_allowed' }, '此功能尚未上線或專案不存在', 'error'],
+    [409, { error: 'office_request_conflict' }, '同一個要求編號已經寫入過，但這次內容不同，所以沒有再寫。請重新讀取。', 'conflict'],
+    [400, { error: 'office_project_invalid' }, '內容不符合規定，沒有寫入。', 'error'],
+    [400, { error: 'office_owner_bot_invalid' }, '負責 Bot 不在可選名單裡，沒有寫入。', 'error'],
+    [502, { error: 'brain_data_invalid' }, '後端資料異常，沒有寫入。', 'error'],
+    [502, { error: 'brain_write_failed' }, '儲存沒有完成確認，不確定有沒有寫入。請重新讀取確認。', 'conflict'],
   ]
   for (const [status, body, message, kind] of cases) {
     assert.equal(ownerBotFailureMessage(status, body), message)
@@ -104,6 +109,13 @@ test('負責 Bot 的錯誤碼有白話訊息', async () => {
   }
   assert.match(ownerBotFailureMessage(409, { error: 'office_project_deleting' }), /正在刪除中/)
   assert.doesNotMatch(ownerBotFailureMessage(409, { error: 'office_project_deleting' }), /資料已被更新/)
+  assert.match(ownerBotFailureMessage(409, { error: 'office_request_conflict' }), /已經寫入過/)
+  assert.match(ownerBotFailureMessage(409, { error: 'office_request_conflict' }), /沒有再寫/)
+  assert.doesNotMatch(ownerBotFailureMessage(409, { error: 'office_request_conflict' }), /資料剛更新過/)
+  assert.match(ownerBotFailureMessage(400, { error: 'office_project_invalid' }), /沒有寫入/)
+  assert.match(ownerBotFailureMessage(502, { error: 'brain_data_invalid' }), /沒有寫入/)
+  assert.match(ownerBotFailureMessage(502, { error: 'brain_write_failed' }), /不確定有沒有寫入/)
+  assert.doesNotMatch(ownerBotFailureMessage(502, { error: 'brain_write_failed' }), /異常，沒有寫入/)
   assert.equal(ownerBotFailureMessage(0, {}), '無法連線，請稍後重試。')
   await assert.rejects(
     assignProjectOwnerBot('p-001', { request_id: 'r', owner_bot: 'sam' }, { fetcher: async () => { throw new Error('offline') } }),
@@ -138,6 +150,16 @@ test('Inbox 專案歸屬卡可選擇負責 Bot，其他問題卡仍是連結', (
   const fromText = buildInbox({ bots: { atlas: { attention: [{ level: 'bad', text: '專案歸屬：2 個專案沒有指定 owner_bot', go: 'office' }] } } })
   assert.equal(fromText[0].assignOwner, true)
   assert.equal(fromText[0].to, null)
+  const otherTitle = buildInbox({ bots: { atlas: { attention: [{ level: 'bad', text: '專案歸屬：請到辦公室看', go: 'office' }] } } })
+  assert.equal(otherTitle[0].assignOwner, false)
+  assert.equal(otherTitle[0].to, '/bot-office')
+  assert.equal(otherTitle[0].action, '處理')
+  const byHandle = buildInbox({ bots: { atlas: { attention: [{ level: 'bad', text: '專案歸屬：其他說明', go: 'office', handle: 'assign-owner' }] } } })
+  assert.equal(byHandle[0].assignOwner, true)
+  assert.equal(byHandle[0].to, null)
+  assert.equal(isAssignOwnerAttention({ text: '專案歸屬：1 個專案沒有指定 owner_bot。' }), false)
+  assert.equal(assignOwnerPanelId('pb:atlas:assign-owner'), 'assign-owner-pb:atlas:assign-owner')
+  assert.notEqual(assignOwnerPanelId('pb:atlas:assign-owner'), assignOwnerPanelId('pb:family:assign-owner'))
 })
 
 test('deriveAtlas 的專案歸屬異常帶 assign-owner', () => {

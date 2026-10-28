@@ -9,6 +9,18 @@ export const INBOX_KINDS = [['decide', '待我處理'], ['problem', '問題回�
 const normDue = due => (due ? String(due).replace(/\//g, '-') : '')
 const nameOf = id => ROSTER.find(r => r.id === id)?.name || id
 const GO = { office: '/bot-office', models: '/ai-army?tab=models' }
+// 後援只認 Atlas 現在這句。其他「專案歸屬：」開頭的紅字仍走原本的連結。
+const ASSIGN_OWNER_TEXT = /^專案歸屬：\d+ 個專案沒有指定 owner_bot$/
+
+export function isAssignOwnerAttention(item) {
+  if (!item || typeof item !== 'object') return false
+  if (item.handle === 'assign-owner') return true
+  return ASSIGN_OWNER_TEXT.test(String(item.text || ''))
+}
+
+export function assignOwnerPanelId(cardId) {
+  return `assign-owner-${cardId}`
+}
 
 export function buildInbox({ decisions = [], projects = [], actions = [], bots = {}, todos = null, sched = null, today = '' } = {}) {
   const items = []
@@ -23,7 +35,7 @@ export function buildInbox({ decisions = [], projects = [], actions = [], bots =
       if (it.level !== 'bad' || it.go === 'board') continue
       const r = ROSTER.find(x => x.id === id)
       const to = GO[it.go] || (it.go === 'memory' && r?.persona ? '/agent/' + r.persona : null)
-      const assignOwner = it.handle === 'assign-owner' || String(it.text || '').startsWith('專案歸屬：')
+      const assignOwner = isAssignOwnerAttention(it)
       items.push({ id: assignOwner ? `pb:${id}:assign-owner` : `pb:${id}:${it.text}`, kind: 'problem', source: nameOf(id), meta: '', title: it.text, detail: '', to: assignOwner ? null : to, action: (to || assignOwner) ? '處理' : '', assignOwner })
     }
   }

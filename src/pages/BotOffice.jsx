@@ -11,6 +11,7 @@ import OfficeHome from './OfficeHome'
 import {officeView, officeMilestones, officePlan, currentMilestoneId, milestoneProgress, executionRounds, isHyOwnerSession, openFollowUpCount} from '../lib/botOfficeView.mjs'
 import { useInbox } from '../inbox/InboxContext'
 import OwnerBotPicker from '../components/OwnerBotPicker'
+import { createLatestRead, readOfficeLatest } from '../lib/latestRead.js'
 
 const NOTES = TAB_NOTES
 const when = value => value ? new Date(value*1000).toLocaleString('zh-TW',{timeZone:'Asia/Taipei',hour12:false}) : '尚未記錄'
@@ -26,24 +27,30 @@ export default function BotOffice() {
   const hub = useInbox()
   const [data, setData] = useState(null), [error, setError] = useState(null), [loading, setLoading] = useState(true), [deleteNote, setDeleteNote] = useState('')
   const [projectId, setProjectId] = useState(null), [tab, setTab] = useState('overview'), [decisionFilter, setDecisionFilter] = useState('open'), [editing, setEditing] = useState(false), [creating,setCreating] = useState(false), [selectedWork,setSelectedWork] = useState(null)
-  const generation = useRef(0), controller = useRef(null), initialLoad = useRef(true)
-  const reload = useCallback(async () => {
-    const version = ++generation.current
-    controller.current?.abort(); controller.current = new AbortController()
-    setLoading(initialLoad.current)
-    try {
-      const next = await loadBotOffice({ headers: authHeaders(), signal: controller.current.signal })
-      if (version === generation.current) { setData(next); setError(null) }
-    } catch (e) {
-      if (version === generation.current && e.name !== 'AbortError') {
-        setError({ kind: e.kind || 'error', message: e.message })
-        if (e.kind === 'auth' || e.kind === 'empty') setData(null)
-      }
-    } finally { if (version === generation.current) { initialLoad.current = false; setLoading(false) } }
-  }, [])
+  const reads = useRef(null)
+  if (!reads.current) reads.current = createLatestRead()
+  const controller = useRef(null), initialLoad = useRef(true)
+  // 輪詢、表單與刪除仍用 reload()：失敗只留原本的錯誤卡，promise 不外丟。
+  // 選擇器要分辨重新讀取失敗，所以用會 reject 的 reloadApplied()。
+  const runRead = useCallback(() => readOfficeLatest(reads.current, {
+    load: () => {
+      controller.current?.abort(); controller.current = new AbortController()
+      setLoading(initialLoad.current)
+      return loadBotOffice({ headers: authHeaders(), signal: controller.current.signal })
+    },
+    onApply(next) { setData(next); setError(null) },
+    onEmpty(error) { setError({ kind: error.kind || 'error', message: error.message }); setData(null) },
+    onFail(error) {
+      setError({ kind: error.kind || 'error', message: error.message })
+      if (error.kind === 'auth') setData(null)
+    },
+    onSettled() { initialLoad.current = false; setLoading(false) },
+  }), [])
+  const reload = useCallback(() => runRead().catch(() => {}), [runRead])
+  const reloadApplied = useCallback(() => runRead(), [runRead])
   useEffect(() => {
     reload(); const interval = setInterval(reload, REFRESH_MS)
-    return () => { generation.current++; controller.current?.abort(); clearInterval(interval) }
+    return () => { reads.current.bump(); controller.current?.abort(); clearInterval(interval) }
   }, [reload])
   const project = data?.projects.find(p => p.id === projectId)
   const report = useOfficeReport(project?.id, data?.updatedRaw)
@@ -67,7 +74,7 @@ export default function BotOffice() {
     {deleteNote && <p className="bo-notice" role="status">{deleteNote}</p>}
     {error && <section className="ao-card" role={error.kind==='empty'?'status':'alert'}><h2>{error.kind==='empty'?'尚無資料':error.kind==='auth'?'請重新登入':'暫時無法更新'}</h2><p>{error.message}</p><button onClick={error.kind==='auth'?expireSession:reload}>{error.kind==='auth'?'重新登入':'重試讀取'}</button></section>}
     {!project && <>
-      <OwnerBotPicker projects={data?.projects || []} onSaved={async () => { await reload(); await hub?.reloadOffice?.() }} />
+      <OwnerBotPicker projects={data?.projects || []} onSaved={async () => { await reloadApplied(); await hub?.reloadOffice?.() }} />
       <OfficeHome title="Bot Office" projects={views} details={details} inbox={inbox} loaded={!loading} error={null} creating={creating} onReload={reload} onCreate={()=>setCreating(v=>!v)} onSelect={id=>{setDeleteNote('');setProjectId(id);setTab('overview');setDecisionFilter('open');setEditing(false);setSelectedWork(null)}} creation={creating&&<OfficeRequest type="new_project" projects={data?.projects || []} inline reload={reload}/>} showModelsLink={false} activeTileLabel="執行中專案" activeCount={(data?.projects || []).filter(item => item.stage === 'running').length} progressOf={item => progressLabel(item._milestoneRows)} progressEmpty="里程碑尚未提供" hidePackageGap/>
     </>} 
     {project && view && <section className="ao ao-project">

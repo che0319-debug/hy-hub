@@ -4,10 +4,11 @@ import '../../public/hy-ui/hy-ui.css'
 import { assignProjectOwnerBot } from '../botOfficeData'
 import { authHeaders, expireSession } from '../auth'
 import { ownerBotChoices, unownedProjects } from '../life-island/worldData'
+import { feedbackAfterReread, feedbackAfterSave } from '../lib/ownerBotUi.js'
 
 const choices = ownerBotChoices()
 const tap = { minHeight: 44 }
-const selectStyle = { ...tap, width: '100%', maxWidth: '100%', minWidth: 0, border: '1px solid var(--hy-line)', borderRadius: 8, padding: '0 12px', background: 'var(--hy-surface)', color: 'var(--hy-ink)', font: 'inherit', fontSize: 15 }
+const selectStyle = { ...tap, width: '100%', maxWidth: '100%', minWidth: 0, border: '1px solid var(--hy-line)', borderRadius: 8, padding: '0 12px', background: 'var(--hy-surface)', color: 'var(--hy-ink)', fontSize: 16 }
 
 export default function OwnerBotPicker({ projects, onSaved, heading = true }) {
   const rows = unownedProjects(projects)
@@ -33,21 +34,22 @@ export default function OwnerBotPicker({ projects, onSaved, heading = true }) {
         expected_revision: row.revision,
       }, { headers: authHeaders() })
       setDraft(prev => ({ ...prev, [row.id]: '' }))
-      patch(row.id, { notice: `已把負責 Bot 設為 ${label}。`, error: '', kind: '' })
-      try { await onSaved?.() }
-      catch { patch(row.id, { notice: '', error: '已儲存，但重新讀取失敗。請按重新讀取。', kind: 'conflict' }) }
+      try {
+        await onSaved?.()
+        patch(row.id, feedbackAfterSave(true, label))
+      } catch { patch(row.id, feedbackAfterSave(false, label)) }
     } catch (error) {
-      patch(row.id, { error: error?.message || '沒有儲存成功，請稍後重試。', kind: error?.kind || 'error', notice: '' })
+      patch(row.id, { error: error?.message || '沒有儲存成功，請稍後重試。', kind: error?.kind || 'error', notice: '', label: '' })
     } finally { setBusyId('') }
   }
   async function reread(id) {
     setBusyId(id)
+    const previous = feedback[id] || {}
     try {
       await onSaved?.()
-      patch(id, { error: '', kind: '' })
-    } catch {
-      patch(id, { error: '重新讀取失敗，請稍後再試。', kind: 'error' })
-    } finally { setBusyId('') }
+      patch(id, feedbackAfterReread(true, previous))
+    } catch { patch(id, feedbackAfterReread(false, previous)) }
+    finally { setBusyId('') }
   }
   return (
     <section className="hy hy-card" aria-label="尚未指定負責 Bot" style={heading ? { marginBottom: 16 } : { marginTop: 12, padding: 0, border: 0, background: 'transparent', boxShadow: 'none' }}>
@@ -67,7 +69,7 @@ export default function OwnerBotPicker({ projects, onSaved, heading = true }) {
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, alignItems: 'flex-end', minWidth: 0 }}>
                 <label style={{ flex: '1 1 12rem', minWidth: 0 }}>
                   <span className="hy-note">負責 Bot</span>
-                  <select aria-label={`${row.title} 負責 Bot`} value={draft[row.id] || ''} disabled={busy} style={selectStyle} onChange={e => { setDraft(prev => ({ ...prev, [row.id]: e.target.value })); patch(row.id, { notice: '' }) }}>
+                  <select className="owner-bot-select" aria-label={`${row.title} 負責 Bot`} value={draft[row.id] || ''} disabled={busy} style={selectStyle} onChange={e => { setDraft(prev => ({ ...prev, [row.id]: e.target.value })); patch(row.id, { notice: '' }) }}>
                     <option value="">請選擇</option>
                     {choices.map(c => <option key={c.value} value={c.value}>{c.label}</option>)}
                   </select>

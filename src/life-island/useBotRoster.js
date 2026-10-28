@@ -7,6 +7,7 @@ import { authHeaders } from '../auth'
 import { loadBotOffice } from '../botOfficeData'
 import { HELPERS } from '../botRoster'
 import { deriveAtlas, deriveOffice, deriveRunners, deriveSummary, deriveTodos } from './worldData'
+import { createLatestRead, readOfficeLatest } from '../lib/latestRead.js'
 
 const EVERY = 60 * 1000
 
@@ -18,22 +19,20 @@ export function useBotRoster(info) {
   const [failed, setFailed] = useState({ office: false, memory: false, runners: false })
   const [done, setDone] = useState({ office: false, memory: false, runners: false })
   const reloadOfficeRef = useRef(() => Promise.resolve())
-  const officeGen = useRef(0)
 
   useEffect(() => {
     let alive = true
     const mark = (k, bad) => { if (!alive) return; setFailed(f => (f[k] === bad ? f : { ...f, [k]: bad })); setDone(d => (d[k] ? d : { ...d, [k]: true })) }
-    const loadOffice = () => {
-      const ticket = ++officeGen.current
-      return loadBotOffice({ headers: authHeaders() })
-        .then(d => { if (alive && ticket === officeGen.current) { setOffice(d); setOfficeEmpty(false); mark('office', false) } return d })
-        .catch(e => {
-          if (!alive || ticket !== officeGen.current) return null
-          if (e?.kind === 'empty') { setOffice(null); setOfficeEmpty(true); mark('office', false) }
-          else mark('office', true)
-          throw e
-        })
-    }
+    const reads = createLatestRead()
+    // 輪詢自己吞掉拒絕，failed.office 的亮法不變。reloadOffice 失敗要 reject，選擇器才不會當成成功。
+    // empty 已經寫進 state 就 resolve，不再往外丟。
+    const loadOffice = () => readOfficeLatest(reads, {
+      isActive: isCurrent => alive && isCurrent(),
+      load: () => loadBotOffice({ headers: authHeaders() }),
+      onApply(data) { setOffice(data); setOfficeEmpty(false); mark('office', false) },
+      onEmpty() { setOffice(null); setOfficeEmpty(true); mark('office', false) },
+      onFail() { mark('office', true) },
+    })
     reloadOfficeRef.current = loadOffice
     const load = () => {
       loadOffice().catch(() => {})
@@ -44,7 +43,7 @@ export function useBotRoster(info) {
     const every = setInterval(load, EVERY)
     const onVis = () => { if (document.visibilityState === 'visible') load() }
     document.addEventListener('visibilitychange', onVis); window.addEventListener('focus', onVis)
-    return () => { alive = false; reloadOfficeRef.current = () => Promise.resolve(); clearInterval(every); document.removeEventListener('visibilitychange', onVis); window.removeEventListener('focus', onVis) }
+    return () => { alive = false; reads.bump(); reloadOfficeRef.current = () => Promise.resolve(); clearInterval(every); document.removeEventListener('visibilitychange', onVis); window.removeEventListener('focus', onVis) }
   }, [])
 
   const reloadOffice = useCallback(() => reloadOfficeRef.current(), [])
