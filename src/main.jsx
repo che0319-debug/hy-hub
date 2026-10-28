@@ -12,7 +12,6 @@ import Line950157 from './pages/Line950157'
 import LineFamily from './pages/LineFamily'
 import LineSam from './pages/LineSam'
 import Settings from './pages/Settings'
-import SystemArchitecture from './pages/SystemArchitecture'
 import AgentConfig from './pages/AgentConfig'
 import Goals from './pages/Goals'
 import Strategy from './pages/Strategy'
@@ -60,7 +59,7 @@ function AppRoutes() {
         <Route path="agent/:id" element={<AgentConfig />} />
         <Route path="goals" element={<Goals />} />
         <Route path="strategy" element={<Strategy />} />
-        <Route path="system-architecture" element={<SystemArchitecture />} />
+        <Route path="system-architecture" element={<Navigate to="/" replace />} />
         <Route path="expert-team" element={<ExpertTeamRedirect />} />
         <Route path="settings" element={<Settings />} />
         <Route path="life-island" element={<Suspense fallback={<p className="hy-lede">載入 HY Life 島…</p>}><LifeIsland /></Suspense>} />

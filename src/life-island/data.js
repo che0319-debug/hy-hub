@@ -28,9 +28,8 @@ export const CENTRAL_ISLAND = {
     {
       id: 'syscenter', title: '系統中心', type: 'system', form: 'syscenter', height: 3.0, q: -2, r: 0,
       kind: '管理', agent: 'Atlas', status: '現有',
-      blurb: '管理系統用的頁面：架構、專家團、設定、Agent 設定。',
+      blurb: '管理系統用的頁面：AI 軍團、設定、Agent 設定。',
       links: [
-        { label: '系統架構', to: '/system-architecture' },
         { label: 'AI 軍團', to: '/ai-army' },
         { label: '設定', to: '/settings' },
       ],
