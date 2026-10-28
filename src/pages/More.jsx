@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom'
 import '../../public/hy-ui/hy-ui.css'
 
 const GROUPS = [
-  ['系統', [['/home', '首頁（今日待辦與行程）'], ['/ai-army', 'AI 軍團'], ['/ai-work-v5', 'AI Office'], ['/system-architecture', '系統架構']]],
+  ['系統', [['/home', '首頁（今日待辦與行程）'], ['/ai-army', 'AI 軍團'], ['/system-architecture', '系統架構']]],
   ['規劃', [['/goals', '人生目標'], ['/strategy', '戰略盤']]],
   ['Bot 團隊', [['/line/hy', 'HY'], ['/line/family', '小因'], ['/line/950157', '950157'], ['/line/sam', 'Sam']]],
   ['其他', [['/settings', '設定']]],

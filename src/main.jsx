@@ -5,7 +5,6 @@ import './index.css'
 import App from './App'
 import Home from './pages/Home'
 import AIArmy from './pages/AIArmy'
-import AIOfficeV1 from './pages/AIOfficeV1'
 import BotOffice from './pages/BotOffice'
 import LineHY from './pages/LineHY'
 import LineXiaoyin from './pages/LineXiaoyin'
@@ -50,7 +49,7 @@ function AppRoutes() {
         <Route path="memory" element={<Navigate to="/ai-army?tab=helpers" replace />} />
         <Route path="workspace/*" element={<LegacyAIWorkRedirect />} />
         <Route path="ai-work" element={<Navigate to="/ai-work-v5" replace />} />
-        <Route path="ai-work-v5" element={<AIOfficeV1 />} />
+        <Route path="ai-work-v5" element={<Navigate to="/bot-office" replace />} />
         <Route path="bot-office" element={<BotOffice />} />
         <Route path="ai-work-v3-ready" element={<Navigate to="/ai-work-v5" replace />} />
         <Route path="ai-work-test/*" element={<Navigate to="/ai-work-v5" replace />} />

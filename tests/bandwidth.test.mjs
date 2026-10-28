@@ -24,9 +24,6 @@ test('reject non-advancing pages rather than loop forever', async () => {
   await assert.rejects(readProjectSummary(async () => ({packages:[],pagination:{packages:{next_offset:100}}}), '/projects/p'), /未前進/)
 })
 test('detail views request full and lists use summaries', () => {
-  const office = fs.readFileSync(new URL('../src/pages/AIOfficeV1.jsx', import.meta.url), 'utf8')
   const control = fs.readFileSync(new URL('../src/pages/ControlCenterV5.jsx', import.meta.url), 'utf8')
-  assert.match(office, /readProjectSummary\(office, ppath\(p.id\)\)/)
-  assert.match(office, /ppath\(id\).*detail=full/)
   assert.match(control, /encodeURIComponent\(id\).*detail=full/)
 })

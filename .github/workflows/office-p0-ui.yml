@@ -39,8 +39,6 @@ jobs:
           node tests/router-ui.cjs
           node tests/pi-ui-smoke.cjs
           node tests/module-registry-ui.cjs
-          node tests/ai-office-ui.cjs
-          node tests/ai-office-startup-ui.cjs
           node tests/review-blockers-ui.cjs
       - uses: actions/upload-artifact@v4
         if: always()
