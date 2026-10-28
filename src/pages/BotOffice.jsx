@@ -12,6 +12,7 @@ import {officeView, officeMilestones, officePlan, currentMilestoneId, milestoneP
 import { useInbox } from '../inbox/InboxContext'
 import OwnerBotPicker from '../components/OwnerBotPicker'
 import { createLatestRead, readOfficeLatest } from '../lib/latestRead.js'
+import { OWNER_SHARED_ROSTER_STALE, refreshAfterOwnerSave } from '../lib/ownerBotUi.js'
 
 const NOTES = TAB_NOTES
 const when = value => value ? new Date(value*1000).toLocaleString('zh-TW',{timeZone:'Asia/Taipei',hour12:false}) : '尚未記錄'
@@ -25,7 +26,7 @@ const progressLabel = rows => { const count = milestoneProgress(rows); return co
 
 export default function BotOffice() {
   const hub = useInbox()
-  const [data, setData] = useState(null), [error, setError] = useState(null), [loading, setLoading] = useState(true), [deleteNote, setDeleteNote] = useState('')
+  const [data, setData] = useState(null), [error, setError] = useState(null), [loading, setLoading] = useState(true), [deleteNote, setDeleteNote] = useState(''), [sharedNote, setSharedNote] = useState('')
   const [projectId, setProjectId] = useState(null), [tab, setTab] = useState('overview'), [decisionFilter, setDecisionFilter] = useState('open'), [editing, setEditing] = useState(false), [creating,setCreating] = useState(false), [selectedWork,setSelectedWork] = useState(null)
   const reads = useRef(null)
   if (!reads.current) reads.current = createLatestRead()
@@ -74,7 +75,17 @@ export default function BotOffice() {
     {deleteNote && <p className="bo-notice" role="status">{deleteNote}</p>}
     {error && <section className="ao-card" role={error.kind==='empty'?'status':'alert'}><h2>{error.kind==='empty'?'尚無資料':error.kind==='auth'?'請重新登入':'暫時無法更新'}</h2><p>{error.message}</p><button onClick={error.kind==='auth'?expireSession:reload}>{error.kind==='auth'?'重新登入':'重試讀取'}</button></section>}
     {!project && <>
-      <OwnerBotPicker projects={data?.projects || []} onSaved={async () => { await reloadApplied(); await hub?.reloadOffice?.() }} />
+      {sharedNote && <p className="bo-notice" role="status">{sharedNote}</p>}
+      <OwnerBotPicker projects={data?.projects || []} onSaved={async () => {
+        // 這一頁的清單先落地。共用名單失敗只留在選擇器外面，不掛到已經離開的那一列。
+        try {
+          const outcome = await refreshAfterOwnerSave(reloadApplied, hub?.reloadOffice)
+          setSharedNote(outcome === 'shared-stale' ? OWNER_SHARED_ROSTER_STALE : '')
+        } catch (failure) {
+          setSharedNote('')
+          throw failure
+        }
+      }} />
       <OfficeHome title="Bot Office" projects={views} details={details} inbox={inbox} loaded={!loading} error={null} creating={creating} onReload={reload} onCreate={()=>setCreating(v=>!v)} onSelect={id=>{setDeleteNote('');setProjectId(id);setTab('overview');setDecisionFilter('open');setEditing(false);setSelectedWork(null)}} creation={creating&&<OfficeRequest type="new_project" projects={data?.projects || []} inline reload={reload}/>} showModelsLink={false} activeTileLabel="執行中專案" activeCount={(data?.projects || []).filter(item => item.stage === 'running').length} progressOf={item => progressLabel(item._milestoneRows)} progressEmpty="里程碑尚未提供" hidePackageGap/>
     </>} 
     {project && view && <section className="ao ao-project">

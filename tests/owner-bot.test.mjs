@@ -1,6 +1,8 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import { assignProjectOwnerBot, mapOffice, ownerBotFailureMessage } from '../src/botOfficeData.js'
+import { isBotOfficePath } from '../src/lib/botOfficeRoute.js'
+import { OWNER_SHARED_ROSTER_STALE, refreshAfterOwnerSave } from '../src/lib/ownerBotUi.js'
 import { assignOwnerPanelId, buildInbox, isAssignOwnerAttention } from '../src/inbox/inboxData.js'
 import { deriveAtlas, deriveOffice, ownerBotChoices, unownedProjects } from '../src/life-island/worldData.js'
 
@@ -12,6 +14,27 @@ const buildings = [
   { id: 'p-005', title: 'Sam 的案子', owner_bot: 'sam', stage: 'running', revision: 0 },
   { id: 'p/006', title: '缺 revision', owner_bot: null, stage: 'unassigned' },
 ]
+
+test('Bot Office 路徑才停用舊端點，其他頁不受影響', () => {
+  assert.equal(isBotOfficePath('/bot-office'), true)
+  assert.equal(isBotOfficePath('/bot-office/'), true)
+  assert.equal(isBotOfficePath('/inbox'), false)
+  assert.equal(isBotOfficePath('/life-island'), false)
+  assert.equal(isBotOfficePath('/ai-work-v5'), false)
+  assert.equal(isBotOfficePath('/bot-office-legacy'), false)
+  assert.equal(isBotOfficePath(''), false)
+})
+
+test('這一頁已讀到新資料後，共用名單失敗不再當成這一列失敗', async () => {
+  let pageRead = 0
+  const outcome = await refreshAfterOwnerSave(async () => { pageRead += 1 }, async () => { throw new Error('roster down') })
+  assert.equal(pageRead, 1)
+  assert.equal(outcome, 'shared-stale')
+  assert.equal(OWNER_SHARED_ROSTER_STALE.includes('這一頁已更新'), true)
+  assert.equal(await refreshAfterOwnerSave(async () => {}, async () => 'ok'), 'saved')
+  assert.equal(await refreshAfterOwnerSave(async () => {}, undefined), 'saved')
+  await assert.rejects(refreshAfterOwnerSave(async () => { throw Object.assign(new Error('page'), { kind: 'error' }) }, async () => {}), error => error.message === 'page')
+})
 
 test('mapOffice 保留 revision 與 ownerBot，缺的 revision 當 0', () => {
   const out = mapOffice({ buildings }, { cards: [] })

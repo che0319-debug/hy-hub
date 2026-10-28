@@ -11,7 +11,7 @@ import { createLatestRead, readOfficeLatest } from '../lib/latestRead.js'
 
 const EVERY = 60 * 1000
 
-export function useBotRoster(info) {
+export function useBotRoster(info, { runnerActivity = true } = {}) {
   const [office, setOffice] = useState(null)      // mapOffice 的結果
   const [officeEmpty, setOfficeEmpty] = useState(false)   // Atlas 還沒產生第一份狀態：不是錯誤
   const [memory, setMemory] = useState(null)
@@ -37,7 +37,6 @@ export function useBotRoster(info) {
     const load = () => {
       loadOffice().catch(() => {})
       fetchMemoryHealth().then(d => { if (alive) { setMemory(d?.bots || null); mark('memory', false) } }).catch(() => mark('memory', true))
-      fetchRunnerActivity().then(d => { if (alive) { setRunners(d); mark('runners', false) } }).catch(() => mark('runners', true))
     }
     load()
     const every = setInterval(load, EVERY)
@@ -45,6 +44,22 @@ export function useBotRoster(info) {
     document.addEventListener('visibilitychange', onVis); window.addEventListener('focus', onVis)
     return () => { alive = false; reads.bump(); reloadOfficeRef.current = () => Promise.resolve(); clearInterval(every); document.removeEventListener('visibilitychange', onVis); window.removeEventListener('focus', onVis) }
   }, [])
+
+  // runner 活動走舊的 /api/ai-work-packages。Bot Office 傳 runnerActivity: false，這頁就不發。
+  // 跟 Office 讀取分開，離開 Bot Office 時立刻補讀，不必等下一輪 60 秒。
+  useEffect(() => {
+    if (!runnerActivity) return undefined
+    let alive = true
+    const mark = bad => { if (!alive) return; setFailed(f => (f.runners === bad ? f : { ...f, runners: bad })); setDone(d => (d.runners ? d : { ...d, runners: true })) }
+    const load = () => {
+      fetchRunnerActivity().then(d => { if (alive) { setRunners(d); mark(false) } }).catch(() => mark(true))
+    }
+    load()
+    const every = setInterval(load, EVERY)
+    const onVis = () => { if (document.visibilityState === 'visible') load() }
+    document.addEventListener('visibilitychange', onVis); window.addEventListener('focus', onVis)
+    return () => { alive = false; clearInterval(every); document.removeEventListener('visibilitychange', onVis); window.removeEventListener('focus', onVis) }
+  }, [runnerActivity])
 
   const reloadOffice = useCallback(() => reloadOfficeRef.current(), [])
 
