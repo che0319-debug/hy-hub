@@ -1,9 +1,11 @@
 <!DOCTYPE html>
-<html lang="zh-TW">
+<html lang="zh-TW" data-bot="950157">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>950157 工作控制中心</title>
+<link rel="stylesheet" href="hy-ui/hy-ui.css">
+<link rel="stylesheet" href="gantt-950157.css">
 <link href="https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=Noto+Sans+TC:wght@400;500;700&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Sortable/1.15.2/Sortable.min.js"></script>
 <style>
@@ -374,6 +376,7 @@ header { background:var(--header-bg); padding:0 24px; display:flex; align-items:
   <div class="tab active" data-tab="progress">📊 進度追蹤</div>
   <div class="tab" data-tab="weekly">📅 週覆盤</div>
   <div class="tab" data-tab="research">🔬 研究</div>
+  <div class="tab" data-tab="gantt">AI 甘特圖</div>
 </div>
 
 <!-- 進度追蹤 -->
@@ -403,6 +406,8 @@ header { background:var(--header-bg); padding:0 24px; display:flex; align-items:
 <div class="tab-content" id="tab-research">
   <div class="research-wrap" id="researchContent"><div class="weekly-loading">載入中…</div></div>
 </div>
+
+<div class="tab-content" id="tab-gantt"><section id="gantt" aria-label="AI 甘特圖"></section></div>
 
 <!-- Milestone Modal -->
 <div class="modal-overlay" id="msModal">
@@ -1067,5 +1072,6 @@ document.querySelector('[data-tab="research"]').addEventListener('click', loadRe
 })();
 
 </script>
+<script type="module" src="gantt-950157.mjs"></script>
 </body>
 </html>
