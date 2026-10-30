@@ -231,7 +231,7 @@ test('project stage error codes map to Chinese messages', async () => {
       error => error.message === message && error.kind === kind && error.code === body.error,
     )
   }
-  assert.equal(projectStageFailureMessage(0, {}), '無法連線，請稍後重試。沒有改階段。')
+  assert.equal(projectStageFailureMessage(0, {}), '無法連線，請稍後重試。請重新讀取確認階段。')
   await assert.rejects(
     setProjectStage('p', payload, { fetcher: async () => { throw new Error('offline') } }),
     error => error.kind === 'network' && /無法連線/.test(error.message),

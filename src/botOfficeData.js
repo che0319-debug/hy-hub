@@ -246,7 +246,7 @@ export function projectStageFailureMessage(status, body = {}) {
     if (error === 'brain_write_failed') return '儲存沒有完成確認，不確定有沒有寫入。請重新讀取確認。'
     return '後端資料異常，沒有改階段。'
   }
-  if (!status) return '無法連線，請稍後重試。沒有改階段。'
+  if (!status) return '無法連線，請稍後重試。請重新讀取確認階段。'
   return '沒有改階段，請稍後重試。'
 }
 

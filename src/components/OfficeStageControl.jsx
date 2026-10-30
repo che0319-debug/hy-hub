@@ -17,7 +17,7 @@ export default function OfficeStageControl({ project, milestones = [], onChanged
   const progress = milestoneProgress(milestones)
   const incomplete = progress.total > 0 && progress.done < progress.total
   const unfinished = progress.total - progress.done
-  const warning = incomplete ? `里程碑 ${unfinished}／${progress.total} 未完成，確定要結案？` : ''
+  const warning = incomplete ? `里程碑只完成 ${progress.done}／${progress.total}（還有 ${unfinished} 個未完成），確定要結案？` : ''
   const warnId = `ao-stage-warn-${String(project.id).replace(/[^A-Za-z0-9_-]/g, '-')}`
 
   function reset() {
