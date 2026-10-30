@@ -1,7 +1,7 @@
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
-import {ownerColor,projectColor,visible,bounds,drag,moveParent,descendants} from '../public/gantt-model.mjs';
+import {ownerColor,projectColor,visible,bounds,drag,moveParent,descendants,viewConfig,dateMarkers} from '../public/gantt-model.mjs';
 const p={id:'p',kind:'project',parent_id:null,project_id:'p',order:0};
 const t={id:'t',kind:'task',parent_id:'p',project_id:'p',order:0,owner:'HY',start:'2026-10-10',end:'2026-10-20'};
 const c={id:'c',kind:'checkpoint',parent_id:'t',project_id:'p',order:0,date:'2026-10-25'};
@@ -35,4 +35,11 @@ test('existing tabs remain and gantt never calls progress storage',()=>{
 test('schedule has five metadata columns and no status editor',()=>{
  const js=readFileSync(new URL('../public/gantt-950157.mjs',import.meta.url),'utf8');
  assert.doesNotMatch(js,/data-key="status"|name="status"|g-cell">狀態/);
+});
+
+test('daily weekly monthly views and important date label collision layout',()=>{
+ assert.equal(viewConfig('day').unit,48);assert.equal(viewConfig('week').unit,30);assert.equal(viewConfig('month').unit,9);
+ const events=Array.from({length:6},(_,i)=>({id:String(i),name:'審查'+i,date:'2026-11-02'}));
+ const result=dateMarkers(events,'2026-11-01',9,837);assert.equal(result.lines.length,6);assert.equal(result.labels.length,3);assert.equal(result.hidden,3);assert.equal(result.height,84);
+ assert.equal(dateMarkers(events,'2027-01-01',9,837).height,0);
 });
