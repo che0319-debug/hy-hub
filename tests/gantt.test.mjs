@@ -31,3 +31,8 @@ test('existing tabs remain and gantt never calls progress storage',()=>{
  const html=readFileSync(new URL('../public/950157-dashboard.html',import.meta.url),'utf8');for(const tab of ['progress','weekly','research','gantt'])assert.match(html,new RegExp('id="tab-'+tab+'"'));
  const js=readFileSync(new URL('../public/gantt-950157.mjs',import.meta.url),'utf8');assert.doesNotMatch(js,/\/api\/950157-progress/);assert.match(js,/\/api\/950157-gantt/);
 });
+
+test('schedule has five metadata columns and no status editor',()=>{
+ const js=readFileSync(new URL('../public/gantt-950157.mjs',import.meta.url),'utf8');
+ assert.doesNotMatch(js,/data-key="status"|name="status"|g-cell">狀態/);
+});
