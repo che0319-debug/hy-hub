@@ -206,6 +206,76 @@ export async function assignProjectOwnerBot(projectId, payload = {}, { headers =
   return data
 }
 
+// 決策後續只說明核准結果要怎麼推進，不改專案 stage。
+export function advanceFollowUpLabel(stage) {
+  if (stage === 'returned') return '已退回，待推進修訂。'
+  if (stage === 'running') return '已核准規劃，待推進為執行中。'
+  if (stage === 'done') return '已核准（舊規則，待推進）。'
+  return '決策已作答，待推進。'
+}
+
+// HY 本人改 stage。answered_by 用專案的 owner_bot；GUI 映射後的欄位是 ownerBot。
+export function projectStageBody(project = {}, patch = {}, requestId = '') {
+  const owner = text(project?.ownerBot) || text(project?.owner_bot)
+  const revision = project?.revision
+  return {
+    request_id: typeof requestId === 'string' ? requestId : '',
+    answered_by: owner,
+    expected_revision: Number.isInteger(revision) && revision >= 0 ? revision : 0,
+    patch: patch && typeof patch === 'object' ? { ...patch } : {},
+  }
+}
+
+export function projectStageRequestId(projectId, now = Date.now()) {
+  return `hy-stage-${projectId}-${now}`
+}
+
+export function projectStageFailureMessage(status, body = {}) {
+  const error = typeof body?.error === 'string' ? body.error : ''
+  if (status === 401) return '登入已過期，請重新登入。'
+  if (error === 'office_closure_summary_required') return '結案摘要不符合規定，沒有設為完成。'
+  if (error === 'office_revision_conflict') return '資料已被更新，請重新讀取。沒有改階段。'
+  if (error === 'office_stage_owner_only') return '只有 HY 本人可以改專案階段。沒有寫入。'
+  if (error === 'office_stage_transition_denied') return '這個階段不能這樣改。沒有寫入。'
+  if (error === 'office_project_deleting') return officeFailureMessage(status, body)
+  if (status === 404 || status === 405) return '此功能尚未上線或專案不存在。沒有改階段。'
+  if (status === 409) return '資料已被更新，請重新讀取。沒有改階段。'
+  if (status === 403) return '只有 HY 本人可以改專案階段。沒有寫入。'
+  if (status === 400) return '內容不符合規定，沒有改階段。'
+  if (status === 502) {
+    if (error === 'brain_write_failed') return '儲存沒有完成確認，不確定有沒有寫入。請重新讀取確認。'
+    return '後端資料異常，沒有改階段。'
+  }
+  if (!status) return '無法連線，請稍後重試。沒有改階段。'
+  return '沒有改階段，請稍後重試。'
+}
+
+// 只給 GUI 已登入的 HY 改階段。不帶 X-Brain-Write-Token，也不走 proxy。
+export async function setProjectStage(projectId, payload = {}, { headers = {}, fetcher = fetch, base = import.meta.env?.VITE_API_BASE || '' } = {}) {
+  const body = projectStageBody(
+    { ownerBot: payload.answered_by, revision: payload.expected_revision },
+    payload.patch,
+    payload.request_id,
+  )
+  let response
+  try {
+    response = await fetcher(`${String(base || '').replace(/\/$/, '')}/api/office/owner/projects/${encodeURIComponent(projectId)}/status`, {
+      method: 'POST', headers: { ...headers, 'Content-Type': 'application/json' }, body: JSON.stringify(body), cache: 'no-store',
+    })
+  } catch (error) {
+    if (error?.name === 'AbortError') throw error
+    throw new OfficeReadError('network', projectStageFailureMessage(0, {}))
+  }
+  const data = await response.json().catch(() => ({}))
+  if (!response.ok) {
+    const code = typeof data?.error === 'string' ? data.error : ''
+    const uncertain = response.status === 502 && code === 'brain_write_failed'
+    const kind = response.status === 401 ? 'auth' : (response.status === 409 || uncertain) ? 'conflict' : 'error'
+    throw new OfficeReadError(kind, projectStageFailureMessage(response.status, data), code)
+  }
+  return data
+}
+
 export async function writeOffice(path, payload, { headers = {}, fetcher = fetch, base = import.meta.env?.VITE_API_BASE || '' } = {}) {
   const response = await fetcher(`${base.replace(/\/$/, '')}/api/office/${path}`, {
     method: 'POST', headers: {...headers, 'Content-Type': 'application/json'}, body: JSON.stringify(payload), cache: 'no-store',
