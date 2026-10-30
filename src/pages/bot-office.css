@@ -12,3 +12,12 @@
 .bo-page .bo-notice{color:var(--hy-you);background:var(--hy-you-bg);padding:12px 14px;border-radius:var(--hy-r-sm)}
 /* 蓋過 .ao select 的 14px，避免手機聚焦時把整頁放大。 */
 .ao select.owner-bot-select{font-size:16px}
+.ao-header-actions .ao-stage{display:flex;min-width:0}
+.ao-header-actions:has(.ao-stage.is-open){flex-basis:100%;margin-left:0}
+.ao-header-actions .ao-stage.is-open{display:block;flex-basis:100%;order:1}
+.ao-stage-panel{display:grid;gap:8px;width:100%;min-width:0;padding:10px 12px;border:1px solid var(--hy-line);border-radius:var(--hy-r-sm);background:var(--hy-bg)}
+.ao-stage-panel p,.ao-stage-panel .hy-note{margin:0}
+.ao-stage-panel label{margin:0}
+.ao-stage-actions{display:flex;flex-wrap:wrap;gap:8px}
+.ao .ao-stage-panel button{min-height:var(--hy-tap);padding:0 14px;font-size:14px}
+.ao-stage-panel textarea{font-size:16px}

@@ -1,6 +1,7 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { loadBotOffice, mapOffice, OFFICE_TABS, REFRESH_MS, safeDriveUrl } from '../src/botOfficeData.js'
+import { readFileSync } from 'node:fs'
+import { advanceFollowUpLabel, loadBotOffice, mapOffice, OFFICE_TABS, projectStageBody, projectStageFailureMessage, projectStageRequestId, safeDriveUrl, setProjectStage } from '../src/botOfficeData.js'
 
 const state = { updated: '2026-10-24T00:00:00Z', islands: [{ id: 'central', name: '中央' }], buildings: [
   { id: 'a', title: '專案 A', island: 'central', stage: 'running', executor: 'gpt', last_review: 'pass' },
@@ -160,11 +161,94 @@ test('review note cards follow explicit review_card links and output plans are a
 
 
 test('follow-ups and advancement markers are displayed without changing stage; review time uses Drive metadata only', () => {
- const out=mapOffice({buildings:[{id:'p',stage:'hy_decision',follow_ups:[{id:'f',text:'先補資料',status:'open',source:'r'}],review_card:'r'}],decisions:[{id:'d',project:'p',status:'answered',needs_advance:true,advance:{stage:'done',decision_revision:17}}]},
+ const out=mapOffice({buildings:[{id:'p',stage:'hy_decision',follow_ups:[{id:'f',text:'先補資料',status:'open',source:'r'}],review_card:'r'}],decisions:[
+   {id:'d',project:'p',status:'answered',needs_advance:true,advance:{stage:'done',decision_revision:17}},
+   {id:'run',project:'p',status:'answered',needs_advance:true,advance:{stage:'running'}},
+ ]},
    {cards:[{id:'r',project:'p',type:'note',title:'review_20261024-2215',created_at:'2026-10-24T22:15:00+08:00',drive_created_at:'2026-10-24T13:15:42.509Z',drive_url:'https://drive.google.com/file/d/r/view'}]})
  const p=out.projects[0]
- assert.equal(p.stage,'hy_decision');assert.equal(p.finished,false);assert.equal(p.pendingAdvances[0].advance.stage,'done')
+ assert.equal(p.stage,'hy_decision');assert.equal(p.finished,false)
+ assert.equal(p.pendingAdvances[0].advance.stage,'done')
+ assert.equal(p.pendingAdvances[1].advance.stage,'running')
+ assert.equal(advanceFollowUpLabel(p.pendingAdvances[0].advance.stage),'已核准（舊規則，待推進）。')
+ assert.equal(advanceFollowUpLabel(p.pendingAdvances[1].advance.stage),'已核准規劃，待推進為執行中。')
+ assert.equal(advanceFollowUpLabel('returned'),'已退回，待推進修訂。')
+ assert.equal(advanceFollowUpLabel(undefined),'決策已作答，待推進。')
+ assert.doesNotMatch(advanceFollowUpLabel('done'),/待推進完成/)
  assert.equal(p.followUps[0].sourceUrl,'https://drive.google.com/file/d/r/view')
  assert.match(p.cards.outputs[0].date,/21:15:42/);assert.doesNotMatch(p.cards.outputs[0].date,/22:15/)
  assert.equal(mapOffice({buildings:[{id:'p',review_card:'r'}]},{cards:[{id:'r',project:'p',type:'note',created_at:'2026-10-24T22:15:00+08:00'}]}).projects[0].cards.outputs[0].date,'Drive 建立時間待補')
+})
+
+test('project stage body uses owner_bot, defaults revision to 0, and posts without a write token', async () => {
+  const done = projectStageBody({ owner_bot: 'sam' }, { stage: 'done', closure_summary: '全部里程碑已結束。' }, projectStageRequestId('p', 1710000000000))
+  assert.deepEqual(done, {
+    request_id: 'hy-stage-p-1710000000000',
+    answered_by: 'sam',
+    expected_revision: 0,
+    patch: { stage: 'done', closure_summary: '全部里程碑已結束。' },
+  })
+  const reopen = projectStageBody({ ownerBot: 'family', revision: 4 }, { stage: 'running' }, 'hy-stage-q-2')
+  assert.equal(reopen.answered_by, 'family')
+  assert.equal(reopen.expected_revision, 4)
+  assert.deepEqual(reopen.patch, { stage: 'running' })
+  assert.equal('closure_summary' in reopen.patch, false)
+  assert.equal(projectStageBody({ owner_bot: 'hy', revision: -1 }, { stage: 'running' }, 'id').expected_revision, 0)
+  assert.equal(projectStageBody({ revision: 1.5 }, { stage: 'running' }, 'id').expected_revision, 0)
+  assert.equal(projectStageBody({}, { stage: 'running' }, 'id').answered_by, '')
+
+  let call
+  await setProjectStage('p/006', done, {
+    base: 'https://api.example/',
+    headers: { Authorization: 'Bearer test-session' },
+    fetcher: async (...args) => {
+      call = args
+      return new Response(JSON.stringify({ project: { id: 'p/006', stage: 'done', revision: 1 } }))
+    },
+  })
+  assert.equal(call[0], 'https://api.example/api/office/owner/projects/p%2F006/status')
+  assert.equal(call[1].method, 'POST')
+  assert.equal(call[1].cache, 'no-store')
+  assert.equal(call[1].headers.Authorization, 'Bearer test-session')
+  assert.equal(call[1].headers['Content-Type'], 'application/json')
+  assert.equal(call[1].headers['X-Brain-Write-Token'], undefined)
+  assert.deepEqual(JSON.parse(call[1].body), done)
+})
+
+test('project stage error codes map to Chinese messages', async () => {
+  const cases = [
+    [400, { error: 'office_closure_summary_required' }, '結案摘要不符合規定，沒有設為完成。', 'error'],
+    [409, { error: 'office_revision_conflict' }, '資料已被更新，請重新讀取。沒有改階段。', 'conflict'],
+    [403, { error: 'office_stage_owner_only' }, '只有 HY 本人可以改專案階段。沒有寫入。', 'error'],
+    [400, { error: 'office_stage_transition_denied' }, '這個階段不能這樣改。沒有寫入。', 'error'],
+    [401, { error: 'unauthorized' }, '登入已過期，請重新登入。', 'auth'],
+  ]
+  const payload = projectStageBody({ owner_bot: 'sam', revision: 0 }, { stage: 'running' }, 'hy-stage-p-1')
+  for (const [status, body, message, kind] of cases) {
+    assert.equal(projectStageFailureMessage(status, body), message)
+    await assert.rejects(
+      setProjectStage('p', payload, { fetcher: async () => new Response(JSON.stringify(body), { status }) }),
+      error => error.message === message && error.kind === kind && error.code === body.error,
+    )
+  }
+  assert.equal(projectStageFailureMessage(0, {}), '無法連線，請稍後重試。請重新讀取確認階段。')
+  await assert.rejects(
+    setProjectStage('p', payload, { fetcher: async () => { throw new Error('offline') } }),
+    error => error.kind === 'network' && /無法連線/.test(error.message),
+  )
+})
+
+test('Bot Office wires stage labels and the HY-only control', () => {
+  const page = readFileSync(new URL('../src/pages/BotOffice.jsx', import.meta.url), 'utf8')
+  const control = readFileSync(new URL('../src/components/OfficeStageControl.jsx', import.meta.url), 'utf8')
+  assert.match(page, /advanceFollowUpLabel\(d\.advance\?\.stage\)/)
+  assert.doesNotMatch(page, /待推進完成/)
+  assert.match(page, /\{hy && <OfficeStageControl /)
+  assert.match(control, /只有全部里程碑結束、寫好結案摘要才設完成。/)
+  assert.match(control, /重新開啟（改回執行中）/)
+  assert.match(control, /stage: 'done', closure_summary: closure/)
+  assert.match(control, /stage: 'running'/)
+  assert.match(control, /authHeaders\(\)/)
+  assert.doesNotMatch(control, /X-Brain-Write-Token|localStorage|sessionStorage/)
+  assert.equal(control.includes("stage === 'returned'"), true)
 })
