@@ -1,0 +1,41 @@
+{
+  "passed": true,
+  "rows": 10,
+  "projects": 2,
+  "checkpointColors": [
+    "rgb(0, 0, 0)",
+    "rgb(180, 35, 24)",
+    "rgb(17, 104, 63)"
+  ],
+  "puts": 3,
+  "unexpected": [],
+  "errors": [],
+  "viewports": [
+    1280,
+    390
+  ],
+  "coverage": [
+    "multi-project",
+    "deep hierarchy",
+    "collapse",
+    "reparent",
+    "order",
+    "delete",
+    "colors",
+    "alignment",
+    "move",
+    "left resize",
+    "right resize",
+    "checkpoint drag",
+    "parent dates",
+    "save reload",
+    "second device",
+    "409 conflict",
+    "503 save",
+    "read failure lock",
+    "header isolation",
+    "existing tabs",
+    "month week",
+    "mobile scroll"
+  ]
+}

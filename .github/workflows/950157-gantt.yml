@@ -1,0 +1,32 @@
+name: 950157 Gantt MVP
+on:
+  pull_request:
+    paths:
+      - 'public/950157-dashboard.html'
+      - 'public/gantt-*'
+      - 'tests/gantt*'
+      - '.github/workflows/950157-gantt.yml'
+jobs:
+  gantt:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: node --test tests/*.test.mjs
+      - run: npm run build
+      - run: npm install --no-save --package-lock=false playwright
+      - run: npx playwright install --with-deps chromium
+      - name: Isolated browser acceptance
+        run: |
+          npm run dev -- --host 127.0.0.1 --port 5173 --strictPort > /tmp/gantt-vite.log 2>&1 &
+          for i in {1..30}; do curl -fsS http://127.0.0.1:5173/950157-dashboard.html > /dev/null && break; sleep 1; done
+          node tests/gantt-ui.cjs
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: 950157-gantt-gui
+          path: docs/quality/ui/gantt/
