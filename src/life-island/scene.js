@@ -27,7 +27,7 @@ import { makeChuan } from './chuan.js';
 import { makeDistTexture, makeWater } from './water.js';
 import { createAtmosphere } from './sky.js';
 import { buildBridges, makeBoats } from './bridges.js';
-import { ISLANDS_DATA, FIGURES, STATUS_INFO } from './data.js';
+import { ISLANDS_DATA, FIGURES, STATUS_INFO, BUILDING_BLOCK, figureFront } from './data.js';
 
 export function webglOk() {
   try { const c = document.createElement('canvas'); return !!(c.getContext('webgl2') || c.getContext('webgl')); } catch { return false; }
@@ -40,7 +40,7 @@ const CFG = { az: 0.62 };
 const S3 = Math.sqrt(3), WATER_Y = -0.5;
 
 // ---------- world definition ----------
-const KEYPOS = { today: [0, 0], dispatch: [1, -1], meeting: [2, 1], syscenter: [-1, 0], hq: [0, 0], lab: [1, 0], brain: [0, 0], dojo: [1, 0], board: [0, 1], home: [0, 0], gym: [1, 0], sidehq: [-1, -1], phone: [1, -1], cuyu: [-1, 1], chuan: [1, 1] };
+const KEYPOS = BUILDING_BLOCK;
 const ISL_CFG = { central: { cityR: 13, seed: 3, col: '#d9a441' }, biz: { cityR: 8, seed: 4, col: '#5a8fe0' }, life: { cityR: 8, seed: 6, col: '#b06ad8' }, family: { cityR: 8, seed: 8, col: '#e8845a' }, side: { cityR: 10, seed: 9, col: '#2fa58a' } };
 const ISLANDS = ISLANDS_DATA.map(d => ({ id: d.id, name: d.name, sub: d.sub, c: d.c, ...ISL_CFG[d.id],
   bs: d.buildings.map(b => ({ id: b.id, title: b.title, type: b.type, form: b.form, height: b.height * 1.15 })),
@@ -260,17 +260,16 @@ for (const isl of ISLANDS) if (!isl.deco && isl.cells) {
 const nbrsOf = (id, i, j) => [[1, 0], [-1, 0], [0, 1], [0, -1]].filter(([a, b]) => roads[id].set.has((i + a) + ',' + (j + b))).map(([a, b]) => [i + a, j + b]);
 const nearestRoad = (id, x, z) => roads[id].cells.reduce((best, c) => { const d = Math.hypot(c.i - x, c.j - z); return !best || d < best.d ? { c, d } : best; }, null).c;
 {
-  const ca = Math.cos(CAMAZ), sa = Math.sin(CAMAZ);
   FIGS.forEach((f, i) => {
     const zb = bldList.find(b => b.bd.id === f.zone), stay = f.status === 'you' || f.status === 'bad';
     // 起點：建築前方（朝鏡頭那側）最近的馬路格；停在原地的人各自錯開
-    const front = { x: zb.x + (1.9 + (i % 2) * 0.7) * sa + (i - 2) * 0.5 * ca, z: zb.z + (1.9 + (i % 2) * 0.7) * ca - (i - 2) * 0.5 * sa };
+    const front = figureFront({ x: zb.x, z: zb.z }, i, CAMAZ);
     const c0 = nearestRoad(f.island, front.x, front.z);
     const bot = makeBot(f.kind, matToon, matOL, f.status);
     bot.root.position.set(c0.i, 0.02, c0.j); bot.root.rotation.y = CAMAZ; bot.root.scale.setScalar(FS);
     bot.mesh.userData.bid = 'bot:' + f.id; pickMeshes.push(bot.mesh);
     scene.add(bot.root);
-    const lp = { kind: 'bot', id: f.id, name: f.name, status: f.status, idx: i, x: c0.i, y: 0.02 + 0.82 * FS, z: c0.j };
+    const lp = { kind: 'bot', id: f.id, name: f.name, status: f.status, staticInfo: !!f.staticInfo, idx: i, x: c0.i, y: 0.02 + 0.82 * FS, z: c0.j };
     labelPts.push(lp);
     bots.push({ bot, f, lp, isl: f.island, phase: i * 1.3, pos: [c0.i, c0.j], ci: c0.i, cj: c0.j, from: [c0.i, c0.j], to: null, t: 0, wait: 0.5 + i * 0.6, moving: false, stay, wantStay: stay, wantStay: stay,
       zone: { x: zb.x, z: zb.z, r: 7 }, homeIsl: f.island, homeZone: { x: zb.x, z: zb.z, r: 7 }, legs: [], bridge: null, away: false, nextTrip: 25 + i * 9 + Math.random() * 25, prev: null, rot: CAMAZ, ox: (i % 3 - 1) * 0.16, oz: ((i + 1) % 3 - 1) * 0.16, hello: false });
@@ -420,7 +419,7 @@ function botOf(id) { return id && id.startsWith('bot:') ? botById[id.slice(4)] :
 const labels = labelPts.filter(p => p.kind !== 'fig' && !p.deco).map(p => {
   const el = document.createElement('div');
   el.className = 'li-label ' + (p.kind === 'island' ? 'li-label-island' : p.kind === 'bot' ? 'li-label-bot' : 'li-label-bldg');
-  if (p.kind === 'bot') { el.dataset.s = p.status; el.title = p.name + '：' + STATUS_INFO[p.status]; const dot = document.createElement('i'); el.appendChild(dot); el.appendChild(document.createTextNode(p.name)); const st = document.createElement('span'); st.textContent = '・' + STATUS_INFO[p.status]; el.appendChild(st); } else
+  if (p.kind === 'bot' && p.staticInfo) { el.title = p.name; el.appendChild(document.createTextNode(p.name)); } else if (p.kind === 'bot') { el.dataset.s = p.status; el.title = p.name + '：' + STATUS_INFO[p.status]; const dot = document.createElement('i'); el.appendChild(dot); el.appendChild(document.createTextNode(p.name)); const st = document.createElement('span'); st.textContent = '・' + STATUS_INFO[p.status]; el.appendChild(st); } else
   el.textContent = p.name;
   if (p.kind === 'bot') { el.setAttribute('role', 'button'); el.tabIndex = 0; el.addEventListener('click', () => api.select('bot:' + p.id, true)); el.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); api.select('bot:' + p.id, true); } }); }
   if (p.kind === 'bldg') { el.setAttribute('role', 'button'); el.tabIndex = 0; el.addEventListener('click', () => api.select(p.id, true)); el.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); api.select(p.id, true); } }); }
@@ -511,7 +510,7 @@ const api = {
   },
   // 即時更新小人狀態（光環顏色、標籤、是否停在原地）。資料由 React 端的 useWorldData 提供。
   setBotStatus(id, status) {
-    const b = botById[id]; if (!b || !STATUS_COLORS[status] || b.bot.status === status) return;
+    const b = botById[id]; if (!b || b.f.staticInfo || !STATUS_COLORS[status] || b.bot.status === status) return;
     const col = STATUS_COLORS[status];
     b.bot.status = status; b.bot.ring.material.color.setHex(col); b.bot.dot.material.color.setHex(col);
     b.lp.status = status; b.wantStay = status === 'you' || status === 'bad';
@@ -520,7 +519,7 @@ const api = {
   },
   // 頭上提醒標：level = 'bad'（有問題，紅）｜'you'（待你處理，琥珀）｜null（不顯示）；reasons 顯示在標籤提示
   setBotAttention(id, level, reasons = []) {
-    const b = botById[id]; if (!b) return;
+    const b = botById[id]; if (!b || b.f.staticInfo) return;
     b.reasons = reasons;
     const l = labels.find(x => x.p === b.lp);
     if (l) { if (level) l.el.dataset.alert = level; else delete l.el.dataset.alert; l.el.title = b.lp.name + '：' + STATUS_INFO[b.lp.status] + (reasons.length ? '\n' + reasons.join('\n') : ''); }

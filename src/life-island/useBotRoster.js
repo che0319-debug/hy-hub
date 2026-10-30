@@ -54,6 +54,7 @@ export function useBotRoster(info) {
     const out = {}
     const loadedAll = done.office || done.memory
     out.atlas = deriveAtlas({ office, officeEmpty, failed, todoFailed: !!info?.todoFailed, unowned: off.unowned, loaded: loadedAll })
+    // 只掛小幫手。Wade 是 coach、staticInfo，不在 HELPERS，所以不會讀他的專案、待辦或記憶。
     for (const h of HELPERS) {
       const o = off.byAgent[h.agent]
       out[h.id] = {

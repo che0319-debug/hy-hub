@@ -1,9 +1,24 @@
-// 五位 Agent 小人：Atlas（黑圓＋星章）、小因（棕色水滴）、Sam（粉紅六邊形）、950157（紅圓）、HY（青綠圓角方塊）。
-// 共通特徵：兩顆白色直長眼。身高約 0.45，腳底在 y=0。
+// Agent 小人：Atlas（黑圓＋星章）、小因（棕色水滴）、Sam（粉紅六邊形）、950157（紅圓）、HY（青綠圓角方塊）、Wade（中綠圓角方塊）。
+// 共通特徵：兩顆白色直長眼（Wade 的眼睛色在 WADE_LOOK）。身高約 0.45，腳底在 y=0。
 import { Group, Mesh, TorusGeometry, SphereGeometry, MeshBasicMaterial, CylinderGeometry, RingGeometry } from 'three';
 import { B, sph, cyl, cone, box } from './geo.js';
 
 export const BOT_COLORS = { atlas: 0x15171c, xiaoyin: 0x9c6a3c, sam: 0xf0409a, p950157: 0xf23d4b, hy: 0x37b5a4, claude: 0xff8a1f, gpt: 0x9bd62c, grokbuild: 0xeceff3 };
+// Wade 的外觀只改這裡。中綠，跟 HY 的青綠、GPT／Grok Build 的黃綠分開。身體是圓角方塊，正中兩顆白色直立橢圓眼，沒有其他特徵。
+export const WADE_LOOK = {
+  body: 0x3dbe72,
+  eye: 0xffffff,
+  size: [0.4, 0.4, 0.34],
+  radius: 0.14,
+  segments: 3,
+  y: 0.235,
+  shade: [0.9, 1.04],
+  eyeRadius: 0.022,
+  eyeScale: [0.7, 1.9, 0.45],
+  eyeDx: 0.064,
+  eyeY: 0.25,
+  eyeZ: 0.178,
+};
 export const STATUS_COLORS = { wait: 0x8d99ab, ai: 0x2f6bff, you: 0xf2a93a, done: 0x2fb36f, bad: 0xe5484d };
 
 function eyes(b, z, y = 0.27, dx = 0.075) {
@@ -55,6 +70,11 @@ function bodyGeo(kind) {
       b.add(box(0.4, 0.38, 0.34, 0.1, 3), BOT_COLORS.grokbuild, { y: 0.235, g: [0.9, 1.05] });
       b.add(box(0.4, 0.14, 0.34, 0.08, 2), 0x2b2d33, { y: 0.4, z: -0.0, g: [0.9, 1] });
       for (const [x, y, r] of [[-0.065, 0.2, 0.55], [0.1, 0.28, 0.55]]) b.add(sph(0.03, 10, 8), 0x1c1d22, { x, y, z: 0.172, s: [0.8, 2.0, 0.5], rz: r });
+      break; }
+    case 'wade': { // 側邊欄圖示：綠色圓角方塊，正中兩顆白色直立橢圓眼
+      const L = WADE_LOOK;
+      b.add(box(L.size[0], L.size[1], L.size[2], L.radius, L.segments), L.body, { y: L.y, g: L.shade });
+      for (const s of [-1, 1]) b.add(sph(L.eyeRadius, 10, 8), L.eye, { x: s * L.eyeDx, y: L.eyeY, z: L.eyeZ, s: L.eyeScale });
       break; }
   }
   return b.build();

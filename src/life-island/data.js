@@ -1,5 +1,5 @@
 // HY Life 島：世界定義（V5.1 第三部分「世界定義表」）。目前只建「中央島」。
-import { ROSTER } from '../botRoster'
+import { ROSTER } from '../botRoster.js'
 // route = 現有的 2D 頁；沒有的寫 null 並在 note 說明。沒有真資料的欄位一律「待補」，不編造。
 export const CENTRAL_ISLAND = {
   id: 'central', name: '中央島', sub: '派工 · Atlas', c: [0, 0], R: 4,
@@ -131,11 +131,46 @@ export const SIDE_ISLAND = {
 export const ISLANDS_DATA = [CENTRAL_ISLAND, BUSINESS_ISLAND, LIFE_ISLAND, FAMILY_ISLAND, SIDE_ISLAND];
 export const ALL_BUILDINGS = ISLANDS_DATA.flatMap(isl => isl.buildings.map(b => ({ ...b, islandId: isl.id, islandName: isl.name })));
 
-// 五位 Agent。展示階段全部先在中央島活動，之後各自搬到自己的島。
+// 建築在島上的街區（bi, bj）。3D 場景把建築放在島心 + (bi, bj) × BLOCK。角色的 zone 用同一個 id。
+export const BUILDING_BLOCK = { today: [0, 0], dispatch: [1, -1], meeting: [2, 1], syscenter: [-1, 0], hq: [0, 0], lab: [1, 0], brain: [0, 0], dojo: [1, 0], board: [0, 1], home: [0, 0], gym: [1, 0], sidehq: [-1, -1], phone: [1, -1], cuyu: [-1, 1], chuan: [1, 1] };
+export const BLOCK = 4;
+
+export function buildingWorld(islandId, buildingId) {
+  const isl = ISLANDS_DATA.find(i => i.id === islandId);
+  const key = BUILDING_BLOCK[buildingId];
+  if (!isl || !key) return null;
+  return { x: isl.c[0] + key[0] * BLOCK, z: isl.c[1] + key[1] * BLOCK };
+}
+
+// 角色閒晃的基地：他所屬建築的世界座標。場景再把他放到該建築朝鏡頭一側的馬路上。
+export function figureHome(fig) {
+  if (!fig) return null;
+  return buildingWorld(fig.island, fig.zone);
+}
+
+// 起步點：建築朝鏡頭的一側，再用名冊順序錯開。az 要跟場景鏡頭方位一樣。之後場景會吸到最近的馬路格。
+export function figureFront(home, index, az = 0.62) {
+  if (!home) return null;
+  const ca = Math.cos(az), sa = Math.sin(az);
+  const reach = 1.9 + (index % 2) * 0.7;
+  const side = (index - 2) * 0.5;
+  return { x: home.x + reach * sa + side * ca, z: home.z + reach * ca - side * sa };
+}
+
+// 名稱、角色、位置來自 src/botRoster.js（全站唯一名冊）。
+// 即時狀態由 useBotRoster 疊到小幫手與執行者；staticInfo 的角色（Wade）不疊，卡片只顯示介紹。
 // status：wait / ai / you / done / bad。zone：平常活動的建築區。status 是 you 或 bad 的會停在原地等你。
-// board：該 Bot 專屬看板（待辦）。對話功能之後再建。
-// 名稱、角色、位置來自 src/botRoster.js（全站唯一名冊）。狀態與數字由 useBotRoster 讀真資料；status 只是還沒載入時的預設值。
-export const FIGURES = ROSTER.map(r => ({ id: r.id, island: r.island, name: r.name, kind: r.kind, status: 'wait', zone: r.zone, role: r.post, board: r.board }))
+export const FIGURES = ROSTER.map(r => ({
+  id: r.id, island: r.island, name: r.name, kind: r.kind, status: 'wait', zone: r.zone, role: r.post, board: r.board,
+  ownerId: r.ownerId || null, intro: r.intro || '', staticInfo: r.staticInfo === true,
+}))
+
+// 靜態角色不讀第二、第三個參數（Bot Office、待辦、記憶、roster 狀態）。
+// 其他角色維持原本的卡片，由畫面在 staticInfo 為 false 時自己接 live。
+export function islandBotCard(fig) {
+  if (fig?.staticInfo) return { staticInfo: true, name: fig.name, role: fig.role, intro: fig.intro || '' };
+  return { staticInfo: false };
+}
 
 // 狀態色的意義（全站一致，見 hy-ui 風格 A）
 export const STATUS_INFO = {

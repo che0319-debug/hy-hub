@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import '../../public/hy-ui/hy-ui.css'
 import '../life-island/life-island.css'
-import { ALL_BUILDINGS, FIGURES, STATUS_INFO } from '../life-island/data'
+import { ALL_BUILDINGS, FIGURES, STATUS_INFO, islandBotCard } from '../life-island/data'
 import { createIslandScene, webglOk } from '../life-island/scene'
 import { formatDue } from '../life-island/useWorldInfo'
 import { useInbox } from '../inbox/InboxContext'
@@ -180,12 +180,39 @@ function MiniMap({ onGo, current }) {
 }
 
 function BotCard({ f: fig, live, loaded, onClose }) {
+  const card = islandBotCard(fig, live, loaded)
+  const [min, setMin] = useStored('li_card_min', false)
+  const btn = { display: 'inline-flex', alignItems: 'center', textDecoration: 'none' }
+  // Wade 這類靜態角色：版面跟別人一樣，但不讀 live，也不顯示載入中或讀取失敗。
+  if (card.staticInfo) {
+    if (min) {
+      return (
+        <section className="hy-card li-card-min">
+          <button type="button" className="li-card-bar" onClick={() => setMin(false)} aria-expanded="false" aria-label={'展開' + card.name}>
+            <span className="hy-card-title">{card.name}</span>
+          </button>
+          <button type="button" className="hy-btn" onClick={onClose} aria-label="關閉卡片">關閉</button>
+        </section>
+      )
+    }
+    return (
+      <section className="hy-card is-focus" aria-live="polite">
+        <div className="hy-card-head">
+          <h2 className="hy-card-title">{card.name}</h2>
+          <div style={{ display: 'flex', gap: 8, flexShrink: 0, whiteSpace: 'nowrap' }}>
+            <button type="button" className="hy-btn" onClick={() => setMin(true)} aria-label="縮小卡片">縮小</button>
+            <button type="button" className="hy-btn" onClick={onClose} aria-label="關閉卡片">關閉</button>
+          </div>
+        </div>
+        <p className="hy-lede" style={{ marginTop: 8 }}>{card.role}</p>
+        <p className="hy-lede" style={{ marginTop: 8 }}>{card.intro}</p>
+      </section>
+    )
+  }
   const f = { ...fig, status: live?.status ?? 'wait', doing: live?.doing || '—' }
   const note = !LIVE_FIGS.has(fig.id) ? '這位的狀態還沒接資料。' : live ? (live.inferred ? '依工作通道推測，後端尚無派工紀錄。' : '') : loaded ? '讀不到這位的狀態資料。' : '正在讀取狀態…'
   const attn = deriveAttention(live)
   const goTo = { office: '/bot-office', board: fig.board, memory: rosterById(fig.id)?.persona ? '/agent/' + rosterById(fig.id).persona : null }
-  const [min, setMin] = useStored('li_card_min', false)
-  const btn = { display: 'inline-flex', alignItems: 'center', textDecoration: 'none' }
   if (min) {
     return (
       <section className="hy-card li-card-min">
