@@ -1,8 +1,11 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { deriveOffice, deriveTodos, deriveRunners, deriveSummary, deriveAttention, RUNNER_FIG, LIVE_FIGS } from '../src/life-island/worldData.js'
+import { deriveOffice, deriveTodos, deriveRunners, deriveSummary, deriveAttention, RUNNER_FIG, LIVE_FIGS, OWNER_BOT_ORDER, ownerBotChoices, canonicalOwnerBot } from '../src/life-island/worldData.js'
 import { ROSTER, HELPERS } from '../src/botRoster.js'
 import { mapOffice } from '../src/botOfficeData.js'
+import { FIGURES, FAMILY_ISLAND, buildingWorld, figureHome, figureFront, islandBotCard } from '../src/life-island/data.js'
+import { BOT_COLORS, WADE_LOOK, makeBot } from '../src/life-island/bots.js'
+import { MeshBasicMaterial } from 'three'
 
 const office = mapOffice({
   updated: '2026-10-25T08:00:00+08:00',
@@ -17,11 +20,81 @@ const office = mapOffice({
   decisions: [{ id: 'd1', project: 'c', status: 'open', title: '要不要補件', kind: 'approval', questions: [] }],
 }, { cards: [] })
 
-test('名冊：四位小幫手＋四位執行者，id 不重複', () => {
+test('名冊：四位小幫手＋執行者與 Atlas，id 不重複', () => {
   assert.equal(HELPERS.length, 4)
-  assert.equal(ROSTER.length, 8)
-  assert.equal(new Set(ROSTER.map(r => r.id)).size, 8)
+  assert.equal(ROSTER.filter(r => r.group === 'executor').length, 3)
+  assert.equal(ROSTER.filter(r => r.group === 'coo').length, 1)
+  assert.equal(ROSTER.length, 9)
+  assert.equal(new Set(ROSTER.map(r => r.id)).size, 9)
   assert.deepEqual(HELPERS.map(h => h.agent), ['hy', '950157', 'family', 'sam'])
+})
+
+test('Wade 在 Life 島名單，駐在健身房，不進 owner-bot，卡片不讀即時資料', () => {
+  const wade = ROSTER.find(r => r.id === 'wade')
+  assert.ok(wade)
+  assert.equal(wade.name, 'Wade')
+  assert.equal(wade.ownerId, 'fitness')
+  assert.equal(wade.role, '健身教練')
+  assert.equal(wade.group, 'coach')
+  assert.equal(wade.agent, null)
+  assert.equal(wade.staticInfo, true)
+  assert.equal(HELPERS.some(h => h.id === 'wade' || h.agent === 'fitness' || h.ownerId === 'fitness'), false)
+  assert.equal(OWNER_BOT_ORDER.includes('fitness'), false)
+  assert.equal(OWNER_BOT_ORDER.includes('wade'), false)
+  assert.equal(ownerBotChoices().some(c => c.value === 'fitness' || c.value === 'wade' || c.label === 'Wade'), false)
+  assert.equal(canonicalOwnerBot('fitness'), '')
+  assert.equal(LIVE_FIGS.has('wade'), false)
+  assert.equal(LIVE_FIGS.has('fitness'), false)
+
+  const fig = FIGURES.find(f => f.id === 'wade')
+  assert.equal(fig.kind, 'wade')
+  assert.equal(fig.island, 'family')
+  assert.equal(fig.zone, 'gym')
+  assert.equal(fig.staticInfo, true)
+  const gym = buildingWorld('family', 'gym')
+  const spot = figureHome(fig)
+  assert.deepEqual(spot, gym)
+  assert.deepEqual(gym, { x: FAMILY_ISLAND.c[0] + 4, z: FAMILY_ISLAND.c[1] })
+  const index = FIGURES.findIndex(f => f.id === 'wade')
+  const front = figureFront(spot, index)
+  const dist = (p, q) => Math.hypot(p.x - q.x, p.z - q.z)
+  assert.ok(dist(front, gym) > 1.5 && dist(front, gym) < 6, `front ${front.x},${front.z}`)
+  for (const b of FAMILY_ISLAND.buildings) {
+    if (b.id === 'gym') continue
+    const p = buildingWorld('family', b.id)
+    assert.ok(dist(front, gym) < dist(front, p), b.id)
+    assert.ok(dist(spot, gym) < dist(spot, p), b.id)
+  }
+
+  assert.equal(WADE_LOOK.body, 0x3dbe72)
+  assert.equal(WADE_LOOK.eye, 0xffffff)
+  for (const [name, color] of Object.entries(BOT_COLORS)) assert.notEqual(WADE_LOOK.body, color, name)
+  assert.notEqual(WADE_LOOK.body, BOT_COLORS.hy)
+  assert.notEqual(WADE_LOOK.body, BOT_COLORS.gpt)
+  const mesh = makeBot('wade', new MeshBasicMaterial(), null, 'wait')
+  assert.equal(mesh.kind, 'wade')
+
+  let reads = 0
+  const live = new Proxy({ status: 'you', doing: 'LIVE_PROBE', office: { done: 1 }, todos: { overdue: 1, today: 1 }, memory: { memory_last: 'x' } }, {
+    get(target, key) { reads += 1; return target[key] },
+  })
+  const card = islandBotCard(fig, live, false)
+  assert.equal(reads, 0)
+  assert.equal(card.staticInfo, true)
+  assert.equal(card.name, 'Wade')
+  assert.equal(card.role, '健身教練')
+  assert.match(card.intro, /專職健身教練/)
+  assert.match(card.intro, /訓練課表/)
+  assert.equal(card.status, undefined)
+  assert.equal(card.doing, undefined)
+  assert.equal(JSON.stringify(card).includes('LIVE_PROBE'), false)
+  assert.equal(JSON.stringify(card).includes('載入'), false)
+  assert.equal(JSON.stringify(card).includes('讀不到'), false)
+
+  const off = deriveOffice({ projects: [{ id: 'g', title: '課表', ownerBot: 'fitness', stage: 'running' }], decisions: [], totals: { pending: 0 } })
+  assert.equal(off.byAgent.fitness, undefined)
+  assert.equal(off.byAgent.wade, undefined)
+  assert.equal(off.unowned, 1)
 })
 
 test('mapOffice 帶出 ownerBot', () => {
