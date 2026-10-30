@@ -12,3 +12,5 @@
 
 .g-tick{height:24px;line-height:24px}.g-tick.g-date{top:24px;color:var(--hy-muted);font-weight:400}
 @media(max-width:640px){.g-row{grid-template-columns:44px 180px 90px 112px 112px var(--g-width)}.g-name{max-width:180px}}
+
+.g-row .g-cell.g-date-red,.g-date-label{color:var(--hy-bad);font-weight:700}.g-date-flags{display:grid;gap:4px}.g-form .g-date-flags label{display:flex;align-items:center;gap:8px;min-height:36px}.g-form .g-date-flags input[type=checkbox]{width:18px;min-height:18px;height:18px;padding:0;accent-color:var(--hy-brand)}

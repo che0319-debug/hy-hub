@@ -12,9 +12,12 @@
   "errors": [],
   "viewports": [
     1280,
-    390
+    1760
   ],
   "coverage": [
+    "started date red",
+    "delayed date red",
+    "independent flag toggles and persistence",
     "multi-project",
     "deep hierarchy",
     "collapse",
