@@ -23,7 +23,7 @@ import { makeGym } from './gym.js';
 import { makeSideHQ } from './sidehq.js';
 import { makePhoneShop } from './phoneshop.js';
 import { makeCuyu } from './cuyu.js';
-import { makeChuan } from './chuan.js';
+import { makeChuan, makeShop } from './chuan.js';
 import { makeDistTexture, makeWater } from './water.js';
 import { createAtmosphere } from './sky.js';
 import { buildBridges, makeBoats } from './bridges.js';
@@ -226,12 +226,86 @@ function scaffold() {
 }
 
 const CAMAZ = CFG.az;
+// 專案建築（目前只有川泱＝商店）。網格只在階段／樓層／提醒簽章變時重做，輪詢本身不重畫。
+const dyn = new Map(), cranes = [], alerts = [];
+const motionQuery = typeof matchMedia === 'function' ? matchMedia('(prefers-reduced-motion: reduce)') : null;
+let motionOff = !!(motionQuery && motionQuery.matches);
+const onMotion = () => { motionOff = !!(motionQuery && motionQuery.matches); };
+motionQuery?.addEventListener?.('change', onMotion);
+function dropPick(obj) {
+  const i = pickMeshes.indexOf(obj);
+  if (i >= 0) pickMeshes.splice(i, 1);
+}
+function clearSlot(slot) {
+  for (const obj of slot.extras) {
+    slot.group.remove(obj);
+    obj.traverse(o => { if (o.geometry) o.geometry.dispose(); dropPick(o); });
+    dropPick(obj);
+  }
+  slot.extras = [];
+  for (let i = cranes.length - 1; i >= 0; i--) if (cranes[i].slot === slot) cranes.splice(i, 1);
+  for (let i = alerts.length - 1; i >= 0; i--) if (alerts[i].slot === slot) alerts.splice(i, 1);
+}
+function mountMade(slot, made) {
+  clearSlot(slot);
+  const mesh = new Mesh(made.geo, matToon);
+  mesh.castShadow = mesh.receiveShadow = true;
+  mesh.userData.bid = slot.id;
+  slot.group.add(mesh);
+  pickMeshes.push(mesh);
+  slot.extras.push(mesh);
+  if (made.crane) {
+    const mast = new Mesh(made.crane.mastGeo, matToon);
+    mast.castShadow = mast.receiveShadow = true;
+    mast.position.set(made.crane.x, 0, made.crane.z);
+    mast.userData.bid = slot.id;
+    const pivot = new Group();
+    pivot.position.set(made.crane.x, made.crane.jibY, made.crane.z);
+    pivot.rotation.y = 0.25;
+    const jib = new Mesh(made.crane.jibGeo, matToon);
+    jib.castShadow = true;
+    pivot.add(jib);
+    slot.group.add(mast, pivot);
+    pickMeshes.push(mast);
+    slot.extras.push(mast, pivot);
+    cranes.push({ slot, jib: pivot, base: 0.25, speed: 0.16 });
+  }
+  if (made.alert) {
+    const mark = new Mesh(made.alert.geo, matToon);
+    mark.castShadow = true;
+    mark.position.set(made.alert.x, made.alert.y, made.alert.z);
+    mark.userData.bid = slot.id;
+    slot.group.add(mark);
+    pickMeshes.push(mark);
+    slot.extras.push(mark);
+    alerts.push({ slot, obj: mark, baseY: made.alert.y, speed: made.alert.level === 'red' ? 7.5 : 3.4, amp: 0.14 });
+  }
+  slot.top = made.top;
+  const rec = bldList.find(x => x.bd.id === slot.id);
+  if (rec) rec.top = made.top;
+  const lp = labelPts.find(p => p.kind === 'bldg' && p.id === slot.id);
+  if (lp) lp.y = made.top + 0.28;
+}
+function applyShop(slot, parts) { mountMade(slot, makeShop(parts)); }
+function applyStatic(slot) { mountMade(slot, makeChuan()); }
+function mountChuan(bd, isl, kb) {
+  const g = new Group();
+  g.position.set(kb.wx, 0, kb.wz);
+  g.rotation.y = CAMAZ;
+  scene.add(g);
+  const slot = { id: bd.id, group: g, extras: [], sig: 'static', lsig: 'static', kind: 'pending', top: 2.6 };
+  dyn.set(bd.id, slot);
+  bldList.push({ bd, isl, x: kb.wx, z: kb.wz, top: slot.top, sc: 1 });
+  labelPts.push({ kind: 'bldg', id: bd.id, name: bd.title, type: bd.type, flag: false, island: isl.id, x: kb.wx, y: 2.9, z: kb.wz, deco: false, project: true });
+  applyStatic(slot);
+}
 let bi2 = 0;
 for (const isl of ISLANDS) {
   cityIsland(isl);
   for (const bd of isl.bs) {
     const kb = (isl.keys || []).find(k => k.id === bd.id); if (!kb || kb.wx === undefined) continue;
-    const made = bd.form === 'scaffold' ? scaffold() : bd.form === 'plaza' ? makePlaza() : bd.form === 'dispatch' ? makeDispatch() : bd.form === 'meeting' ? makeMeeting() : bd.form === 'syscenter' ? makeSysCenter() : bd.form === 'hq' ? makeHQ() : bd.form === 'lab' ? makeLab() : bd.form === 'brain' ? makeBrain() : bd.form === 'dojo' ? makeDojo() : bd.form === 'sandtable' ? makeBoard() : bd.form === 'home' ? makeHome() : bd.form === 'gym' ? makeGym() : bd.form === 'sidehq' ? makeSideHQ() : bd.form === 'phoneshop' ? makePhoneShop() : bd.form === 'cuyu' ? makeCuyu() : bd.form === 'chuan' ? makeChuan() : makeBuilding(bd, bi2++ + 3), SC = BESPOKE.includes(bd.form) ? (bd.form === 'sidehq' ? 1.3 : 1) : bd.form === 'tent' ? 2.3 : 3.2;
+    if (bd.form === 'chuan') { mountChuan(bd, isl, kb); continue; }
+    const made = bd.form === 'scaffold' ? scaffold() : bd.form === 'plaza' ? makePlaza() : bd.form === 'dispatch' ? makeDispatch() : bd.form === 'meeting' ? makeMeeting() : bd.form === 'syscenter' ? makeSysCenter() : bd.form === 'hq' ? makeHQ() : bd.form === 'lab' ? makeLab() : bd.form === 'brain' ? makeBrain() : bd.form === 'dojo' ? makeDojo() : bd.form === 'sandtable' ? makeBoard() : bd.form === 'home' ? makeHome() : bd.form === 'gym' ? makeGym() : bd.form === 'sidehq' ? makeSideHQ() : bd.form === 'phoneshop' ? makePhoneShop() : bd.form === 'cuyu' ? makeCuyu() : makeBuilding(bd, bi2++ + 3), SC = BESPOKE.includes(bd.form) ? (bd.form === 'sidehq' ? 1.3 : 1) : bd.form === 'tent' ? 2.3 : 3.2;
     const g = new Group(), m = new Mesh(made.geo, matToon); m.castShadow = m.receiveShadow = true; g.add(m); m.userData.bid = bd.id; pickMeshes.push(m);
     g.position.set(kb.wx, 0, kb.wz); g.rotation.y = CAMAZ + (BESPOKE.includes(bd.form) ? 0 : 0.2 * (bi2 % 3 - 1)); g.scale.setScalar(SC);
     scene.add(g); bldList.push({ bd, isl, x: kb.wx, z: kb.wz, top: made.top * SC, sc: SC });
@@ -416,10 +490,75 @@ const botById = Object.fromEntries(bots.map(b => [b.f.id, b]));
 function botOf(id) { return id && id.startsWith('bot:') ? botById[id.slice(4)] : null; }
 
 // ---------- labels (DOM) ----------
+function fillStaticLabel(el, name) {
+  el.classList.remove('li-label-project', 'li-label-memorial');
+  delete el.dataset.s;
+  el.replaceChildren();
+  el.textContent = name || '';
+  el.title = name || '';
+  el.setAttribute('aria-label', name || '');
+}
+function fillMemorialLabel(el, label) {
+  el.classList.add('li-label-project', 'li-label-memorial');
+  el.replaceChildren();
+  el.dataset.s = 'done';
+  const title = document.createElement('span');
+  title.className = 'li-proj-title';
+  title.textContent = label?.title || '';
+  const meta = document.createElement('span');
+  meta.className = 'li-proj-meta';
+  meta.textContent = label?.text || '完成';
+  el.append(title, meta);
+  const aria = [label?.title, label?.text].filter(Boolean).join(' ');
+  el.title = aria;
+  el.setAttribute('aria-label', aria);
+}
+function fillProjectLabel(el, label, fallback) {
+  el.classList.remove('li-label-memorial');
+  el.classList.add('li-label-project');
+  el.replaceChildren();
+  const title = document.createElement('span');
+  title.className = 'li-proj-title';
+  title.textContent = label?.title || fallback || '';
+  el.appendChild(title);
+  if (!label) {
+    delete el.dataset.s;
+    el.title = fallback || '';
+    el.setAttribute('aria-label', fallback || '');
+    return;
+  }
+  el.dataset.s = label.tone || 'wait';
+  const track = document.createElement('span');
+  track.className = 'li-proj-track';
+  track.setAttribute('aria-hidden', 'true');
+  const bar = document.createElement('i');
+  bar.style.width = Math.max(0, Math.min(100, Math.round((label.ratio || 0) * 100))) + '%';
+  track.appendChild(bar);
+  const meta = document.createElement('span');
+  meta.className = 'li-proj-meta';
+  meta.appendChild(document.createTextNode(label.text || ''));
+  if (label.tag) {
+    const tag = document.createElement('em');
+    tag.className = 'li-proj-tag';
+    tag.textContent = label.tag;
+    meta.appendChild(tag);
+  }
+  el.append(track, meta);
+  if (label.chip) {
+    const chip = document.createElement('span');
+    chip.className = 'li-proj-chip';
+    chip.dataset.s = label.chip.tone;
+    chip.textContent = label.chip.text;
+    el.appendChild(chip);
+  }
+  const aria = [label.title, label.text, label.tag, label.chip?.text].filter(Boolean).join(' ');
+  el.title = aria;
+  el.setAttribute('aria-label', aria);
+}
 const labels = labelPts.filter(p => p.kind !== 'fig' && !p.deco).map(p => {
   const el = document.createElement('div');
   el.className = 'li-label ' + (p.kind === 'island' ? 'li-label-island' : p.kind === 'bot' ? 'li-label-bot' : 'li-label-bldg');
-  if (p.kind === 'bot' && p.staticInfo) { el.title = p.name; el.appendChild(document.createTextNode(p.name)); } else if (p.kind === 'bot') { el.dataset.s = p.status; el.title = p.name + '：' + STATUS_INFO[p.status]; const dot = document.createElement('i'); el.appendChild(dot); el.appendChild(document.createTextNode(p.name)); const st = document.createElement('span'); st.textContent = '・' + STATUS_INFO[p.status]; el.appendChild(st); } else
+  if (p.kind === 'bot' && p.staticInfo) { el.title = p.name; el.appendChild(document.createTextNode(p.name)); } else if (p.kind === 'bot') { el.dataset.s = p.status; el.title = p.name + '：' + STATUS_INFO[p.status]; const dot = document.createElement('i'); el.appendChild(dot); el.appendChild(document.createTextNode(p.name)); const st = document.createElement('span'); st.textContent = '・' + STATUS_INFO[p.status]; el.appendChild(st); } else if (p.project) { el.textContent = p.name; el.title = p.name; el.dataset.slot = 'pending'; } else
   el.textContent = p.name;
   if (p.kind === 'bot') { el.setAttribute('role', 'button'); el.tabIndex = 0; el.addEventListener('click', () => api.select('bot:' + p.id, true)); el.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); api.select('bot:' + p.id, true); } }); }
   if (p.kind === 'bldg') { el.setAttribute('role', 'button'); el.tabIndex = 0; el.addEventListener('click', () => api.select(p.id, true)); el.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); api.select(p.id, true); } }); }
@@ -428,8 +567,17 @@ const labels = labelPts.filter(p => p.kind !== 'fig' && !p.deco).map(p => {
 
 // ---------- camera ----------
 const HOME = { az: 0.62, el: 0.5, dist: 72, tx: 0.5, ty: 2, tz: 2.5 };
-// 除錯用：網址加 ?cam=dist,tx,tz,el 可指定起始鏡頭（截圖檢查細節用）
-try { const q = new URLSearchParams((location.hash.split('?')[1]) || '').get('cam'); if (q) { const [d, x, z, e] = q.split(',').map(Number); if (d) HOME.dist = d; if (!Number.isNaN(x)) HOME.tx = x; if (!Number.isNaN(z)) HOME.tz = z; if (e) HOME.el = e; } } catch { /* ignore */ }
+// 除錯用：?cam=dist,tx,tz,el 指定起始鏡頭。?focus=建築 id 把鏡頭拉到那一棟（正式頁不帶就沒效果）。
+try {
+  const params = new URLSearchParams((location.hash.split('?')[1]) || '');
+  const q = params.get('cam');
+  if (q) { const [d, x, z, e] = q.split(',').map(Number); if (d) HOME.dist = d; if (!Number.isNaN(x)) HOME.tx = x; if (!Number.isNaN(z)) HOME.tz = z; if (e) HOME.el = e; }
+  const focusId = params.get('focus');
+  if (focusId && bById[focusId]) {
+    const b = bById[focusId];
+    HOME.tx = b.x; HOME.tz = b.z; HOME.ty = 1.6; HOME.dist = 16; HOME.el = 0.5; HOME.az = CFG.az;
+  }
+} catch { /* ignore */ }
 const view = { ...HOME };
 const LIM = { dist: [8, 125], el: [0.28, 1.25] };
 let target = { ...HOME }, W = W0, H = H0;
@@ -485,6 +633,14 @@ function frame(now) {
   atmo.update(now, Math.min(0.1, (now - (frame.lastA || now)) / 1000), { x: view.tx, z: view.tz }, camera.position); frame.lastA = now;
   const dtb = Math.min(0.1, (now - (frame.lastB || now)) / 1000); frame.lastB = now; updateBots(dtb, (now - t0) / 1000);
   if (selRing.visible) selRing.material.opacity = 0.75 + 0.2 * Math.sin(now / 260);
+  const sec = (now - t0) / 1000;
+  if (motionOff) {
+    for (const c of cranes) c.jib.rotation.y = c.base;
+    for (const a of alerts) a.obj.position.y = a.baseY;
+  } else {
+    for (const c of cranes) c.jib.rotation.y = c.base + sec * c.speed;
+    for (const a of alerts) a.obj.position.y = a.baseY + Math.abs(Math.sin(sec * a.speed)) * a.amp;
+  }
   renderer.render(scene, camera);
   const showB = view.dist < 100;
   for (const { p, el: de } of labels) {
@@ -526,8 +682,36 @@ const api = {
   },
   home() { Object.assign(target, HOME); },
   focus(islandId) { const isl = ISLANDS.find(x => x.id === islandId); if (!isl) return; selected = null; placeRing(selRing, null); target.tx = isl.c[0] + (islandId === 'central' ? 0.5 : 0); target.tz = isl.c[1] + 2.5; target.dist = islandId === 'central' ? 72 : 46; opts.onSelect && opts.onSelect(null); },
+  // presentation.view 為 null：回到這格原本的靜態外觀，並清掉即時名牌。簽章沒變就不重做網格。
+  // 專案從下一輪清單消失時，kind 變成 absent／failed，網格與名牌一起換掉，不留上一輪的吊車或進度。
+  setProjectBuilding(id, presentation) {
+    const slot = dyn.get(id); if (!slot) return;
+    const view = presentation?.view || null;
+    const mode = view?.mode === 'memorial' ? 'memorial' : view ? 'live' : 'static';
+    const kind = presentation?.kind || mode;
+    const sig = mode === 'static' ? 'static' : view.signature;
+    if (slot.sig !== sig) {
+      if (mode === 'static') applyStatic(slot);
+      else applyShop(slot, view.parts);
+      slot.sig = sig;
+    }
+    const lsig = mode === 'static' ? 'static' : (view.label?.signature || mode);
+    const rec = labels.find(x => x.p.kind === 'bldg' && x.p.id === id);
+    if (slot.lsig !== lsig) {
+      slot.lsig = lsig;
+      if (rec) {
+        if (mode === 'static') fillStaticLabel(rec.el, rec.p.name);
+        else if (mode === 'memorial') fillMemorialLabel(rec.el, view.label);
+        else fillProjectLabel(rec.el, view.label, rec.p.name);
+      }
+    }
+    if (slot.kind !== kind) {
+      slot.kind = kind;
+      if (rec) rec.el.dataset.slot = kind;
+    }
+  },
   dispose() {
-    disposed = true; atmo.dispose(); cancelAnimationFrame(raf); ro.disconnect();
+    disposed = true; motionQuery?.removeEventListener?.('change', onMotion); atmo.dispose(); cancelAnimationFrame(raf); ro.disconnect();
     scene.traverse(o => { if (o.geometry) o.geometry.dispose(); if (o.material) (Array.isArray(o.material) ? o.material : [o.material]).forEach(m => m.dispose()); });
     renderer.dispose(); renderer.domElement.remove(); labels.forEach(l => l.el.remove());
   },

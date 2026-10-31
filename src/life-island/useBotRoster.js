@@ -70,5 +70,8 @@ export function useBotRoster(info) {
 
   const loaded = done.office || done.memory
   const failedCount = Object.values(failed).filter(Boolean).length + (info?.todoFailed ? 1 : 0)
-  return { bots, loaded, office, officeEmpty, unowned: off.unowned, reloadOffice, ...deriveSummary({ pending: off.pending, failedCount, loaded }) }
+  // loaded：有清單（含空清單）。之後某次輪詢失敗不會清掉上一份，所以仍是 loaded。
+  // failed：一次都沒拿到。pending：還沒回應。島上用這個分辨「專案確定不在」與「抓取失敗」。
+  const officeStatus = (office || officeEmpty) ? 'loaded' : (done.office && failed.office) ? 'failed' : 'pending'
+  return { bots, loaded, office, officeEmpty, officeStatus, unowned: off.unowned, reloadOffice, ...deriveSummary({ pending: off.pending, failedCount, loaded }) }
 }

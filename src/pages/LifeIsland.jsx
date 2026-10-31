@@ -1,8 +1,9 @@
 import { useEffect, useRef, useState } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useLocation } from 'react-router-dom'
 import '../../public/hy-ui/hy-ui.css'
 import '../life-island/life-island.css'
 import { ALL_BUILDINGS, FIGURES, STATUS_INFO, islandBotCard } from '../life-island/data'
+import { findProjectForBuilding, presentSlot } from '../life-island/projectBuilding.mjs'
 import { createIslandScene, webglOk } from '../life-island/scene'
 import { formatDue } from '../life-island/useWorldInfo'
 import { useInbox } from '../inbox/InboxContext'
@@ -11,6 +12,20 @@ import { rosterById } from '../botRoster'
 
 const BUILDINGS = ALL_BUILDINGS
 const BY_ID = Object.fromEntries(BUILDINGS.map(b => [b.id, b]))
+
+// 測試用。開發伺服器網址帶 ?fixture=memorial 時，川泱這格暫時看成完工紀念。
+// 正式建置不讀這個參數。data.js 不寫紀念，川泱還沒完成。
+const TEST_MEMORIAL = {
+  name: '示範完工店',
+  completedOn: '2026-10-01',
+  blurb: '這是測試用的完工紀念，不是川泱的正式資料。',
+  look: 'shop',
+}
+
+function memorialFixture(search) {
+  if (!import.meta.env.DEV) return false
+  try { return new URLSearchParams(search).get('fixture') === 'memorial' } catch { return false }
+}
 
 // 小地圖：五座島的大致位置（x、y 是百分比）。built=false 的還沒建，先標示建設中。
 const MAP_ISLANDS = [
@@ -263,7 +278,86 @@ function BotCard({ f: fig, live, loaded, onClose }) {
   )
 }
 
-function BuildingCard({ b, onClose, floating }) {
+function LiveBuildingCard({ card, onClose, floating }) {
+  const [min, setMin] = useStored('li_card_min', false)
+  const btn = { display: 'inline-flex', alignItems: 'center', textDecoration: 'none', minHeight: 44 }
+  if (floating && min) {
+    return (
+      <section className="hy-card li-card-min">
+        <button type="button" className="li-card-bar" onClick={() => setMin(false)} aria-expanded="false" aria-label={'展開' + card.title}>
+          <span className="hy-card-title">{card.title}</span><span className="hy-pill" data-s={card.tone}>{card.stageLabel}</span>
+        </button>
+        <button type="button" className="hy-btn" onClick={onClose} aria-label="關閉卡片">關閉</button>
+      </section>
+    )
+  }
+  return (
+    <section className="hy-card is-focus li-live" aria-live="polite">
+      <div className="hy-card-head">
+        <h2 className="hy-card-title">{card.title}</h2>
+        <div style={{ display: 'flex', gap: 8, flexShrink: 0, whiteSpace: 'nowrap' }}>
+          {floating && <button type="button" className="hy-btn" onClick={() => setMin(true)} aria-label="縮小卡片">縮小</button>}
+          <button type="button" className="hy-btn" onClick={onClose} aria-label="關閉卡片">關閉</button>
+        </div>
+      </div>
+      <div className="li-live-body">
+        <div className="li-live-badges">
+          {card.badges.map(item => <span key={item.key} className="hy-pill" data-s={item.tone}>{item.text}</span>)}
+        </div>
+        <p className="li-live-k">未完成里程碑</p>
+        {card.milestones.length
+          ? <ul className="li-live-list">{card.milestones.map(m => <li key={m.id}>{m.line}</li>)}</ul>
+          : <p className="hy-lede">{card.milestoneNote}</p>}
+        <p className="li-live-k">待你決定</p>
+        {card.decisions.length
+          ? <ul className="li-live-list">{card.decisions.map(d => <li key={d.id}>{d.line}</li>)}</ul>
+          : <p className="hy-lede">目前沒有</p>}
+        <p className="li-live-k">最新成果</p>
+        <p className="li-live-out">{card.output || '尚無'}</p>
+      </div>
+      <div className="li-live-actions">
+        <Link to={card.href} className="hy-btn is-primary" style={btn}>到 Bot Office 看完整專案</Link>
+      </div>
+    </section>
+  )
+}
+
+function MemorialCard({ card, onClose, floating }) {
+  const [min, setMin] = useStored('li_card_min', false)
+  if (floating && min) {
+    return (
+      <section className="hy-card li-card-min" data-card="memorial">
+        <button type="button" className="li-card-bar" onClick={() => setMin(false)} aria-expanded="false" aria-label={'展開' + card.title}>
+          <span className="hy-card-title">{card.title}</span>
+        </button>
+        <button type="button" className="hy-btn" onClick={onClose} aria-label="關閉卡片">關閉</button>
+      </section>
+    )
+  }
+  return (
+    <section className="hy-card is-focus" data-card="memorial" aria-live="polite">
+      <div className="hy-card-head">
+        <h2 className="hy-card-title">{card.title}</h2>
+        <div style={{ display: 'flex', gap: 8, flexShrink: 0, whiteSpace: 'nowrap' }}>
+          {floating && <button type="button" className="hy-btn" onClick={() => setMin(true)} aria-label="縮小卡片">縮小</button>}
+          <button type="button" className="hy-btn" onClick={onClose} aria-label="關閉卡片">關閉</button>
+        </div>
+      </div>
+      <dl className="hy-kv">
+        <dt>完成日</dt><dd>{card.completedOn || '未填'}</dd>
+      </dl>
+      {card.blurb && <p className="hy-lede" style={{ marginTop: 8 }}>{card.blurb}</p>}
+    </section>
+  )
+}
+
+function BuildingCard({ b, presentation, onClose, floating }) {
+  if (presentation?.kind === 'live' && presentation.card) return <LiveBuildingCard card={presentation.card} onClose={onClose} floating={floating} />
+  if (presentation?.kind === 'memorial' && presentation.card) return <MemorialCard card={presentation.card} onClose={onClose} floating={floating} />
+  return <StaticBuildingCard b={b} onClose={onClose} floating={floating} />
+}
+
+function StaticBuildingCard({ b, onClose, floating }) {
   const [min, setMin] = useStored('li_card_min', false)
   if (floating && min) {
     return (
@@ -311,13 +405,21 @@ export default function LifeIsland() {
   const [mapCur, setMapCur] = useState('central')
   const [sky, setSky] = useState(null)
   const { info, roster: data, counts, loaded: inboxLoaded } = useInbox()
+  const { search } = useLocation()
+  const fixtureOn = memorialFixture(search)
   const [panel, setPanel] = useState(null)
+  const [sceneTick, setSceneTick] = useState(0)
+
+  function slotOf(building) {
+    if (!fixtureOn || building?.id !== 'chuan') return building
+    return { ...building, memorial: TEST_MEMORIAL }
+  }
 
   useEffect(() => {
     if (!gl || !stageRef.current) return undefined
     let api
     try {
-      api = createIslandScene(stageRef.current, layerRef.current, { onSelect: id => setSel(id), onSky: v => setSky(v) })
+      api = createIslandScene(stageRef.current, layerRef.current, { onSelect: id => setSel(id), onSky: v => setSky(v), onReady: () => setSceneTick(n => n + 1) })
       apiRef.current = api
     } catch (e) {
       console.warn('[LifeIsland] WebGL 啟動失敗，改用清單', e)
@@ -333,6 +435,20 @@ export default function LifeIsland() {
     for (const [id, v] of Object.entries(data.bots)) if (v) { api.setBotStatus(id, v.status); const a = deriveAttention(v); api.setBotAttention(id, a.level, a.reasons) }
   }, [data.bots, gl])
 
+  // 專案建築跟既有的 Bot Office 輪詢走，這裡不再另打一支。簽章沒變，場景不會重做網格。
+  // 清單換了、專案不在了，就把即時網格與名牌清掉。失敗且沒有上一份清單時同樣回到靜態外觀。
+  useEffect(() => {
+    const api = apiRef.current
+    if (!api) return
+    const officeStatus = data.officeStatus || 'pending'
+    for (const building of BUILDINGS) {
+      const slot = slotOf(building)
+      if (slot.form !== 'chuan' && !slot.project && !slot.memorial) continue
+      const project = slot.project && data.office ? findProjectForBuilding(slot, data.office.projects) : null
+      api.setProjectBuilding(slot.id, presentSlot(slot, { project, officeStatus, today: info.today }))
+    }
+  }, [data.office, data.officeStatus, info.today, gl, sceneTick, fixtureOn])
+
   function choose(id) {
     setSel(id)
     apiRef.current && apiRef.current.select(id, false)
@@ -340,6 +456,9 @@ export default function LifeIsland() {
 
   const b = sel && !sel.startsWith('bot:') ? BY_ID[sel] : null
   const fig = sel && sel.startsWith('bot:') ? FIG_BY_ID[sel.slice(4)] : null
+  const slot = b ? slotOf(b) : null
+  const project = slot?.project && data.office ? findProjectForBuilding(slot, data.office.projects) : null
+  const presentation = slot ? presentSlot(slot, { project, officeStatus: data.officeStatus || 'pending', today: info.today }) : null
   return (
     <div className="hy li-page">
       <h1 className="li-sr">HY Life 島</h1>
@@ -359,7 +478,7 @@ export default function LifeIsland() {
               <span className="li-sign-t">{sky.time} · {sky.phase} · {sky.weather}{sky.temp != null ? ` ${sky.temp}°` : ''}</span>
             </div>
           )}
-          {(b || fig) && <div className="li-float">{fig ? <BotCard f={fig} live={data.bots[fig.id]} loaded={data.loaded} onClose={() => choose(null)} /> : <BuildingCard floating b={b} onClose={() => choose(null)} />}</div>}
+          {(b || fig) && <div className="li-float">{fig ? <BotCard f={fig} live={data.bots[fig.id]} loaded={data.loaded} onClose={() => choose(null)} /> : <BuildingCard floating b={b} presentation={presentation} onClose={() => choose(null)} />}</div>}
           <div className="li-hint">拖曳旋轉、滾輪或雙指縮放、Shift＋拖曳平移</div>
         </div>
       ) : (
@@ -367,7 +486,7 @@ export default function LifeIsland() {
           <div className="hy-empty">這台裝置不支援 3D，改用下方清單。內容與 3D 相同。</div>
           <StatusBar onGo={choose} info={info} data={data} panel={panel} setPanel={setPanel} />
           {panel && <InfoPanel kind={panel} info={info} onClose={() => setPanel(null)} />}
-          {b && <BuildingCard b={b} onClose={() => choose(null)} />}
+          {b && <BuildingCard b={b} presentation={presentation} onClose={() => choose(null)} />}
           <section className="hy-card">
             <h2 className="hy-card-title">中央島的建築</h2>
             <ul className="hy-list li-bldlist">

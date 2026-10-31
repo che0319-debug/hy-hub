@@ -19,7 +19,7 @@ export function prismTri(wz, rise, len) {
 }
 
 export class B {
-  constructor() { this.parts = []; this.M = new Matrix4(); }
+  constructor() { this.parts = []; this.M = new Matrix4(); this._src = new Map(); }
   with(o, fn) {
     const prev = this.M.clone();
     _e.set(o.rx || 0, o.ry || 0, o.rz || 0); _q.setFromEuler(_e); _p.set(o.x || 0, o.y || 0, o.z || 0); _s.set(1, 1, 1);
@@ -27,6 +27,8 @@ export class B {
   }
   add(geo, color, o = {}) {
     const g = geo.index ? geo.toNonIndexed() : geo.clone();
+    // 來源先複製再計次。只被加一次的，build 時丟掉；重複使用的模板（島上的地塊）留著。
+    if (g !== geo) this._src.set(geo, (this._src.get(geo) || 0) + 1);
     g.deleteAttribute('uv'); if (g.attributes.uv1) g.deleteAttribute('uv1');
     _e.set(o.rx || 0, o.ry || 0, o.rz || 0); _q.setFromEuler(_e);
     const sc = o.s; if (typeof sc === 'number') _s.set(sc, sc, sc); else if (sc) _s.set(sc[0], sc[1], sc[2]); else _s.set(1, 1, 1);
@@ -45,5 +47,12 @@ export class B {
     g.setAttribute('color', new BufferAttribute(col, 3)); g.setAttribute('aGlow', new BufferAttribute(glow, 1));
     this.parts.push(g); return this;
   }
-  build() { const g = mergeGeometries(this.parts, false); this.parts = []; g.computeBoundingSphere(); g.computeBoundingBox(); return g; }
+  build() {
+    const g = mergeGeometries(this.parts, false);
+    for (const part of this.parts) part.dispose();
+    this.parts = [];
+    for (const [src, n] of this._src) if (n === 1) src.dispose();
+    this._src.clear();
+    g.computeBoundingSphere(); g.computeBoundingBox(); return g;
+  }
 }
