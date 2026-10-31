@@ -1,0 +1,22 @@
+/* 對齊正式成果報告的 section.focus／tag／metric。規則都收在 .rs-card 底下。 */
+.ao .rs-card.ao-report-snapshot{border-left:5px solid #1f9d55;padding:18px 18px 16px 20px}
+.ao .rs-card .ao-card-head h2{min-width:0}
+.rs-card .rs-source{flex:none}
+.rs-card .rs-tags{display:flex;flex-wrap:wrap;gap:6px;margin:2px 0 10px}
+.rs-card .rs-tag{display:inline-flex;align-items:center;min-height:24px;padding:2px 10px;border-radius:999px;background:#7a8496;color:#fff;font-size:12px;font-weight:650;line-height:1.4;white-space:nowrap}
+.rs-card .rs-tag[data-s="done"]{background:#1f9d55}
+.rs-card .rs-tag[data-s="you"]{background:#d98a00}
+.rs-card .rs-tag[data-s="wait"]{background:#7a8496}
+.rs-card .rs-tag[data-s="bad"]{background:#c43d3d}
+.rs-card .rs-tag[data-s="ai"]{background:#2f6fdb}
+.rs-card .rs-tag[data-s="source"]{background:var(--hy-sunken);color:var(--hy-muted);font-weight:500}
+.rs-card .rs-metrics{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin:10px 0 12px}
+.rs-card .rs-metric{min-width:0;border:1px solid var(--hy-line);border-radius:10px;padding:12px 14px;background:var(--hy-surface)}
+.rs-card .rs-metric b{display:block;font-size:22px;font-weight:700;line-height:1.2;font-variant-numeric:tabular-nums;color:var(--hy-ink)}
+.rs-card .rs-metric span{display:block;margin-top:4px;font-size:12px;line-height:1.45;color:var(--hy-muted)}
+.ao .rs-card p.rs-conclusion{margin:12px 0 4px;font-weight:700;line-height:1.7}
+.rs-card .rs-items{list-style:disc;margin:8px 0 0;padding-left:1.35em}
+.rs-card .rs-items li{margin:6px 0;line-height:1.7;overflow-wrap:anywhere}
+.rs-card .rs-items b{font-weight:700}
+.ao .rs-card p.rs-stale{margin:12px 0 0;padding:8px 12px;border-radius:8px;background:var(--hy-you-bg);color:var(--hy-you);font-size:13px;line-height:1.5}
+@media(max-width:720px){.rs-card .rs-metrics{grid-template-columns:repeat(2,minmax(0,1fr))}}

@@ -1,17 +1,12 @@
+import { extractSummarySection, isMilestoneDone, plain, SUMMARY_ITEM_LIMIT } from './reportSummary.mjs'
+
+export { isMilestoneDone }
+
 const list = value => Array.isArray(value) ? value : []
 export const officeTime = value => { const n = typeof value === 'number' ? value : Date.parse(value) / 1000; return Number.isFinite(n) && n > 0 ? n : null }
-const DONE_MILESTONE = new Set(['done', 'completed', 'complete', 'closed', 'passed', '完成', '已完成'])
 const DONE_ROUND = new Set(['done', 'completed', 'finished', 'complete', 'closed'])
 const ACTIVE_ROUND = new Set(['running', 'ready', 'blocked', 'failed', 'waiting', 'active'])
 const textOf = value => typeof value === 'string' ? value.trim() : ''
-const decode = value => textOf(value)
-  .replace(/&nbsp;/gi, ' ')
-  .replace(/&amp;/gi, '&')
-  .replace(/&lt;/gi, '<')
-  .replace(/&gt;/gi, '>')
-  .replace(/&quot;/gi, '"')
-  .replace(/&#39;/gi, "'")
-const plain = value => decode(String(value || '').replace(/<[^>]+>/g, ' ')).replace(/\s+/g, ' ').trim()
 
 export const REPORT_FRAME = { sandbox: 'allow-popups allow-popups-to-escape-sandbox', referrerPolicy: 'no-referrer' }
 
@@ -22,11 +17,6 @@ export function isHyOwnerSession(token) {
     const data = JSON.parse(atob(payload))
     return data?.sub === 'hy'
   } catch { return false }
-}
-
-export function isMilestoneDone(milestone) {
-  const status = textOf(milestone?.status)
-  return DONE_MILESTONE.has(status) || DONE_MILESTONE.has(status.toLowerCase())
 }
 
 export function officeMilestones(building = {}) {
@@ -67,21 +57,11 @@ export function officePlan(building = {}, embedded = null) {
 }
 
 export function reportSummaryLines(html) {
-  if (typeof html !== 'string' || !html.trim()) return []
-  const source = html.replace(/<script\b[\s\S]*?<\/script>/gi, '').replace(/<style\b[\s\S]*?<\/style>/gi, '')
-  const heading = /<(h[1-4]|b|strong)\b[^>]*>([\s\S]*?)<\/\1>/gi
-  let found = null
-  for (const match of source.matchAll(heading)) {
-    if (/一頁摘要|現在怎樣.*你要做什麼/.test(plain(match[2]))) { found = match; break }
-  }
-  if (!found) return []
-  const rest = source.slice(found.index + found[0].length)
-  const level = /^h([1-4])$/i.exec(found[1])
-  const next = level ? new RegExp(`<h[1-${level[1]}]\\b`, 'i').exec(rest) : null
-  const section = next ? rest.slice(0, next.index) : rest
-  const items = [...section.matchAll(/<li\b[^>]*>([\s\S]*?)<\/li>/gi)].map(match => plain(match[1])).filter(Boolean).slice(0, 6)
+  const section = extractSummarySection(html)
+  if (!section) return []
+  const items = [...section.html.matchAll(/<li\b[^>]*>([\s\S]*?)<\/li>/gi)].map(match => plain(match[1])).filter(Boolean).slice(0, SUMMARY_ITEM_LIMIT)
   if (items.length) return items
-  const body = plain(section).slice(0, 1200)
+  const body = plain(section.html).slice(0, 1200)
   return body ? [body] : []
 }
 

@@ -4,6 +4,8 @@ import remarkGfm from 'remark-gfm'
 import {PlanSummary,PlanDocument} from '../pages/PlanViews'
 import {milestones,PACKAGE_STATUS,safeUrl} from '../lib/aiOffice.mjs'
 import {officeEvents,officeTime,officeJournal,reportSummaryLines,reportIsStale,reportVersions,normalizeOfficeReport,normalizeOfficeDocument,normalizeOfficeFiles,reviewRounds,reviewFieldLabel,openFollowUpCount,REPORT_FRAME,officeDeleteOutcome} from '../lib/botOfficeView.mjs'
+import {composeReportSummary,reportSummaryStatus} from '../lib/reportSummary.mjs'
+import ReportSummaryCard,{ReportStaleNote} from './ReportSummaryCard'
 import {OfficeRequest,OfficeLog,OfficeFollowUps} from './OfficeActions'
 import {OFFICE_NAMES,OFFICE_TABS,loadOfficeReport,loadOfficeReportHtml,loadOfficeDocument,loadOfficeFiles,deleteOfficeProject,uploadOfficeFile,importOfficeReference,officeDeleteHold} from '../botOfficeData'
 import {authHeaders} from '../auth'
@@ -21,31 +23,33 @@ const projectCards = project => OFFICE_TABS.flatMap(([key]) => project.cards?.[k
 export function useOfficeReport(projectId, updatedRaw) {
   const [metaState,setMetaState]=useState({status:'idle',meta:null,error:''})
   const [fileId,setFileId]=useState('')
-  const [htmlState,setHtmlState]=useState({html:'',error:''})
+  const [htmlState,setHtmlState]=useState({status:'idle',html:'',error:''})
   useEffect(()=>{
-    if(!projectId){setMetaState({status:'idle',meta:null,error:''});setFileId('');setHtmlState({html:'',error:''});return undefined}
+    if(!projectId){setMetaState({status:'idle',meta:null,error:''});setFileId('');setHtmlState({status:'idle',html:'',error:''});return undefined}
     const ctrl=new AbortController(); let alive=true
-    setMetaState({status:'loading',meta:null,error:''}); setFileId(''); setHtmlState({html:'',error:''})
+    setMetaState({status:'loading',meta:null,error:''}); setFileId(''); setHtmlState({status:'idle',html:'',error:''})
     loadOfficeReport(projectId,{headers:authHeaders(),signal:ctrl.signal}).then(data=>{
       if(!alive)return
       const meta=normalizeOfficeReport(data)
       if(!meta){setMetaState({status:'error',meta:null,error:'報告資料格式無法辨識，沒有改顯示其他內容。'});return}
       if(!meta.exists){setMetaState({status:'empty',meta,error:meta.reason||''});return}
+      const nextId=meta.file_id||meta.history[0]?.file_id||''
       setMetaState({status:'ready',meta,error:''})
-      setFileId(meta.file_id||meta.history[0]?.file_id||'')
+      setFileId(nextId)
+      if(nextId)setHtmlState({status:'loading',html:'',error:''})
     }).catch(error=>{if(alive&&error.name!=='AbortError')setMetaState({status:'error',meta:null,error:error.message||'報告讀取失敗。'})})
     return()=>{alive=false;ctrl.abort()}
   },[projectId])
   useEffect(()=>{
     if(!projectId||!fileId||metaState.status!=='ready')return undefined
     const ctrl=new AbortController(); let alive=true
-    setHtmlState({html:'',error:''})
-    loadOfficeReportHtml(projectId,fileId,{headers:authHeaders(),signal:ctrl.signal}).then(html=>{if(alive)setHtmlState({html,error:''})}).catch(error=>{if(alive&&error.name!=='AbortError')setHtmlState({html:'',error:error.message||'報告內文讀取失敗。'})})
+    setHtmlState({status:'loading',html:'',error:''})
+    loadOfficeReportHtml(projectId,fileId,{headers:authHeaders(),signal:ctrl.signal}).then(html=>{if(alive)setHtmlState({status:'ready',html,error:''})}).catch(error=>{if(alive&&error.name!=='AbortError')setHtmlState({status:'error',html:'',error:error.message||'報告內文讀取失敗。'})})
     return()=>{alive=false;ctrl.abort()}
   },[projectId,fileId,metaState.status])
   const meta=metaState.meta
   const modified=fileId&&meta?(meta.history.find(item=>item.file_id===fileId)?.modified_time||(fileId===meta.file_id?meta.modified_time:'')):''
-  return {...metaState,fileId,setFileId,html:htmlState.html,htmlError:htmlState.error,lines:reportSummaryLines(htmlState.html),stale:reportIsStale(updatedRaw,modified),modified,versions:reportVersions(meta)}
+  return {...metaState,fileId,setFileId,html:htmlState.html,htmlStatus:htmlState.status,htmlError:htmlState.error,lines:reportSummaryLines(htmlState.html),stale:reportIsStale(updatedRaw,modified),modified,versions:reportVersions(meta)}
 }
 
 export function usePlanDocument(cardId) {
@@ -74,15 +78,9 @@ export function OfficeReportStrip({report,onOpen}) {
   </button>
 }
 
-export function OfficeSnapshot({lines=[],status='empty',message='',stale=false}) {
-  return <section className="ao-card ao-report-snapshot"><div className="ao-card-head"><h2>一頁摘要：現在怎樣、你要做什麼</h2><small>正式成果報告</small></div>
-    {status==='loading'&&<p className="ao-muted">正在讀取專案報告…</p>}
-    {status==='ready'&&(lines.length?lines.map((line,i)=><p key={i}>{line}</p>):<p className="ao-muted">報告裡沒有「一頁摘要」。</p>)}
-    {status==='empty'&&<p>這個專案還沒有專案報告</p>}
-    {status==='error'&&<p role="alert">{message||'報告讀取失敗。'}</p>}
-    {status==='empty'&&message&&<p className="ao-muted">{message}</p>}
-    {stale&&<p role="status">報告比目前狀態舊，請以狀態列為準</p>}
-  </section>
+export function OfficeSnapshot({html='',lines=[],project=null,milestones=[],status='empty',message='',stale=false}) {
+  const model=status==='ready'?composeReportSummary({html,lines,project,milestones}):null
+  return <ReportSummaryCard title={model?.title} badges={model?.badges} metrics={model?.metrics} conclusion={model?.conclusion} items={model?.items} status={status} message={message} stale={stale}/>
 }
 export function OfficeCards({items}) {return items.map(c=><article className="ao-card" key={c.id}><h2>{c.title}</h2><p>{c.summary}</p><Link href={c.driveUrl}>開啟 Drive 原件</Link></article>)}
 export function OfficeTeam({project}) {
@@ -178,25 +176,23 @@ function ReviewDocument({cardId}) {
 }
 
 // HTML is supplied as content, never fetched from an arbitrary URL or inserted into the host DOM.
-export function OfficeResults({project,report,onOverview}) {
+export function OfficeResults({project,report,milestones=[],onOverview}) {
  const [full,setFull]=useState(false)
  const versions=report?.versions||[]
  const html=report?.html||''
  useEffect(()=>{if(!full)return;const key=e=>{if(e.key==='Escape')setFull(false)};window.addEventListener('keydown',key);return()=>window.removeEventListener('keydown',key)},[full])
+ const summaryStatus=reportSummaryStatus(report)
  const rounds=reviewRounds(projectCards(project))
  const checkpoints=Array.isArray(project.source?.quality?.checkpoints)?project.source.quality.checkpoints:[]
  const linked=new Set(rounds.map(round=>round.reviewId))
  const extraReviews=project.cards.outputs.filter(card=>card.isReview&&!linked.has(card.id))
  return <div className="ao-results"><Card title="成果報告" className={full?'ao-reader-full':''}><div className="ao-toolbar">{project.folderUrl&&<Link href={project.folderUrl}>開專案 Drive 資料夾</Link>}{report?.meta?.drive_url&&<Link href={report.meta.drive_url}>在 Drive 開啟</Link>}<label>報告版本<select aria-label="成果報告版本" value={report?.fileId||''} onChange={e=>report.setFileId(e.target.value)}>{!versions.length&&<option value="">尚無正式報告</option>}{versions.map(item=><option key={item.file_id} value={item.file_id}>{item.current?'目前版本':`第 ${item.version??''} 版`} · {when(item.modified_time)}</option>)}</select></label><button disabled={!html} onClick={()=>setFull(v=>!v)}>{full?'離開完整閱讀':'完整閱讀'}</button><button type="button" disabled={!html} onClick={()=>downloadHtml(`${project.title||'專案'}_專案報告.html`,html)}>下載</button></div>
     <ReportStatus project={project}/>
-    {report?.stale&&<p role="status">報告比目前狀態舊，請以狀態列為準</p>}
+    {summaryStatus==='ready'&&html&&report?.stale&&<div className="rs-card"><ReportStaleNote/></div>}
     <p className="ao-muted">最後更新：{report?.modified?when(report.modified):'尚未記錄'}</p>
-    {report?.status==='empty'&&<Empty>這個專案還沒有專案報告</Empty>}
-    {report?.status==='empty'&&report.error&&<p className="ao-muted">{report.error}</p>}
-    {report?.status==='error'&&<p role="alert">{report.error}</p>}
-    {report?.htmlError&&<p role="alert">{report.htmlError}</p>}
-    {report?.status==='loading'&&<Empty>正在讀取專案報告…</Empty>}
-    {html?<iframe title="正式 HTML 成果報告" sandbox={REPORT_FRAME.sandbox} referrerPolicy={REPORT_FRAME.referrerPolicy} srcDoc={html}/>:report?.status==='ready'&&!report.htmlError&&<Empty>正在讀取報告內文…</Empty>}
+    {summaryStatus==='ready'&&html
+      ?<iframe title="正式 HTML 成果報告" sandbox={REPORT_FRAME.sandbox} referrerPolicy={REPORT_FRAME.referrerPolicy} srcDoc={html}/>
+      :<OfficeSnapshot html={html} lines={report?.lines} project={project} milestones={milestones} status={summaryStatus} message={report?.htmlError||report?.error||''} stale={Boolean(report?.stale)}/>}
   </Card><Card title="獨立審查"><p className="ao-muted">只審三個節點：規劃、重大里程碑、結案。審查結論只在卡片有 verdict 欄時顯示；是否核准仍在<button className="ao-inline" onClick={onOverview}>概況</button>決定。</p>
     {checkpoints.map(item=><details className="ao-review" key={item.checkpoint_id}><summary><span className="ao-review-kind">{item.kind}</span><b>{item.milestone_id||''} 第 {item.round} 輪</b>{item.verdict&&<Pill s={item.verdict==='PASS'||item.verdict==='pass'?'done':'you'}>{item.verdict}</Pill>}</summary><p>{text(item.findings||item.summary)}</p></details>)}
     {rounds.map(round=><details className="ao-review" key={`${round.outputId}:${round.round}`}><summary><b>第 {round.round} 輪</b> {round.outputTitle}{round.hasVerdict&&<Pill s={round.verdict==='pass'||round.verdict==='PASS'?'done':'you'}>{round.verdict}</Pill>}</summary>
