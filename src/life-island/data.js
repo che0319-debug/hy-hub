@@ -121,7 +121,7 @@ export const SIDE_ISLAND = {
       blurb: '甜點事業（建設中）。', links: [], note: '建設中，還沒有對應頁面。',
     },
     {
-      id: 'chuan', title: '川泱購物', type: 'business', form: 'chuan', height: 2.6, q: 1, r: 1,
+      id: 'chuan', title: '川泱購物', type: 'business', form: 'chuan', height: 2.6, q: 1, r: 1, project: 'p-002',
       kind: '事業', agent: 'Sam', status: '待補',
       blurb: '購物事業（建設中）。', links: [], note: '建設中，還沒有對應頁面。',
     },
