@@ -1,21 +1,15 @@
-// 專案建築：類型、階段零件、樓層、提醒與即時卡片。純函式，不碰網路與畫面。
+// 專案建築：類型、階段零件、樓層、提醒、即時卡片與完工紀念。純函式，不碰網路與畫面。
+// 進行中一律用商店外殼。building_type 先留著，等專案完成、有專屬造型再讀。
 // 里程碑的 depends_on／ready 尚未進主線時，缺欄位就不顯示「可開工／等待」。
 // Bot Office 頁目前不讀 ?project=（那支檔不能一起改）。連結先帶上專案 id。
 
 export const FLOOR_CAP = 5
 
-// 商店現在有造型。其餘先登記，造型之後再補。
+// 現在只建模商店。office／factory／lab／home／gym 先不登記：
+// 進行中不換外觀；專屬造型等完工、寫進格子的 memorial.look 之後再補。
 export const TYPE_REGISTRY = {
   shop: { id: 'shop', label: '商店', built: true },
-  office: { id: 'office', label: '辦公室', built: false },
-  factory: { id: 'factory', label: '工廠', built: false },
-  lab: { id: 'lab', label: '實驗室', built: false },
-  home: { id: 'home', label: '住家', built: false },
-  gym: { id: 'gym', label: '健身房', built: false },
 }
-
-// 沒寫 building_type 時的歸屬。目前只有 Sam 的事業落成商店。
-const OWNER_TYPE = { sam: 'shop' }
 
 export const STAGE_LABELS = {
   unassigned: '待派',
@@ -79,23 +73,24 @@ export function normalizeMilestones(project) {
   }))
 }
 
-function ownerOf(project) {
-  return text(project?.owner_bot) || text(project?.ownerBot) || text(project?.source?.owner_bot)
-}
-
 function explicitType(project) {
   return text(project?.building_type) || text(project?.source?.building_type)
 }
 
-export function resolveBuildingType(project, fallback = 'shop') {
-  const explicit = explicitType(project)
-  if (explicit && TYPE_REGISTRY[explicit]) return explicit
-  const owner = ownerOf(project)
-  if (OWNER_TYPE[owner]) return OWNER_TYPE[owner]
-  return fallback
+// 鉤子：原樣讀出 building_type，不決定現在的外殼。空字串代表沒寫。
+export function readBuildingType(project) {
+  return explicitType(project)
 }
 
-// 未完工的類型沒有自己的造型，呼叫端先沿用商店外殼。
+// 進行中的專案沒有分類外觀。寫了已建模的類型才採用，目前只有 shop。
+// 負責人（包含 sam）不換類型。還沒建模的類型退回商店。
+export function resolveBuildingType(project, fallback = 'shop') {
+  const explicit = explicitType(project)
+  if (explicit && TYPE_REGISTRY[explicit]?.built) return explicit
+  return TYPE_REGISTRY[fallback]?.built ? fallback : 'shop'
+}
+
+// 還沒建模的類型沿用商店外殼。
 export function meshKind(type) {
   return TYPE_REGISTRY[type]?.built ? type : 'shop'
 }
@@ -376,7 +371,9 @@ export function composeBuilding(project, { today, title } = {}) {
     output: latestOutputLine(project),
   }
   return {
+    mode: 'live',
     type,
+    buildingType: readBuildingType(project),
     mesh: meshKind(type),
     stage,
     stageLabel: labelText,
@@ -389,4 +386,78 @@ export function composeBuilding(project, { today, title } = {}) {
     label,
     card,
   }
+}
+
+// 格子上的完工紀念。缺名稱、日期、簡介三者全部，就當沒寫。
+// look 只有已建模的才採用；其餘先記在 requestedLook，外殼仍是商店。
+export function readMemorial(raw) {
+  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return null
+  const name = text(raw.name)
+  const blurb = text(raw.blurb)
+  const completedOn = normDue(raw.completedOn)
+  const requestedLook = text(raw.look) || 'shop'
+  if (!name && !blurb && !completedOn) return null
+  const look = TYPE_REGISTRY[requestedLook]?.built ? requestedLook : 'shop'
+  return { name: name || '已完成', blurb, completedOn, look, requestedLook }
+}
+
+// 沒有 Bot Office 專案時的完工外觀：滿樓層、綠旗、點燈，沒有吊車與圍欄。
+// 卡片是固定介紹（名稱、完成日、簡介），沒有即時徽章，也沒有前往 Bot Office 的連結。
+export function memorialView(raw) {
+  const memorial = readMemorial(raw)
+  if (!memorial) return null
+  const floors = floorPlan('done', FLOOR_CAP)
+  const parts = stageParts('done', floors, null)
+  const mesh = meshKind(memorial.look)
+  const textLine = memorial.completedOn ? `完成 ${memorial.completedOn}` : '完成'
+  const label = {
+    title: memorial.name,
+    text: textLine,
+    ratio: null,
+    tag: '',
+    tone: 'done',
+    chip: null,
+    signature: ['memorial', memorial.name, textLine, memorial.blurb, mesh].join('|'),
+  }
+  const card = {
+    fixed: true,
+    live: false,
+    title: memorial.name,
+    completedOn: memorial.completedOn,
+    blurb: memorial.blurb,
+    badges: [],
+    href: null,
+  }
+  return {
+    mode: 'memorial',
+    type: mesh,
+    look: mesh,
+    requestedLook: memorial.requestedLook,
+    mesh,
+    stage: 'done',
+    parts,
+    signature: buildingSignature(mesh, parts),
+    label,
+    card,
+  }
+}
+
+// 這一格現在畫什麼。
+// 進行中的專案優先於紀念：Bot Office 還有這筆，就仍是工地，不換成完工外觀。
+// loaded 且專案不在、格子有紀念：完工商店與固定介紹卡。
+// loaded 且沒有紀念、failed、pending：view／card 都是 null，呼叫端回到這格原本的靜態外觀與靜態卡。
+// failed 與 absent 分開記。失敗時不畫紀念，避免還沒確認刪除就把店畫成已完工。
+// 若失敗時仍留著上一份清單，呼叫端應維持 loaded，這裡就不會清掉進行中。
+export function presentSlot(building, { project = null, officeStatus = 'pending', today } = {}) {
+  if (project) {
+    const view = composeBuilding(project, { today, title: building?.title })
+    return { kind: 'live', officeStatus, view, card: view.card }
+  }
+  if (officeStatus === 'loaded') {
+    const view = memorialView(building?.memorial)
+    if (view) return { kind: 'memorial', officeStatus, view, card: view.card }
+    return { kind: 'absent', officeStatus, view: null, card: null }
+  }
+  if (officeStatus === 'failed') return { kind: 'failed', officeStatus, view: null, card: null }
+  return { kind: 'pending', officeStatus: officeStatus || 'pending', view: null, card: null }
 }

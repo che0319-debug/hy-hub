@@ -29,9 +29,15 @@ function miles(spec) {
 }
 
 function officeState(spec) {
-  return {
+  const shell = {
     updated: '2026-10-31T09:00:00+08:00',
     islands: [{ id: 'side', name: '金融島' }],
+    buildings: [],
+    decisions: [],
+  }
+  if (spec.empty) return shell
+  return {
+    ...shell,
     buildings: [{
       id: 'p-002',
       title: '川泱購物',
@@ -75,9 +81,19 @@ const shots = [
   { name: 'card-mobile', stage: 'running', done: 0, gates: true, decision: '招牌要不要改成橘色', output: true, click: true, wait: '執行中', width: 390, height: 844 },
 ]
 
+// v2：進行中卡片、測試用完工紀念、專案從清單消失後回到原本的川泱。SUITE=v2 才跑。
+const v2Dir = process.env.ISLAND_BUILDINGS_V2_DIR || '/workspace/build-packets/island-buildings/v2'
+const v2Shots = [
+  { name: 'card-running', stage: 'running', done: 0, gates: true, decision: '招牌要不要改成橘色', output: true, click: true, wait: '執行中', slot: 'live', width: 1280, height: 900 },
+  { name: 'memorial-building', empty: true, fixture: 'memorial', slot: 'memorial', width: 1280, height: 900 },
+  { name: 'memorial-card', empty: true, fixture: 'memorial', slot: 'memorial', click: 'memorial', width: 1280, height: 900 },
+  { name: 'deleted-slot', stage: 'running', done: 0, drop: true, slot: 'absent', width: 1280, height: 900 },
+  { name: 'deleted-card', stage: 'running', done: 0, drop: true, slot: 'absent', click: 'static', width: 1280, height: 900 },
+]
+
 const chromeArgs = ['--no-sandbox', '--disable-dev-shm-usage', '--ignore-gpu-blocklist', '--enable-webgl', '--use-gl=angle', '--use-angle=swiftshader', '--enable-unsafe-swiftshader']
 
-async function shoot(browser, spec) {
+async function shoot(browser, spec, dir) {
   const context = await browser.newContext({ viewport: { width: spec.width, height: spec.height }, deviceScaleFactor: 1 })
   await context.addInitScript(() => {
     const payload = { exp: Math.floor(Date.now() / 1000) + 3600, sub: 'hy' }
@@ -85,13 +101,14 @@ async function shoot(browser, spec) {
   })
   const state = officeState(spec)
   const index = officeIndex(spec)
+  let dropped = false
   await context.route('**/api/**', async route => {
     const req = route.request()
     const u = new URL(req.url())
     const headers = { 'Content-Type': 'application/json', 'X-Brain-Updated': state.updated }
     let data = {}
     if (u.pathname.endsWith('/api/auth/session') || u.pathname.endsWith('/api/auth/refresh')) data = { ok: true }
-    else if (u.pathname.endsWith('/api/office/state')) data = state
+    else if (u.pathname.endsWith('/api/office/state')) data = (spec.drop && dropped) ? { ...state, buildings: [], decisions: [] } : state
     else if (u.pathname.endsWith('/api/office/index')) data = index
     else if (u.pathname.includes('memory-health')) data = { bots: {} }
     else if (u.pathname.includes('today-schedule')) data = { events: [] }
@@ -105,33 +122,83 @@ async function shoot(browser, spec) {
   const page = await context.newPage()
   const errors = []
   page.on('pageerror', e => errors.push(e.message))
-  await page.goto(base + '/#/life-island?focus=chuan', { waitUntil: 'domcontentloaded' })
+  const q = new URLSearchParams({ focus: 'chuan' })
+  if (spec.fixture) q.set('fixture', spec.fixture)
+  await page.goto(base + '/#/life-island?' + q.toString(), { waitUntil: 'domcontentloaded' })
   await page.addStyleTag({ content: `
     @font-face { font-family: "Noto Sans TC"; src: local("Noto Sans CJK TC"), local("Noto Sans CJK JP"); font-weight: 100 900; }
     .li-map, .li-map-mini, .li-hint, .li-hud, .li-m-hud, .li-sign { display: none !important; }
   ` })
-  await page.waitForFunction(text => {
-    const el = document.querySelector('.li-label-project')
-    return !!(el && el.textContent && el.textContent.includes('川泱') && el.textContent.includes(text))
-  }, spec.wait, { timeout: 25000 })
+  if (spec.drop) {
+    await page.waitForFunction(() => {
+      const el = document.querySelector('[data-slot="live"]')
+      return !!(el && el.textContent && el.textContent.includes('執行中'))
+    }, null, { timeout: 25000 })
+    if (spec.click === 'static') {
+      await page.getByRole('button', { name: /川泱購物/ }).click()
+      await page.getByRole('link', { name: '到 Bot Office 看完整專案' }).waitFor()
+    }
+    dropped = true
+    await page.evaluate(() => {
+      document.dispatchEvent(new Event('visibilitychange'))
+      window.dispatchEvent(new Event('focus'))
+    })
+    await page.waitForFunction(() => {
+      const el = document.querySelector('[data-slot="absent"]')
+      return !!(el && !el.classList.contains('li-label-project') && el.textContent.includes('川泱') && !el.textContent.includes('執行中'))
+    }, null, { timeout: 25000 })
+    if (spec.click === 'static') {
+      await page.waitForFunction(() => {
+        const card = document.querySelector('.li-float')
+        if (!card) return false
+        const text = card.textContent || ''
+        return text.includes('購物事業（建設中）') && !text.includes('到 Bot Office') && !card.querySelector('a')
+      }, null, { timeout: 10000 })
+    }
+  } else if (spec.slot) {
+    await page.waitForFunction(slot => {
+      const el = document.querySelector(`[data-slot="${slot}"]`)
+      return !!(el && el.textContent)
+    }, spec.slot, { timeout: 25000 })
+  } else {
+    await page.waitForFunction(text => {
+      const el = document.querySelector('.li-label-project')
+      return !!(el && el.textContent && el.textContent.includes('川泱') && el.textContent.includes(text))
+    }, spec.wait, { timeout: 25000 })
+  }
   const canvas = await page.locator('canvas').count()
   if (!canvas) throw new Error(spec.name + ' 沒有 WebGL canvas\n' + errors.join('\n'))
   await page.waitForTimeout(700)
-  if (spec.click) {
+  if (spec.click === true) {
     await page.getByRole('button', { name: /川泱購物/ }).click()
     await page.getByRole('link', { name: '到 Bot Office 看完整專案' }).waitFor()
     if (spec.gates) await page.getByText('可開工').first().waitFor()
     await page.waitForTimeout(500)
   }
+  if (spec.click === 'memorial') {
+    await page.getByRole('button', { name: /示範完工店/ }).click()
+    const card = page.locator('[data-card="memorial"]')
+    await card.waitFor()
+    await card.getByText('完成日').waitFor()
+    await card.getByText('2026-10-01', { exact: true }).waitFor()
+    await card.getByText('這是測試用的完工紀念，不是川泱的正式資料。').waitFor()
+    if (await card.getByRole('link', { name: '到 Bot Office 看完整專案' }).count()) throw new Error(spec.name + ' 紀念卡不該有 Bot Office 按鈕')
+    if (await card.locator('.li-live-badges').count()) throw new Error(spec.name + ' 紀念卡不該有即時徽章')
+    await page.waitForTimeout(400)
+  }
   if (errors.length) throw new Error(spec.name + ' pageerror\n' + errors.join('\n'))
-  await page.screenshot({ path: path.join(out, spec.name + '.png') })
+  await page.screenshot({ path: path.join(dir, spec.name + '.png') })
   await context.close()
   console.log('saved', spec.name)
 }
 
 ;(async () => {
+  const suite = process.env.SUITE || 'v1'
+  const dir = suite === 'v2' ? v2Dir : out
+  fs.mkdirSync(dir, { recursive: true })
+  const pool = suite === 'v2' ? v2Shots : shots
   const only = process.env.ONLY
-  const list = only ? shots.filter(spec => spec.name === only) : shots
+  const list = only ? pool.filter(spec => only.split(',').includes(spec.name)) : pool
   if (!list.length) throw new Error('no shot named ' + only)
   const browser = await pw.launch({
     headless: true,
@@ -139,7 +206,7 @@ async function shoot(browser, spec) {
     args: chromeArgs,
   })
   try {
-    for (const spec of list) await shoot(browser, spec)
+    for (const spec of list) await shoot(browser, spec, dir)
   } finally {
     await browser.close()
   }

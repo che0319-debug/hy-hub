@@ -6,8 +6,8 @@ import { makeShop } from '../src/life-island/chuan.js'
 import { treeGeos } from '../src/life-island/props.js'
 import {
   FLOOR_CAP, TYPE_REGISTRY, alertChip, composeBuilding, currentMilestone, findProjectForBuilding, floorPlan,
-  hasOverdue, meshKind, milestoneGate, officeProjectPath, placeholderParts, projectAlert,
-  resolveBuildingType, stageParts,
+  hasOverdue, meshKind, milestoneGate, officeProjectPath, placeholderParts, presentSlot, projectAlert,
+  readBuildingType, resolveBuildingType, stageParts,
 } from '../src/life-island/projectBuilding.mjs'
 
 const TODAY = '2026-10-31'
@@ -143,24 +143,35 @@ test('逾期只看未完成且到期日已過', () => {
   assert.equal(hasOverdue([{ status: 'running', due: '2020-01-01' }], ''), false)
 })
 
-test('建築類型：明寫優先，否則 Sam 用商店，未知類型退回', () => {
-  assert.equal(resolveBuildingType({ building_type: 'lab', owner_bot: 'sam' }), 'lab')
+test('進行中一律商店：building_type 只留鉤子，不看負責人', () => {
+  assert.deepEqual(Object.keys(TYPE_REGISTRY), ['shop'])
+  assert.equal(TYPE_REGISTRY.shop.built, true)
+  assert.equal(TYPE_REGISTRY.office, undefined)
+  assert.equal(TYPE_REGISTRY.factory, undefined)
+  assert.equal(TYPE_REGISTRY.lab, undefined)
+  assert.equal(TYPE_REGISTRY.home, undefined)
+  assert.equal(TYPE_REGISTRY.gym, undefined)
+  assert.equal(readBuildingType({ building_type: 'lab', owner_bot: 'sam' }), 'lab')
+  assert.equal(readBuildingType({ source: { building_type: 'gym', owner_bot: 'sam' } }), 'gym')
+  assert.equal(readBuildingType({ owner_bot: 'sam' }), '')
+  assert.equal(resolveBuildingType({ building_type: 'lab', owner_bot: 'sam' }), 'shop')
+  assert.equal(resolveBuildingType({ building_type: 'shop', owner_bot: 'hy' }), 'shop')
   assert.equal(resolveBuildingType({ owner_bot: 'sam' }), 'shop')
   assert.equal(resolveBuildingType({ ownerBot: 'sam' }), 'shop')
-  assert.equal(resolveBuildingType({ source: { building_type: 'gym', owner_bot: 'sam' } }), 'gym')
-  assert.equal(resolveBuildingType({ owner_bot: 'hy' }, 'shop'), 'shop')
+  assert.equal(resolveBuildingType({ source: { building_type: 'gym', owner_bot: 'sam' } }), 'shop')
+  assert.equal(resolveBuildingType({ owner_bot: 'hy' }), 'shop')
   assert.equal(resolveBuildingType({ building_type: 'castle', owner_bot: 'sam' }), 'shop')
-  assert.equal(TYPE_REGISTRY.shop.built, true)
-  assert.equal(TYPE_REGISTRY.office.built, false)
-  assert.equal(TYPE_REGISTRY.factory.built, false)
-  assert.equal(TYPE_REGISTRY.lab.built, false)
-  assert.equal(TYPE_REGISTRY.home.built, false)
-  assert.equal(TYPE_REGISTRY.gym.built, false)
+  assert.equal(resolveBuildingType({ building_type: 'office' }), 'shop')
   assert.equal(meshKind('lab'), 'shop')
+  assert.equal(meshKind('office'), 'shop')
   assert.equal(meshKind('shop'), 'shop')
-  const view = composeBuilding(project(), { today: TODAY })
+  const view = composeBuilding(project({ building_type: 'lab', owner_bot: 'hy' }), { today: TODAY })
+  const plain = composeBuilding(project(), { today: TODAY })
+  assert.equal(view.mode, 'live')
   assert.equal(view.type, 'shop')
   assert.equal(view.mesh, 'shop')
+  assert.equal(view.buildingType, 'lab')
+  assert.equal(view.signature, plain.signature)
 })
 
 test('即時卡片：有 depends_on 才標可開工或等待', () => {
@@ -332,10 +343,91 @@ test('mapped 專案讀 source 上的里程碑與類型', () => {
     decisions: [],
     cards: {},
   }, { today: TODAY })
+  assert.equal(view.mode, 'live')
   assert.equal(view.type, 'shop')
   assert.equal(view.stageLabel, '待審')
   assert.equal(view.parts.flag, 'blue')
   assert.equal(view.card.milestones.length, 1)
   assert.match(view.card.milestones[0].line, /上架/)
   assert.match(view.card.milestones[0].line, /可開工/)
+})
+
+const MEMORIAL = {
+  name: '示範完工店',
+  completedOn: '2026-10-01',
+  blurb: '這是測試用的完工紀念。',
+  look: 'shop',
+}
+
+function slot(extra = {}) {
+  return { id: 'chuan', title: '川泱購物', project: 'p-002', blurb: '購物事業（建設中）。', ...extra }
+}
+
+test('完工紀念是固定介紹卡：滿樓層、綠旗點燈，沒有即時徽章與連結', () => {
+  const shown = presentSlot(slot({ memorial: MEMORIAL }), { project: null, officeStatus: 'loaded', today: TODAY })
+  assert.equal(shown.kind, 'memorial')
+  assert.equal(shown.view.mode, 'memorial')
+  assert.equal(shown.view.mesh, 'shop')
+  assert.equal(shown.view.parts.floors, FLOOR_CAP)
+  assert.equal(shown.view.parts.flag, 'green')
+  assert.equal(shown.view.parts.lit, true)
+  assert.equal(shown.view.parts.roof, true)
+  assert.equal(shown.view.parts.crane, false)
+  assert.equal(shown.view.parts.fence, false)
+  assert.equal(shown.view.parts.alert, null)
+  assert.equal(shown.view.label.chip, null)
+  assert.equal(shown.view.label.tag, '')
+  assert.equal(shown.view.label.text, '完成 2026-10-01')
+  assert.equal(shown.card.fixed, true)
+  assert.equal(shown.card.live, false)
+  assert.equal(shown.card.title, '示範完工店')
+  assert.equal(shown.card.completedOn, '2026-10-01')
+  assert.equal(shown.card.blurb, MEMORIAL.blurb)
+  assert.deepEqual(shown.card.badges, [])
+  assert.equal(shown.card.href, null)
+  assert.equal(shown.card.milestones, undefined)
+  const slash = presentSlot(slot({ memorial: { name: '店', completedOn: '2026/03/04', blurb: '一句', look: 'lab' } }), { officeStatus: 'loaded' })
+  assert.equal(slash.card.completedOn, '2026-03-04')
+  assert.equal(slash.view.mesh, 'shop')
+  assert.equal(slash.view.requestedLook, 'lab')
+  assert.equal(presentSlot(slot({ memorial: {} }), { officeStatus: 'loaded' }).kind, 'absent')
+})
+
+test('專案不在或抓取失敗都回到靜態格，兩者分開記', () => {
+  const gone = presentSlot(slot(), { project: null, officeStatus: 'loaded', today: TODAY })
+  const failed = presentSlot(slot(), { project: null, officeStatus: 'failed', today: TODAY })
+  const pending = presentSlot(slot(), { project: null, officeStatus: 'pending', today: TODAY })
+  assert.equal(gone.kind, 'absent')
+  assert.equal(failed.kind, 'failed')
+  assert.equal(pending.kind, 'pending')
+  assert.notEqual(gone.kind, failed.kind)
+  for (const item of [gone, failed, pending]) {
+    assert.equal(item.view, null)
+    assert.equal(item.card, null)
+  }
+  const hidden = presentSlot(slot({ memorial: MEMORIAL }), { project: null, officeStatus: 'failed', today: TODAY })
+  assert.equal(hidden.kind, 'failed')
+  assert.equal(hidden.view, null)
+  const before = presentSlot(slot(), { project: project(), officeStatus: 'loaded', today: TODAY })
+  const after = presentSlot(slot(), { project: null, officeStatus: 'loaded', today: TODAY })
+  assert.equal(before.kind, 'live')
+  assert.equal(before.card.live, true)
+  assert.equal(after.view, null)
+  assert.notEqual(before.view.signature, 'static')
+})
+
+test('進行中的專案蓋過同一格的完工紀念', () => {
+  const live = presentSlot(slot({ memorial: MEMORIAL }), { project: project(), officeStatus: 'loaded', today: TODAY })
+  assert.equal(live.kind, 'live')
+  assert.equal(live.view.mode, 'live')
+  assert.equal(live.card.live, true)
+  assert.equal(live.card.title, '川泱購物')
+  assert.equal(live.card.href, '/bot-office?project=p-002')
+  assert.ok(live.card.badges.length > 0)
+  assert.equal(live.view.parts.crane, true)
+  assert.equal(live.view.parts.flag, null)
+  assert.equal(live.view.parts.lit, false)
+  const done = presentSlot(slot({ memorial: MEMORIAL }), { project: null, officeStatus: 'loaded', today: TODAY })
+  assert.equal(done.kind, 'memorial')
+  assert.notEqual(live.view.signature, done.view.signature)
 })

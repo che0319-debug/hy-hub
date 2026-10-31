@@ -23,8 +23,7 @@ import { makeGym } from './gym.js';
 import { makeSideHQ } from './sidehq.js';
 import { makePhoneShop } from './phoneshop.js';
 import { makeCuyu } from './cuyu.js';
-import { makeShop } from './chuan.js';
-import { placeholderParts } from './projectBuilding.mjs';
+import { makeChuan, makeShop } from './chuan.js';
 import { makeDistTexture, makeWater } from './water.js';
 import { createAtmosphere } from './sky.js';
 import { buildBridges, makeBoats } from './bridges.js';
@@ -247,9 +246,8 @@ function clearSlot(slot) {
   for (let i = cranes.length - 1; i >= 0; i--) if (cranes[i].slot === slot) cranes.splice(i, 1);
   for (let i = alerts.length - 1; i >= 0; i--) if (alerts[i].slot === slot) alerts.splice(i, 1);
 }
-function applyShop(slot, parts) {
+function mountMade(slot, made) {
   clearSlot(slot);
-  const made = makeShop(parts || placeholderParts());
   const mesh = new Mesh(made.geo, matToon);
   mesh.castShadow = mesh.receiveShadow = true;
   mesh.userData.bid = slot.id;
@@ -288,17 +286,18 @@ function applyShop(slot, parts) {
   const lp = labelPts.find(p => p.kind === 'bldg' && p.id === slot.id);
   if (lp) lp.y = made.top + 0.28;
 }
+function applyShop(slot, parts) { mountMade(slot, makeShop(parts)); }
+function applyStatic(slot) { mountMade(slot, makeChuan()); }
 function mountChuan(bd, isl, kb) {
   const g = new Group();
   g.position.set(kb.wx, 0, kb.wz);
   g.rotation.y = CAMAZ;
   scene.add(g);
-  const slot = { id: bd.id, group: g, extras: [], sig: '', lsig: '', top: 1.2 };
+  const slot = { id: bd.id, group: g, extras: [], sig: 'static', lsig: 'static', kind: 'pending', top: 2.6 };
   dyn.set(bd.id, slot);
   bldList.push({ bd, isl, x: kb.wx, z: kb.wz, top: slot.top, sc: 1 });
-  labelPts.push({ kind: 'bldg', id: bd.id, name: bd.title, type: bd.type, flag: false, island: isl.id, x: kb.wx, y: 1.6, z: kb.wz, deco: false, project: true });
-  applyShop(slot, placeholderParts());
-  slot.sig = 'ph';
+  labelPts.push({ kind: 'bldg', id: bd.id, name: bd.title, type: bd.type, flag: false, island: isl.id, x: kb.wx, y: 2.9, z: kb.wz, deco: false, project: true });
+  applyStatic(slot);
 }
 let bi2 = 0;
 for (const isl of ISLANDS) {
@@ -491,7 +490,31 @@ const botById = Object.fromEntries(bots.map(b => [b.f.id, b]));
 function botOf(id) { return id && id.startsWith('bot:') ? botById[id.slice(4)] : null; }
 
 // ---------- labels (DOM) ----------
+function fillStaticLabel(el, name) {
+  el.classList.remove('li-label-project', 'li-label-memorial');
+  delete el.dataset.s;
+  el.replaceChildren();
+  el.textContent = name || '';
+  el.title = name || '';
+  el.setAttribute('aria-label', name || '');
+}
+function fillMemorialLabel(el, label) {
+  el.classList.add('li-label-project', 'li-label-memorial');
+  el.replaceChildren();
+  el.dataset.s = 'done';
+  const title = document.createElement('span');
+  title.className = 'li-proj-title';
+  title.textContent = label?.title || '';
+  const meta = document.createElement('span');
+  meta.className = 'li-proj-meta';
+  meta.textContent = label?.text || '完成';
+  el.append(title, meta);
+  const aria = [label?.title, label?.text].filter(Boolean).join(' ');
+  el.title = aria;
+  el.setAttribute('aria-label', aria);
+}
 function fillProjectLabel(el, label, fallback) {
+  el.classList.remove('li-label-memorial');
   el.classList.add('li-label-project');
   el.replaceChildren();
   const title = document.createElement('span');
@@ -535,7 +558,7 @@ function fillProjectLabel(el, label, fallback) {
 const labels = labelPts.filter(p => p.kind !== 'fig' && !p.deco).map(p => {
   const el = document.createElement('div');
   el.className = 'li-label ' + (p.kind === 'island' ? 'li-label-island' : p.kind === 'bot' ? 'li-label-bot' : 'li-label-bldg');
-  if (p.kind === 'bot' && p.staticInfo) { el.title = p.name; el.appendChild(document.createTextNode(p.name)); } else if (p.kind === 'bot') { el.dataset.s = p.status; el.title = p.name + '：' + STATUS_INFO[p.status]; const dot = document.createElement('i'); el.appendChild(dot); el.appendChild(document.createTextNode(p.name)); const st = document.createElement('span'); st.textContent = '・' + STATUS_INFO[p.status]; el.appendChild(st); } else if (p.project) fillProjectLabel(el, null, p.name); else
+  if (p.kind === 'bot' && p.staticInfo) { el.title = p.name; el.appendChild(document.createTextNode(p.name)); } else if (p.kind === 'bot') { el.dataset.s = p.status; el.title = p.name + '：' + STATUS_INFO[p.status]; const dot = document.createElement('i'); el.appendChild(dot); el.appendChild(document.createTextNode(p.name)); const st = document.createElement('span'); st.textContent = '・' + STATUS_INFO[p.status]; el.appendChild(st); } else if (p.project) { el.textContent = p.name; el.title = p.name; el.dataset.slot = 'pending'; } else
   el.textContent = p.name;
   if (p.kind === 'bot') { el.setAttribute('role', 'button'); el.tabIndex = 0; el.addEventListener('click', () => api.select('bot:' + p.id, true)); el.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); api.select('bot:' + p.id, true); } }); }
   if (p.kind === 'bldg') { el.setAttribute('role', 'button'); el.tabIndex = 0; el.addEventListener('click', () => api.select(p.id, true)); el.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); api.select(p.id, true); } }); }
@@ -659,16 +682,32 @@ const api = {
   },
   home() { Object.assign(target, HOME); },
   focus(islandId) { const isl = ISLANDS.find(x => x.id === islandId); if (!isl) return; selected = null; placeRing(selRing, null); target.tx = isl.c[0] + (islandId === 'central' ? 0.5 : 0); target.tz = isl.c[1] + 2.5; target.dist = islandId === 'central' ? 72 : 46; opts.onSelect && opts.onSelect(null); },
-  // view 為 null 時回到開工地的占位。簽章沒變就不重做網格。
-  setProjectBuilding(id, view) {
+  // presentation.view 為 null：回到這格原本的靜態外觀，並清掉即時名牌。簽章沒變就不重做網格。
+  // 專案從下一輪清單消失時，kind 變成 absent／failed，網格與名牌一起換掉，不留上一輪的吊車或進度。
+  setProjectBuilding(id, presentation) {
     const slot = dyn.get(id); if (!slot) return;
-    const sig = view?.signature || 'ph';
-    if (slot.sig !== sig) { applyShop(slot, view?.parts || placeholderParts()); slot.sig = sig; }
-    const lsig = view?.label?.signature || '';
+    const view = presentation?.view || null;
+    const mode = view?.mode === 'memorial' ? 'memorial' : view ? 'live' : 'static';
+    const kind = presentation?.kind || mode;
+    const sig = mode === 'static' ? 'static' : view.signature;
+    if (slot.sig !== sig) {
+      if (mode === 'static') applyStatic(slot);
+      else applyShop(slot, view.parts);
+      slot.sig = sig;
+    }
+    const lsig = mode === 'static' ? 'static' : (view.label?.signature || mode);
+    const rec = labels.find(x => x.p.kind === 'bldg' && x.p.id === id);
     if (slot.lsig !== lsig) {
       slot.lsig = lsig;
-      const rec = labels.find(x => x.p.kind === 'bldg' && x.p.id === id);
-      if (rec) fillProjectLabel(rec.el, view?.label || null, rec.p.name);
+      if (rec) {
+        if (mode === 'static') fillStaticLabel(rec.el, rec.p.name);
+        else if (mode === 'memorial') fillMemorialLabel(rec.el, view.label);
+        else fillProjectLabel(rec.el, view.label, rec.p.name);
+      }
+    }
+    if (slot.kind !== kind) {
+      slot.kind = kind;
+      if (rec) rec.el.dataset.slot = kind;
     }
   },
   dispose() {

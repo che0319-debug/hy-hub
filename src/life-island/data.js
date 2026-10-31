@@ -122,6 +122,8 @@ export const SIDE_ISLAND = {
     },
     {
       id: 'chuan', title: '川泱購物', type: 'business', form: 'chuan', height: 2.6, q: 1, r: 1, project: 'p-002',
+      // 完工並從 Bot Office 刪除後，才在這格寫 memorial: { name, completedOn: 'YYYY-MM-DD', blurb, look: 'shop' }。
+      // 川泱還沒完成，不要填。格子上同時有進行中專案時，即時資料蓋過紀念。
       kind: '事業', agent: 'Sam', status: '待補',
       blurb: '購物事業（建設中）。', links: [], note: '建設中，還沒有對應頁面。',
     },
