@@ -12,7 +12,7 @@ const json = (status, body) => new Response(JSON.stringify(body), { status, head
 
 test('report summary reads the one-page section and ignores scripts', () => {
   const html = '<h1>報告</h1><section><h2>一頁摘要：現在怎樣、你要做什麼</h2><ul><li>第一件</li><li><b>第二件</b></li><li>三</li><li>四</li><li>五</li><li>六</li><li>七</li></ul><script>parent.__unsafe=true</script></section><h2>其他</h2><ul><li>不要</li></ul>'
-  assert.deepEqual(reportSummaryLines(html), ['第一件', '第二件', '三', '四', '五', '六'])
+  assert.deepEqual(reportSummaryLines(html), ['第一件', '第二件', '三', '四', '五', '六', '七'])
   assert.equal(reportSummaryLines('<p>PASS 這不是一頁摘要</p>').length, 0)
   assert.equal(reportSummaryLines('').length, 0)
 })
