@@ -78,9 +78,16 @@ export function OfficeReportStrip({report,onOpen}) {
   </button>
 }
 
-export function OfficeSnapshot({html='',lines=[],project=null,milestones=[],status='empty',message='',stale=false}) {
-  const model=status==='ready'?composeReportSummary({html,lines,project,milestones}):null
-  return <ReportSummaryCard title={model?.title} badges={model?.badges} metrics={model?.metrics} conclusion={model?.conclusion} items={model?.items} status={status} message={message} stale={stale}/>
+function excerptLabel(modified) {
+  const stamp = when(modified)
+  return stamp === '尚未記錄' ? '摘自正式成果報告' : `摘自正式成果報告（${stamp}）`
+}
+
+export function OfficeSnapshot({html='',lines=[],project=null,milestones=[],status='empty',message='',stale=false,modified=''}) {
+  const ready=status==='ready'
+  const model=composeReportSummary({html:ready?html:'',lines:ready?lines:[],project,milestones})
+  const hasReport=model.metrics.length>0||Boolean(model.conclusion)||model.items.length>0
+  return <ReportSummaryCard title={model.title} source={ready&&hasReport?excerptLabel(modified):''} badges={model.badges} metrics={ready?model.metrics:[]} conclusion={ready?model.conclusion:''} items={ready?model.items:[]} status={status} message={message} stale={stale}/>
 }
 export function OfficeCards({items}) {return items.map(c=><article className="ao-card" key={c.id}><h2>{c.title}</h2><p>{c.summary}</p><Link href={c.driveUrl}>開啟 Drive 原件</Link></article>)}
 export function OfficeTeam({project}) {
@@ -192,7 +199,7 @@ export function OfficeResults({project,report,milestones=[],onOverview}) {
     <p className="ao-muted">最後更新：{report?.modified?when(report.modified):'尚未記錄'}</p>
     {summaryStatus==='ready'&&html
       ?<iframe title="正式 HTML 成果報告" sandbox={REPORT_FRAME.sandbox} referrerPolicy={REPORT_FRAME.referrerPolicy} srcDoc={html}/>
-      :<OfficeSnapshot html={html} lines={report?.lines} project={project} milestones={milestones} status={summaryStatus} message={report?.htmlError||report?.error||''} stale={Boolean(report?.stale)}/>}
+      :<OfficeSnapshot html={html} lines={report?.lines} project={project} milestones={milestones} status={summaryStatus} message={report?.htmlError||report?.error||''} stale={Boolean(report?.stale)} modified={report?.modified||''}/>}
   </Card><Card title="獨立審查"><p className="ao-muted">只審三個節點：規劃、重大里程碑、結案。審查結論只在卡片有 verdict 欄時顯示；是否核准仍在<button className="ao-inline" onClick={onOverview}>概況</button>決定。</p>
     {checkpoints.map(item=><details className="ao-review" key={item.checkpoint_id}><summary><span className="ao-review-kind">{item.kind}</span><b>{item.milestone_id||''} 第 {item.round} 輪</b>{item.verdict&&<Pill s={item.verdict==='PASS'||item.verdict==='pass'?'done':'you'}>{item.verdict}</Pill>}</summary><p>{text(item.findings||item.summary)}</p></details>)}
     {rounds.map(round=><details className="ao-review" key={`${round.outputId}:${round.round}`}><summary><b>第 {round.round} 輪</b> {round.outputTitle}{round.hasVerdict&&<Pill s={round.verdict==='pass'||round.verdict==='PASS'?'done':'you'}>{round.verdict}</Pill>}</summary>

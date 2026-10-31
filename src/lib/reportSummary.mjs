@@ -2,7 +2,7 @@
 // 清單與 reportSummaryLines 共用一個上限。
 export const SUMMARY_ITEM_LIMIT = 8
 export const DONE_MILESTONE = new Set(['done', 'completed', 'complete', 'closed', 'passed', '完成', '已完成'])
-const NOT_STARTED = new Set(['', 'open', 'pending', 'not_started', 'todo', '未開始', '尚未開工', '未開工'])
+const RUNNING = new Set(['running', 'in_progress', 'in-progress', 'active', 'doing', 'started', '執行中', '進行中'])
 const CLOSED_FOLLOW_UP = new Set(['done', 'resolved', 'cancelled', '已完成', '已取消'])
 const TEXT = value => typeof value === 'string' ? value.trim() : ''
 const statusKey = value => TEXT(value).toLowerCase()
@@ -149,57 +149,74 @@ function pendingDecisions(project) {
   return null
 }
 
-function milestoneBadge(rows) {
-  if (!rows.length) return null
-  const done = rows.filter(milestoneDone).length
-  const total = rows.length
-  if (done === total) return { tone: 'done', text: `里程碑 ${done}／${total} 完成` }
-  const idle = rows.every(row => !milestoneDone(row) && NOT_STARTED.has(statusKey(row?.status)))
-  if (idle) {
-    const ids = rows.map(row => TEXT(row?.id)).filter(Boolean)
-    if (ids.length >= 2) return { tone: 'wait', text: `${ids[0]}–${ids[ids.length - 1]} 尚未開工` }
-    if (ids.length === 1) return { tone: 'wait', text: `${ids[0]} 尚未開工` }
-    return { tone: 'wait', text: '里程碑尚未開工' }
-  }
-  return { tone: done ? 'ai' : 'wait', text: `里程碑 ${done}／${total}` }
+function shortTitle(value) {
+  const text = TEXT(value)
+  if (!text || text === '未命名卡片') return ''
+  return text.length > 24 ? `${text.slice(0, 24)}…` : text
 }
 
+function cardTime(card, index) {
+  const raw = card?.createdAt || card?.driveCreatedAt || card?.date || card?.created_at || ''
+  const time = Date.parse(raw)
+  return { time: Number.isFinite(time) ? time : 0, index }
+}
+
+function latestOutputBadge(project) {
+  const cards = project?.cards?.outputs
+  if (!Array.isArray(cards)) return null
+  const outputs = cards.filter(card => card && card.type !== 'review' && !card.isReview)
+  if (!outputs.length) return null
+  const latest = outputs
+    .map((card, index) => ({ card, ...cardTime(card, index) }))
+    .sort((a, b) => b.time - a.time || b.index - a.index)[0].card
+  const title = shortTitle(latest.title)
+  return { tone: 'ai', text: title ? `最新產出 ${title}` : `產出 ${outputs.length} 件` }
+}
+
+function milestoneBadges(rows) {
+  if (!rows.length) return []
+  const done = rows.filter(milestoneDone).length
+  const total = rows.length
+  const running = rows.filter(row => !milestoneDone(row) && RUNNING.has(statusKey(row?.status)))
+  const badges = [{ tone: done === total ? 'done' : running.length ? 'ai' : 'wait', text: `里程碑 ${done}／${total}` }]
+  for (const row of running) {
+    const id = TEXT(row?.id)
+    if (id) badges.push({ tone: 'ai', text: `${id} 執行中` })
+  }
+  return badges
+}
+
+// 狀態徽章只來自目前專案。數字卡留在報告裡，這裡不另做。
 export function projectSummaryChrome(project, milestones = []) {
   const rows = Array.isArray(milestones) ? milestones.filter(item => item && typeof item === 'object') : []
   const badges = []
-  const plan = planBadge(project)
-  if (plan) badges.push(plan)
-  const follow = openFollowUps(project)
-  if (follow > 0) badges.push({ tone: 'you', text: `執行前待辦 ${follow} 件` })
-  const pending = pendingDecisions(project)
-  if (pending > 0) badges.push({ tone: 'you', text: `待你決定 ${pending} 件` })
-  const milestone = milestoneBadge(rows)
-  if (milestone) badges.push(milestone)
   const stage = TEXT(project?.stageLabel)
   if (stage) badges.push({ tone: project?.tone || 'wait', text: `階段 ${stage}` })
-  const metrics = []
-  if (rows.length) metrics.push({ value: `${rows.filter(milestoneDone).length}／${rows.length}`, label: '里程碑完成' })
-  if (pending > 0) metrics.push({ value: String(pending), label: '待你決定' })
-  if (follow > 0) metrics.push({ value: String(follow), label: '執行前待辦未完成' })
-  return { badges, metrics }
+  badges.push(...milestoneBadges(rows))
+  const pending = pendingDecisions(project)
+  if (pending > 0) badges.push({ tone: 'you', text: `待你決定 ${pending} 件` })
+  const follow = openFollowUps(project)
+  if (follow > 0) badges.push({ tone: 'you', text: `執行前待辦 ${follow} 件` })
+  const plan = planBadge(project)
+  if (plan) badges.push(plan)
+  const output = latestOutputBadge(project)
+  if (output) badges.push(output)
+  return { badges }
 }
 
 export function composeReportSummary({ html = '', lines = [], project = null, milestones = [] } = {}) {
   const parsed = parseReportSummary(html)
-  const chrome = projectSummaryChrome(project, milestones)
   const hasHtml = typeof html === 'string' && html.trim()
   let items = parsed.items
   // lines 是同一份 HTML 抽出的純文字。有 HTML 時以解析結果為準，避免把徽章和數字再糊成一行。
   if (!hasHtml && !items.length && Array.isArray(lines)) items = lines.map(splitLead).filter(Boolean).slice(0, SUMMARY_ITEM_LIMIT)
   const taken = takeConclusion(items, parsed.conclusion)
-  const narrative = Boolean(taken.conclusion) || taken.items.length > 0
-  const reportChrome = parsed.badges.length > 0 || parsed.metrics.length > 0
-  // 沒有摘要內文時不拿專案現況填徽章，空摘要文案才出得來。有內文但報告自己沒有徽章／數字，才回填。
-  const live = narrative && !reportChrome ? chrome : { badges: [], metrics: [] }
+  // 徽章一律用即時專案。報告徽章（例如凍結的「尚未開工」）不顯示。
+  // 數字卡、結論、清單只留報告裡真的有的；沒有摘要時不拿現況填這些。
   return {
     title: parsed.title || '一頁摘要：現在怎樣、你要做什麼',
-    badges: parsed.badges.length ? parsed.badges : live.badges,
-    metrics: parsed.metrics.length ? parsed.metrics : live.metrics,
+    badges: projectSummaryChrome(project, milestones).badges,
+    metrics: parsed.metrics,
     conclusion: taken.conclusion,
     items: taken.items,
   }
