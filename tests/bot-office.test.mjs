@@ -123,7 +123,8 @@ test('P1 tabs, review activity, intake waiting, figures, review links and answer
     decisions:[{id:'open',project:'p',kind:'intake',status:'open'}, {id:'closed',project:'p',status:'answered',revision:17,card:'decision',questions:[{no:1,q:'主力？',answer:'已確認',answered_by:'sam',answer_source:'proxy',confirmed_by:'hy',confirmed_at:'now',bot_suggestions:[{answer:'參考',answered_by:'sam',basis:'紀錄',confidence:'high'}]}],history:[{actor:'hy',action:'confirm'}]}]},
     {cards:[{id:'review',project:'p',type:'review',drive_url:'https://drive.google.com/report'}, {id:'decision',project:'p',type:'decision',summary:'過期摘要'}]})
   assert.deepEqual(OFFICE_TABS.map(t=>t[1]),['概況','會議室','執行計畫','成果與審查','工作日誌'])
-  assert.equal(out.projects[0].stageLabel,'等 HY 回答')
+  // 階段標籤只顯示 5 種名稱：有 intake 待答也仍是「規劃中」，待答題目另外顯示「N 項待你處理」。
+  assert.equal(out.projects[0].stageLabel,'規劃中'); assert.equal(out.projects[0].pending,true)
   assert.equal(out.projects[0].review.verdict,'fail'); assert.equal(out.projects[0].review.returnedCount,2)
   assert.deepEqual(out.projects[0].review.requiredChanges,['補證據']);assert.equal(out.projects[0].review.url,'https://drive.google.com/report')
   assert.equal(out.projects[0].figures[0].lookAs,'PI');assert.equal(out.allDecisions[1].revision,17)
@@ -172,7 +173,8 @@ test('follow-ups and advancement markers are displayed without changing stage; r
  assert.equal(p.pendingAdvances[1].advance.stage,'running')
  assert.equal(advanceFollowUpLabel(p.pendingAdvances[0].advance.stage),'已核准（舊規則，待推進）。')
  assert.equal(advanceFollowUpLabel(p.pendingAdvances[1].advance.stage),'已核准規劃，待推進為執行中。')
- assert.equal(advanceFollowUpLabel('returned'),'已退回，待推進修訂。')
+ assert.equal(advanceFollowUpLabel('assigned'),'已退回規劃，待推進回規劃中。')
+ assert.equal(advanceFollowUpLabel('returned'),'已退回規劃，待推進回規劃中。')
  assert.equal(advanceFollowUpLabel(undefined),'決策已作答，待推進。')
  assert.doesNotMatch(advanceFollowUpLabel('done'),/待推進完成/)
  assert.equal(p.followUps[0].sourceUrl,'https://drive.google.com/file/d/r/view')
@@ -250,5 +252,46 @@ test('Bot Office wires stage labels and the HY-only control', () => {
   assert.match(control, /stage: 'running'/)
   assert.match(control, /authHeaders\(\)/)
   assert.doesNotMatch(control, /X-Brain-Write-Token|localStorage|sessionStorage/)
-  assert.equal(control.includes("stage === 'returned'"), true)
+  assert.equal(control.includes('returned'), false)
+  assert.doesNotMatch(page, /等 HY 回答|activeTileLabel/)
+  assert.match(page, /<Pill project=\{project\}\/>/)
+})
+
+test('five project stages: labels, tones, legacy normalization at read time', async () => {
+  const { PROJECT_STAGES, normalizeStage } = await import('../src/lib/projectStages.mjs')
+  assert.deepEqual(PROJECT_STAGES.map(s => [s.key, s.label, s.tone]), [
+    ['assigned','規劃中','wait'], ['hy_decision','待你決定','you'], ['running','執行中','ai'], ['review','待審','ai'], ['done','完成','done']])
+  assert.equal(normalizeStage('returned', 'sam'), 'assigned')
+  assert.equal(normalizeStage('returned', ''), 'assigned')
+  assert.equal(normalizeStage('unassigned', 'sam'), 'assigned')
+  assert.equal(normalizeStage('unassigned', ''), '')
+  assert.equal(normalizeStage('weird', 'sam'), '')
+  const out = mapOffice({updated:state.updated, buildings:[
+    {id:'r',owner_bot:'sam',stage:'returned',returned_count:3},
+    {id:'u',owner_bot:'sam',stage:'unassigned'},
+    {id:'n',stage:'unassigned'}]}, {cards:[]})
+  assert.deepEqual(out.projects.map(p => [p.id, p.stage, p.stageLabel]), [['r','assigned','規劃中'],['u','assigned','規劃中'],['n','','狀態待確認']])
+  assert.equal(out.projects[0].finished, false)
+})
+
+test('HY Hub home summary uses the five stage names from mapOffice totals', () => {
+  const out = mapOffice({updated:state.updated, buildings:[
+    {id:'a',owner_bot:'sam',stage:'assigned'},{id:'r',owner_bot:'sam',stage:'returned'},{id:'d',owner_bot:'sam',stage:'hy_decision'},
+    {id:'x',owner_bot:'sam',stage:'running'},{id:'v',owner_bot:'sam',stage:'review'},{id:'f',owner_bot:'sam',stage:'done'}]}, {cards:[]})
+  assert.deepEqual(out.totals.stages, {assigned:2, hy_decision:1, running:1, review:1, done:1})
+  assert.equal(out.totals.all, 6)
+  const summary = readFileSync(new URL('../src/components/OfficeHomeSummary.jsx', import.meta.url), 'utf8')
+  assert.match(summary, /PROJECT_STAGES\.map/)
+  assert.match(summary, /'專案總數'/)
+  assert.doesNotMatch(summary, /進行中|已完成|全部專案/)
+})
+
+test('Bot Office home uses only the five stage names; no returned-count badge anywhere', () => {
+  const home = readFileSync(new URL('../src/pages/OfficeHome.jsx', import.meta.url), 'utf8')
+  assert.match(home, /\['all','全部'\],\.\.\.PROJECT_STAGES/)
+  assert.doesNotMatch(home, /進行中|已完成/)
+  for (const file of ['../src/components/BotOfficePanels.jsx','../src/components/OfficeActions.jsx','../src/components/BotRosterCards.jsx','../src/life-island/worldData.js','../src/life-island/projectBuilding.mjs']) {
+    const src = readFileSync(new URL(file, import.meta.url), 'utf8')
+    assert.doesNotMatch(src, /被退回|退回次數|退回 \{|returnedCount/, file)
+  }
 })

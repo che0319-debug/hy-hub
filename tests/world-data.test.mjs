@@ -106,12 +106,14 @@ test('deriveOffice：狀態與 Bot Office 一致，歸屬看 owner_bot', () => {
   const r = deriveOffice(office)
   assert.equal(r.byAgent['950157'].status, 'ai')
   assert.equal(r.byAgent['950157'].counts.done, 1)
-  assert.match(r.byAgent['950157'].doing, /1 個專案進行中：觸覺手套簡報/)
+  assert.match(r.byAgent['950157'].doing, /^執行中 1：觸覺手套簡報/)
   assert.equal(r.byAgent.sam.status, 'you')            // 有待你決定的題目
   assert.equal(r.byAgent.sam.asks, 1)
   assert.equal(r.byAgent.family.status, 'ai')           // 待審也算 AI 執行中
   assert.equal(r.byAgent.hy.status, 'wait')
-  assert.equal(r.byAgent.hy.counts.returned, 1)
+  assert.equal(r.byAgent.hy.counts.waiting, 1)               // 舊資料 returned 讀成規劃中
+  assert.equal('returned' in r.byAgent.hy.counts, false)
+  assert.equal(r.byAgent.sam.doing, '規劃中 1')
   assert.equal(r.pending, 1)
   assert.equal(r.unowned, 1)                            // 沒有 owner_bot 的專案不算在任何人身上
 })
@@ -172,7 +174,7 @@ test('deriveAttention：問題→紅、待處理→琥珀、無事→不顯示',
   const you = deriveAttention({ status: 'you', office: { asks: 2, returned: 0 }, todos: { overdue: 0, today: 1 } }, now)
   assert.equal(you.level, 'you'); assert.deepEqual(you.reasons, ['待你確認 2 件', '今日待辦 1 件'])
   assert.equal(deriveAttention({ status: 'wait', todos: { overdue: 1, today: 0 } }, now).level, 'bad')
-  assert.equal(deriveAttention({ status: 'wait', office: { returned: 1 } }, now).level, 'bad')
+  assert.equal(deriveAttention({ status: 'wait', office: { returned: 1 } }, now).level, null)   // 退回不再亮紅
   const stale = deriveAttention({ status: 'wait', memory: { memory_last: day(25) } }, now)
   assert.equal(stale.level, 'bad'); assert.deepEqual(stale.reasons, ['長期記憶 25 天沒更新'])
   assert.equal(deriveAttention({ status: 'bad' }, now).level, 'bad')
@@ -181,7 +183,7 @@ test('deriveAttention：問題→紅、待處理→琥珀、無事→不顯示',
 
 test('deriveAttention：items 帶層級與去處，供卡片列出原因', () => {
   const a = deriveAttention({ status: 'you', office: { asks: 1, returned: 1 }, todos: { overdue: 2, today: 0 } })
-  assert.deepEqual(a.items.map(i => [i.level, i.text, i.go]), [['bad', '專案被退回 1 件', 'office'], ['bad', '逾期待辦 2 件', 'board'], ['you', '待你確認 1 件', 'office']])
+  assert.deepEqual(a.items.map(i => [i.level, i.text, i.go]), [['bad', '逾期待辦 2 件', 'board'], ['you', '待你確認 1 件', 'office']])
 })
 
 test('deriveAtlas：系統健康清單；有異常就是紅、全部正常是待命', async () => {

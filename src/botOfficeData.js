@@ -2,12 +2,11 @@
 // All external field mapping lives here. Unknown fields are tolerated and not rendered.
 import { OFFICE_TABS as AI_OFFICE_TABS } from './lib/aiOffice.mjs'
 import { officeFailureMessage } from './lib/botOfficeView.mjs'
+import { STAGE_KEYS, STAGE_LABEL, STAGE_TONE, normalizeStage } from './lib/projectStages.mjs'
 export const OFFICE_TABS = AI_OFFICE_TABS
 export const REFRESH_MS = 30000
-const STAGES = {
-  unassigned: ['待派', 'wait'], assigned: ['已派', 'wait'], running: ['執行中', 'ai'],
-  review: ['待審', 'ai'], hy_decision: ['待 HY 決定', 'you'], done: ['完成', 'done'], returned: ['退回', 'bad'],
-}
+// 只有 5 種階段，名稱與顏色見 lib/projectStages.mjs。
+const STAGES = Object.fromEntries(Object.keys(STAGE_LABEL).map(key => [key, [STAGE_LABEL[key], STAGE_TONE[key]]]))
 const DELETE_HOLD = {
   running: '目前專案執行中，需等結束後才能刪除。',
   review: '目前專案在審查中，需等審查結束後才能刪除。',
@@ -15,7 +14,7 @@ const DELETE_HOLD = {
 const CARD_GROUP = { meeting: 'meeting', note: 'meeting', execution: 'execution', plan: 'execution', output: 'outputs', log: 'log', decision: 'overview', review: 'outputs' }
 const array = value => Array.isArray(value) ? value : []
 const text = value => typeof value === 'string' ? value : ''
-// project.stage 是 text(p.stage)，與 STAGES 的鍵相同；審查階段是 'review'，不是 stageLabel「待審」。
+// project.stage 是 normalizeStage(p.stage)，與 STAGES 的鍵相同；審查階段是 'review'，不是 stageLabel「待審」。
 export function officeDeleteHold(project) {
   const stage = text(project?.stage)
   if (!Object.prototype.hasOwnProperty.call(STAGES, stage)) return ''
@@ -64,7 +63,7 @@ export function mapOffice(state = {}, index = {}, metadata = {}) {
   const allDecisions = array(state.decisions).filter(d => d && ['open', 'answered'].includes(d.status)).map(d => ({
     needsAdvance: d.needs_advance === true, advance: d.advance && typeof d.advance === 'object' ? d.advance : null,
     status: d.status, answeredAt: text(d.answered_at), history: array(d.history).filter(h => h && typeof h === 'object'),
-    id: text(d.id), title: text(d.title) || '待 HY 決定', suggestion: text(d.suggestion),
+    id: text(d.id), title: text(d.title) || '待你處理', suggestion: text(d.suggestion),
     kind: text(d.kind), revision: Number.isInteger(d.revision) ? d.revision : 0,
     answer: d.answer, answerSource: text(d.answer_source), answeredBy: text(d.answered_by), basis: text(d.basis), confidence: text(d.confidence),
     why: text(d.why), askedAt: text(d.asked_at), deadline: text(d.deadline),
@@ -90,8 +89,9 @@ export function mapOffice(state = {}, index = {}, metadata = {}) {
   }
   const cardLink = value => safeDriveUrl(value) || cards.find(c => c.id === value)?.driveUrl || null
   const projects = array(state.buildings).filter(p => p && typeof p === 'object').map(p => {
-    let [stageLabel, tone] = STAGES[p.stage] || ['狀態待確認', 'wait']
-    if (p.stage === 'assigned' && decisions.some(d => d.projectId === p.id && d.kind === 'intake')) { stageLabel = '等 HY 回答'; tone = 'you' }
+    // 舊資料的 unassigned／returned 讀取時換算成 5 種之一；階段標籤只顯示這 5 種名稱。
+    const stage = normalizeStage(p.stage, p.owner_bot)
+    const [stageLabel, tone] = STAGES[stage] || ['狀態待確認', 'wait']
     const planCard = cards.find(c => c.id === p.plan_card) || null
     const groups = Object.fromEntries(OFFICE_TABS.map(([key]) => [key, cards.filter(c => c.projectId === p.id && c.tab === key)]))
     return {
@@ -107,10 +107,10 @@ export function mapOffice(state = {}, index = {}, metadata = {}) {
       pendingAdvances: allDecisions.filter(d => d.projectId === p.id && d.needsAdvance),
       logs: array(state.logs).filter(l => l && l.project === p.id), requests: array(state.requests).filter(r => r && r.project === p.id),
       allDecisions: allDecisions.filter(d => d.projectId === p.id),
-      stage: text(p.stage), stageLabel, tone, executor: text(p.executor) || '尚未指定', ownerBot: text(p.owner_bot),
+      stage, stageLabel, tone, executor: text(p.executor) || '尚未指定', ownerBot: text(p.owner_bot),
       revision: Number.isInteger(p.revision) && p.revision >= 0 ? p.revision : 0,
       decisions: decisions.filter(d => d.projectId === p.id), cards: groups,
-      finished: p.stage === 'done' || p.stage === 'returned', active: ['running', 'review'].includes(p.stage),
+      finished: stage === 'done', active: ['running', 'review'].includes(stage),
       pending: decisions.some(d => d.projectId === p.id),
     }
   }).sort((a, b) => Number(b.pending) - Number(a.pending))
@@ -118,7 +118,9 @@ export function mapOffice(state = {}, index = {}, metadata = {}) {
     projects, decisions, allDecisions, requests: array(state.requests), stale: Boolean(metadata.stale),
     state, index, updatedRaw: text(state.updated),
     updated: when(metadata.stateUpdated || state.updated), updatedAt: metadata.stateUpdated || state.updated || null, indexUpdated: when(metadata.indexUpdated || index.updated),
-    totals: { pending: decisions.length, running: projects.filter(p => p.active).length, finished: projects.filter(p => p.finished).length, all: projects.length },
+    // stages：5 種階段各有幾個專案（首頁統計卡用，與 Bot Office 首頁同一口徑）；pending 仍是待答題目數（提醒用）。
+    totals: { pending: decisions.length, running: projects.filter(p => p.active).length, finished: projects.filter(p => p.finished).length, all: projects.length,
+      stages: Object.fromEntries(STAGE_KEYS.map(key => [key, projects.filter(p => p.stage === key).length])) },
   }
 }
 
@@ -208,7 +210,8 @@ export async function assignProjectOwnerBot(projectId, payload = {}, { headers =
 
 // 決策後續只說明核准結果要怎麼推進，不改專案 stage。
 export function advanceFollowUpLabel(stage) {
-  if (stage === 'returned') return '已退回，待推進修訂。'
+  // 退回不是階段：規劃書被退回就回到規劃中。舊紀錄可能寫 returned，同樣處理。
+  if (stage === 'assigned' || stage === 'returned') return '已退回規劃，待推進回規劃中。'
   if (stage === 'running') return '已核准規劃，待推進為執行中。'
   if (stage === 'done') return '已核准（舊規則，待推進）。'
   return '決策已作答，待推進。'

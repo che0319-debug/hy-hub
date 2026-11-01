@@ -42,16 +42,17 @@ export function deriveOffice(office) {
     const mine = projects.filter(p => p.ownerBot === h.agent)
     const ids = new Set(mine.map(p => p.id))
     const n = stage => mine.filter(p => p.stage === stage).length
-    const counts = { total: mine.length, running: n('running'), review: n('review'), hyDecision: n('hy_decision'), waiting: n('unassigned') + n('assigned'), done: n('done'), returned: n('returned') }
+    // 只有 5 種階段；p.stage 已在 mapOffice 換算過舊值。waiting＝規劃中。
+    const counts = { total: mine.length, running: n('running'), review: n('review'), hyDecision: n('hy_decision'), waiting: n('assigned'), done: n('done') }
     const asks = decisions.filter(d => ids.has(d.projectId)).length
     const active = counts.running + counts.review
     const first = mine.find(p => p.stage === 'running') || mine.find(p => p.stage === 'review')
     byAgent[h.agent] = {
       status: asks > 0 || counts.hyDecision > 0 ? 'you' : active > 0 ? 'ai' : 'wait',
       asks, counts,
-      doing: active ? `${active} 個專案進行中${first ? `：${clip(first.title, 24)}` : ''}`
-        : counts.waiting ? `${counts.waiting} 個專案等待派工`
-        : counts.total ? '目前沒有進行中的專案' : '名下還沒有專案',
+      doing: active ? `${[counts.running && `執行中 ${counts.running}`, counts.review && `待審 ${counts.review}`].filter(Boolean).join('・')}${first ? `：${clip(first.title, 24)}` : ''}`
+        : counts.waiting ? `規劃中 ${counts.waiting}`
+        : counts.total ? '目前沒有執行中的專案' : '名下還沒有專案',
     }
   }
   return { byAgent, pending: num(office.totals?.pending), unowned: unownedProjects(projects).length }
@@ -101,13 +102,12 @@ export function deriveRunners(activity) {
 //   待你確認：Bot Office 待你決定的題數（與 Bot Office 頁「待你決定」同一個數字）
 //   系統：讀不到資料的來源數，0 代表正常；還沒載入完成時是 null
 // 頭上提醒標：有問題（紅 bad）或待你處理（琥珀 you）才出現；reasons 供提示文字。
-// 紅：被退回、逾期待辦、長期記憶超過 7 天沒更新、執行者異常。琥珀：待你確認、今日待辦。
+// 紅：逾期待辦、長期記憶超過 7 天沒更新、執行者異常。琥珀：待你確認、今日待辦。
 export function deriveAttention(bot, now = Date.now()) {
   if (!bot) return { level: null, reasons: [], items: [] }
   if (bot.attention) return { level: bot.attention.some(i => i.level === 'bad') ? 'bad' : bot.attention.length ? 'you' : null, reasons: bot.attention.map(i => i.text), items: bot.attention }
   const items = []   // { level, text, go }：go = 'office' | 'board' | 'memory'，由畫面決定連到哪
   const o = bot.office, t = bot.todos
-  if (o?.returned > 0) items.push({ level: 'bad', text: `專案被退回 ${o.returned} 件`, go: 'office' })
   if (t?.overdue > 0) items.push({ level: 'bad', text: `逾期待辦 ${t.overdue} 件`, go: 'board' })
   const lt = bot.memory?.memory_last ? freshness(bot.memory.memory_last, now) : null
   if (lt?.level === 'stale') items.push({ level: 'bad', text: `長期記憶 ${lt.days} 天沒更新`, go: 'memory' })

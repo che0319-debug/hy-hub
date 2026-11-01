@@ -54,7 +54,7 @@ export default function OwnerBotPicker({ projects, onSaved, heading = true }) {
   return (
     <section className="hy hy-card" aria-label="尚未指定負責 Bot" style={heading ? { marginBottom: 16 } : { marginTop: 12, padding: 0, border: 0, background: 'transparent', boxShadow: 'none' }}>
       {heading && <h2 className="hy-card-title">尚未指定負責 Bot</h2>}
-      <p className="hy-note">選一位負責 Bot，再按儲存。沒有選擇不會送出。完成或退回的專案也可以指定。</p>
+      <p className="hy-note">選一位負責 Bot，再按儲存。沒有選擇不會送出。完成的專案也可以指定。</p>
       <ul style={{ listStyle: 'none', margin: '12px 0 0', padding: 0, display: 'flex', flexDirection: 'column', gap: 12 }}>
         {rows.map(row => {
           const fb = feedback[row.id] || {}

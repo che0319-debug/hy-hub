@@ -163,7 +163,7 @@ function downloadHtml(name,html){const url=URL.createObjectURL(new Blob([html],{
 
 function ReportStatus({project}) {
   const pending=project.decisions?.length||project.allDecisions?.filter(item=>item.status==='open').length||0
-  return <p className="ao-muted" aria-label="報告動態狀態">階段 {project.stageLabel} · 負責 {project.ownerBot||'尚未指定'} · 執行者 {project.executor||'尚未指定'} · 最近審查 {reviewFieldLabel(project.review?.verdict)} · 退回 {project.review?.returnedCount||0} 次 · 執行前待辦未完成 {openFollowUpCount(project.followUps)} · 待 HY 決定 {pending}</p>
+  return <p className="ao-muted" aria-label="報告動態狀態">階段 {project.stageLabel} · 負責 {project.ownerBot||'尚未指定'} · 執行者 {project.executor||'尚未指定'} · 最近審查 {reviewFieldLabel(project.review?.verdict)} · 執行前待辦未完成 {openFollowUpCount(project.followUps)} · 待你處理 {pending}</p>
 }
 
 function ReviewDocument({cardId}) {
@@ -211,7 +211,7 @@ export function OfficeResults({project,report,milestones=[],onOverview}) {
       <ReviewDocument cardId={round.reviewId}/>
     </details>)}
     {!rounds.length&&<Empty>尚無由成果對到審查卡的輪次。</Empty>}
-    <p>最近審查：{reviewFieldLabel(project.review?.verdict)} · 退回次數：{project.review?.returnedCount||0}</p>
+    <p>最近審查：{reviewFieldLabel(project.review?.verdict)}</p>
     {project.review?.url&&<Link href={project.review.url}>開啟審查報告</Link>}
     {project.review?.requiredChanges?.length>0&&<><h3>必改清單</h3><ul>{project.review.requiredChanges.map((item,i)=><li key={i}>{item}</li>)}</ul></>}
     {extraReviews.map(card=><details className="ao-review" key={card.id}><summary>{card.title}</summary><p>{card.date}</p><p>{card.summary}</p><Link href={card.driveUrl}>審查報告</Link>{card.verdict?<p>結論：{card.verdict}</p>:<p>最近審查：{reviewFieldLabel(project.review?.verdict)}</p>}</details>)}

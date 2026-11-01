@@ -3,6 +3,8 @@
 // 里程碑的 depends_on／ready 尚未進主線時，缺欄位就不顯示「可開工／等待」。
 // Bot Office 頁目前不讀 ?project=（那支檔不能一起改）。連結先帶上專案 id。
 
+import { STAGE_LABEL, STAGE_TONE as STAGE_TONES, normalizeStage } from '../lib/projectStages.mjs'
+
 export const FLOOR_CAP = 5
 
 // 現在只建模商店。office／factory／lab／home／gym 先不登記：
@@ -11,25 +13,10 @@ export const TYPE_REGISTRY = {
   shop: { id: 'shop', label: '商店', built: true },
 }
 
-export const STAGE_LABELS = {
-  unassigned: '待派',
-  assigned: '已派',
-  running: '執行中',
-  review: '待審',
-  hy_decision: '待 HY 決定',
-  done: '完成',
-  returned: '退回',
-}
+// 專案階段固定 5 種：規劃中（灰）、待你決定（琥珀）、執行中／待審（藍）、完成（綠）。退回不是階段。
+export const STAGE_LABELS = { ...STAGE_LABEL }
 
-const STAGE_TONE = {
-  unassigned: 'wait',
-  assigned: 'wait',
-  running: 'ai',
-  review: 'ai',
-  hy_decision: 'you',
-  done: 'done',
-  returned: 'bad',
-}
+const STAGE_TONE = { ...STAGE_TONES }
 
 const DONE = new Set(['done', 'completed', 'complete', 'closed', 'passed', '完成', '已完成'])
 
@@ -97,7 +84,7 @@ export function meshKind(type) {
 
 export function floorPlan(stage, doneCount) {
   const done = Math.max(0, Number(doneCount) || 0)
-  if (stage === 'unassigned' || stage === 'assigned' || !stage) return { floors: 0, half: false, complete: false }
+  if (stage === 'assigned' || !stage) return { floors: 0, half: false, complete: false }
   if (stage === 'review' || stage === 'done' || stage === 'hy_decision') {
     return { floors: Math.min(FLOOR_CAP, done), half: false, complete: true }
   }
@@ -133,11 +120,11 @@ export function openDecisions(project) {
   })
 }
 
-// 紅優先於琥珀：退回或逾期蓋過待決定。
+// 紅優先於琥珀：逾期蓋過待決定。退回不是階段，不再亮紅。
 export function projectAlert({ stage, milestones, decisions, today, open }) {
   const pending = typeof open === 'number' ? open : (Array.isArray(decisions) ? decisions.length : 0)
-  if (stage === 'returned' || hasOverdue(milestones, today)) {
-    return { level: 'red', reason: stage === 'returned' ? 'returned' : 'overdue', count: pending }
+  if (hasOverdue(milestones, today)) {
+    return { level: 'red', reason: 'overdue', count: pending }
   }
   if (stage === 'hy_decision' || pending > 0) return { level: 'amber', reason: 'decision', count: pending }
   return null
@@ -145,7 +132,7 @@ export function projectAlert({ stage, milestones, decisions, today, open }) {
 
 export function alertChip(alert) {
   if (!alert) return null
-  if (alert.level === 'red') return { tone: 'bad', text: alert.reason === 'returned' ? '被退回' : '逾期' }
+  if (alert.level === 'red') return { tone: 'bad', text: '逾期' }
   const n = alert.count || 0
   return { tone: 'you', text: n ? `待你決定 ${n}` : '待你決定' }
 }
@@ -167,8 +154,8 @@ export function stageParts(stage, floors = { floors: 0, half: false }, alert = n
     lit: false,
     alert: level,
   }
-  if (stage === 'unassigned' || stage === 'assigned') return { ...base, scaffold: true, desaturate: true }
-  if (stage === 'running' || stage === 'returned') {
+  if (stage === 'assigned') return { ...base, scaffold: true, desaturate: true }
+  if (stage === 'running') {
     return {
       ...base,
       body: true,
@@ -176,7 +163,7 @@ export function stageParts(stage, floors = { floors: 0, half: false }, alert = n
       floors: floors.floors || 0,
       crane: true,
       fence: true,
-      alert: stage === 'returned' ? (level || 'red') : level,
+      alert: level,
     }
   }
   if (stage === 'review' || stage === 'done' || stage === 'hy_decision') {
@@ -325,7 +312,8 @@ export function findProjectForBuilding(building, projects = []) {
 }
 
 export function composeBuilding(project, { today, title } = {}) {
-  const stage = text(project?.stage) || 'unassigned'
+  // 舊資料的 unassigned／returned 換算成 5 種之一；換不出來就當規劃中（工地）。
+  const stage = normalizeStage(text(project?.stage), text(project?.ownerBot) || text(project?.owner_bot)) || 'assigned'
   const milestones = normalizeMilestones(project).map(item => ({ ...item, due: item.due }))
   // normalize 已把 due 收成日期；逾期直接看這份。
   const progress = milestoneProgress(milestones)
