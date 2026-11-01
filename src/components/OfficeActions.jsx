@@ -1,6 +1,8 @@
 import { useRef, useState } from 'react'
 import { writeOffice, safeDriveUrl } from '../botOfficeData'
-import { authHeaders, expireSession } from '../auth'
+import { authHeaders, expireSession, getAccessToken } from '../auth'
+import { isHyOwnerSession } from '../lib/botOfficeView.mjs'
+import { openProjectBody } from '../lib/officeFlow.mjs'
 const NAMES = {hy: 'HY', sam: 'Sam', family: '小因', '950157': '950157'}
 const LABELS = {spec_change: '規格變更', message: '會議室留言', new_project: '新增專案', reassign: '改派'}
 
@@ -17,7 +19,21 @@ export function OfficeRequest({ type, projects, projectId, readOnly, reload, inl
     if (type === 'new_project') Object.assign(payload, {title: form.title.trim(), goal: form.goal.trim(), owner_bot: form.owner_bot})
     else payload.project = form.project
     if (type === 'reassign') Object.assign(payload, {executor: form.executor, reviewer: form.reviewer})
-    try { await writeOffice('requests', payload, {headers: authHeaders()}); requestId.current = null; setNotice('已送出，處理結果會顯示在此專案。'); setOpen(inline); setForm(old => ({...old, content: '', title: '', goal: ''})); await reload() }
+    try {
+      let opened = false
+      if (type === 'new_project' && isHyOwnerSession(getAccessToken())) {
+        try {
+          await writeOffice('owner/projects', openProjectBody({ request_id: requestId.current, owner_bot: form.owner_bot, title: form.title, goal: form.goal, content: form.content }), { headers: authHeaders() })
+          opened = true
+        } catch { opened = false }
+      }
+      if (!opened) await writeOffice('requests', payload, { headers: authHeaders() })
+      requestId.current = null
+      setNotice(opened ? '已開案，PI 會先寫規劃書' : '已送出，處理結果會顯示在此專案。')
+      setOpen(inline)
+      setForm(old => ({ ...old, content: '', title: '', goal: '' }))
+      await reload()
+    }
     catch (e) { setError(e) } finally { setBusy(false) }
   }
   return <div className="bo-action">{!inline && <button disabled={readOnly || busy} aria-expanded={open} onClick={() => setOpen(v => !v)}>{LABELS[type]}</button>}

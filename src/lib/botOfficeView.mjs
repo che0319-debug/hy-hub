@@ -31,6 +31,9 @@ export function officeMilestones(building = {}) {
     deliverables: list(item.deliverables).length ? list(item.deliverables) : (textOf(item.output) ? [textOf(item.output)] : []),
     acceptance: list(item.acceptance).length ? list(item.acceptance) : list(item.acceptance_criteria),
     packages: [],
+    step: textOf(item.step),
+    kind: textOf(item.kind),
+    dependsOn: list(item.depends_on).map(dep => (typeof dep === 'string' || typeof dep === 'number') ? String(dep) : (dep && dep.id != null ? String(dep.id) : '')).filter(Boolean),
   }))
 }
 

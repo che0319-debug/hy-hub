@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { answerOfficeDecision } from '../botOfficeData'
 import { authHeaders, expireSession } from '../auth'
 import { closedLabel, decisionOwner, waitingLabel } from '../lib/botOfficeView.mjs'
+import { verdictLabel } from '../lib/officeFlow.mjs'
 const NAMES = { sam: 'Sam', family: '小因', '950157': '950157', hy: 'HY Bot' }
 const CONFIDENCE = { high: '高', medium: '中', low: '低' }
 
@@ -15,6 +16,17 @@ function Attribution({ item }) {
     </span>
     <p className="bo-summary">{typeof item.answer === 'string' ? item.answer : item.answer?.feedback || ''}</p>
     {item.basis && <p className="ao-muted">根據：{item.basis}</p>}
+  </div>
+}
+
+function FlowReview({ review }) {
+  if (!review) return null
+  const verdict = verdictLabel(review.verdict)
+  return <div className="of-review">
+    {verdict && <p>審查結論：<b>{verdict}</b></p>}
+    {review.verdictText && <p>{review.verdictText}</p>}
+    {review.reportUrl && <p><a href={review.reportUrl} target="_blank" rel="noopener noreferrer">審查報告</a></p>}
+    {review.mustFix?.length > 0 && <div><b>必改項目</b><ul>{review.mustFix.map((line, index) => <li key={index}>{line}</li>)}</ul></div>}
   </div>
 }
 
@@ -72,13 +84,16 @@ export function Decision({ item, readOnly, reload, project = null, now = Date.no
       </form>}
     </section>)}
     {!item.questions.length && item.kind === 'approval' && <>
+      {item.flow && <FlowReview review={item.review} />}
       {closed ? <Attribution item={item} /> : <>
       <Attribution item={item} />
       <label>修改意見（退回時必填）<textarea aria-label="退回意見" value={feedback} disabled={disabled} onChange={e => { setDraftRevision(old => old ?? item.revision); setFeedback(e.target.value) }} /></label>
       <div className="ao-toolbar"><button className="ao-primary" disabled={disabled} onClick={() => submit('approve')}>核准</button>
-        <button disabled={disabled || !feedback.trim()} onClick={() => submit('return')}>退回修改</button>
-        {item.answerSource === 'proxy' && item.answer && <button disabled={disabled} onClick={() => submit('confirm')}>確認代答</button>}
-        <button disabled={disabled} onClick={() => submit('defer')}>先不決定</button>
+        {item.flow
+          ? <button disabled={disabled || !feedback.trim()} onClick={() => submit('return')}>退回（附意見）</button>
+          : <><button disabled={disabled || !feedback.trim()} onClick={() => submit('return')}>退回修改</button>
+            {item.answerSource === 'proxy' && item.answer && <button disabled={disabled} onClick={() => submit('confirm')}>確認代答</button>}
+            <button disabled={disabled} onClick={() => submit('defer')}>先不決定</button></>}
       </div></>}
     </>}
     {closed && !item.questions.length && item.kind !== 'approval' && <Attribution item={item} />}
