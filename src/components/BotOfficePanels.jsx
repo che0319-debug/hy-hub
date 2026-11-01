@@ -3,11 +3,12 @@ import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import {PlanSummary,PlanDocument} from '../pages/PlanViews'
 import {milestones,PACKAGE_STATUS,safeUrl} from '../lib/aiOffice.mjs'
-import {officeEvents,officeTime,officeJournal,reportSummaryLines,reportIsStale,reportVersions,normalizeOfficeReport,normalizeOfficeDocument,normalizeOfficeFiles,reviewRounds,reviewFieldLabel,openFollowUpCount,REPORT_FRAME,officeDeleteOutcome} from '../lib/botOfficeView.mjs'
+import {officeEvents,officeTime,officeJournal,reportSummaryLines,reportIsStale,reportVersions,normalizeOfficeReport,normalizeOfficeDocument,normalizeOfficeFiles,reviewRounds,reviewFieldLabel,openFollowUpCount,REPORT_FRAME,officeDeleteOutcome,meetingZones} from '../lib/botOfficeView.mjs'
 import {composeReportSummary,reportSummaryStatus} from '../lib/reportSummary.mjs'
 import ReportSummaryCard,{ReportStaleNote} from './ReportSummaryCard'
 import {OfficeRequest,OfficeLog,OfficeFollowUps} from './OfficeActions'
-import {OFFICE_NAMES,OFFICE_TABS,loadOfficeReport,loadOfficeReportHtml,loadOfficeDocument,loadOfficeFiles,deleteOfficeProject,uploadOfficeFile,importOfficeReference,officeDeleteHold} from '../botOfficeData'
+import {Decision} from './OfficeDecisions'
+import {OFFICE_NAMES,OFFICE_TABS,loadOfficeReport,loadOfficeReportHtml,loadOfficeDocument,loadOfficeFiles,deleteOfficeProject,uploadOfficeFile,importOfficeReference,officeDeleteHold,advanceFollowUpLabel} from '../botOfficeData'
 import {authHeaders} from '../auth'
 import './project-report.css'
 import '../pages/control-center-v5.css'
@@ -123,14 +124,45 @@ function OfficeAttachments({projectId,onSelect}) {
   </fieldset>
 }
 
-export function OfficeMeeting({project,projects,reload,onOverview,state,index}) {
+// 會議室三區（HY 2026-10-31 定案）：
+// 第一區「待你處理」：決策卡與補資料卡同一層，件數＝頁首「N 項待你處理」。執行前待辦只能看，由負責 Bot 在工作日誌回覆後關閉。
+// 第二區「參考資料與建議」：原本的對話紀錄、上傳參考資料與送出建議，功能不變，只搬位置。
+// 第三區「已結案」：預設收合成一行，點開才載入內容。
+function MeetingPending({project,items,now,reload}) {
+ const open=openFollowUpCount(project.followUps),advances=project.pendingAdvances||[]
+ return <section className={`ao-card mr-zone mr-pending${items.length?' is-focus needs-you':''}`} id={`mr-pending-${project.id}`} aria-label="待你處理" tabIndex={-1}>
+  <div className="ao-card-head"><h2>待你處理</h2><Pill s={items.length?'you':'done'}>{items.length} 件</Pill></div>
+  <p className="ao-muted">要你拍板的決策和要你提供的資料放在同一層，等最久的排最前面。</p>
+  {items.length?<div className="cc5 mr-items">{items.map(item=><Decision key={item.id} item={item} project={project} now={now} reload={reload}/>)}</div>:<Empty>目前沒有要你處理的事。Bot 需要你拍板或補資料時，會出現在這裡。</Empty>}
+  {(project.followUps?.length>0||advances.length>0)&&<details className="mr-readonly"><summary>負責 Bot 處理中・只能看（執行前待辦未完成 {open}{advances.length?`・決策後續 ${advances.length}`:''}）</summary>
+   <p className="ao-muted">執行前待辦由負責 Bot 在工作日誌回覆後才會關閉，這裡不能刪除或修改。</p>
+   {project.followUps?.length>0&&<OfficeFollowUps project={project}/>}
+   {advances.length>0&&<ul className="ao-bullets">{advances.map(d=><li key={d.id}>{d.title}：{advanceFollowUpLabel(d.advance?.stage)}</li>)}</ul>}
+  </details>}
+ </section>
+}
+function MeetingClosed({project,items,reload}) {
+ const [open,setOpen]=useState(false)
+ return <section className="ao-card mr-zone mr-closed" aria-label="已結案"><details id={`mr-closed-${project.id}`} open={open} onToggle={e=>setOpen(e.currentTarget.open)}><summary><span>已結案 {items.length} 件</span><small>{open?'收合':'點開看已回覆的決策與資料'}</small></summary>
+  {open&&(items.length?<div className="cc5 mr-items">{items.map(item=><Decision key={item.id} item={item} project={project} readOnly reload={reload}/>)}</div>:<Empty>還沒有已結案的項目。</Empty>)}
+ </details></section>
+}
+export function OfficeMeeting({project,projects,reload,state,index,now=Date.now()}) {
  const journal=(state&&index?officeJournal(state,index,project.id):officeEvents(project)).filter(e=>e.kind==='human'||e.kind==='notification'||e.action)
  const seen=new Set(journal.map(e=>e.id))
  const cards=(project.cards?.meeting||[]).filter(c=>!seen.has(`card:${c.id}`)).map(c=>({id:`card:${c.id}`,at:officeTime(c.createdAt||c.date),actor:c.title,kind:'human',text:c.summary,url:c.driveUrl}))
  const events=[...journal,...cards.filter(c=>c.at)].sort((a,b)=>a.at-b.at).concat(cards.filter(c=>!c.at))
  const [selected,setSelected]=useState(null)
  const appendix=selected?`已登錄檔案：${selected.name}（${selected.id}）`:''
- return <div className="ao-meeting"><section className="ao-card ao-thread-card"><h2>與 PI 的對話</h2><p className="ao-muted">正式的建議、補充與決策紀錄；PI 即時對話尚未接上。</p><div className="ao-thread">{events.map(e=><article className={`ao-message${e.actor==='HY'?' is-me':''}`} key={e.id}><div><b>{e.actor}</b> <time>{when(e.at)}</time>{e.detail==='已送出'&&<Pill s="wait">已送出</Pill>}</div><p>{e.text}</p>{e.detail&&e.detail!=='已送出'&&<p className="ao-muted">{e.detail}</p>}{e.url&&<Link href={e.url}>開啟 Drive 原件</Link>}{e.action&&<button onClick={onOverview}>到概況處理</button>}</article>)}{!events.length&&<Empty>還沒有對話。從下方送出第一則意見。</Empty>}</div><div className="ao-composer"><OfficeRequest key={project.id} type="message" projects={projects} projectId={project.id} inline reload={reload} appendix={appendix}><OfficeAttachments projectId={project.id} onSelect={setSelected}/></OfficeRequest></div></section><OfficeTeam project={project}/></div>
+ const zones=meetingZones(project)
+ const openIds=new Set(zones.pending.map(d=>d.id))
+ const toPending=()=>{const el=document.getElementById(`mr-pending-${project.id}`);el?.scrollIntoView({behavior:'smooth',block:'start'});el?.focus({preventScroll:true})}
+ const toClosed=()=>{const el=document.getElementById(`mr-closed-${project.id}`);if(!el)return;el.open=true;el.scrollIntoView({behavior:'smooth',block:'start'})}
+ return <div className="mr-zones">
+  <MeetingPending project={project} items={zones.pending} now={now} reload={reload}/>
+  <div className="ao-meeting mr-reference"><section className="ao-card ao-thread-card mr-zone" aria-label="參考資料與建議"><h2>參考資料與建議</h2><p className="ao-muted">上傳參考資料、給 PI 建議或補充都在這裡；下方保留過去的建議與補充紀錄。PI 即時對話尚未接上。</p><div className="ao-thread">{events.map(e=><article className={`ao-message${e.actor==='HY'?' is-me':''}`} key={e.id}><div><b>{e.actor}</b> <time>{when(e.at)}</time>{e.detail==='已送出'&&<Pill s="wait">已送出</Pill>}</div><p>{e.text}</p>{e.detail&&e.detail!=='已送出'&&<p className="ao-muted">{e.detail}</p>}{e.url&&<Link href={e.url}>開啟 Drive 原件</Link>}{e.action&&(openIds.has(e.action)?<button onClick={toPending}>到待你處理</button>:<button onClick={toClosed}>到已結案</button>)}</article>)}{!events.length&&<Empty>還沒有對話。從下方送出第一則意見。</Empty>}</div><div className="ao-composer"><OfficeRequest key={project.id} type="message" projects={projects} projectId={project.id} inline reload={reload} appendix={appendix}><OfficeAttachments projectId={project.id} onSelect={setSelected}/></OfficeRequest></div></section><OfficeTeam project={project}/></div>
+  <MeetingClosed project={project} items={zones.closed} reload={reload}/>
+ </div>
 }
 export function OfficeExecution({project,plan,selected,select,planDocument}) {
   const [mode,setMode]=useState('summary'),[ratio,setRatio]=useState(60),[focus,setFocus]=useState('')
@@ -200,7 +232,7 @@ export function OfficeResults({project,report,milestones=[],onOverview}) {
     {summaryStatus==='ready'&&html
       ?<iframe title="正式 HTML 成果報告" sandbox={REPORT_FRAME.sandbox} referrerPolicy={REPORT_FRAME.referrerPolicy} srcDoc={html}/>
       :<OfficeSnapshot html={html} lines={report?.lines} project={project} milestones={milestones} status={summaryStatus} message={report?.htmlError||report?.error||''} stale={Boolean(report?.stale)} modified={report?.modified||''}/>}
-  </Card><Card title="獨立審查"><p className="ao-muted">只審三個節點：規劃、重大里程碑、結案。審查結論只在卡片有 verdict 欄時顯示；是否核准仍在<button className="ao-inline" onClick={onOverview}>概況</button>決定。</p>
+  </Card><Card title="獨立審查"><p className="ao-muted">只審三個節點：規劃、重大里程碑、結案。審查結論只在卡片有 verdict 欄時顯示；是否核准在<button className="ao-inline" onClick={onOverview}>會議室</button>的「待你處理」決定。</p>
     {checkpoints.map(item=><details className="ao-review" key={item.checkpoint_id}><summary><span className="ao-review-kind">{item.kind}</span><b>{item.milestone_id||''} 第 {item.round} 輪</b>{item.verdict&&<Pill s={item.verdict==='PASS'||item.verdict==='pass'?'done':'you'}>{item.verdict}</Pill>}</summary><p>{text(item.findings||item.summary)}</p></details>)}
     {rounds.map(round=><details className="ao-review" key={`${round.outputId}:${round.round}`}><summary><b>第 {round.round} 輪</b> {round.outputTitle}{round.hasVerdict&&<Pill s={round.verdict==='pass'||round.verdict==='PASS'?'done':'you'}>{round.verdict}</Pill>}</summary>
       <p>成果版本：{round.outputTitle}</p>
@@ -219,7 +251,7 @@ export function OfficeResults({project,report,milestones=[],onOverview}) {
 }
 export function OfficeJournal({project,reload,onOverview,onExecution,state,index}) {
  const [filter,setFilter]=useState('all'), events=(state&&index?officeJournal(state,index,project.id):officeEvents(project)).filter(e=>filter==='all'||e.kind===filter)
- return <><Card title="工作日誌"><div className="ao-toolbar" role="group" aria-label="工作日誌篩選">{[['all','全部'],['human','HY 與代理'],['system','系統與工作包'],['artifact','成果登錄']].map(([k,l])=><button key={k} aria-pressed={filter===k} onClick={()=>setFilter(k)}>{l}</button>)}</div><ol className="ao-journal">{events.map(e=><li key={e.id}><time>{e.dateLabel||when(e.at)}</time><b>{e.actor}</b><p>{e.text}</p>{e.detail&&<details><summary>詳情</summary><p>{e.detail}</p></details>}{e.action&&<button onClick={onOverview}>到概況</button>}{e.work&&<button onClick={()=>onExecution(e.work)}>關聯工作包 {e.milestone}</button>}{e.url&&<Link href={e.url}>成果</Link>}</li>)}</ol>{!events.length&&<Empty>這個篩選沒有事件。</Empty>}</Card><details><summary>新增 HY 留言</summary><OfficeLog project={{...project,logs:[]}} reload={reload}/></details></>
+ return <><Card title="工作日誌"><div className="ao-toolbar" role="group" aria-label="工作日誌篩選">{[['all','全部'],['human','HY 與代理'],['system','系統與工作包'],['artifact','成果登錄']].map(([k,l])=><button key={k} aria-pressed={filter===k} onClick={()=>setFilter(k)}>{l}</button>)}</div><ol className="ao-journal">{events.map(e=><li key={e.id}><time>{e.dateLabel||when(e.at)}</time><b>{e.actor}</b><p>{e.text}</p>{e.detail&&<details><summary>詳情</summary><p>{e.detail}</p></details>}{e.action&&<button onClick={onOverview}>到會議室</button>}{e.work&&<button onClick={()=>onExecution(e.work)}>關聯工作包 {e.milestone}</button>}{e.url&&<Link href={e.url}>成果</Link>}</li>)}</ol>{!events.length&&<Empty>這個篩選沒有事件。</Empty>}</Card><details><summary>新增 HY 留言</summary><OfficeLog project={{...project,logs:[]}} reload={reload}/></details></>
 }
 
 export function OfficeDelete({project,updatedRaw,onDeleted}) {

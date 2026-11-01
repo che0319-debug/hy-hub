@@ -66,7 +66,7 @@ export function mapOffice(state = {}, index = {}, metadata = {}) {
     id: text(d.id), title: text(d.title) || '待你處理', suggestion: text(d.suggestion),
     kind: text(d.kind), revision: Number.isInteger(d.revision) ? d.revision : 0,
     answer: d.answer, answerSource: text(d.answer_source), answeredBy: text(d.answered_by), basis: text(d.basis), confidence: text(d.confidence),
-    why: text(d.why), askedAt: text(d.asked_at), deadline: text(d.deadline),
+    why: text(d.why), askedAt: text(d.asked_at) || text(d.created_at), deadline: text(d.deadline), createdBy: text(d.created_by),
     evidence: array(d.evidence).filter(v => typeof v === 'string'),
     choiceOptions: array(d.options).map(o => typeof o === 'string' ? { label: o, impact: '' } : (o && typeof o.label === 'string' ? { label: o.label, impact: text(o.impact) } : null)).filter(Boolean),
     questions: array(d.questions).filter(q => q && Number.isInteger(q.no)).map(q => ({
@@ -103,7 +103,8 @@ export function mapOffice(state = {}, index = {}, metadata = {}) {
         requiredChanges: array(p.required_changes || p.must_fix || p.last_review?.required_changes).filter(v => typeof v === 'string'),
         returnedCount: Number.isInteger(p.returned_count) && p.returned_count >= 0 ? p.returned_count : 0 },
       figures: array(state.figures).filter(f => f && f.project === p.id).map(f => ({ id: text(f.id), owner: text(f.owner), project: text(f.project), island: text(f.island), lookAs: text(f.look_as), status: text(f.status), role: text(f.role), name: text(f.name), startedAt: text(f.started_at), finishedAt: text(f.finished_at), card: text(f.card) })),
-      followUps: array(p.follow_ups).filter(v => v && typeof v === 'object').map(v => ({id: text(v.id), text: text(v.text), status: text(v.status), source: text(v.source), sourceUrl: cardLink(v.source)})),
+      // Live follow_ups may be plain strings; show them as open (closed only when the owner bot replies in the work log).
+      followUps: array(p.follow_ups).map((v, i) => typeof v === 'string' ? (v.trim() ? {id: `${text(p.id)}-follow-up-${i + 1}`, text: v.trim(), status: 'open', source: ''} : null) : v).filter(v => v && typeof v === 'object').map(v => ({id: text(v.id), text: text(v.text), status: text(v.status), source: text(v.source), sourceUrl: cardLink(v.source)})),
       pendingAdvances: allDecisions.filter(d => d.projectId === p.id && d.needsAdvance),
       logs: array(state.logs).filter(l => l && l.project === p.id), requests: array(state.requests).filter(r => r && r.project === p.id),
       allDecisions: allDecisions.filter(d => d.projectId === p.id),

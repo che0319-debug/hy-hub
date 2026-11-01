@@ -243,7 +243,10 @@ test('project stage error codes map to Chinese messages', async () => {
 test('Bot Office wires stage labels and the HY-only control', () => {
   const page = readFileSync(new URL('../src/pages/BotOffice.jsx', import.meta.url), 'utf8')
   const control = readFileSync(new URL('../src/components/OfficeStageControl.jsx', import.meta.url), 'utf8')
-  assert.match(page, /advanceFollowUpLabel\(d\.advance\?\.stage\)/)
+  // 決策後續搬到會議室第一區（唯讀）。
+  const panels = readFileSync(new URL('../src/components/BotOfficePanels.jsx', import.meta.url), 'utf8')
+  assert.match(panels, /advanceFollowUpLabel\(d\.advance\?\.stage\)/)
+  assert.doesNotMatch(panels, /待推進完成/)
   assert.doesNotMatch(page, /待推進完成/)
   assert.match(page, /\{hy && <OfficeStageControl /)
   assert.match(control, /只有全部里程碑結束、寫好結案摘要才設完成。/)

@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { answerOfficeDecision } from '../botOfficeData'
 import { authHeaders, expireSession } from '../auth'
+import { closedLabel, decisionOwner, waitingLabel } from '../lib/botOfficeView.mjs'
 const NAMES = { sam: 'Sam', family: '小因', '950157': '950157', hy: 'HY Bot' }
 const CONFIDENCE = { high: '高', medium: '中', low: '低' }
 
@@ -17,7 +18,7 @@ function Attribution({ item }) {
   </div>
 }
 
-function Decision({ item, readOnly, reload }) {
+export function Decision({ item, readOnly, reload, project = null, now = Date.now() }) {
   const [drafts, setDrafts] = useState({}), [feedback, setFeedback] = useState(''), [draftRevision, setDraftRevision] = useState(null)
   const [busy, setBusy] = useState(false), [error, setError] = useState(null), [notice, setNotice] = useState('')
   async function submit(action, question, answer) {
@@ -41,7 +42,7 @@ function Decision({ item, readOnly, reload }) {
   const disabled = busy || readOnly
   const closed = item.status === 'answered'
   return <article className="bo-decision-form cc5-panel" aria-label={item.title}>
-    <div className="cc5-tags"><span className="cc5-tag">{({intake:'補資料',approval:'待核准',pi_decision:'PI 決策'})[item.kind]||'待確認'}</span></div><h2 className="cc5-q">{item.title}</h2>{item.suggestion && <p>{item.suggestion}</p>}
+    <div className="cc5-tags"><span className="cc5-tag">{({intake:'補資料',approval:'待核准',pi_decision:'PI 決策'})[item.kind]||'待確認'}</span></div>{project && <p className="bo-decision-meta"><span>負責 <b>{decisionOwner(item, project)}</b></span><span>{item.status === 'answered' ? closedLabel(item.answeredAt) : waitingLabel(item.askedAt, now)}</span></p>}<h2 className="cc5-q">{item.title}</h2>{item.suggestion && <p>{item.suggestion}</p>}
     {item.why && <p><b>為什麼要你決定：</b>{item.why}</p>}
     {item.choiceOptions?.length > 0 && <ol className="ao-options">{item.choiceOptions.map(option => <li key={option.label}><b>{option.label}</b>{option.impact && <small>{option.impact}</small>}</li>)}</ol>}
     {item.evidence?.length > 0 && <p className="ao-muted">證據：{item.evidence.join('、')}</p>}

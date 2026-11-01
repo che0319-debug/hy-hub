@@ -271,3 +271,33 @@ export function officeEvents(project) {
  for(const e of list(p.events)) if(e && e.id) events.push({...e,at:officeTime(e.at)})
  return events.filter(e=>e.at).sort((a,b)=>b.at-a.at || String(a.id).localeCompare(String(b.id)))
 }
+
+// 會議室三區（HY 2026-10-31 定案）：第一區「待你處理」＝所有 open 的決策卡與補資料卡（同一層）；
+// 第三區「已結案」＝已回覆的卡。第一區的件數就是頁首「N 項待你處理」的件數。
+const OWNER_NAMES = { sam: 'Sam', family: '小因', '950157': '950157', hy: 'HY Bot' }
+export function decisionOwner(decision = {}, project = {}) {
+  const id = [decision.createdBy, project.ownerBot].find(v => typeof v === 'string' && v.trim() && v.trim() !== 'hy-gui') || ''
+  return id ? OWNER_NAMES[id] || id : '負責 Bot 待補'
+}
+export function waitingLabel(askedAt, now = Date.now()) {
+  const at = officeTime(askedAt)
+  if (!at) return '等待時間待補'
+  const minutes = Math.max(0, Math.floor((now / 1000 - at) / 60))
+  if (minutes < 60) return minutes < 1 ? '剛送出' : `已等 ${minutes} 分鐘`
+  const hours = Math.floor(minutes / 60)
+  if (hours < 24) return `已等 ${hours} 小時`
+  const days = Math.floor(hours / 24), rest = hours % 24
+  return rest ? `已等 ${days} 天 ${rest} 小時` : `已等 ${days} 天`
+}
+export function meetingZones(project = {}) {
+  const all = list(project.allDecisions)
+  const time = d => officeTime(d.askedAt) ?? Infinity
+  const pending = all.filter(d => d && d.status === 'open').slice().sort((a, b) => time(a) - time(b))
+  const closedAt = d => officeTime(d.answeredAt) ?? officeTime(d.askedAt) ?? 0
+  const closed = all.filter(d => d && d.status === 'answered').slice().sort((a, b) => closedAt(b) - closedAt(a))
+  return { pending, closed }
+}
+export function closedLabel(answeredAt) {
+  const at = officeTime(answeredAt)
+  return at ? `結案 ${new Date(at * 1000).toLocaleString('zh-TW', { timeZone: 'Asia/Taipei', hour12: false })}` : '結案時間待補'
+}
