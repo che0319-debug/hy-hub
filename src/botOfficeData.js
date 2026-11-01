@@ -2,7 +2,7 @@
 // All external field mapping lives here. Unknown fields are tolerated and not rendered.
 import { OFFICE_TABS as AI_OFFICE_TABS } from './lib/aiOffice.mjs'
 import { officeFailureMessage } from './lib/botOfficeView.mjs'
-import { STAGE_LABEL, STAGE_TONE, normalizeStage } from './lib/projectStages.mjs'
+import { STAGE_KEYS, STAGE_LABEL, STAGE_TONE, normalizeStage } from './lib/projectStages.mjs'
 export const OFFICE_TABS = AI_OFFICE_TABS
 export const REFRESH_MS = 30000
 // 只有 5 種階段，名稱與顏色見 lib/projectStages.mjs。
@@ -118,7 +118,9 @@ export function mapOffice(state = {}, index = {}, metadata = {}) {
     projects, decisions, allDecisions, requests: array(state.requests), stale: Boolean(metadata.stale),
     state, index, updatedRaw: text(state.updated),
     updated: when(metadata.stateUpdated || state.updated), updatedAt: metadata.stateUpdated || state.updated || null, indexUpdated: when(metadata.indexUpdated || index.updated),
-    totals: { pending: decisions.length, running: projects.filter(p => p.active).length, finished: projects.filter(p => p.finished).length, all: projects.length },
+    // stages：5 種階段各有幾個專案（首頁統計卡用，與 Bot Office 首頁同一口徑）；pending 仍是待答題目數（提醒用）。
+    totals: { pending: decisions.length, running: projects.filter(p => p.active).length, finished: projects.filter(p => p.finished).length, all: projects.length,
+      stages: Object.fromEntries(STAGE_KEYS.map(key => [key, projects.filter(p => p.stage === key).length])) },
   }
 }
 

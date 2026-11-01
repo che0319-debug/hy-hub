@@ -274,6 +274,18 @@ test('five project stages: labels, tones, legacy normalization at read time', as
   assert.equal(out.projects[0].finished, false)
 })
 
+test('HY Hub home summary uses the five stage names from mapOffice totals', () => {
+  const out = mapOffice({updated:state.updated, buildings:[
+    {id:'a',owner_bot:'sam',stage:'assigned'},{id:'r',owner_bot:'sam',stage:'returned'},{id:'d',owner_bot:'sam',stage:'hy_decision'},
+    {id:'x',owner_bot:'sam',stage:'running'},{id:'v',owner_bot:'sam',stage:'review'},{id:'f',owner_bot:'sam',stage:'done'}]}, {cards:[]})
+  assert.deepEqual(out.totals.stages, {assigned:2, hy_decision:1, running:1, review:1, done:1})
+  assert.equal(out.totals.all, 6)
+  const summary = readFileSync(new URL('../src/components/OfficeHomeSummary.jsx', import.meta.url), 'utf8')
+  assert.match(summary, /PROJECT_STAGES\.map/)
+  assert.match(summary, /'專案總數'/)
+  assert.doesNotMatch(summary, /進行中|已完成|全部專案/)
+})
+
 test('Bot Office home uses only the five stage names; no returned-count badge anywhere', () => {
   const home = readFileSync(new URL('../src/pages/OfficeHome.jsx', import.meta.url), 'utf8')
   assert.match(home, /\['all','全部'\],\.\.\.PROJECT_STAGES/)

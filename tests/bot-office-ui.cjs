@@ -38,6 +38,18 @@ for(const spec of [{name:'desktop',width:1280,height:900},{name:'mobile',width:3
   await page.locator('.ao-header').screenshot({path:out+'/'+spec.name+'-header-pill-legacy-returned.png'});
   await page.getByRole('button',{name:'‹ Bot Office',exact:true}).click();
   await page.getByRole('button').filter({hasText:'年度方向'}).waitFor();
+  if(spec.name!=='stale'){
+   // HY Hub 首頁上方的 Bot Office 統計卡：同樣 5 種階段＋專案總數，不出現「進行中／已完成」。
+   await page.goto('http://127.0.0.1:5173/#/home');await page.addStyleTag({content:font+' body{font-family:"Noto Sans TC",sans-serif}'});
+   const summary=page.locator('.office-summary');await summary.waitFor();
+   await page.waitForFunction(()=>[...document.querySelectorAll('.office-summary strong')].every(e=>e.textContent!=='—'));
+   const cards=await summary.locator('.office-stat').evaluateAll(els=>els.map(e=>[e.querySelector('.office-stat-copy>span').textContent,e.querySelector('strong').textContent]));
+   assert.deepEqual(cards,[['規劃中','2'],['待你決定','1'],['執行中','1'],['待審','1'],['完成','1'],['專案總數','7']]);
+   const text=await summary.innerText();for(const word of ['進行中','已完成','全部專案'])assert(!text.includes(word),'home summary old word '+word);
+   assert(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),'home overflow '+spec.name);
+   await summary.screenshot({path:out+'/'+(spec.name==='desktop'?'home-summary.png':'home-summary-'+spec.name+'.png')});
+   await page.goto('http://127.0.0.1:5173/#/bot-office');await page.getByRole('button').filter({hasText:'年度方向'}).waitFor();
+  }
  }
  if(spec.name==='desktop'){
  const before=api.filter(([,p])=>p.startsWith('/api/office/')).length;holdRefresh=true;const pending=Promise.all(['state','index'].map(name=>page.waitForRequest(r=>r.url().endsWith('/api/office/'+name))));await page.clock.runFor(30001);await pending;assert.equal(await page.getByText('正在讀取 Office 資料…',{exact:true}).count(),0);const completed=Promise.all(['state','index'].map(name=>page.waitForResponse(r=>r.url().endsWith('/api/office/'+name))));releaseRefresh();await completed;assert.equal(api.filter(([,p])=>p.startsWith('/api/office/')).length,before+2);await page.getByRole('button').filter({hasText:'年度方向'}).click();for(const [i,label]of ['概況','會議室','執行計畫','成果與審查','工作日誌'].entries()){await page.getByRole('navigation',{name:'Bot Office 專案分頁'}).getByRole('button',{name:label,exact:label!=='概況'}).click();await page.screenshot({path:out+'/tab-'+i+'.png',fullPage:true});}
