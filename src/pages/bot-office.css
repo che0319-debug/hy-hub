@@ -21,3 +21,23 @@
 .ao-stage-actions{display:flex;flex-wrap:wrap;gap:8px}
 .ao .ao-stage-panel button{min-height:var(--hy-tap);padding:0 14px;font-size:14px}
 .ao-stage-panel textarea{font-size:16px}
+/* 會議室三區：待你處理 → 參考資料與建議 → 已結案（手機同順序，待你處理排最前） */
+.mr-zones{display:grid;gap:var(--hy-gap);min-width:0}
+.mr-zones>.ao-card,.mr-zones>.ao-meeting{width:100%;min-width:0;margin:0}
+.mr-zone .ao-card-head{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.mr-zone .ao-card-head h2{margin:0}
+.bo-page .mr-items .bo-decision-form{margin:0}
+.bo-page .bo-decision-meta{display:flex;flex-wrap:wrap;gap:4px 16px;margin:6px 0 0;color:var(--hy-muted);font-size:var(--hy-fs-meta)}
+.bo-page .bo-decision-meta b{color:var(--hy-ink)}
+.mr-readonly{margin-top:var(--hy-gap);border-top:1px solid var(--hy-line);padding-top:var(--hy-gap)}
+.mr-readonly>summary{cursor:pointer;min-height:var(--hy-tap);display:flex;align-items:center;color:var(--hy-muted);font-size:var(--hy-fs-meta)}
+.mr-readonly .bo-follow-ups{margin:8px 0 0;box-shadow:none}
+.mr-closed{padding-top:0;padding-bottom:0}
+.mr-closed>details>summary{cursor:pointer;min-height:var(--hy-tap);display:flex;align-items:center;justify-content:space-between;gap:12px;font-weight:600}
+.mr-closed>details>summary span{white-space:nowrap}
+.mr-closed>details>summary small{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--hy-muted);font-weight:400;font-size:var(--hy-fs-meta)}
+.mr-closed>details[open]>summary{border-bottom:1px solid var(--hy-line);margin-bottom:var(--hy-gap)}
+.mr-closed>details[open]{padding-bottom:var(--hy-gap)}
+.ao .ao-pending-pill{border:0;cursor:pointer;font:inherit;font-size:var(--hy-fs-tiny);font-weight:500;min-height:32px;padding:0 12px;position:relative}
+/* 視覺 32px，點擊範圍擴到 44px（--hy-tap） */
+.ao .ao-pending-pill::after{content:'';position:absolute;left:0;right:0;top:calc((32px - var(--hy-tap)) / 2);bottom:calc((32px - var(--hy-tap)) / 2)}

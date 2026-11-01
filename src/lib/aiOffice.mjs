@@ -1,6 +1,6 @@
 export const OFFICE_TABS = [['overview','概況'],['meeting','會議室'],['execution','執行計畫'],['outputs','成果與審查'],['log','工作日誌']]
-// One job per tab; decisions and approvals only on 概況, messages and attachments only in 會議室.
-export const TAB_NOTES = { overview:'現在怎樣、你要決定什麼。核准與驗收只在這裡做。', meeting:'和 PI 溝通的唯一入口。意見與附件都從這裡送出。', execution:'已核准的時程與兩份規劃書。規劃變更請到會議室提出。', outputs:'成果報告與獨立審查。PASS 只代表內容通過，不等於核准。', log:'所有事件依時間排列，只能追加、不能修改。' }
+// One job per tab; 概況 only reports, everything waiting for HY (decisions, approvals, data requests) plus messages and attachments lives in 會議室.
+export const TAB_NOTES = { overview:'現在怎樣：報告摘要、里程碑與 AI 進度。要你處理的事在會議室。', meeting:'要你處理的事、參考資料與建議、已結案紀錄都在這裡。核准、作答與附件都從這裡送出。', execution:'已核准的時程與兩份規劃書。規劃變更請到會議室提出。', outputs:'成果報告與獨立審查。PASS 只代表內容通過，不等於核准。', log:'所有事件依時間排列，只能追加、不能修改。' }
 export const isPending = a => a.status==='OPEN' && ['HY','owner'].includes(a.assigned_to)
 export const PROJECT_STATUS = { ai_pending:'待 AI 接手中', ai_running:'進行中', confirmation:'等待確認', completed:'完成' }
 export function activityLabel(project) {
