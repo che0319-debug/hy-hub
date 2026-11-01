@@ -4,6 +4,7 @@ import { useRef, useState } from 'react'
 import { authHeaders, expireSession } from '../auth'
 import { projectStageBody, projectStageRequestId, setProjectStage } from '../botOfficeData'
 import { milestoneProgress } from '../lib/botOfficeView.mjs'
+import { closureReason } from '../lib/officeFlow.mjs'
 
 export default function OfficeStageControl({ project, milestones = [], onChanged }) {
   const [mode, setMode] = useState('')
@@ -16,6 +17,7 @@ export default function OfficeStageControl({ project, milestones = [], onChanged
   if (!project?.id) return null
 
   const progress = milestoneProgress(milestones)
+  const blocked = closureReason(milestones)
   const incomplete = progress.total > 0 && progress.done < progress.total
   const unfinished = progress.total - progress.done
   const warning = incomplete ? `里程碑只完成 ${progress.done}／${progress.total}（還有 ${unfinished} 個未完成），確定要結案？` : ''
@@ -83,6 +85,15 @@ export default function OfficeStageControl({ project, milestones = [], onChanged
             <button type="button" className="ao-primary" disabled={busy} onClick={() => submit({ stage: 'running' })}>{busy ? '送出中…' : '確認重新開啟'}</button>
           </div>
         </div>
+      </div>
+    )
+  }
+
+  if (blocked) {
+    return (
+      <div className="ao-stage is-blocked">
+        <button type="button" disabled>設為完成</button>
+        <p className="ao-stage-reason">{blocked}</p>
       </div>
     )
   }

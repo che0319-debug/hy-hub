@@ -105,7 +105,9 @@ test('樓層＝已完成里程碑，超過上限就封頂；執行中 0 棟是�
   assert.equal(view.parts.half, false)
   assert.equal(view.parts.roof, false)
   assert.equal(view.label.text, '3／8')
-  assert.equal(view.label.tag, 'M4')
+  // 島只顯示一個狀態：有 lead_step 時不再另外標目前里程碑。
+  assert.equal(view.label.tag, '')
+  assert.equal(view.label.title, '川泱購物｜M4 執行中')
 })
 
 test('提醒紅優於琥珀', () => {
@@ -185,7 +187,7 @@ test('即時卡片：有 depends_on 才標可開工或等待', () => {
   })
   const card = composeBuilding(withDeps, { today: TODAY }).card
   assert.equal(card.live, true)
-  assert.deepEqual(card.badges.map(item => item.text), ['執行中', '里程碑 0／8', '執行中 M1', '待你決定 1'])
+  assert.deepEqual(card.badges.map(item => item.text), ['M1 執行中', '里程碑 0／8', '待你決定 1'])
   assert.equal(card.milestones.length, 8)
   assert.match(card.milestones[0].line, /M1/)
   assert.match(card.milestones[0].line, /可開工/)
@@ -211,13 +213,27 @@ test('即時卡片：有 depends_on 才標可開工或等待', () => {
   assert.equal(milestoneGate({ id: 'M2', dependsOn: ['M1'], ready: undefined }, [{ id: 'M1', status: 'done' }]).text, '可開工')
 })
 
+test('已取消的步驟不進未完成清單，里程碑分數仍照狀態計', () => {
+  const card = composeBuilding(project({
+    milestones: [
+      { id: 'M1', title: '完成的', status: 'done' },
+      { id: 'M7', title: '取消的', status: 'cancelled' },
+      { id: 'M3', title: '還在做', status: 'running' },
+    ],
+  }), { today: TODAY }).card
+  assert.deepEqual(card.milestones.map(item => item.id), ['M3'])
+  assert.equal(card.badges.find(item => item.key === 'ms').text, '里程碑 1／3')
+  assert.equal(card.badges.find(item => item.key === 'cur'), undefined)
+  assert.equal(card.badges.find(item => item.key === 'stage').text, 'M3 執行中')
+})
+
 test('同一狀態簽章不變；樓層或提醒變了才變', () => {
   const a = composeBuilding(project(), { today: TODAY })
   const b = composeBuilding(project(), { today: TODAY })
   assert.equal(a.signature, b.signature)
-  assert.equal(a.label.title, '川泱購物｜執行中')
+  assert.equal(a.label.title, '川泱購物｜M1 執行中')
   assert.equal(a.label.text, '0／8')
-  assert.equal(a.label.tag, 'M1')
+  assert.equal(a.label.tag, '')
   assert.equal(a.label.chip, null)
   const taller = composeBuilding(project({ milestones: miles(8, { done: 3 }) }), { today: TODAY })
   assert.notEqual(a.signature, taller.signature)
@@ -235,8 +251,9 @@ test('自由文字的未完成里程碑仍標 M1；有執行中狀態就優先�
   ]
   const view = composeBuilding(project({ milestones: rows }), { today: TODAY })
   assert.equal(currentMilestone(rows).id, 'M1')
-  assert.equal(view.label.tag, 'M1')
-  assert.equal(view.card.badges.find(item => item.key === 'cur').text, '執行中 M1')
+  assert.equal(view.label.tag, '')
+  assert.equal(view.card.badges.find(item => item.key === 'cur'), undefined)
+  assert.equal(view.card.stageLabel, 'M1 執行中')
   assert.equal(view.parts.half, true)
   assert.equal(view.parts.floors, 0)
 
@@ -246,8 +263,8 @@ test('自由文字的未完成里程碑仍標 M1；有執行中狀態就優先�
       { id: 'M2', title: '招牌', status: 'in_progress' },
     ],
   }), { today: TODAY })
-  assert.equal(prefer.label.tag, 'M2')
-  assert.equal(prefer.card.badges.find(item => item.key === 'cur').text, '執行中 M2')
+  assert.equal(prefer.label.tag, '')
+  assert.equal(prefer.card.badges.find(item => item.key === 'cur'), undefined)
 
   const review = composeBuilding(project({
     stage: 'review',

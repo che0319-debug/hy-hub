@@ -129,7 +129,7 @@ function OfficeAttachments({projectId,onSelect}) {
 // 第二區「參考資料與建議」：原本的對話紀錄、上傳參考資料與送出建議，功能不變，只搬位置。
 // 第三區「已結案」：預設收合成一行，點開才載入內容。
 function MeetingPending({project,items,now,reload}) {
- const open=openFollowUpCount(project.followUps),advances=project.pendingAdvances||[]
+ const open=openFollowUpCount(project.followUps),advances=(project.pendingAdvances||[]).filter(d=>!d.flow)
  return <section className={`ao-card mr-zone mr-pending${items.length?' is-focus needs-you':''}`} id={`mr-pending-${project.id}`} aria-label="待你處理" tabIndex={-1}>
   <div className="ao-card-head"><h2>待你處理</h2><Pill s={items.length?'you':'done'}>{items.length} 件</Pill></div>
   <p className="ao-muted">要你拍板的決策和要你提供的資料放在同一層，等最久的排最前面。</p>
@@ -137,7 +137,7 @@ function MeetingPending({project,items,now,reload}) {
   {(project.followUps?.length>0||advances.length>0)&&<details className="mr-readonly"><summary>負責 Bot 處理中・只能看（執行前待辦未完成 {open}{advances.length?`・決策後續 ${advances.length}`:''}）</summary>
    <p className="ao-muted">執行前待辦由負責 Bot 在工作日誌回覆後才會關閉，這裡不能刪除或修改。</p>
    {project.followUps?.length>0&&<OfficeFollowUps project={project}/>}
-   {advances.length>0&&<ul className="ao-bullets">{advances.map(d=><li key={d.id}>{d.title}：{advanceFollowUpLabel(d.advance?.stage)}</li>)}</ul>}
+   {advances.length>0&&<ul className="ao-bullets">{advances.map(d=><li key={d.id}>{d.title}：{advanceFollowUpLabel(d.advance?.stage) && '已作答'}</li>)}</ul>}
   </details>}
  </section>
 }

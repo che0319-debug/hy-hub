@@ -38,6 +38,36 @@
 .mr-closed>details>summary small{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--hy-muted);font-weight:400;font-size:var(--hy-fs-meta)}
 .mr-closed>details[open]>summary{border-bottom:1px solid var(--hy-line);margin-bottom:var(--hy-gap)}
 .mr-closed>details[open]{padding-bottom:var(--hy-gap)}
+/* 專案流程圖：桌面橫排、窄螢幕改直排，格子用 hy-pill 色調，狀態用文字寫出來。 */
+.of-flow{min-width:0}
+.of-track,.of-row{display:flex;flex-wrap:wrap;align-items:flex-start;gap:8px;list-style:none;margin:0;padding:0;min-width:0}
+.of-track{width:100%}
+.of-group,.of-cycle{flex:1 1 220px;min-width:0;display:grid;gap:4px;align-content:start}
+.of-cell{align-self:flex-start;flex:1 1 88px;min-width:0;max-width:100%;display:flex;flex-direction:column;gap:2px;border:1px solid var(--hy-line);border-radius:10px;padding:8px 10px;background:var(--hy-wait-bg);color:var(--hy-wait)}
+.of-cell b,.of-cell small,.of-caption,.of-meta,.of-loop{overflow-wrap:anywhere}
+.of-cell small{font-size:var(--hy-fs-tiny);line-height:1.4}
+.of-cell[data-s="wait"]{background:var(--hy-wait-bg);color:var(--hy-wait)}
+.of-cell[data-s="ai"]{background:var(--hy-ai-bg);color:var(--hy-ai)}
+.of-cell[data-s="you"]{background:var(--hy-you-bg);color:var(--hy-you)}
+.of-cell[data-s="done"]{background:var(--hy-done-bg);color:var(--hy-done)}
+.of-cell.is-on{border-width:2px;font-weight:700}
+.of-cell.is-idle{opacity:.72}
+.of-arrow{flex:0 0 auto;align-self:center;color:var(--hy-muted);line-height:1}
+.of-caption,.of-meta,.of-loop{margin:0;font-size:var(--hy-fs-tiny);color:var(--hy-muted)}
+.of-loop{color:var(--hy-ai);font-weight:600}
+.of-cancelled{font-size:11px}
+.of-review{display:grid;gap:4px;margin:8px 0;padding:10px 12px;border-radius:var(--hy-r-sm);background:var(--hy-surface);border:1px solid var(--hy-line);min-width:0}
+.of-review ul{margin:0;padding-left:1.2em}
+.ao-overview-v2 .ao-timeline li.is-cancelled{color:var(--hy-muted);background:var(--hy-wait-bg)}
+.ao-overview-v2 .ao-timeline li.is-cancelled b{text-decoration:line-through}
+.ao-header-actions:has(.ao-stage.is-blocked){flex-basis:100%;margin-left:0}
+.ao-header-actions .ao-stage.is-blocked{flex-basis:100%;flex-wrap:wrap;gap:8px;align-items:center}
+.ao-stage-reason{flex:1 1 180px;min-width:0;margin:0;color:var(--hy-muted);font-size:var(--hy-fs-meta);overflow-wrap:anywhere}
+@media(max-width:700px){
+  .of-track,.of-row{flex-direction:column}
+  .of-arrow{transform:rotate(90deg);align-self:center}
+  .of-cell,.of-group,.of-cycle{flex-basis:auto;width:100%}
+}
 .ao .ao-pending-pill{border:0;cursor:pointer;font:inherit;font-size:var(--hy-fs-tiny);font-weight:500;min-height:32px;padding:0 12px;position:relative}
 /* 視覺 32px，點擊範圍擴到 44px（--hy-tap） */
 .ao .ao-pending-pill::after{content:'';position:absolute;left:0;right:0;top:calc((32px - var(--hy-tap)) / 2);bottom:calc((32px - var(--hy-tap)) / 2)}

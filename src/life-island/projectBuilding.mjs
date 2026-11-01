@@ -4,6 +4,7 @@
 // Bot Office 頁目前不讀 ?project=（那支檔不能一起改）。連結先帶上專案 id。
 
 import { STAGE_LABEL, STAGE_TONE as STAGE_TONES, normalizeStage } from '../lib/projectStages.mjs'
+import { leadTone, projectFlow } from '../lib/officeFlow.mjs'
 
 export const FLOOR_CAP = 5
 
@@ -324,33 +325,40 @@ export function composeBuilding(project, { today, title } = {}) {
   const type = resolveBuildingType(project)
   const labelText = stageLabelOf(project, stage)
   const tone = stageToneOf(stage, labelText)
-  const running = currentMilestone(milestones)
+  const flow = projectFlow(project?.source || project, { decisions: project?.allDecisions || project?.decisions || [], stage })
+  const lead = flow.lead_step
+  const cancelledIds = new Set((flow.milestones || []).filter(item => item.step === 'cancelled').map(item => item.id))
+  const activeMilestones = milestones.filter(item => !cancelledIds.has(item.id))
+  const running = currentMilestone(activeMilestones)
   const name = text(project?.title) || text(title) || '專案'
   const chip = alertChip(alert)
-  const unfinished = milestones.filter(item => !isMilestoneDone(item)).map(item => milestoneLine(item, milestones))
+  const unfinished = activeMilestones.filter(item => !isMilestoneDone(item)).map(item => milestoneLine(item, milestones))
   const showRunning = !!(running && (stage === 'running' || isRunningStatus(running.status)))
+  const cardLabel = lead?.label || labelText
+  const cardTone = lead?.label ? leadTone(lead, stage) : tone
   const badges = [
-    { key: 'stage', text: labelText, tone },
+    { key: 'stage', text: cardLabel, tone: cardTone },
     { key: 'ms', text: `里程碑 ${progress.done}／${progress.total}`, tone: 'wait' },
   ]
-  if (showRunning) badges.push({ key: 'cur', text: `執行中 ${running.id}`, tone: 'ai' })
+  // 島上只顯示一個狀態（lead_step）；沒有 lead_step 的舊資料才補目前里程碑。
+  if (showRunning && !lead?.label) badges.push({ key: 'cur', text: `執行中 ${running.id}`, tone: 'ai' })
   if (pending.length) badges.push({ key: 'ask', text: `待你決定 ${pending.length}`, tone: 'you' })
   const ratio = progress.total ? progress.done / progress.total : 0
   const label = {
-    title: `${name}｜${labelText}`,
+    title: `${name}｜${cardLabel}`,
     text: `${progress.done}／${progress.total}`,
     ratio,
-    tag: showRunning ? running.id : '',
-    tone,
+    tag: showRunning && !lead?.label ? running.id : '',
+    tone: cardTone,
     chip,
-    signature: [name, labelText, progress.done, progress.total, showRunning ? running.id : '', chip?.text || ''].join('|'),
+    signature: [name, cardLabel, progress.done, progress.total, showRunning && !lead?.label ? running.id : '', chip?.text || ''].join('|'),
   }
   const card = {
     live: true,
     title: name,
     stage,
-    stageLabel: labelText,
-    tone,
+    stageLabel: cardLabel,
+    tone: cardTone,
     href: officeProjectPath(project?.id),
     badges,
     milestones: unfinished,
