@@ -70,7 +70,7 @@ function officeIndex(spec) {
 }
 
 const shots = [
-  { name: 'stage-assigned', stage: 'assigned', done: 0, wait: '已派', width: 1280, height: 900 },
+  { name: 'stage-assigned', stage: 'assigned', done: 0, wait: '規劃中', width: 1280, height: 900 },
   { name: 'stage-running', stage: 'running', done: 0, wait: '執行中', width: 1280, height: 900 },
   { name: 'stage-running-3of8', stage: 'running', done: 3, wait: '3／8', width: 1280, height: 900 },
   { name: 'stage-review', stage: 'review', done: 4, wait: '待審', width: 1280, height: 900 },

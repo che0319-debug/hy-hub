@@ -4,6 +4,7 @@ const {chromium:pw}=require('playwright');
 const out=path.resolve(process.env.BOT_OFFICE_QA_DIR || 'docs/quality/ui/bot-office'); fs.mkdirSync(out,{recursive:true});
 const fontDir=path.dirname(require.resolve('@fontsource/noto-sans-tc/package.json'));
 const font=fs.readFileSync(path.join(fontDir,'400.css'),'utf8').replace(/url\(([^)]+)\)/g,(_,u)=>`url(data:font/woff2;base64,${fs.readFileSync(path.join(fontDir,u.replace(/["']/g,''))).toString('base64')})`);
+// 含兩個已停用的舊值：unassigned（沒有負責 Bot → 狀態待確認）與 returned（讀成規劃中）。
 const stages=['unassigned','assigned','running','review','hy_decision','done','returned'];
 const state={updated:'2026-10-24T14:30:00+08:00',islands:[{id:'company',name:'公司'}],buildings:stages.map((stage,i)=>({id:'p'+i,title:['品牌落地','技術簡報','家庭安排','健康課表','年度方向','研究整理','包裝修訂'][i],island:'company',stage,executor:'grok-build'})),decisions:[{id:'d1',ref:'p4',status:'open',title:'確認年度方向',suggestion:'先完成驗收，再安排下一階段。'},{id:'d2',ref:'p0',status:'answered',title:'不應顯示'}]};
 const index={updated:state.updated,cards:state.buildings.flatMap(p=>['decision','meeting','execution','output','log'].map(type=>({id:p.id+type,project:p.id,type,title:p.title+'・'+type,summary:'先核對方向與範圍，再整理工作摘要。完整內容請查看 Drive 原件。',drive_url:'https://drive.google.com/file/d/example/view',date:'2026-10-24'})))};
@@ -16,6 +17,28 @@ for(const spec of [{name:'desktop',width:1280,height:900},{name:'mobile',width:3
  const page=await context.newPage();if(spec.name==='desktop')await page.clock.install();page.on('pageerror',e=>errors.push(e.message));await page.goto('http://127.0.0.1:5173/#/bot-office');await page.addStyleTag({content:font+' body{font-family:"Noto Sans TC",sans-serif}'});await page.evaluate(()=>document.fonts.ready);await page.getByRole('heading',{name:'Bot Office',exact:true}).waitFor();
  if(spec.status===404)await page.getByRole('heading',{name:'尚無資料',exact:true}).waitFor();else if(spec.status===401)await page.getByRole('heading',{name:'請重新登入',exact:true}).waitFor();else await page.getByRole('button').filter({hasText:'年度方向'}).waitFor();
  if(spec.indexMissing){assert.equal(await page.locator('.ao-project-line').count(),7);await page.getByRole('button').filter({hasText:'年度方向'}).click();await page.getByText('正式規劃尚未提供里程碑。',{exact:true}).waitFor();await page.getByRole('button',{name:'‹ Bot Office',exact:true}).click();}assert(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),'overflow '+spec.name);await page.screenshot({path:out+'/'+spec.name+'.png',fullPage:true});
+ if(['desktop','mobile','stale'].includes(spec.name)){
+  // 統計卡與篩選只用 5 種階段名稱，舊值讀取時換算：returned→規劃中；沒有負責 Bot 的 unassigned 只算進總數。
+  const tiles=await page.locator('.ao-tile').evaluateAll(els=>els.map(e=>[e.querySelector('small').textContent,e.querySelector('strong').textContent]));
+  assert.deepEqual(tiles,[['規劃中','2'],['待你決定','1'],['執行中','1'],['待審','1'],['完成','1'],['專案總數','7']]);
+  const chips=await page.locator('.ao-chips button, [aria-label="專案篩選"] button').allTextContents();
+  assert.deepEqual(chips,['全部','規劃中','待你決定','執行中','待審','完成']);
+  const body=await page.locator('.ao-home').innerText();
+  for(const word of ['待派','已派','退回','進行中','已完成','待 HY 決定','執行中專案'])assert(!body.includes(word),'old stage word '+word);
+  await page.locator('.ao-tiles').screenshot({path:out+'/'+spec.name+'-tiles.png'});
+  const [top,bottom]=await page.evaluate(()=>{const t=document.querySelector('.ao-tiles').getBoundingClientRect(),c=document.querySelector('.ao-home-controls').getBoundingClientRect();return [t.top+scrollY,c.bottom+scrollY]});
+  await page.screenshot({path:out+'/'+spec.name+'-tiles-chips.png',fullPage:true,clip:{x:0,y:Math.max(0,top-8),width:spec.width,height:bottom-top+16}});
+  await page.getByRole('button').filter({hasText:'年度方向'}).click();
+  const pill=page.locator('.ao-header-top .hy-pill').first();
+  assert.equal(await pill.textContent(),'待你決定');
+  await page.locator('.ao-header').screenshot({path:out+'/'+spec.name+'-header-pill.png'});
+  await page.getByRole('button',{name:'‹ Bot Office',exact:true}).click();
+  await page.getByRole('button').filter({hasText:'包裝修訂'}).click();
+  assert.equal(await page.locator('.ao-header-top .hy-pill').first().textContent(),'規劃中');
+  await page.locator('.ao-header').screenshot({path:out+'/'+spec.name+'-header-pill-legacy-returned.png'});
+  await page.getByRole('button',{name:'‹ Bot Office',exact:true}).click();
+  await page.getByRole('button').filter({hasText:'年度方向'}).waitFor();
+ }
  if(spec.name==='desktop'){
  const before=api.filter(([,p])=>p.startsWith('/api/office/')).length;holdRefresh=true;const pending=Promise.all(['state','index'].map(name=>page.waitForRequest(r=>r.url().endsWith('/api/office/'+name))));await page.clock.runFor(30001);await pending;assert.equal(await page.getByText('正在讀取 Office 資料…',{exact:true}).count(),0);const completed=Promise.all(['state','index'].map(name=>page.waitForResponse(r=>r.url().endsWith('/api/office/'+name))));releaseRefresh();await completed;assert.equal(api.filter(([,p])=>p.startsWith('/api/office/')).length,before+2);await page.getByRole('button').filter({hasText:'年度方向'}).click();for(const [i,label]of ['概況','會議室','執行計畫','成果與審查','工作日誌'].entries()){await page.getByRole('navigation',{name:'Bot Office 專案分頁'}).getByRole('button',{name:label,exact:label!=='概況'}).click();await page.screenshot({path:out+'/tab-'+i+'.png',fullPage:true});}
  assert.equal(await page.getByRole('button',{name:'示範',exact:true}).count(),0);assert.equal(await page.getByRole('button',{name:'真實',exact:true}).count(),0);

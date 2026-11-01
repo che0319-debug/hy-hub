@@ -1,4 +1,5 @@
-// HY 本人把專案設為完成，或把誤結案的專案改回執行中。returned 不能重開。
+// HY 本人把專案設為完成，或把誤結案的專案改回執行中。
+// 只有這兩個目標：完成、執行中。退回不是階段，不在這裡提供。
 import { useRef, useState } from 'react'
 import { authHeaders, expireSession } from '../auth'
 import { projectStageBody, projectStageRequestId, setProjectStage } from '../botOfficeData'
@@ -12,7 +13,7 @@ export default function OfficeStageControl({ project, milestones = [], onChanged
   const [error, setError] = useState(null)
   const busyRef = useRef(false)
   const stage = project?.stage
-  if (stage === 'returned' || !project?.id) return null
+  if (!project?.id) return null
 
   const progress = milestoneProgress(milestones)
   const incomplete = progress.total > 0 && progress.done < progress.total

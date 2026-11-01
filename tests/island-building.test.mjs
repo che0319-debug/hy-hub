@@ -79,10 +79,9 @@ test('階段對應零件：地基、半成品、完整、旗子與燈', () => {
   assert.equal(decision.roof, true)
   assert.equal(decision.flag, null)
 
-  const returned = stageParts('returned', floorPlan('returned', 0), null)
-  assert.equal(returned.alert, 'red')
-  assert.equal(returned.crane, true)
-  assert.equal(returned.roof, false)
+  const planning = stageParts('assigned', floorPlan('assigned', 0), null)
+  assert.equal(planning.scaffold, true)
+  assert.equal(planning.alert, null)
 })
 
 test('樓層＝已完成里程碑，超過上限就封頂；執行中 0 棟是半層', () => {
@@ -92,7 +91,6 @@ test('樓層＝已完成里程碑，超過上限就封頂；執行中 0 棟是�
   assert.equal(floorPlan('running', 8).floors, 5)
   assert.equal(floorPlan('running', 6).floors, 5)
   assert.deepEqual(floorPlan('assigned', 4), { floors: 0, half: false, complete: false })
-  assert.equal(floorPlan('unassigned', 2).floors, 0)
   assert.equal(floorPlan('review', 3).floors, 3)
   assert.equal(floorPlan('review', 3).complete, true)
   assert.equal(floorPlan('review', 0).floors, 0)
@@ -118,11 +116,11 @@ test('提醒紅優於琥珀', () => {
   const both = projectAlert({ stage: 'running', milestones: late, open: 1, today: TODAY })
   assert.equal(both.level, 'red')
   assert.equal(both.reason, 'overdue')
-  assert.equal(projectAlert({ stage: 'returned', milestones: future, open: 2, today: TODAY }).reason, 'returned')
+  // 退回不是階段，不再亮紅；舊資料的 returned 由 composeBuilding 換算成規劃中。
+  assert.equal(projectAlert({ stage: 'assigned', milestones: future, open: 2, today: TODAY }).reason, 'decision')
   assert.equal(projectAlert({ stage: 'hy_decision', milestones: future, open: 0, today: TODAY }).level, 'amber')
   assert.equal(projectAlert({ stage: 'running', milestones: future, open: 0, today: TODAY }), null)
   assert.equal(alertChip(both).text, '逾期')
-  assert.equal(alertChip({ level: 'red', reason: 'returned', count: 1 }).text, '被退回')
   assert.equal(alertChip({ level: 'amber', reason: 'decision', count: 2 }).text, '待你決定 2')
 
   const amber = composeBuilding(project({ decisions: open }), { today: TODAY })

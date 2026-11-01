@@ -23,7 +23,7 @@ function Fresh({ iso }) {
 function Card({ h, d, loaded, open, onToggle }) {
   const o = d?.office, t = d?.todos
   const status = d?.status ?? 'wait'
-  const line = o ? `進行中 ${o.running + o.review}・完成 ${o.done}` : loaded ? '—' : '讀取中…'
+  const line = o ? `執行中 ${o.running}・待審 ${o.review}・完成 ${o.done}` : loaded ? '—' : '讀取中…'
   const id = 'bot-' + h.id
   return (
     <section className={'hy-card bot-card' + (status === 'you' ? ' needs-you' : '')} aria-labelledby={id + '-t'}>
@@ -41,11 +41,11 @@ function Card({ h, d, loaded, open, onToggle }) {
         <div id={id + '-d'} className="hy-stack">
           <dl className="hy-kv">
             <dt>正在做</dt><dd>{d?.doing || '—'}</dd>
-            <dt>進行中</dt><dd>{o ? `${o.running} 執行中・${o.review} 待審` : '—'}</dd>
+            <dt>規劃中</dt><dd>{dash(o?.waiting)}</dd>
+            <dt>執行中</dt><dd>{dash(o?.running)}</dd>
+            <dt>待審</dt><dd>{dash(o?.review)}</dd>
             <dt>待你確認</dt><dd>{o ? (o.asks + o.hyDecision > 0 ? <span className="hy-pill" data-s="you">{o.asks + o.hyDecision}</span> : 0) : '—'}</dd>
-            <dt>等待派工</dt><dd>{dash(o?.waiting)}</dd>
-            <dt>完成的專案</dt><dd>{dash(o?.done)}</dd>
-            <dt>被退回</dt><dd>{o ? (o.returned > 0 ? <span className="hy-pill" data-s="bad">{o.returned}</span> : 0) : '—'}</dd>
+            <dt>完成</dt><dd>{dash(o?.done)}</dd>
             <dt>全部專案</dt><dd>{dash(o?.total)}</dd>
             <dt>待辦</dt><dd>{t ? <>逾期 {t.overdue > 0 ? <span className="hy-pill" data-s="bad">{t.overdue}</span> : 0}・今日 {t.today}</> : '—'}</dd>
             <dt>要詢問你的事</dt><dd><span className="hy-pill" data-s="wait">待建立</span></dd>

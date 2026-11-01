@@ -57,7 +57,7 @@ export function OfficeFollowUps({ project }) {
 
 export function OfficeReview({ project }) {
   const review = project.review
-  return <section className="ao-card"><h2>品質與審查</h2><dl className="hy-kv"><dt>最近審查</dt><dd>{({pass: '通過', fail: '需修改', none: '尚無審查'})[review.verdict] || review.verdict}</dd><dt>退回次數</dt><dd>{review.returnedCount}</dd></dl>
+  return <section className="ao-card"><h2>品質與審查</h2><dl className="hy-kv"><dt>最近審查</dt><dd>{({pass: '通過', fail: '需修改', none: '尚無審查'})[review.verdict] || review.verdict}</dd></dl>
     {safeDriveUrl(review.url) ? <a href={review.url} target="_blank" rel="noopener noreferrer">開啟審查報告 ↗</a> : <p className="ao-muted">審查報告連結待補。</p>}
     <h3>必改清單</h3>{review.requiredChanges.length ? <ul>{review.requiredChanges.map((c, i) => <li key={i}>{c}</li>)}</ul> : <p className="ao-muted">尚未提供必改清單。</p>}
   </section>

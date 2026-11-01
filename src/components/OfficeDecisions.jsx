@@ -88,7 +88,7 @@ function Decision({ item, readOnly, reload }) {
   </article>
 }
 
-export default function OfficeDecisions({ items, readOnly, reload, title = '待 HY 決定', toolbar }) {
+export default function OfficeDecisions({ items, readOnly, reload, title = '待你處理', toolbar }) {
   if (!items.length) return null
   const pending = items.some(d => d.status !== 'answered')
   return <section className={`ao-card bo-decisions${pending ? ' is-focus needs-you' : ''}`} aria-label={title}>
