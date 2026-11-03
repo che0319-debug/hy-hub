@@ -53,3 +53,16 @@ export function moveParent(items,id,parentId){
   const project=parent.kind==='project'?parent.id:parent.project_id;
   return items.map(r=>subtree.has(r.id)?{...r,project_id:project,...(r.id===id?{parent_id:parentId,order:ordered(items,parentId).length?Math.max(...ordered(items,parentId).map(x=>x.order))+1:0}:{})}:r);
 }
+
+export function viewConfig(mode) {
+  return {day:{unit:48,days:14,step:7},week:{unit:30,days:28,step:7},month:{unit:9,days:93,step:31}}[mode] || {unit:9,days:93,step:31};
+}
+export function dateMarkers(events,anchor,unit,width) {
+  const end=[-1,-1,-1],labels=[],lines=[];let hidden=0;
+  for(const event of [...events].sort((a,b)=>a.date.localeCompare(b.date)||a.name.localeCompare(b.name))){
+    const x=(day(event.date)-day(anchor)+.5)*unit;if(x<0||x>=width)continue;
+    lines.push({...event,x});const left=Math.max(0,Math.min(width-150,x)),lane=end.findIndex(n=>n<left);
+    if(lane<0){hidden++;continue;}end[lane]=left+150;labels.push({...event,x,left,lane});
+  }
+  return {labels,lines,hidden,height:lines.length?28*(Math.max(0,...labels.map(x=>x.lane))+1):0};
+}

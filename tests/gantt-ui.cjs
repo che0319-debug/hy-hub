@@ -18,11 +18,23 @@ const fixture={revision:'demo1',items:[
 ]};
 (async()=>{
 const browser=await chromium.launch({headless:true,...(process.env.CHROMIUM_PATH?{executablePath:process.env.CHROMIUM_PATH}:{}),args:['--no-sandbox','--disable-dev-shm-usage','--disable-gpu']});
-let saved=structuredClone(fixture),failure=null,puts=0,unexpected=[];
+let saved=structuredClone(fixture),failure=null,puts=0,unexpected=[],planning=null,planningReady=false;
 const context=await browser.newContext({viewport:{width:1280,height:900}});
 await context.route('**/*',async route=>{
  const url=new URL(route.request().url());
  if(['127.0.0.1','localhost'].includes(url.hostname))return route.continue();
+ if(url.pathname.startsWith('/api/950157-gantt/planning')){
+  const method=route.request().method();
+  if(url.pathname.endsWith('/apply')){assert.equal(route.request().postDataJSON().revision,saved.revision);saved={...saved,revision:'ai-applied',items:[...saved.items,...planning.proposal.items]};planning={...planning,applied:true,revision:3};return route.fulfill({contentType:'application/json',body:JSON.stringify({schedule:saved,session:planning,warning:null})});}
+  if(method==='POST'){
+   assert.ok(route.request().postDataBuffer().includes(Buffer.from('需求.csv')));
+   planning={id:'22222222-2222-4222-8222-222222222222',name:'AI 建立專案',revision:1,pending:true,applied:false,request_id:'request-ai',messages:[{role:'user',text:'依附件展開一版規劃',attachments:[{id:'source1',name:'需求.csv'}]}],proposal:null};
+   return route.fulfill({contentType:'application/json',body:JSON.stringify(planning)});
+  }
+  if(url.pathname.endsWith('/planning'))return route.fulfill({contentType:'application/json',body:JSON.stringify({sessions:planning?[{id:planning.id,name:planning.name,pending:!planningReady}]:[]})});
+  if(planningReady&&planning.pending){planning={...planning,revision:2,pending:false,proposal:{items:[r('ai-project','project',null,'ai-project','AI 草案專案','',null,null,{order:2}),r('ai-task','task','ai-project','ai-project','AI 展開的工作','HY','2026-11-07','2026-11-22')],important_dates:[],assumptions:['日期由 AI 提議，待確認']},messages:[...planning.messages,{role:'assistant',text:'已展開一版規劃，請確認日期假設。'}]};}
+  return route.fulfill({contentType:'application/json',body:JSON.stringify(planning)});
+ }
  if(url.pathname==='/api/950157-gantt'){
   const put=route.request().method()==='PUT';if(put)puts++;
   if(failure)return route.fulfill({status:failure,contentType:'application/json',body:'{"detail":"test failure"}'});
@@ -47,14 +59,14 @@ const red='rgb(180, 35, 24)';
 for(const part of ['g-start','g-end'])assert.equal(await page.locator('[data-id=t] .'+part).evaluate(el=>getComputedStyle(el).color),red);
 assert.notEqual(await page.locator('[data-id=s] .g-start').evaluate(el=>getComputedStyle(el).color),red);
 await page.locator('[data-id=t] [data-key=name]').click();await page.locator('[data-action=edit]').click();
-assert.ok(await page.locator('dialog [name=started]').isChecked());assert.ok(await page.locator('dialog [name=delayed]').isChecked());
-await page.locator('dialog [name=started]').uncheck();await page.getByRole('button',{name:'套用變更'}).click();
+assert.ok(await page.locator('.g-task-dialog [name=started]').isChecked());assert.ok(await page.locator('.g-task-dialog [name=delayed]').isChecked());
+await page.locator('.g-task-dialog [name=started]').uncheck();await page.getByRole('button',{name:'套用變更'}).click();
 assert.notEqual(await page.locator('[data-id=t] .g-start').evaluate(el=>getComputedStyle(el).color),red);
 assert.equal(await page.locator('[data-id=t] .g-end').evaluate(el=>getComputedStyle(el).color),red);
-await page.locator('[data-action=edit]').click();await page.locator('dialog [name=started]').check();await page.locator('dialog [name=delayed]').uncheck();await page.getByRole('button',{name:'套用變更'}).click();
+await page.locator('[data-action=edit]').click();await page.locator('.g-task-dialog [name=started]').check();await page.locator('.g-task-dialog [name=delayed]').uncheck();await page.getByRole('button',{name:'套用變更'}).click();
 assert.equal(await page.locator('[data-id=t] .g-start').evaluate(el=>getComputedStyle(el).color),red);
 assert.notEqual(await page.locator('[data-id=t] .g-end').evaluate(el=>getComputedStyle(el).color),red);
-await page.locator('[data-action=edit]').click();await page.locator('dialog [name=delayed]').check();await page.getByRole('button',{name:'套用變更'}).click();
+await page.locator('[data-action=edit]').click();await page.locator('.g-task-dialog [name=delayed]').check();await page.getByRole('button',{name:'套用變更'}).click();
 
 assert.ok((await page.locator('.g-row[data-id]').evaluateAll(rows=>rows.map(r=>{const cs=[...r.children].map(c=>c.getBoundingClientRect());return cs.every(c=>Math.abs(c.y-cs[0].y)<.5&&Math.abs(c.height-44)<.5)}))).every(Boolean));
 await page.locator('[data-toggle=t]').click();assert.equal(await page.locator('.g-row[data-id]').count(),6);await page.locator('[data-toggle=t]').click();
@@ -66,23 +78,37 @@ await pointer('[data-id=c] .g-mark',18);assert.equal(await page.locator('[data-i
 await page.locator('[data-action=save]').click();await page.getByRole('status').filter({hasText:'已儲存'}).waitFor();assert.equal(puts,1);assert.equal(saved.items.find(r=>r.id==='t').started,true);assert.equal(saved.items.find(r=>r.id==='t').delayed,true);
 await page.reload();await page.locator('[data-id=t]').waitFor();assert.equal(await page.locator('[data-id=t] [data-key=start]').inputValue(),'2026-11-05');
 const second=await context.newPage();await second.goto(base);await second.locator('[data-id=t]').waitFor();assert.equal(await second.locator('[data-id=t] [data-key=start]').inputValue(),'2026-11-05');await second.close();
-await page.locator('[data-id=s2] [data-key=name]').click();await page.locator('[data-action=task]').click();await page.locator('dialog [name=name]').fill('第五層測試工作');await page.locator('dialog [name=start]').fill('2026-11-07');await page.locator('dialog [name=end]').fill('2026-11-08');await page.getByRole('button',{name:'套用變更'}).click();assert.equal(await page.locator('.g-row[data-id]').count(),11);
-await page.locator('[data-action=edit]').click();await page.locator('dialog [name=parent]').selectOption('p2');await page.getByRole('button',{name:'套用變更'}).click();await page.locator('[data-action=up]').click();await page.locator('[data-action=down]').click();await page.locator('[data-action=delete]').click();assert.equal(await page.locator('.g-row[data-id]').count(),10);
+await page.locator('[data-id=s2] [data-key=name]').click();await page.locator('[data-action=task]').click();await page.locator('.g-task-dialog [name=name]').fill('第五層測試工作');await page.locator('.g-task-dialog [name=start]').fill('2026-11-07');await page.locator('.g-task-dialog [name=end]').fill('2026-11-08');await page.getByRole('button',{name:'套用變更'}).click();assert.equal(await page.locator('.g-row[data-id]').count(),11);
+await page.locator('[data-action=edit]').click();await page.locator('.g-task-dialog [name=parent]').selectOption('p2');await page.getByRole('button',{name:'套用變更'}).click();await page.locator('[data-action=up]').click();await page.locator('[data-action=down]').click();await page.locator('[data-action=delete]').click();assert.equal(await page.locator('.g-row[data-id]').count(),10);
 
 // Checkpoint CRUD uses the same editor and fixed type choices.
-await page.locator('[data-id=p] [data-key=name]').click();await page.locator('[data-action=checkpoint]').click();await page.locator('dialog [name=name]').fill('新增查核測試');await page.locator('dialog [name=date]').fill('2026-11-22');await page.locator('dialog [name=checkpoint_type]').selectOption('major');await page.getByRole('button',{name:'套用變更'}).click();assert.equal(await page.locator('.g-row[data-id]').count(),11);
-await page.locator('[data-action=edit]').click();await page.locator('dialog [name=name]').fill('修改查核測試');await page.locator('dialog [name=date]').fill('2026-11-23');await page.locator('dialog [name=checkpoint_type]').selectOption('general');await page.getByRole('button',{name:'套用變更'}).click();await page.locator('[data-action=delete]').click();assert.equal(await page.locator('.g-row[data-id]').count(),10);
+await page.locator('[data-id=p] [data-key=name]').click();await page.locator('[data-action=checkpoint]').click();await page.locator('.g-task-dialog [name=name]').fill('新增查核測試');await page.locator('.g-task-dialog [name=date]').fill('2026-11-22');await page.locator('.g-task-dialog [name=checkpoint_type]').selectOption('major');await page.getByRole('button',{name:'套用變更'}).click();assert.equal(await page.locator('.g-row[data-id]').count(),11);
+await page.locator('[data-action=edit]').click();await page.locator('.g-task-dialog [name=name]').fill('修改查核測試');await page.locator('.g-task-dialog [name=date]').fill('2026-11-23');await page.locator('.g-task-dialog [name=checkpoint_type]').selectOption('general');await page.getByRole('button',{name:'套用變更'}).click();await page.locator('[data-action=delete]').click();assert.equal(await page.locator('.g-row[data-id]').count(),10);
 
 failure=409;await page.locator('[data-action=save]').click();await page.getByRole('status').filter({hasText:'其他裝置'}).waitFor();assert.ok(await page.locator('[data-action=save]').isEnabled());
 failure=503;await page.locator('[data-action=save]').click();await page.getByRole('status').filter({hasText:'儲存失敗'}).waitFor();await page.locator('[data-action=load]').click();await page.getByRole('status').filter({hasText:'讀取失敗'}).waitFor();assert.ok(await page.locator('[data-action=save]').isDisabled());const count=puts;await page.locator('#saveBtn').click();assert.equal(puts,count);
 failure=null;await page.locator('[data-action=load]').click();await page.locator('[data-id=t]').waitFor();
 for(const tab of ['progress','weekly','research','gantt']){await page.locator(`[data-tab=${tab}]`).click();assert.ok(await page.locator(`#tab-${tab}`).isVisible());}
+
+// Daily view plus shared event dates, separate from three specification checkpoints.
+await anchor();await page.locator('#g-mode').selectOption('day');assert.equal(await page.locator('.g-grid').evaluate(el=>el.style.getPropertyValue('--g-unit')),'48px');
+await page.locator('[data-id=t] .g-bar').focus();await page.keyboard.press('ArrowRight');assert.equal(await page.locator('[data-id=t] [data-key=start]').inputValue(),'2026-11-06');await page.keyboard.press('ArrowLeft');
+await page.locator('#g-mode').selectOption('month');
+await page.locator('[data-action=dates]').click();await page.locator('.g-dates-dialog [name=name]').fill('技術審查');await page.locator('.g-dates-dialog [name=date]').fill('2026-11-14');await page.locator('.g-dates-dialog [name=category]').selectOption('review');await page.getByRole('button',{name:'套用日期'}).click();
+await page.locator('[data-date-action=new]').click();await page.locator('.g-dates-dialog [name=name]').fill('成果展覽');await page.locator('.g-dates-dialog [name=date]').fill('2026-11-24');await page.getByRole('button',{name:'套用日期'}).click();await page.locator('[data-date-action=close]').click();
+assert.equal(await page.locator('.g-important-label').count(),2);assert.equal(await page.locator('.g-important-line').count(),20);
+await page.locator('[data-action=save]').click();await page.getByRole('status').filter({hasText:'已儲存'}).waitFor();assert.equal(saved.important_dates.length,2);
+// Website stores a handoff; mocked ChatGPT responds, then only human Apply changes the table.
+await page.locator('[aria-label="規劃附件"]').setInputFiles({name:'需求.csv',mimeType:'text/csv',buffer:Buffer.from('項目,負責人\n驗證,HY')});await page.locator('.g-plan-form [name=message]').fill('依附件展開一版規劃');await page.getByRole('button',{name:'送出規劃需求'}).click();await page.locator('.g-plan-handoff').waitFor();assert.match(await page.locator('[aria-label="ChatGPT 接力訊息"]').inputValue(),/gantt_planning_read/);assert.equal(await page.locator('.g-row[data-id]').count(),10);
+await page.screenshot({path:path.join(out,'ai-handoff-1280.png'),fullPage:true});
+planningReady=true;await page.locator('[aria-label="重新讀取規劃"]').click();await page.getByRole('button',{name:'預覽草案'}).waitFor();assert.equal(await page.locator('.g-row[data-id]').count(),10);await page.getByRole('button',{name:'預覽草案'}).click();assert.match(await page.locator('.g-proposal-dialog').innerText(),/日期由 AI 提議/);await page.screenshot({path:path.join(out,'ai-proposal-1280.png'),fullPage:true});await page.getByRole('button',{name:'關閉預覽'}).click();await page.screenshot({path:path.join(out,'ai-ready-1280.png'),fullPage:true});await page.getByRole('button',{name:'確認加入總表'}).click();await page.locator('[data-id=ai-project]').waitFor();assert.equal(await page.locator('.g-row[data-id]').count(),12);
+
 await anchor();await page.locator('#g-mode').selectOption('week');assert.equal(await page.locator('.g-mark').count(),3);await page.locator('#g-mode').selectOption('month');
 await page.locator('.g-scroll').evaluate(el=>{el.scrollLeft=0;el.scrollTop=0});await page.evaluate(()=>document.fonts.ready);await page.screenshot({path:path.join(out,'desktop-1280.png'),fullPage:true});
 if(!process.env.GANTT_DESKTOP_ONLY){await page.setViewportSize({width:390,height:900});await page.screenshot({path:path.join(out,'mobile-390.png'),fullPage:true});assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=390),'no outer horizontal scroll');
 await page.locator('.g-scroll').evaluate(el=>el.scrollLeft=358);await page.screenshot({path:path.join(out,'mobile-timeline-390.png'),fullPage:true});
 }
 await page.setViewportSize({width:1760,height:1000});await page.locator('.g-scroll').evaluate(el=>el.scrollLeft=0);await page.screenshot({path:path.join(out,'demo-complete.png'),fullPage:true});
-assert.equal(unexpected.length,0);assert.equal(errors.length,0,errors.join('\n'));fs.writeFileSync(path.join(out,'qa.json'),JSON.stringify({passed:true,rows:10,projects:2,checkpointColors:colors,puts,unexpected,errors,viewports:process.env.GANTT_DESKTOP_ONLY?[1280,1760]:[1280,390,1760],coverage:['started date red','delayed date red','independent flag toggles and persistence','multi-project','deep hierarchy','collapse','reparent','order','delete','colors','alignment','move','left resize','right resize','checkpoint drag','parent dates','save reload','second device','409 conflict','503 save','read failure lock','header isolation','existing tabs','month week','mobile scroll']},null,2));
+assert.equal(unexpected.length,0);assert.equal(errors.length,0,errors.join('\n'));fs.writeFileSync(path.join(out,'qa.json'),JSON.stringify({passed:true,rows:await page.locator('.g-row[data-id]').count(),projects:await page.locator('.g-row.is-project').count(),checkpointColors:colors,puts,unexpected,errors,viewports:process.env.GANTT_DESKTOP_ONLY?[1280,1760]:[1280,390,1760],coverage:['daily view','important date reference lines','attachment handoff','AI staged preview','human apply appends project','started date red','delayed date red','independent flag toggles and persistence','multi-project','deep hierarchy','collapse','reparent','order','delete','colors','alignment','move','left resize','right resize','checkpoint drag','parent dates','save reload','second device','409 conflict','503 save','read failure lock','header isolation','existing tabs','month week','mobile scroll']},null,2));
 await browser.close();console.log('Gantt browser QA passed. '+out);
 })().catch(e=>{console.error(e);process.exit(1)});

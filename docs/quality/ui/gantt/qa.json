@@ -1,13 +1,13 @@
 {
   "passed": true,
-  "rows": 10,
-  "projects": 2,
+  "rows": 12,
+  "projects": 3,
   "checkpointColors": [
     "rgb(0, 0, 0)",
     "rgb(180, 35, 24)",
     "rgb(17, 104, 63)"
   ],
-  "puts": 3,
+  "puts": 4,
   "unexpected": [],
   "errors": [],
   "viewports": [
@@ -15,6 +15,11 @@
     1760
   ],
   "coverage": [
+    "daily view",
+    "important date reference lines",
+    "attachment handoff",
+    "AI staged preview",
+    "human apply appends project",
     "started date red",
     "delayed date red",
     "independent flag toggles and persistence",
