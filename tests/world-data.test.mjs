@@ -1,6 +1,6 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { deriveOffice, deriveTodos, deriveRunners, deriveSummary, deriveAttention, RUNNER_FIG, LIVE_FIGS, OWNER_BOT_ORDER, ownerBotChoices, canonicalOwnerBot } from '../src/life-island/worldData.js'
+import { deriveOffice, deriveTodos, deriveRunners, deriveSummary, deriveAttention, todoMarker, RUNNER_FIG, LIVE_FIGS, OWNER_BOT_ORDER, ownerBotChoices, canonicalOwnerBot } from '../src/life-island/worldData.js'
 import { ROSTER, HELPERS } from '../src/botRoster.js'
 import { mapOffice } from '../src/botOfficeData.js'
 import { FIGURES, FAMILY_ISLAND, buildingWorld, figureHome, figureFront, islandBotCard } from '../src/life-island/data.js'
@@ -167,23 +167,32 @@ test('deriveSummary：待你確認取 Bot Office；系統數讀取失敗的來�
   assert.equal(deriveSummary({ pending: 0, failedCount: 2, loaded: true }).systemIssues, 2)
 })
 
-test('deriveAttention：問題→紅、待處理→琥珀、無事→不顯示', () => {
+test('deriveAttention：問題→紅、待你確認→琥珀、個人待辦→藍、無事→不顯示', () => {
   const now = Date.parse('2026-10-25T01:00:00Z'), day = n => new Date(now - n * 86400e3).toISOString()
   assert.deepEqual(deriveAttention(null), { level: null, reasons: [], items: [] })
   assert.equal(deriveAttention({ status: 'wait', office: { asks: 0, returned: 0 }, todos: { overdue: 0, today: 0 }, memory: { memory_last: day(1) } }, now).level, null)
   const you = deriveAttention({ status: 'you', office: { asks: 2, returned: 0 }, todos: { overdue: 0, today: 1 } }, now)
   assert.equal(you.level, 'you'); assert.deepEqual(you.reasons, ['待你確認 2 件', '今日待辦 1 件'])
-  assert.equal(deriveAttention({ status: 'wait', todos: { overdue: 1, today: 0 } }, now).level, 'bad')
+  assert.equal(you.items.find(i => i.text.startsWith('今日待辦')).level, 'todo')
+  assert.deepEqual(todoMarker(you), { alert: 'you', todoDot: true })
+  const onlyTodo = deriveAttention({ status: 'wait', todos: { overdue: 1, today: 0 } }, now)
+  assert.equal(onlyTodo.level, 'todo')
+  assert.deepEqual(todoMarker(onlyTodo), { alert: 'todo', todoDot: false })
   assert.equal(deriveAttention({ status: 'wait', office: { returned: 1 } }, now).level, null)   // 退回不再亮紅
   const stale = deriveAttention({ status: 'wait', memory: { memory_last: day(25) } }, now)
   assert.equal(stale.level, 'bad'); assert.deepEqual(stale.reasons, ['長期記憶 25 天沒更新'])
   assert.equal(deriveAttention({ status: 'bad' }, now).level, 'bad')
-  assert.equal(deriveAttention({ status: 'you', todos: { overdue: 1, today: 0 } }, now).level, 'bad')   // 紅色優先
+  const both = deriveAttention({ status: 'you', todos: { overdue: 1, today: 0 }, memory: { memory_last: day(25) } }, now)
+  assert.equal(both.level, 'bad')   // 系統問題仍優先於個人待辦
+  assert.equal(todoMarker(both).todoDot, true)
+  assert.equal(deriveAttention({ status: 'you', todos: { overdue: 1, today: 0 } }, now).level, 'you')
+  assert.deepEqual(todoMarker(deriveAttention(null)), { alert: null, todoDot: false })
 })
 
 test('deriveAttention：items 帶層級與去處，供卡片列出原因', () => {
   const a = deriveAttention({ status: 'you', office: { asks: 1, returned: 1 }, todos: { overdue: 2, today: 0 } })
-  assert.deepEqual(a.items.map(i => [i.level, i.text, i.go]), [['bad', '逾期待辦 2 件', 'board'], ['you', '待你確認 1 件', 'office']])
+  assert.deepEqual(a.items.map(i => [i.level, i.text, i.go]), [['todo', '逾期待辦 2 件', 'board'], ['you', '待你確認 1 件', 'office']])
+  assert.deepEqual(todoMarker(a), { alert: 'you', todoDot: true })
 })
 
 test('deriveAtlas：系統健康清單；有異常就是紅、全部正常是待命', async () => {

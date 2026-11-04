@@ -673,12 +673,18 @@ const api = {
     const l = labels.find(x => x.p === b.lp);
     if (l) { l.el.dataset.s = status; l.el.title = b.lp.name + '：' + STATUS_INFO[status] + (b.reasons && b.reasons.length ? '\n' + b.reasons.join('\n') : ''); const st = l.el.querySelector('span'); if (st) st.textContent = '・' + STATUS_INFO[status]; }
   },
-  // 頭上提醒標：level = 'bad'（有問題，紅）｜'you'（待你處理，琥珀）｜null（不顯示）；reasons 顯示在標籤提示
-  setBotAttention(id, level, reasons = []) {
+  // 頭上提醒標：bad 紅 !、you 橘 !、todo 藍點、null 不顯示。
+  // todoDot：橘或紅驚嘆號旁邊再加一顆小藍點（個人待辦也到期）。
+  setBotAttention(id, level, reasons = [], todoDot = false) {
     const b = botById[id]; if (!b || b.f.staticInfo) return;
     b.reasons = reasons;
     const l = labels.find(x => x.p === b.lp);
-    if (l) { if (level) l.el.dataset.alert = level; else delete l.el.dataset.alert; l.el.title = b.lp.name + '：' + STATUS_INFO[b.lp.status] + (reasons.length ? '\n' + reasons.join('\n') : ''); }
+    if (!l) return;
+    if (level === 'bad' || level === 'you' || level === 'todo') l.el.dataset.alert = level;
+    else delete l.el.dataset.alert;
+    if (todoDot) l.el.dataset.todo = '1';
+    else delete l.el.dataset.todo;
+    l.el.title = b.lp.name + '：' + STATUS_INFO[b.lp.status] + (reasons.length ? '\n' + reasons.join('\n') : '');
   },
   home() { Object.assign(target, HOME); },
   focus(islandId) { const isl = ISLANDS.find(x => x.id === islandId); if (!isl) return; selected = null; placeRing(selRing, null); target.tx = isl.c[0] + (islandId === 'central' ? 0.5 : 0); target.tz = isl.c[1] + 2.5; target.dist = islandId === 'central' ? 72 : 46; opts.onSelect && opts.onSelect(null); },

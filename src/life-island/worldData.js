@@ -101,20 +101,41 @@ export function deriveRunners(activity) {
 // ---- 狀態列：兩個數字 ----
 //   待你確認：Bot Office 待你決定的題數（與 Bot Office 頁「待你決定」同一個數字）
 //   系統：讀不到資料的來源數，0 代表正常；還沒載入完成時是 null
-// 頭上提醒標：有問題（紅 bad）或待你處理（琥珀 you）才出現；reasons 供提示文字。
-// 紅：逾期待辦、長期記憶超過 7 天沒更新、執行者異常。琥珀：待你確認、今日待辦。
+// 頭上提醒標：有問題（紅 !）或 Bot Office 待你確認（橘 !）。
+// 個人待辦（今日／逾期，來自 personal-progress）是藍色，不跟 Bot Office 的橘／紅混在一起。
+// 只有個人待辦時，小人顯示藍點；橘或紅同時存在時，驚嘆號旁再加一顆小藍點。
+const ATTENTION_RANK = { bad: 3, you: 2, todo: 1 }
+
+function attentionLevel(items) {
+  let level = null
+  for (const item of items) {
+    if ((ATTENTION_RANK[item.level] || 0) > (ATTENTION_RANK[level] || 0)) level = item.level
+  }
+  return level
+}
+
 export function deriveAttention(bot, now = Date.now()) {
   if (!bot) return { level: null, reasons: [], items: [] }
   if (bot.attention) return { level: bot.attention.some(i => i.level === 'bad') ? 'bad' : bot.attention.length ? 'you' : null, reasons: bot.attention.map(i => i.text), items: bot.attention }
   const items = []   // { level, text, go }：go = 'office' | 'board' | 'memory'，由畫面決定連到哪
   const o = bot.office, t = bot.todos
-  if (t?.overdue > 0) items.push({ level: 'bad', text: `逾期待辦 ${t.overdue} 件`, go: 'board' })
+  if (t?.overdue > 0) items.push({ level: 'todo', text: `逾期待辦 ${t.overdue} 件`, go: 'board' })
   const lt = bot.memory?.memory_last ? freshness(bot.memory.memory_last, now) : null
   if (lt?.level === 'stale') items.push({ level: 'bad', text: `長期記憶 ${lt.days} 天沒更新`, go: 'memory' })
   if (bot.status === 'bad') items.push({ level: 'bad', text: '執行異常', go: 'office' })
   if (bot.status === 'you' || o?.asks > 0 || o?.hyDecision > 0) { const n = o?.asks || o?.hyDecision; items.push({ level: 'you', text: n ? `待你確認 ${n} 件` : '待你確認', go: 'office' }) }
-  if (t?.today > 0) items.push({ level: 'you', text: `今日待辦 ${t.today} 件`, go: 'board' })
-  return { level: items.some(i => i.level === 'bad') ? 'bad' : items.length ? 'you' : null, reasons: items.map(i => i.text), items }
+  if (t?.today > 0) items.push({ level: 'todo', text: `今日待辦 ${t.today} 件`, go: 'board' })
+  return { level: attentionLevel(items), reasons: items.map(i => i.text), items }
+}
+
+// 小人頭上的標記。alert 寫進 data-alert；todoDot 為真時，橘／紅驚嘆號旁邊加一顆小藍點。
+export function todoMarker(attention) {
+  const items = Array.isArray(attention?.items) ? attention.items : []
+  const personal = items.some(item => item && item.level === 'todo')
+  const level = attention?.level || null
+  if (level === 'bad' || level === 'you') return { alert: level, todoDot: personal }
+  if (personal || level === 'todo') return { alert: 'todo', todoDot: false }
+  return { alert: null, todoDot: false }
 }
 
 export function deriveSummary({ pending, failedCount, loaded }) {

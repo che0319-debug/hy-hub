@@ -7,8 +7,16 @@ import { findProjectForBuilding, presentSlot } from '../life-island/projectBuild
 import { createIslandScene, webglOk } from '../life-island/scene'
 import { formatDue } from '../life-island/useWorldInfo'
 import { useInbox } from '../inbox/InboxContext'
-import { LIVE_FIGS, deriveAttention } from '../life-island/worldData'
+import { LIVE_FIGS, deriveAttention, todoMarker } from '../life-island/worldData'
+import ProjectMarquee from '../life-island/ProjectMarquee'
 import { rosterById } from '../botRoster'
+
+const ATTN_LABEL = { bad: '有問題', you: '待處理', todo: '待辦' }
+
+function todayChipCount(info, counts) {
+  const ready = !!info && (info.list !== null || info.todoFailed) && (info.sched !== null || info.schedFailed)
+  return ready && counts ? counts.today : null
+}
 
 const BUILDINGS = ALL_BUILDINGS
 const BY_ID = Object.fromEntries(BUILDINGS.map(b => [b.id, b]))
@@ -49,15 +57,18 @@ function Legend() {
       <summary>狀態色說明</summary>
       <ul>
         {Object.entries(STATUS_INFO).map(([k, v]) => <li key={k}><i data-s={k} />{v}</li>)}
+        <li><i data-s="todo" />今日待辦</li>
+        <li className="li-legend-note">藍是個人待辦。橘驚嘆號是 Bot Office 待你確認；兩者同時有，驚嘆號旁會多一顆小藍點。</li>
       </ul>
     </details>
   )
 }
 
-function StatusBar({ onGo, info, data, panel, setPanel }) {
+function StatusBar({ onGo, info, data, panel, setPanel, counts }) {
   const overdue = info.overdue, todayN = info.todayCount
   const real = overdue !== null
   const needs = data.needsYou, sysN = data.systemIssues
+  const inboxToday = todayChipCount(info, counts)
   const toggle = k => setPanel(panel === k ? null : k)
   const nextText = info.schedFailed ? '行程讀取失敗' : info.sched === null ? '行程載入中' : info.next ? `${info.next.start} ${info.next.title}` : info.sched.length ? '今天的行程結束了' : '今天沒有行程'
   return (
@@ -71,6 +82,9 @@ function StatusBar({ onGo, info, data, panel, setPanel }) {
       <button type="button" className="li-chip li-chip-you" data-s={needs > 0 ? 'you' : needs === 0 ? 'done' : 'wait'} onClick={() => onGo('dispatch')}>
         待你確認 <b>{needs ?? '—'}</b>
       </button>
+      <Link className="li-chip li-chip-today" data-s="todo" to="/inbox?tab=today">
+        今日待辦 <b>{inboxToday ?? '—'}</b>
+      </Link>
       <button type="button" className="li-chip li-chip-sys" data-s={sysN > 0 ? 'bad' : sysN === 0 ? 'done' : 'wait'} onClick={() => onGo('syscenter')}>
         {sysN === null ? '系統載入中' : sysN > 0 ? <>資料讀取異常 <b>{sysN}</b></> : '系統正常'}
       </button>
@@ -84,6 +98,7 @@ function MobileHud({ counts, loaded, sky, info }) {
   const [open, setOpen] = useState(null)   // null | 'inbox' | 'sched'
   const toggle = k => setOpen(v => (v === k ? null : k))
   const tone = !loaded ? 'wait' : counts.problem + counts.overdue > 0 ? 'bad' : counts.decide > 0 ? 'you' : 'done'
+  const inboxToday = todayChipCount(info, counts)
   const rows = [['decide', '待我處理'], ['problem', '問題回報'], ['overdue', '過期'], ['today', '今日任務']]
   return (
     <div className="li-m-hud li-m-only">
@@ -94,6 +109,9 @@ function MobileHud({ counts, loaded, sky, info }) {
         <button type="button" className="li-chip" data-s={info.overdue > 0 ? 'bad' : 'wait'} onClick={() => toggle('todo')} aria-expanded={open === 'todo'} aria-controls="li-m-pop">
           逾期 <b>{info.overdue !== null ? info.overdue : '—'}</b>・今日 <b>{info.todayCount !== null ? info.todayCount : '—'}</b><i className="li-caret" aria-hidden="true" />
         </button>
+        <Link className="li-chip li-chip-today" data-s="todo" to="/inbox?tab=today">
+          今日待辦 <b>{inboxToday ?? '—'}</b>
+        </Link>
         <Legend />
       </div>
       <div className="li-m-top li-m-row2">
@@ -252,8 +270,8 @@ function BotCard({ f: fig, live, loaded, onClose }) {
       {attn.items.length > 0 && (
         <ul className="li-attn" aria-label="需要注意">
           {attn.items.map(i => (
-            <li key={i.text}>
-              <span className="hy-pill" data-s={i.level}>{i.level === 'bad' ? '有問題' : '待處理'}</span>
+            <li key={i.text} data-level={i.level}>
+              <span className="hy-pill" data-s={i.level}>{ATTN_LABEL[i.level] || '待處理'}</span>
               <span className="li-attn-text">{i.text}</span>
               {goTo[i.go] && <Link to={goTo[i.go]} className="li-attn-go">處理</Link>}
             </li>
@@ -432,7 +450,12 @@ export default function LifeIsland() {
   useEffect(() => {
     const api = apiRef.current
     if (!api) return
-    for (const [id, v] of Object.entries(data.bots)) if (v) { api.setBotStatus(id, v.status); const a = deriveAttention(v); api.setBotAttention(id, a.level, a.reasons) }
+    for (const [id, v] of Object.entries(data.bots)) if (v) {
+      api.setBotStatus(id, v.status)
+      const a = deriveAttention(v)
+      const mark = todoMarker(a)
+      api.setBotAttention(id, mark.alert, a.reasons, mark.todoDot)
+    }
   }, [data.bots, gl])
 
   // 專案建築跟既有的 Bot Office 輪詢走，這裡不再另打一支。簽章沒變，場景不會重做網格。
@@ -467,24 +490,30 @@ export default function LifeIsland() {
           <div ref={stageRef} style={{ position: 'absolute', inset: 0 }} />
           <div ref={layerRef} className="li-layer" />
           <MiniMap onGo={id => { setSel(null); setMapCur(id); apiRef.current && apiRef.current.focus(id) }} current={mapCur} />
-          <div className="li-hud li-d-only">
-            <StatusBar onGo={choose} info={info} data={data} panel={panel} setPanel={setPanel} />
-          </div>
-          <MobileHud counts={counts} loaded={inboxLoaded} sky={sky} info={info} />
-          {panel && <InfoPanel kind={panel} info={info} onClose={() => setPanel(null)} />}
-          {sky && (
-            <div className={'li-sign li-d-only' + (sky.night > 0.6 ? ' is-night' : '')} aria-label={`新竹 ${sky.date} ${sky.weekday} ${sky.time}，${sky.phase}，${sky.weather}`}>
-              <span className="li-sign-d">{sky.date} {sky.weekday}</span>
-              <span className="li-sign-t">{sky.time} · {sky.phase} · {sky.weather}{sky.temp != null ? ` ${sky.temp}°` : ''}</span>
+          <div className="li-top">
+            <div className="li-top-row">
+              <div className="li-hud li-d-only">
+                <StatusBar onGo={choose} info={info} data={data} panel={panel} setPanel={setPanel} counts={counts} />
+              </div>
+              <MobileHud counts={counts} loaded={inboxLoaded} sky={sky} info={info} />
+              {sky && (
+                <div className={'li-sign li-d-only' + (sky.night > 0.6 ? ' is-night' : '')} aria-label={`新竹 ${sky.date} ${sky.weekday} ${sky.time}，${sky.phase}，${sky.weather}`}>
+                  <span className="li-sign-d">{sky.date} {sky.weekday}</span>
+                  <span className="li-sign-t">{sky.time} · {sky.phase} · {sky.weather}{sky.temp != null ? ` ${sky.temp}°` : ''}</span>
+                </div>
+              )}
             </div>
-          )}
+            <ProjectMarquee projects={data.office?.projects} />
+          </div>
+          {panel && <InfoPanel kind={panel} info={info} onClose={() => setPanel(null)} />}
           {(b || fig) && <div className="li-float">{fig ? <BotCard f={fig} live={data.bots[fig.id]} loaded={data.loaded} onClose={() => choose(null)} /> : <BuildingCard floating b={b} presentation={presentation} onClose={() => choose(null)} />}</div>}
           <div className="li-hint">拖曳旋轉、滾輪或雙指縮放、Shift＋拖曳平移</div>
         </div>
       ) : (
         <div style={{ display: 'grid', gap: 16 }}>
           <div className="hy-empty">這台裝置不支援 3D，改用下方清單。內容與 3D 相同。</div>
-          <StatusBar onGo={choose} info={info} data={data} panel={panel} setPanel={setPanel} />
+          <StatusBar onGo={choose} info={info} data={data} panel={panel} setPanel={setPanel} counts={counts} />
+          <ProjectMarquee projects={data.office?.projects} />
           {panel && <InfoPanel kind={panel} info={info} onClose={() => setPanel(null)} />}
           {b && <BuildingCard b={b} presentation={presentation} onClose={() => choose(null)} />}
           <section className="hy-card">
