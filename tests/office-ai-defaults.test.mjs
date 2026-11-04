@@ -52,6 +52,20 @@ test('seedOfficeAi prefers the project assignment then settings then defaults', 
   })
 })
 
+test('seedOfficeAi does not open reassign with a default backup equal to the project primary', () => {
+  const seeded = seedOfficeAi(null, { executor: 'grok-build', reviewer: 'claude' })
+  assert.deepEqual(seeded, {
+    executor: 'grok-build', reviewer: 'claude', executor_backup: 'claude', reviewer_backup: 'gpt',
+  })
+  assert.deepEqual(officeAiConflict({
+    executor: { primary: seeded.executor, backup: seeded.executor_backup },
+    reviewer: { primary: seeded.reviewer, backup: seeded.reviewer_backup },
+  }), [])
+  assert.equal(seedOfficeAi(null, {
+    executor: 'grok-build', reviewer: 'claude', reviewerBackup: 'claude',
+  }).reviewer_backup, 'claude')
+})
+
 test('mapOffice keeps backup fields and top-level settings', () => {
   const out = mapOffice({
     buildings: [{ id: 'p', title: '專案', executor: 'grok-build', reviewer: 'gpt', executor_backup: 'claude', reviewer_backup: 'claude' }],

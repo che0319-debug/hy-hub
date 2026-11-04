@@ -39,12 +39,22 @@ export function officeAiConflict(defaults) {
   return messages
 }
 
+// 專案沒寫備案時才用預設。主案若剛好等於該角色的預設備案（例如審查者是 Claude），
+// 改派表單不能帶著衝突打開，否則只填說明也送不出去。已寫在專案上的備案保持原樣。
+function backupFor(explicit, primary, roleDefaults) {
+  if (explicit) return explicit
+  const preferred = [roleDefaults?.backup, roleDefaults?.primary, ...OFFICE_AI_CHOICES]
+  return preferred.find(id => OFFICE_AI_CHOICES.includes(id) && id !== primary) || ''
+}
+
 export function seedOfficeAi(settings, project) {
   const defaults = parseOfficeSettings({ ai_defaults: settings?.ai_defaults || settings }).ai_defaults
+  const executor = named(project?.executor) || defaults.executor.primary
+  const reviewer = named(project?.reviewer) || defaults.reviewer.primary
   return {
-    executor: named(project?.executor) || defaults.executor.primary,
-    reviewer: named(project?.reviewer) || defaults.reviewer.primary,
-    executor_backup: named(project?.executorBackup) || defaults.executor.backup,
-    reviewer_backup: named(project?.reviewerBackup) || defaults.reviewer.backup,
+    executor,
+    reviewer,
+    executor_backup: backupFor(named(project?.executorBackup), executor, defaults.executor),
+    reviewer_backup: backupFor(named(project?.reviewerBackup), reviewer, defaults.reviewer),
   }
 }
