@@ -1,4 +1,5 @@
 import { authHeaders } from './auth'
+import { parseOfficeSettings } from './lib/officeAiDefaults.mjs'
 
 const API_BASE = import.meta.env.VITE_API_BASE || "";
 
@@ -409,4 +410,43 @@ export async function updateAgentMemory(memoryId, payload) {
   const result = await res.json().catch(() => ({}))
   if (!res.ok || !result.ok) throw new Error(result.error || `update memory failed: ${res.status}`)
   return result.memory
+}
+
+function officeSettingsError(message, status, body = {}) {
+  const error = new Error(message)
+  error.status = status
+  error.body = body
+  error.kind = status === 401 ? 'auth' : status === 409 ? 'conflict' : 'error'
+  return error
+}
+
+export async function getOfficeSettings() {
+  const res = await fetch(`${API_BASE}/api/office/settings`, {
+    method: 'GET',
+    headers: { ...authHeaders() },
+    cache: 'no-store',
+  })
+  if (res.status === 404) throw officeSettingsError('office_settings_not_found', 404)
+  if (res.status === 401) throw officeSettingsError('登入已過期，請重新登入。', 401)
+  const result = await res.json().catch(() => ({}))
+  if (!res.ok) throw officeSettingsError(result.error || `getOfficeSettings failed: ${res.status}`, res.status, result)
+  return parseOfficeSettings(result)
+}
+
+export async function saveOfficeSettings({ expected_revision, ai_defaults }) {
+  const res = await fetch(`${API_BASE}/api/office/settings`, {
+    method: 'PUT',
+    headers: { ...authHeaders(), 'Content-Type': 'application/json' },
+    body: JSON.stringify({ expected_revision, ai_defaults }),
+    cache: 'no-store',
+  })
+  const result = await res.json().catch(() => ({}))
+  if (res.status === 409) throw officeSettingsError('設定已被更新，請重新整理', 409, result)
+  if (res.status === 401) throw officeSettingsError('登入已過期，請重新登入。', 401, result)
+  if (res.status === 403) throw officeSettingsError('只有 HY 本人可以修改預設 AI。', 403, result)
+  if (res.status === 400 && result.error === 'office_reviewer_must_differ') {
+    throw officeSettingsError('執行與審查主案必須不同', 400, result)
+  }
+  if (!res.ok) throw officeSettingsError(result.error || `saveOfficeSettings failed: ${res.status}`, res.status, result)
+  return parseOfficeSettings(result)
 }

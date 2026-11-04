@@ -3,7 +3,8 @@
 @tailwind utilities;
 
 /* 頂欄高度：手機版 3rem，桌面版已移除（站名與手機版入口放在側欄） */
-:root { --hy-topbar: 3rem; }
+:root { --hy-topbar: 3rem; color-scheme: light; }
+select, option, optgroup { color: var(--hy-ink, #13213a); background-color: var(--hy-surface, #ffffff); }
 @media (min-width: 768px) { :root { --hy-topbar: 0rem; } }
 
 /* 各 Bot 看板（iframe）的外框：手機撐滿「底部導覽以上」的高度；桌面維持原樣 */

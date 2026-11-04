@@ -4,6 +4,7 @@
  * 只能用這裡的 token 與元件；需要新元件先在 PR 說明理由。
  */
 :root{
+  color-scheme: light;
   /* Bot 代表色：只用在頁首標章、目前分頁、主要按鈕、重點卡的左邊線 */
   --hy-brand:#1d4ed8;
   /* 骨架 */
@@ -25,6 +26,8 @@ html[data-bot="950157"]{--hy-brand:#1d4ed8}
 html[data-bot="family"]{--hy-brand:#c0392b}
 html[data-bot="personal"]{--hy-brand:#16a34a}
 html[data-bot="sam"]{--hy-brand:#2d7a3e}
+
+select, option, optgroup { color: var(--hy-ink); background-color: var(--hy-surface); }
 
 .hy *,.hy *::before,.hy *::after{box-sizing:border-box}
 body.hy{margin:0;background:var(--hy-bg);color:var(--hy-ink);font-family:'Noto Sans TC',system-ui,sans-serif;
