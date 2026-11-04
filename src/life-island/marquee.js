@@ -50,6 +50,26 @@ export function marqueeStageText(stage, rows) {
   return STAGE_LABEL[stage] || '狀態待確認'
 }
 
+export const MARQUEE_INTERVAL_MS = 4000
+
+// 一次只顯示一則。暫停或只有一則時停在原位，否則前進一格並繞回開頭。
+export function advanceMarquee(index, count, paused = false) {
+  const total = Number(count) || 0
+  if (total <= 0) return 0
+  const current = ((Number(index) || 0) % total + total) % total
+  if (paused || total < 2) return current
+  return (current + 1) % total
+}
+
+export function marqueeCaption(item) {
+  if (!item || typeof item !== 'object') return ''
+  const title = text(item.title) || '未命名專案'
+  const stageText = text(item.stageText) || '狀態待確認'
+  const progress = text(item.progress) || '0/0'
+  // FE0E 讓 ▶ 用文字字形，避免系統把它畫成彩色表情符號。
+  return `▶\uFE0E ${title} ${stageText} ${progress}`
+}
+
 export function buildMarqueeItems(projects) {
   const list = Array.isArray(projects) ? projects : []
   const ranked = []

@@ -2,7 +2,8 @@ import test from 'node:test'
 import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
 import { deriveAttention, todoMarker } from '../src/life-island/worldData.js'
-import { buildMarqueeItems, runningStageText } from '../src/life-island/marquee.js'
+import { MARQUEE_INTERVAL_MS, advanceMarquee, buildMarqueeItems, marqueeCaption, runningStageText } from '../src/life-island/marquee.js'
+import { PROJECT_STAGES } from '../src/lib/projectStages.mjs'
 
 const miles = rows => rows.map(row => ({ id: row[0], name: row[0], status: row[1], ...(row[2] ? { step: row[2] } : {}) }))
 
@@ -79,7 +80,60 @@ test('Bot Office 用現成的 ?project= 深連結，沒有 id 就回列表', () 
   assert.match(page, /useSearchParams\(/)
   assert.match(page, /searchParams\.get\('project'\)/)
   const island = readFileSync(new URL('../src/pages/LifeIsland.jsx', import.meta.url), 'utf8')
-  assert.match(island, /今日待辦/)
   assert.match(island, /todoMarker/)
   assert.match(island, /ProjectMarquee/)
+})
+
+test('跑馬燈一次只秀一則，每 4 秒換下一個，暫停就停住', () => {
+  assert.equal(MARQUEE_INTERVAL_MS, 4000)
+  assert.equal(advanceMarquee(0, 3, false), 1)
+  assert.equal(advanceMarquee(2, 3, false), 0)
+  assert.equal(advanceMarquee(1, 3, true), 1)
+  assert.equal(advanceMarquee(4, 3, true), 1)
+  assert.equal(advanceMarquee(0, 1, false), 0)
+  assert.equal(advanceMarquee(5, 0, false), 0)
+  const items = buildMarqueeItems([
+    { id: 'run-1', title: '手套簡報', stage: 'running', milestones: miles([['M4', '執行中']]) },
+    { id: 'ask-1', title: '補件卡', stage: 'hy_decision', milestones: miles([['M1', '完成'], ['M2', '未開始']]) },
+  ])
+  assert.equal(items.length, 2)
+  assert.equal(marqueeCaption(items[0]), '▶\uFE0E 手套簡報 M4 執行中 0/1')
+  assert.equal(marqueeCaption(items[advanceMarquee(0, items.length, false)]), '▶\uFE0E 補件卡 待你決定 1/2')
+  assert.doesNotMatch(marqueeCaption(items[0]), /補件卡/)
+})
+
+test('頂欄沒有今日待辦晶片，圖例與跑馬燈在同一列', () => {
+  const island = readFileSync(new URL('../src/pages/LifeIsland.jsx', import.meta.url), 'utf8')
+  const marquee = readFileSync(new URL('../src/life-island/ProjectMarquee.jsx', import.meta.url), 'utf8')
+  const css = readFileSync(new URL('../src/life-island/life-island.css', import.meta.url), 'utf8')
+  const status = island.slice(island.indexOf('function StatusBar'), island.indexOf('function InfoPanel'))
+  assert.doesNotMatch(island, /li-chip-today/)
+  assert.doesNotMatch(status, /今日待辦\s*<b>/)
+  assert.doesNotMatch(island, /<details[^>]*li-legend/)
+  assert.match(status, /待你確認/)
+  assert.match(status, /<Legend \/>/)
+  assert.match(status, /<ProjectMarquee/)
+  assert.equal((island.match(/<ProjectMarquee/g) || []).length, 1)
+  assert.match(island, /\['assigned', 'running', 'review', 'hy_decision', 'done'\]/)
+  assert.deepEqual(
+    ['assigned', 'running', 'review', 'hy_decision', 'done'].map(key => PROJECT_STAGES.find(stage => stage.key === key).label),
+    ['規劃中', '執行中', '待審', '待你決定', '完成'],
+  )
+  assert.match(island, /useMaxWidth\(480\)/)
+  assert.equal((marquee.match(/<Link/g) || []).length, 1)
+  assert.doesNotMatch(marquee, /\.map\(/)
+  assert.doesNotMatch(marquee, /li-marquee-track/)
+  assert.match(marquee, /MARQUEE_INTERVAL_MS/)
+  assert.match(marquee, /advanceMarquee/)
+  assert.match(marquee, /marqueeCaption/)
+  assert.match(marquee, /onMouseEnter/)
+  assert.match(marquee, /onFocus/)
+  assert.match(css, /\.li-marquee\s*\{[^}]*flex:\s*1\s+1\s+auto/)
+  assert.match(css, /\.li-marquee\s*\{[^}]*min-width:\s*0/)
+  assert.match(css, /\.li-marquee\s*\{[^}]*overflow:\s*hidden/)
+  assert.match(css, /\.li-marquee\s*\{[^}]*white-space:\s*nowrap/)
+  assert.match(css, /\.li-marquee\s*\{[^}]*text-overflow:\s*ellipsis/)
+  assert.match(css, /max-width:\s*480px/)
+  assert.doesNotMatch(css, /li-marquee-scroll/)
+  assert.match(readFileSync(new URL('../src/life-island/worldData.js', import.meta.url), 'utf8'), /今日待辦/)
 })
