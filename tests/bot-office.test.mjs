@@ -2,6 +2,7 @@ import test from 'node:test'
 import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
 import { advanceFollowUpLabel, loadBotOffice, mapOffice, OFFICE_TABS, projectStageBody, projectStageFailureMessage, projectStageRequestId, safeDriveUrl, setProjectStage } from '../src/botOfficeData.js'
+import { canReturnToPlanning } from '../src/lib/officeFlow.mjs'
 
 const state = { updated: '2026-10-24T00:00:00Z', islands: [{ id: 'central', name: '中央' }], buildings: [
   { id: 'a', title: '專案 A', island: 'central', stage: 'running', executor: 'gpt', last_review: 'pass' },
@@ -234,6 +235,8 @@ test('project stage error codes map to Chinese messages', async () => {
     )
   }
   assert.equal(projectStageFailureMessage(0, {}), '無法連線，請稍後重試。請重新讀取確認階段。')
+  assert.equal(projectStageFailureMessage(400, { error: 'office_stage_transition_denied' }, 'return'), '這個階段不能退回規劃中。沒有寫入。')
+  assert.equal(projectStageFailureMessage(409, { error: 'office_revision_conflict' }, 'return'), '資料已被更新，請重新讀取。沒有改階段。')
   await assert.rejects(
     setProjectStage('p', payload, { fetcher: async () => { throw new Error('offline') } }),
     error => error.kind === 'network' && /無法連線/.test(error.message),
@@ -249,15 +252,54 @@ test('Bot Office wires stage labels and the HY-only control', () => {
   assert.doesNotMatch(panels, /待推進完成/)
   assert.doesNotMatch(page, /待推進完成/)
   assert.match(page, /\{hy && <OfficeStageControl /)
+  assert.match(page, /allMilestones=\{view\._flow\?\.milestones \|\| milestoneRows\}/)
   assert.match(control, /只有全部里程碑結束、寫好結案摘要才設完成。/)
   assert.match(control, /重新開啟（改回執行中）/)
+  assert.match(control, /退回規劃中/)
+  assert.match(control, /退回後這個專案會回到規劃中，負責 Bot 要重送規劃書，經審查後才會開核准卡給你。/)
+  assert.match(control, /確認退回/)
   assert.match(control, /stage: 'done', closure_summary: closure/)
   assert.match(control, /stage: 'running'/)
+  assert.match(control, /stage: 'assigned'/)
   assert.match(control, /authHeaders\(\)/)
-  assert.doesNotMatch(control, /X-Brain-Write-Token|localStorage|sessionStorage/)
+  assert.doesNotMatch(control, /X-Brain-Write-Token|localStorage|sessionStorage|window\.confirm/)
   assert.equal(control.includes('returned'), false)
   assert.doesNotMatch(page, /等 HY 回答|activeTileLabel/)
   assert.match(page, /<Pill project=\{project\}\/>/)
+})
+
+test('canReturnToPlanning is only for hy_decision with no plan review and no later milestones', () => {
+  const decision = { id: 'p-003', stage: 'hy_decision' }
+  assert.equal(canReturnToPlanning(decision, []), true)
+  assert.equal(canReturnToPlanning(decision, undefined), true)
+  assert.equal(canReturnToPlanning(decision, [{ id: 'M0', kind: 'plan', step: 'running' }]), true)
+  assert.equal(canReturnToPlanning(decision, [{ id: 'm0', step: 'waiting' }]), true)
+  assert.equal(canReturnToPlanning(decision, [{ id: 'M0', step: 'done' }]), true)
+  assert.equal(canReturnToPlanning(decision, [{ kind: 'plan', step: 'cancelled' }]), true)
+  assert.equal(canReturnToPlanning(decision, [{ id: 'M0', step: 'review' }]), false)
+  assert.equal(canReturnToPlanning(decision, [{ id: 'M0', kind: 'plan', step: 'hy_decision' }]), false)
+  assert.equal(canReturnToPlanning(decision, [{ id: 'plan', kind: 'plan', step: 'review' }]), false)
+  assert.equal(canReturnToPlanning(decision, [{ id: 'M0', step: 'running' }, { id: 'note', kind: 'plan', step: 'hy_decision' }]), false)
+  assert.equal(canReturnToPlanning(decision, [{ id: 'M1', step: 'waiting' }]), false)
+  assert.equal(canReturnToPlanning(decision, [{ id: 'G1', kind: 'gate', step: 'running' }]), false)
+  assert.equal(canReturnToPlanning(decision, [{ id: 'M0', step: 'running' }, { id: 'M1', step: 'done' }]), false)
+  assert.equal(canReturnToPlanning(decision, [null, 'M1', { id: 'M2', step: 'waiting' }]), false)
+  assert.equal(canReturnToPlanning({ stage: 'running' }, []), false)
+  assert.equal(canReturnToPlanning({ stage: 'assigned' }, []), false)
+  assert.equal(canReturnToPlanning({ stage: 'review' }, [{ id: 'M0', step: 'running' }]), false)
+  assert.equal(canReturnToPlanning({ stage: 'done' }, []), false)
+  assert.equal(canReturnToPlanning(null, []), false)
+})
+
+test('project stage body for return to planning sends assigned and no closure summary', () => {
+  const back = projectStageBody({ owner_bot: 'sam', revision: 2 }, { stage: 'assigned' }, projectStageRequestId('p-003', 1710000000000))
+  assert.deepEqual(back, {
+    request_id: 'hy-stage-p-003-1710000000000',
+    answered_by: 'sam',
+    expected_revision: 2,
+    patch: { stage: 'assigned' },
+  })
+  assert.equal('closure_summary' in back.patch, false)
 })
 
 test('five project stages: labels, tones, legacy normalization at read time', async () => {
