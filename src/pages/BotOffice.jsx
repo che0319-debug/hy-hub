@@ -1,5 +1,6 @@
 // Match the actual AIOfficeV1 five-tab structure; data stays on the new Office APIs.
 import { useCallback, useEffect, useRef, useState } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import { authHeaders, expireSession, getAccessToken } from '../auth'
 import { loadBotOffice, OFFICE_TABS, REFRESH_MS, OFFICE_NAMES } from '../botOfficeData'
 import './bot-office.css'
@@ -49,7 +50,8 @@ function timelineExtra(milestone, current) {
 export default function BotOffice() {
   const hub = useInbox()
   const [data, setData] = useState(null), [error, setError] = useState(null), [loading, setLoading] = useState(true), [deleteNote, setDeleteNote] = useState(''), [sharedNote, setSharedNote] = useState('')
-  const [projectId, setProjectId] = useState(null), [tab, setTab] = useState('overview'), [editing, setEditing] = useState(false), [creating,setCreating] = useState(false), [selectedWork,setSelectedWork] = useState(null), [settingsOpen, setSettingsOpen] = useState(false)
+  const [searchParams] = useSearchParams()
+  const [projectId, setProjectId] = useState(() => searchParams.get('project') || null), [tab, setTab] = useState('overview'), [editing, setEditing] = useState(false), [creating,setCreating] = useState(false), [selectedWork,setSelectedWork] = useState(null), [settingsOpen, setSettingsOpen] = useState(false)
   const reads = useRef(null)
   if (!reads.current) reads.current = createLatestRead()
   const controller = useRef(null), initialLoad = useRef(true)
