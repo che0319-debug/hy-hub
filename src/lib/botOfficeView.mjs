@@ -8,6 +8,14 @@ const DONE_ROUND = new Set(['done', 'completed', 'finished', 'complete', 'closed
 const ACTIVE_ROUND = new Set(['running', 'ready', 'blocked', 'failed', 'waiting', 'active'])
 const textOf = value => typeof value === 'string' ? value.trim() : ''
 
+export function officeRequestStatusLabel(item = {}) {
+  const status = textOf(item.status)
+  if (item.type === 'reassign' && status === 'open') return '待套用'
+  if (status === 'applied') return '已套用'
+  if (status === 'open') return '已送出'
+  return status
+}
+
 export const REPORT_FRAME = { sandbox: 'allow-popups allow-popups-to-escape-sandbox', referrerPolicy: 'no-referrer' }
 
 export function isHyOwnerSession(token) {
@@ -245,7 +253,7 @@ export function officeJournal(state = {}, index = {}, projectId) {
   })
   for (const item of list(state.requests).filter(item => item && item.project === projectId)) pushEvent(events, {
     id: item.id || item.request_id, at: item.created_at, actor: item.created_by === 'hy' ? 'HY' : '專案流程', kind: 'human',
-    text: textOf(item.payload?.content || item.payload?.title || item.type), detail: textOf(item.status) === 'open' ? '已送出' : textOf(item.status),
+    text: textOf(item.payload?.content || item.payload?.title || item.type), detail: officeRequestStatusLabel(item),
   })
   return events.sort((a, b) => b.at - a.at || String(a.id).localeCompare(String(b.id)))
 }
@@ -269,7 +277,7 @@ export function officeView(project) {
 export function officeEvents(project) {
  const p=project.source || {}, events=[]
  for(const l of project.logs) events.push({id:l.id,at:officeTime(l.at),actor:l.actor==='hy'?'HY':l.answered_by==='hy'?'HY Bot':l.answered_by || 'Bot',kind:'human',text:l.content})
- for(const r of project.requests) events.push({id:r.id,at:officeTime(r.created_at),actor:r.created_by==='hy'?'HY':'專案流程',kind:'human',text:r.payload?.content || r.payload?.title || '',detail:r.status==='open'?'已送出':r.status})
+ for(const r of project.requests) events.push({id:r.id,at:officeTime(r.created_at),actor:r.created_by==='hy'?'HY':'專案流程',kind:'human',text:r.payload?.content || r.payload?.title || '',detail:officeRequestStatusLabel(r)})
  for(const d of project.allDecisions) for(const [i,h] of (d.history || []).entries()) events.push({id:d.id+':'+i,at:officeTime(h.at),actor:h.actor==='hy'?'HY':h.answered_by==='hy'?'HY Bot':h.answered_by || 'Bot',kind:'human',text:d.title,detail:typeof h.answer==='string'?h.answer:h.action,action:d.status==='open'?d.id:null})
  for(const e of list(p.events)) if(e && e.id) events.push({...e,at:officeTime(e.at)})
  return events.filter(e=>e.at).sort((a,b)=>b.at-a.at || String(a.id).localeCompare(String(b.id)))

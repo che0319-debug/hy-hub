@@ -2,7 +2,7 @@ import test from 'node:test'
 import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
 import { OFFICE_AI_CHOICES, OFFICE_AI_DEFAULTS, officeAiConflict, parseOfficeSettings, seedOfficeAi } from '../src/lib/officeAiDefaults.mjs'
-import { mapOffice } from '../src/botOfficeData.js'
+import { applyOfficeRequest, mapOffice, reassignApplyFailureMessage } from '../src/botOfficeData.js'
 
 const read = rel => readFileSync(new URL(rel, import.meta.url), 'utf8')
 
@@ -101,6 +101,38 @@ test('home has 設定 beside 重新整理; settings dialog and APIs exist', () =
   assert.match(actions, /executor_backup/)
   assert.match(actions, /reviewer_backup/)
   assert.match(actions, /seedOfficeAi/)
+  assert.match(actions, /type === 'reassign' \? '已套用'/)
+  assert.match(actions, /OfficeReassignQueue/)
+  assert.match(actions, />套用</)
+  const panels = read('../src/components/BotOfficePanels.jsx')
+  assert.match(panels, /OfficeReassignQueue/)
+  assert.match(panels, /待套用/)
+})
+
+test('applyOfficeRequest posts to the apply endpoint and speaks Traditional Chinese', async () => {
+  assert.equal(reassignApplyFailureMessage(403, { error: 'office_owner_only' }), '只有你本人可以套用改派。')
+  assert.equal(reassignApplyFailureMessage(409, { error: 'office_request_not_open' }), '這筆改派已經套用，或不是待套用狀態。')
+  assert.equal(reassignApplyFailureMessage(409, { error: 'office_request_not_reassign' }), '這不是改派，不能套用。')
+  assert.match(reassignApplyFailureMessage(400, { error: 'office_request_invalid' }), /沒有套用/)
+  assert.doesNotMatch(reassignApplyFailureMessage(409, { error: 'office_request_not_open' }), /applied|request/i)
+  let call
+  const saved = await applyOfficeRequest('legacy/1', {
+    headers: { Authorization: 'session' },
+    base: 'http://hub.test',
+    fetcher: async (...args) => {
+      call = args
+      return new Response(JSON.stringify({ request: { status: 'applied' }, project: { revision: 3 } }))
+    },
+  })
+  assert.equal(call[0], 'http://hub.test/api/office/requests/legacy%2F1/apply')
+  assert.equal(call[1].method, 'POST')
+  assert.equal(call[1].headers.Authorization, 'session')
+  assert.equal(call[1].headers['X-Brain-Write-Token'], undefined)
+  assert.equal(call[1].body, '{}')
+  assert.equal(saved.project.revision, 3)
+  await assert.rejects(applyOfficeRequest('legacy-1', {
+    fetcher: async () => new Response(JSON.stringify({ error: 'office_request_not_open' }), { status: 409 }),
+  }), error => error.kind === 'conflict' && error.message === '這筆改派已經套用，或不是待套用狀態。')
 })
 
 test('selects declare a light color-scheme and explicit option colors', () => {

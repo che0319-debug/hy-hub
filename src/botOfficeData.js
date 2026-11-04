@@ -285,6 +285,47 @@ export async function setProjectStage(projectId, payload = {}, { headers = {}, f
   return data
 }
 
+export function reassignApplyFailureMessage(status, body = {}) {
+  const error = typeof body?.error === 'string' ? body.error : ''
+  if (status === 401) return '登入已過期，請重新登入。'
+  if (status === 403) return '只有你本人可以套用改派。'
+  if (error === 'office_request_not_open') return '這筆改派已經套用，或不是待套用狀態。'
+  if (error === 'office_request_not_reassign') return '這不是改派，不能套用。'
+  if (error === 'office_reviewer_must_differ' || error === 'office_request_invalid') return '改派內容不符合規定，沒有套用。'
+  if (error === 'office_project_deleting') return officeFailureMessage(status || 409, body)
+  if (error === 'office_project_not_found' || error === 'office_request_not_found' || status === 404) return '找不到這筆改派或專案。'
+  if (status === 409) return '資料已更新，請重新整理後再套用。'
+  if (status === 400) return '改派內容不符合規定，沒有套用。'
+  if (status === 413) return '資料已達大小上限，沒有套用。'
+  if (status === 502) {
+    if (error === 'brain_write_failed') return '儲存沒有完成確認，不確定有沒有套用。請重新整理。'
+    return '後端資料異常，沒有套用。'
+  }
+  if (!status) return '無法連線，請稍後重試。'
+  return '沒有套用，請稍後重試。'
+}
+
+export async function applyOfficeRequest(requestId, { headers = {}, fetcher = fetch, base = import.meta.env?.VITE_API_BASE || '' } = {}) {
+  const id = encodeURIComponent(String(requestId || ''))
+  let response
+  try {
+    response = await fetcher(`${String(base || '').replace(/\/$/, '')}/api/office/requests/${id}/apply`, {
+      method: 'POST', headers: { ...headers, 'Content-Type': 'application/json' }, body: '{}', cache: 'no-store',
+    })
+  } catch (error) {
+    if (error?.name === 'AbortError') throw error
+    throw new OfficeReadError('network', reassignApplyFailureMessage(0, {}))
+  }
+  const data = await response.json().catch(() => ({}))
+  if (!response.ok) {
+    const code = typeof data?.error === 'string' ? data.error : ''
+    const uncertain = response.status === 502 && code === 'brain_write_failed'
+    const kind = response.status === 401 ? 'auth' : (response.status === 409 || uncertain) ? 'conflict' : 'error'
+    throw new OfficeReadError(kind, reassignApplyFailureMessage(response.status, data), code)
+  }
+  return data
+}
+
 export async function writeOffice(path, payload, { headers = {}, fetcher = fetch, base = import.meta.env?.VITE_API_BASE || '' } = {}) {
   const response = await fetcher(`${base.replace(/\/$/, '')}/api/office/${path}`, {
     method: 'POST', headers: {...headers, 'Content-Type': 'application/json'}, body: JSON.stringify(payload), cache: 'no-store',

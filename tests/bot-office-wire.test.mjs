@@ -3,7 +3,7 @@ import assert from 'node:assert/strict'
 import {
   REPORT_FRAME, isHyOwnerSession, officeMilestones, currentMilestoneId, milestoneProgress,
   reportSummaryLines, reportIsStale, reportVersions, normalizeOfficeReport, normalizeOfficeDocument,
-  normalizeOfficeFiles, deleteErrorMessage, officeDeleteOutcome, officeFailureMessage, reviewRounds, officeJournal, executionRounds,
+  normalizeOfficeFiles, deleteErrorMessage, officeDeleteOutcome, officeFailureMessage, reviewRounds, officeJournal, executionRounds, officeRequestStatusLabel,
 } from '../src/lib/botOfficeView.mjs'
 import { loadOfficeReport, loadOfficeReportHtml, loadOfficeDocument, loadOfficeFiles, deleteOfficeProject, uploadOfficeFile, importOfficeReference, mapOffice, officeDeleteHold } from '../src/botOfficeData.js'
 
@@ -88,6 +88,9 @@ test('officeJournal merges office records, keeps human system and artifact apart
   assert.equal(byId.ls.kind, 'system')
   assert.equal(byId.r.kind, 'human')
   assert.equal(byId.r.detail, '已送出')
+  assert.equal(officeRequestStatusLabel({ type: 'reassign', status: 'open' }), '待套用')
+  assert.equal(officeRequestStatusLabel({ type: 'reassign', status: 'applied' }), '已套用')
+  assert.equal(officeRequestStatusLabel({ type: 'message', status: 'open' }), '已送出')
   assert.equal(byId['fu:fu2'].kind, 'system')
   assert.equal(events.some(event => event.id === 'fu:fu'), false)
   assert.deepEqual(events.map(event => event.at), [...events.map(event => event.at)].sort((a, b) => b - a))

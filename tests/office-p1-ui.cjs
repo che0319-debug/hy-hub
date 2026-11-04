@@ -5,7 +5,7 @@ const fontDir=path.dirname(require.resolve('@fontsource/noto-sans-tc/package.jso
 const font=fs.readFileSync(path.join(fontDir,'400.css'),'utf8').replace(/url\(([^)]+)\)/g,(_,p)=>`url(data:font/woff2;base64,${fs.readFileSync(path.join(fontDir,p.replace(/["']/g,''))).toString('base64')})`);
 (async()=>{for(const width of [390,1280]){
  const browser=await chromium.launch({headless:true,...(process.env.CHROME_BIN?{executablePath:process.env.CHROME_BIN,args:['--no-sandbox']}: {})});const page=await browser.newPage({viewport:{width,height:900}});let writes=[],errors=[];
- const state={updated:'2026-10-24T20:00:00+08:00',buildings:[{id:'qa',title:'工程驗證專案',owner_bot:'sam',reviewer:'claude',island:'side',stage:'assigned',executor:'grok-build',last_review:'fail',returned_count:2,required_changes:['補上驗證紀錄'],review_card:'report'},{id:'review',title:'待審專案',stage:'review'}],figures:[{id:'claude',name:'Claude',role:'reviewer'}, {id:'pi',name:'工程 PI',role:'pi',project:'qa',owner:'sam',island:'side',look_as:'PI',status:'waiting'}, ...[1,2,3].map(i=>({id:'gb'+i,name:'Grok Build',role:'executor',project:'qa',owner:'pi',look_as:'grok-build'}))],logs:[],requests:[],decisions:[
+ const state={updated:'2026-10-24T20:00:00+08:00',buildings:[{id:'qa',title:'工程驗證專案',owner_bot:'sam',reviewer:'claude',island:'side',stage:'assigned',executor:'grok-build',executor_backup:'claude',reviewer_backup:'gpt',last_review:'fail',returned_count:2,required_changes:['補上驗證紀錄'],review_card:'report'},{id:'review',title:'待審專案',stage:'review'}],figures:[{id:'claude',name:'Claude',role:'reviewer'}, {id:'pi',name:'工程 PI',role:'pi',project:'qa',owner:'sam',island:'side',look_as:'PI',status:'waiting'}, ...[1,2,3].map(i=>({id:'gb'+i,name:'Grok Build',role:'executor',project:'qa',owner:'pi',look_as:'grok-build'}))],logs:[],requests:[{id:'req-open-reassign',request_id:'legacy-reassign',project:'qa',type:'reassign',status:'open',created_by:'hy',created_at:'2026-10-24T18:00:00+08:00',payload:{type:'reassign',project:'qa',content:'舊的改派',request_id:'legacy-reassign',executor:'claude',reviewer:'gpt',executor_backup:'grok-build',reviewer_backup:'claude'}}],decisions:[
  {id:'open',project:'qa',kind:'intake',status:'open',revision:0,title:'新流程提問',questions:[{no:1,q:'主力品項？',answer:'建議手機，整新 iPhone 待 HY',answer_source:'proxy',answered_by:'sam',basis:'既有討論',confidence:'medium',bot_suggestions:[{answer:'先從小量測試',answered_by:'sam',basis:'現金流限制',confidence:'high'}]},{no:2,q:'下一題',authority:'owner_only',bot_suggestions:[{answer:'HY 可採用的參考',answered_by:'sam',basis:'正式紀錄',confidence:'high'}]}]},
  {id:'done',project:'qa',card:'old',kind:'intake',status:'answered',revision:17,title:'已完成的提問',questions:[{no:1,q:'產品方向',answer:'完整新答案',answer_source:'proxy',answered_by:'sam',confirmed_by:'hy',confirmed_at:'2026-10-24T20:00:00+08:00'}],history:[{at:'2026-10-24T19:00:00+08:00',actor:'hy',action:'confirm',answer:'完整新答案'}]}]};
  const index={updated:'2026-10-24T16:00:00+08:00',cards:[{id:'report',project:'qa',type:'review',title:'審查報告',drive_url:'https://drive.google.com/report'},{id:'old',project:'qa',type:'decision',summary:'過期摘要'}]};
@@ -17,7 +17,22 @@ const font=fs.readFileSync(path.join(fontDir,'400.css'),'utf8').replace(/url\(([
    const payload=req.postDataJSON();writes.push({path:u.pathname,payload});assert(!req.headers()['x-brain-write-token']);
    if(u.pathname.endsWith('/answer')){const d=state.decisions[0];assert.equal(payload.expected_revision,d.revision);d.revision++;const q=d.questions.find(q=>q.no===payload.question_no);if(payload.action==='confirm')q.confirmed_by='hy';if(payload.answer){q.answer=payload.answer;q.answer_source='hy';q.answered_by='hy'}data={decision:d,updated:state.updated};}
    else if(u.pathname.endsWith('/log')){state.logs.push({id:'log-'+writes.length,at:state.updated,content:payload.content,actor:'hy',project:payload.project});data={updated:state.updated};}
-   else if(u.pathname.endsWith('/requests')){state.requests.push({id:'r-'+writes.length,project:payload.project,payload,type:payload.type,status:'open'});data={updated:state.updated};}
+   else if(/\/api\/office\/requests\/[^/]+\/apply$/.test(u.pathname)){
+     const key=decodeURIComponent(u.pathname.split('/').at(-2));
+     const row=state.requests.find(item=>item.request_id===key||item.id===key);
+     if(!row||row.type!=='reassign'||row.status!=='open'){await route.fulfill({status:409,contentType:'application/json',body:JSON.stringify({error:!row?'office_request_not_found':row.type!=='reassign'?'office_request_not_reassign':'office_request_not_open'})});return;}
+     const building=state.buildings.find(item=>item.id===row.project);
+     const fields=row.payload||{};
+     if(building){building.executor=fields.executor;building.reviewer=fields.reviewer;if(fields.executor_backup)building.executor_backup=fields.executor_backup;if(fields.reviewer_backup)building.reviewer_backup=fields.reviewer_backup;building.revision=(building.revision||0)+1;}
+     row.status='applied';row.applied_by='hy';row.applied_at=state.updated;
+     data={request:row,project:building,updated:state.updated};
+   }
+   else if(u.pathname.endsWith('/requests')){
+     const applied=payload.type==='reassign';
+     if(applied){const building=state.buildings.find(item=>item.id===payload.project);if(building){building.executor=payload.executor;building.reviewer=payload.reviewer;if(payload.executor_backup)building.executor_backup=payload.executor_backup;if(payload.reviewer_backup)building.reviewer_backup=payload.reviewer_backup;building.revision=(building.revision||0)+1;}}
+     const row={id:'r-'+writes.length,request_id:payload.request_id,project:payload.project,payload,type:payload.type,status:applied?'applied':'open',created_by:'hy'};
+     state.requests.push(row);data={request:row,updated:state.updated};
+   }
    else throw new Error('Unexpected write '+u.pathname);
  }else if(u.pathname.includes('dispatch-sessions'))data=[];
  await route.fulfill({status:200,contentType:'application/json',body:JSON.stringify(data)});
@@ -36,11 +51,17 @@ const font=fs.readFileSync(path.join(fontDir,'400.css'),'utf8').replace(/url\(([
  await nav.getByRole('button',{name:/會議室/}).click();const team=page.locator('.ao-team');await team.locator('b').getByText('Claude',{exact:true}).waitFor();assert.equal(await team.locator('b').getByText('Grok Build',{exact:true}).count(),1);assert.equal(await team.getByText('工程 PI',{exact:true}).count(),1);assert.equal(await page.getByText('專案／島',{exact:true}).count(),0);await page.evaluate(()=>window.scrollTo(0,0));await page.screenshot({path:`${out}/meeting-${width}.png`,fullPage:true});
  const message=page.getByRole('form',{name:'會議室留言'});await message.getByRole('textbox',{name:'意見或補充資料',exact:true}).fill('會議室留言隔離測試');await message.getByRole('button',{name:'送給 PI',exact:true}).click();await page.getByText('已送出，處理結果會顯示在此專案。').waitFor();
  await page.getByRole('button',{name:'編輯專案',exact:true}).click();
- for(const label of ['規格變更','改派']){if(label==='改派'){await nav.getByRole('button',{name:/概況/}).click();await page.getByText('AI 執行配置',{exact:true}).click();}
+ for(const label of ['規格變更','改派']){if(label==='改派'){await nav.getByRole('button',{name:/概況/}).click();await page.getByText('AI 執行配置',{exact:true}).click();
+   const ai=page.locator('details').filter({hasText:'AI 執行配置'});
+   await ai.getByRole('button',{name:'套用',exact:true}).click();
+   await ai.getByRole('status').filter({hasText:'已套用'}).waitFor();
+   if(!(await ai.getByRole('button',{name:'改派',exact:true}).isVisible()))await page.getByText('AI 執行配置',{exact:true}).click();
+ }
    await page.getByRole('button',{name:label,exact:true}).click();const form=page.getByRole('form',{name:label});await form.getByRole('textbox',{name:'說明',exact:true}).fill(label+'隔離測試');await form.getByRole('button',{name:'送出請求',exact:true}).click();await form.waitFor({state:'detached'});
+   if(label==='改派')await page.getByRole('status').filter({hasText:'已套用'}).first().waitFor();
  }
  await page.getByRole('button',{name:'‹ Bot Office',exact:true}).click();assert.equal(await page.getByRole('button',{name:'示範',exact:true}).count(),0);assert.equal(await page.getByRole('button',{name:'真實',exact:true}).count(),0);
  await page.getByRole('button',{name:'新增專案',exact:true}).click();const create=page.getByRole('form',{name:'新增專案'});await create.getByRole('textbox',{name:'名稱',exact:true}).fill('隔離新案');await create.getByRole('textbox',{name:'目標',exact:true}).fill('驗證開案表單');await create.getByRole('combobox',{name:'負責 Bot',exact:true}).selectOption('sam');await create.getByRole('textbox',{name:'說明（選填）',exact:true}).fill('請開案');await create.getByRole('button',{name:'送出請求',exact:true}).click();await page.getByText('已送出，處理結果會顯示在此專案。').waitFor();
- assert.equal(writes.filter(w=>w.path==='/api/office/requests').length,4);assert.equal(state.buildings.length,2);assert.equal(writes.at(-1).payload.owner_bot,'sam');assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth),false);assert.deepEqual(errors,[]);
+ assert.equal(writes.filter(w=>w.path==='/api/office/requests').length,4);assert.equal(writes.filter(w=>w.path==='/api/office/requests/legacy-reassign/apply').length,1);assert.equal(state.buildings.length,2);assert.equal(writes.at(-1).payload.owner_bot,'sam');assert.equal(state.requests.find(item=>item.request_id==='legacy-reassign').status,'applied');assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth),false);assert.deepEqual(errors,[]);
  await page.getByRole('button',{name:/工程驗證專案/}).click();assert.equal(await page.getByRole('heading',{level:1}).count(),1);assert.equal(await page.getByText('等待 Atlas 處理',{exact:true}).count(),0);await page.evaluate(()=>window.scrollTo(0,0));await page.screenshot({path:`${out}/overview-${width}.png`,fullPage:true});await browser.close();console.log(`Office P1/P2 ${width}: tabs, suggestions, supplement, history, review, log and four queued requests passed`);
 }})().catch(e=>{console.error(e);process.exit(1)});

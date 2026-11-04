@@ -1,5 +1,5 @@
 import { useRef, useState } from 'react'
-import { writeOffice, safeDriveUrl } from '../botOfficeData'
+import { writeOffice, applyOfficeRequest, safeDriveUrl, OFFICE_NAMES } from '../botOfficeData'
 import { authHeaders, expireSession, getAccessToken } from '../auth'
 import { isHyOwnerSession } from '../lib/botOfficeView.mjs'
 import { openProjectBody } from '../lib/officeFlow.mjs'
@@ -34,7 +34,7 @@ export function OfficeRequest({ type, projects, projectId, readOnly, reload, inl
       }
       if (!opened) await writeOffice('requests', payload, { headers: authHeaders() })
       requestId.current = null
-      setNotice(opened ? '已開案，PI 會先寫規劃書' : '已送出，處理結果會顯示在此專案。')
+      setNotice(opened ? '已開案，PI 會先寫規劃書' : type === 'reassign' ? '已套用' : '已送出，處理結果會顯示在此專案。')
       setOpen(inline)
       setForm(old => ({ ...old, content: '', title: '', goal: '' }))
       await reload()
@@ -48,12 +48,50 @@ export function OfficeRequest({ type, projects, projectId, readOnly, reload, inl
       {type === 'new_project' && <><label>名稱<input value={form.title} onChange={set('title')} required /></label><label>目標<textarea value={form.goal} onChange={set('goal')} required /></label><label>負責 Bot<select value={form.owner_bot} onChange={set('owner_bot')}>{Object.entries(NAMES).map(([id, name]) => <option key={id} value={id}>{name}</option>)}</select></label></>}
       {type === 'reassign' && <><label>執行者（主案）<select value={form.executor} onChange={set('executor')} aria-label="執行者主案">{OFFICE_AI_CHOICES.map(n => <option key={n} value={n}>{AI_LABELS[n]}</option>)}</select></label><label>執行者（備案）<select value={form.executor_backup} onChange={set('executor_backup')} aria-label="執行者備案">{OFFICE_AI_CHOICES.map(n => <option key={n} value={n}>{AI_LABELS[n]}</option>)}</select></label><label>審查者（主案）<select value={form.reviewer} onChange={set('reviewer')} aria-label="審查者主案">{OFFICE_AI_CHOICES.map(n => <option key={n} value={n}>{AI_LABELS[n]}</option>)}</select></label><label>審查者（備案）<select value={form.reviewer_backup} onChange={set('reviewer_backup')} aria-label="審查者備案">{OFFICE_AI_CHOICES.map(n => <option key={n} value={n}>{AI_LABELS[n]}</option>)}</select></label>{reassignConflict.map(message => <p key={message} role="alert">{message}</p>)}</>}
       <label>{type === 'new_project' ? '說明（選填）' : inline ? '意見或補充資料' : '說明'}<textarea aria-label={type === 'new_project' ? '說明（選填）' : inline ? '意見或補充資料' : '說明'} value={form.content} onChange={set('content')} required={type !== 'new_project' && !appendix.trim()} /></label>
-      <p className="ao-muted">送出後會交給專案流程處理，處理完成後更新專案。</p>
+      <p className="ao-muted">{type === 'reassign' ? '送出後會立即套用到這個專案。' : '送出後會交給專案流程處理，處理完成後更新專案。'}</p>
       {children}<div className="ao-toolbar"><button type="submit" className="ao-primary" disabled={!(type === 'new_project' ? form.title.trim() && form.goal.trim() : form.content.trim() || appendix.trim()) || type === 'reassign' && reassignConflict.length > 0}>{type === 'message' ? '送給 PI' : '送出請求'}</button>{!inline && <button type="button" onClick={() => setOpen(false)}>取消</button>}</div>
       </fieldset>
     </form>}
     {busy && <p role="status">正在儲存…</p>}{notice && <p role="status">{notice}</p>}{error && <p role="alert">{error.message}{error.kind === 'auth' && <button onClick={expireSession}>重新登入</button>}</p>}
   </div>
+}
+
+function reassignSummary(payload = {}) {
+  const name = id => OFFICE_NAMES[id] || id || '尚未指定'
+  const role = (label, primary, backup) => backup ? `${label} ${name(primary)}（備案 ${name(backup)}）` : `${label} ${name(primary)}`
+  return `${role('執行', payload.executor, payload.executor_backup)}、${role('審查', payload.reviewer, payload.reviewer_backup)}`
+}
+
+export function OfficeReassignQueue({ project, reload }) {
+  const open = (project?.requests || []).filter(row => row && row.type === 'reassign' && row.status === 'open')
+  const [busyId, setBusyId] = useState('')
+  const [notice, setNotice] = useState('')
+  const [error, setError] = useState(null)
+  async function apply(row) {
+    const key = row.request_id || row.id
+    setBusyId(key); setError(null); setNotice('')
+    try {
+      await applyOfficeRequest(key, { headers: authHeaders() })
+      setNotice('已套用')
+      await reload()
+    } catch (reason) {
+      setError(reason)
+    } finally {
+      setBusyId('')
+    }
+  }
+  if (!open.length && !notice && !error) return null
+  return <section aria-label="待套用的改派">
+    <h3>待套用的改派</h3>
+    {notice && <p role="status">{notice}</p>}
+    {error && <p role="alert">{error.message}{error.kind === 'auth' && <button type="button" onClick={expireSession}>重新登入</button>}</p>}
+    {open.length > 0 && <ul className="ao-bullets">{open.map(row => {
+      const key = row.request_id || row.id
+      const summary = (row.payload?.content || '').trim() || '尚未填寫說明'
+      return <li key={key}><p>{summary}</p><p className="ao-muted">{reassignSummary(row.payload)}</p><button type="button" disabled={Boolean(busyId)} onClick={() => apply(row)}>套用</button></li>
+    })}</ul>}
+    {!open.length && <p className="ao-muted">沒有待套用的改派。</p>}
+  </section>
 }
 
 export function OfficeLog({ project, readOnly, reload }) {
