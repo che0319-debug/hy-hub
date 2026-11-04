@@ -1,12 +1,12 @@
 // HY 本人把專案設為完成，或把誤結案的專案改回執行中。
-// 只有這兩個目標：完成、執行中。退回不是階段，不在這裡提供。
+// 待你決定、規劃書不在審查或核定、也還沒展開後續里程碑時，可以退回規劃中（stage 改為 assigned），讓負責 Bot 重送規劃書。
 import { useRef, useState } from 'react'
 import { authHeaders, expireSession } from '../auth'
-import { projectStageBody, projectStageRequestId, setProjectStage } from '../botOfficeData'
+import { projectStageBody, projectStageFailureMessage, projectStageRequestId, setProjectStage } from '../botOfficeData'
 import { milestoneProgress } from '../lib/botOfficeView.mjs'
-import { closureReason } from '../lib/officeFlow.mjs'
+import { canReturnToPlanning, closureReason } from '../lib/officeFlow.mjs'
 
-export default function OfficeStageControl({ project, milestones = [], onChanged }) {
+export default function OfficeStageControl({ project, milestones = [], allMilestones = [], onChanged }) {
   const [mode, setMode] = useState('')
   const [summary, setSummary] = useState('')
   const [ack, setAck] = useState(false)
@@ -22,6 +22,7 @@ export default function OfficeStageControl({ project, milestones = [], onChanged
   const unfinished = progress.total - progress.done
   const warning = incomplete ? `里程碑只完成 ${progress.done}／${progress.total}（還有 ${unfinished} 個未完成），確定要結案？` : ''
   const warnId = `ao-stage-warn-${String(project.id).replace(/[^A-Za-z0-9_-]/g, '-')}`
+  const canReturn = canReturnToPlanning(project, allMilestones)
 
   function reset() {
     setMode('')
@@ -41,7 +42,13 @@ export default function OfficeStageControl({ project, milestones = [], onChanged
       await onChanged?.()
       reset()
     } catch (err) {
-      setError({ kind: err?.kind || 'error', message: err?.message || '沒有改階段，請稍後重試。' })
+      const deniedReturn = patch?.stage === 'assigned' && err?.code === 'office_stage_transition_denied'
+      setError({
+        kind: err?.kind || 'error',
+        message: deniedReturn
+          ? projectStageFailureMessage(400, { error: 'office_stage_transition_denied' }, 'return')
+          : (err?.message || '沒有改階段，請稍後重試。'),
+      })
     } finally {
       busyRef.current = false
       setBusy(false)
@@ -66,6 +73,9 @@ export default function OfficeStageControl({ project, milestones = [], onChanged
       {error.kind === 'conflict' && <button type="button" disabled={busy} onClick={() => { setError(null); onChanged?.() }}>重新讀取</button>}
     </div>
   )
+  const returnButton = canReturn ? (
+    <button type="button" disabled={busy} onClick={() => { setError(null); setMode('return') }}>退回規劃中</button>
+  ) : null
 
   if (stage === 'done') {
     if (mode !== 'reopen') {
@@ -89,10 +99,26 @@ export default function OfficeStageControl({ project, milestones = [], onChanged
     )
   }
 
+  if (mode === 'return') {
+    return (
+      <div className="ao-stage is-open">
+        <div className="ao-stage-panel">
+          <p>退回後這個專案會回到規劃中，負責 Bot 要重送規劃書，經審查後才會開核准卡給你。</p>
+          {alert}
+          <div className="ao-stage-actions">
+            <button type="button" disabled={busy} onClick={reset}>取消</button>
+            <button type="button" className="ao-primary" disabled={busy} onClick={() => submit({ stage: 'assigned' })}>{busy ? '送出中…' : '確認退回'}</button>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
   if (blocked) {
     return (
       <div className="ao-stage is-blocked">
         <button type="button" disabled>設為完成</button>
+        {returnButton}
         <p className="ao-stage-reason">{blocked}</p>
       </div>
     )
@@ -102,6 +128,7 @@ export default function OfficeStageControl({ project, milestones = [], onChanged
     return (
       <div className="ao-stage">
         <button type="button" aria-expanded="false" disabled={busy} onClick={() => { setError(null); setMode('close') }}>設為完成</button>
+        {returnButton}
       </div>
     )
   }

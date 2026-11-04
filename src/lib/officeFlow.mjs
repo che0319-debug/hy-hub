@@ -184,6 +184,25 @@ function executionLead(board, milestones, stage) {
   return { milestone_id: '', step: 'running', label: stageLabel(stage) }
 }
 
+// 舊流程卡在待你決定、規劃書還沒進審查或核定、也還沒展開 M1／G1 時，才能退回規劃中。
+// 列上的 step 用呼叫端給的值（流程圖里程碑已是換算後的 step），這裡不再推斷。
+export function canReturnToPlanning(project, allMilestoneRows = []) {
+  if (project?.stage !== 'hy_decision') return false
+  const rows = Array.isArray(allMilestoneRows) ? allMilestoneRows : []
+  let planLocked = false
+  let expanded = 0
+  for (const row of rows) {
+    if (!row || typeof row !== 'object') continue
+    if (isPlanMilestone(row)) {
+      const step = text(row.step)
+      if (step === 'review' || step === 'hy_decision') planLocked = true
+      continue
+    }
+    if (/^[MG]\d/i.test(text(row.id))) expanded += 1
+  }
+  return !planLocked && expanded === 0
+}
+
 export function closureReason(milestones = [], decisions = []) {
   const rows = Array.isArray(milestones) && milestones.every(item => asStep(item?.step))
     ? milestones

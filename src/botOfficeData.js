@@ -239,13 +239,16 @@ export function projectStageRequestId(projectId, now = Date.now()) {
   return `hy-stage-${projectId}-${now}`
 }
 
-export function projectStageFailureMessage(status, body = {}) {
+// context 為 return 時，只改「階段不允許」這一句；其他錯誤與未帶 context 的呼叫維持原句。
+export function projectStageFailureMessage(status, body = {}, context = '') {
   const error = typeof body?.error === 'string' ? body.error : ''
   if (status === 401) return '登入已過期，請重新登入。'
   if (error === 'office_closure_summary_required') return '結案摘要不符合規定，沒有設為完成。'
   if (error === 'office_revision_conflict') return '資料已被更新，請重新讀取。沒有改階段。'
   if (error === 'office_stage_owner_only') return '只有 HY 本人可以改專案階段。沒有寫入。'
-  if (error === 'office_stage_transition_denied') return '這個階段不能這樣改。沒有寫入。'
+  if (error === 'office_stage_transition_denied') {
+    return context === 'return' ? '這個階段不能退回規劃中。沒有寫入。' : '這個階段不能這樣改。沒有寫入。'
+  }
   if (error === 'office_project_deleting') return officeFailureMessage(status, body)
   if (status === 404 || status === 405) return '此功能尚未上線或專案不存在。沒有改階段。'
   if (status === 409) return '資料已被更新，請重新讀取。沒有改階段。'
