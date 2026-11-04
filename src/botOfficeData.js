@@ -99,7 +99,7 @@ export function mapOffice(state = {}, index = {}, metadata = {}) {
     const groups = Object.fromEntries(OFFICE_TABS.map(([key]) => [key, cards.filter(c => c.projectId === p.id && c.tab === key)]))
     return {
       source: p, id: text(p.id), title: text(p.title) || '未命名專案', island: islands.get(p.island) || text(p.island) || '未分區',
-      latestCardId: text(p.card), team: officeTeam(p, state.figures), reviewer: text(p.reviewer), planCard,
+      latestCardId: text(p.card), team: officeTeam(p, state.figures), reviewer: text(p.reviewer), reviewerBackup: text(p.reviewer_backup), planCard,
       ownerBot: text(p.owner_bot), planUrl: cardLink(p.plan_card), folderUrl: safeDriveUrl(p.drive_folder_url),
       review: { verdict: text(p.last_review?.verdict) || text(p.last_review) || 'none',
         url: cardLink(p.review_card) || cards.filter(c => c.projectId === p.id).map(c => array(index.cards).find(raw => raw.id === c.id)?.review_card).map(cardLink).find(Boolean) || null,
@@ -111,7 +111,7 @@ export function mapOffice(state = {}, index = {}, metadata = {}) {
       pendingAdvances: allDecisions.filter(d => d.projectId === p.id && d.needsAdvance),
       logs: array(state.logs).filter(l => l && l.project === p.id), requests: array(state.requests).filter(r => r && r.project === p.id),
       allDecisions: allDecisions.filter(d => d.projectId === p.id),
-      stage, stageLabel, tone, executor: text(p.executor) || '尚未指定', ownerBot: text(p.owner_bot),
+      stage, stageLabel, tone, executor: text(p.executor) || '尚未指定', executorBackup: text(p.executor_backup), ownerBot: text(p.owner_bot),
       revision: Number.isInteger(p.revision) && p.revision >= 0 ? p.revision : 0,
       decisions: decisions.filter(d => d.projectId === p.id), cards: groups,
       finished: stage === 'done', active: ['running', 'review'].includes(stage),
@@ -120,6 +120,7 @@ export function mapOffice(state = {}, index = {}, metadata = {}) {
   }).sort((a, b) => Number(b.pending) - Number(a.pending))
   return {
     projects, decisions, allDecisions, requests: array(state.requests), stale: Boolean(metadata.stale),
+    settings: state.settings && typeof state.settings === 'object' ? state.settings : null,
     state, index, updatedRaw: text(state.updated),
     updated: when(metadata.stateUpdated || state.updated), updatedAt: metadata.stateUpdated || state.updated || null, indexUpdated: when(metadata.indexUpdated || index.updated),
     // stages：5 種階段各有幾個專案（首頁統計卡用，與 Bot Office 首頁同一口徑）；pending 仍是待答題目數（提醒用）。

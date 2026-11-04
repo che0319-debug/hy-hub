@@ -14,6 +14,7 @@
 .ao button{cursor:pointer}.ao button:hover{background:var(--hy-sunken)}.ao button:disabled{opacity:.5;cursor:not-allowed}
 .ao :is(button,a,input,textarea,select,[tabindex]):focus-visible{outline:3px solid var(--hy-brand);outline-offset:2px}
 .ao input,.ao select,.ao textarea{width:100%;max-width:100%;margin-top:6px;min-width:0}
+.ao select option,.ao select optgroup{color:var(--hy-ink);background:var(--hy-surface)}
 .ao textarea{min-height:100px;font:inherit;border:1px solid var(--hy-line);border-radius:var(--hy-r-sm);padding:10px 12px;background:var(--hy-surface);color:var(--hy-ink)}
 .ao label{display:block;font-size:var(--hy-fs-meta);color:var(--hy-muted);margin:10px 0}
 .ao form{display:grid;gap:10px}.ao form>button{justify-self:start}
@@ -49,6 +50,13 @@
 .ao-progress-track{display:block;height:6px;border-radius:var(--hy-r-pill);background:var(--hy-sunken);overflow:hidden}.ao-progress-track>span{display:block;height:100%;background:var(--hy-ai)}.ao-progress-track[data-s=done]>span{background:var(--hy-done)}
 .ao-project-time{text-align:right}
 .ao-home-empty{text-align:center;padding:32px}
+
+/* 全系統預設 AI 設定對話框：Esc 關閉、焦點鎖在對話框、手機 select 16px 避免放大 */
+.ao-settings-backdrop{position:fixed;inset:0;z-index:80;display:flex;align-items:flex-start;justify-content:center;padding:16px;background:color-mix(in srgb,var(--hy-header) 48%,transparent);overflow:auto}
+.ao-settings-dialog{width:min(520px,100%);margin:12vh auto;display:grid;gap:8px}
+.ao-settings-dialog select{font-size:16px}
+.ao-settings-fields{display:grid;grid-template-columns:1fr 1fr;gap:12px;min-width:0}
+@media(max-width:640px){.ao-settings-fields{grid-template-columns:1fr}.ao-settings-dialog{margin:8px auto}}
 
 /* 專案頁 */
 .ao-project{display:grid;gap:12px;padding-bottom:28px}
