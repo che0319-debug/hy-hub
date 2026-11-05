@@ -446,3 +446,58 @@ test('進行中的專案蓋過同一格的完工紀念', () => {
   assert.equal(done.kind, 'memorial')
   assert.notEqual(live.view.signature, done.view.signature)
 })
+
+test('只剩等你時主標籤改待你決定，房子仍是施工中', () => {
+  const card = { id: 'd-silver', status: 'open', kind: 'intake', authority: 'owner_only', milestone: 'M4', title: '銀角申請通過了嗎？', deadline: '2020-01-01' }
+  const view = composeBuilding(project({
+    title: '川泱',
+    milestones: [
+      { id: 'M1', status: '完成', step: 'done' },
+      { id: 'M4', status: '執行中', step: 'running', depends_on: ['M1'] },
+      { id: 'G2', status: '需要你', step: 'waiting', depends_on: ['M4'] },
+    ],
+    decisions: [card],
+  }), { today: TODAY })
+  assert.equal(view.stage, 'running')
+  assert.equal(view.parts.crane, true)
+  assert.equal(view.parts.fence, true)
+  assert.equal(view.parts.roof, false)
+  assert.equal(view.label.title, '川泱｜待你決定')
+  assert.equal(view.label.tone, 'you')
+  assert.equal(view.card.badges[0].text, '待你決定')
+  assert.equal(view.card.badges.at(-1).text, '待你決定 1')
+  assert.equal(view.parts.alert, 'amber')
+  assert.equal(view.label.chip.text, '待你決定 1')
+
+  const partial = composeBuilding(project({
+    title: '川泱',
+    milestones: [
+      { id: 'M4', status: '執行中', step: 'running' },
+      { id: 'M7', status: '執行中', step: 'running' },
+    ],
+    decisions: [card],
+  }), { today: TODAY })
+  assert.equal(partial.label.title, '川泱｜M4 執行中')
+
+  const gate = composeBuilding(project({
+    title: '川泱',
+    milestones: [
+      { id: 'M4', status: '執行中', step: 'running' },
+      { id: 'G1', status: '核定中', step: 'hy_decision' },
+    ],
+    decisions: [card],
+  }), { today: TODAY })
+  assert.equal(gate.label.title, '川泱｜G1 核定中')
+  assert.equal(gate.stage, 'running')
+  assert.equal(gate.parts.crane, true)
+  assert.equal(gate.parts.roof, false)
+
+  const unlinked = composeBuilding(project({
+    milestones: [
+      { id: 'M1', status: '完成', step: 'done' },
+      { id: 'M4', status: '執行中', step: 'running', depends_on: ['M1'] },
+    ],
+    decisions: [{ id: 'd1', status: 'open', kind: 'intake', authority: 'owner_only', title: '沒連到里程碑' }],
+  }), { today: TODAY })
+  assert.equal(unlinked.label.title, '川泱購物｜M4 執行中')
+})

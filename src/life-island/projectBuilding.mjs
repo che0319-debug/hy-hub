@@ -334,8 +334,10 @@ export function composeBuilding(project, { today, title } = {}) {
   const chip = alertChip(alert)
   const unfinished = activeMilestones.filter(item => !isMilestoneDone(item)).map(item => milestoneLine(item, milestones))
   const showRunning = !!(running && (stage === 'running' || isRunningStatus(running.status)))
-  const cardLabel = lead?.label || labelText
-  const cardTone = lead?.label ? leadTone(lead, stage) : tone
+  // 整案只剩等你、而且最前面的步驟仍是執行中時，主標籤改「待你決定」。房子零件仍看存檔階段。
+  const waitingOnYou = flow.display_stage === 'hy_decision' && stage === 'running' && lead?.step === 'running'
+  const cardLabel = waitingOnYou ? '待你決定' : (lead?.label || labelText)
+  const cardTone = waitingOnYou ? 'you' : (lead?.label ? leadTone(lead, stage) : tone)
   const badges = [
     { key: 'stage', text: cardLabel, tone: cardTone },
     { key: 'ms', text: `里程碑 ${progress.done}／${progress.total}`, tone: 'wait' },

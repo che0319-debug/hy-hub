@@ -1,7 +1,7 @@
 // 專案流程 v1 的純換算。新後端若已給 flow_phase／plan_step／step_board／lead_step 就照用；
 // 缺欄位時用與後端同一套規則補上，讓舊後端也能畫流程圖。不打網路。
 import { isMilestoneDone } from './reportSummary.mjs'
-import { STAGE_LABEL, STAGE_TONE, normalizeStage } from './projectStages.mjs'
+import { STAGE_KEYS, STAGE_LABEL, STAGE_TONE, normalizeStage } from './projectStages.mjs'
 
 export const STEP_LABEL = {
   waiting: '等前置',
@@ -252,6 +252,7 @@ export function projectFlow(building = {}, { decisions = [], stage } = {}) {
   const version = Number(source.plan?.version)
   const planVersion = Number.isFinite(version) ? version : null
   const planRedo = flowPhase === 'execution' && !!m0 && ['running', 'review', 'hy_decision'].includes(m0.step)
+  const blocked = blockedDisplay(normalized, board, milestones, decisions, source)
   return {
     milestones,
     flow_phase: flowPhase,
@@ -261,7 +262,71 @@ export function projectFlow(building = {}, { decisions = [], stage } = {}) {
     plan_version: planVersion,
     plan_redo: planRedo,
     closure_reason: closureReason(milestones),
+    display_stage: blocked.displayStage,
+    blocked_on_user: blocked.blockedOnUser,
+    blocked_milestones: blocked.blockedMilestones,
   }
+}
+
+const TRACKED_ID = /^(?:M|G)(?:[1-9]|[1-9][0-9])$/
+
+function isUserBlocker(decision) {
+  if (!decision || typeof decision !== 'object') return false
+  if (text(decision.status) !== 'open') return false
+  if (text(decision.kind) === 'approval') return false
+  if (text(decision.authority) === 'delegated') return false
+  return Boolean(text(decision.id))
+}
+
+function milestoneDeps(milestone) {
+  if (Array.isArray(milestone?.deps)) return milestone.deps.filter(Boolean)
+  return depsOf(milestone)
+}
+
+function blocksMilestone(decision, milestone) {
+  if (!isUserBlocker(decision)) return false
+  const mid = text(milestone?.id)
+  if (!TRACKED_ID.test(mid)) return false
+  if (text(decision.milestone) === mid) return true
+  return milestoneDeps(milestone).includes(text(decision.id))
+}
+
+// 與後端同一套：存檔是執行中、每個執行中里程碑都被未答的補資料卡連到、而且沒有人在審查，才顯示待你決定。
+function computedBlocks(stage, board, milestones, decisions) {
+  if (stage !== 'running') return { displayStage: stage || '', blockedOnUser: false, blockedMilestones: [] }
+  const running = (board.running || []).filter(id => TRACKED_ID.test(id))
+  if (!running.length) return { displayStage: 'running', blockedOnUser: false, blockedMilestones: [] }
+  const review = (board.review || []).some(id => TRACKED_ID.test(id))
+  const byId = new Map((milestones || []).filter(item => text(item?.id)).map(item => [text(item.id), item]))
+  const cards = (Array.isArray(decisions) ? decisions : []).filter(isUserBlocker)
+  const blocked = running.filter(id => {
+    const row = byId.get(id)
+    return row && cards.some(card => blocksMilestone(card, row))
+  })
+  if (review) return { displayStage: 'running', blockedOnUser: false, blockedMilestones: blocked }
+  if (blocked.length === running.length) return { displayStage: 'hy_decision', blockedOnUser: true, blockedMilestones: blocked }
+  return { displayStage: 'running', blockedOnUser: false, blockedMilestones: blocked }
+}
+
+function blockedDisplay(stage, board, milestones, decisions, source) {
+  const computed = computedBlocks(stage, board, milestones, decisions)
+  const given = text(source?.display_stage)
+  const givenBlocked = Array.isArray(source?.blocked_milestones)
+    ? sortIds(source.blocked_milestones.map(id => text(id)).filter(id => TRACKED_ID.test(id)))
+    : null
+  return {
+    displayStage: STAGE_KEYS.includes(given) ? given : computed.displayStage,
+    blockedOnUser: typeof source?.blocked_on_user === 'boolean' ? source.blocked_on_user : computed.blockedOnUser,
+    blockedMilestones: givenBlocked == null ? computed.blockedMilestones : givenBlocked,
+  }
+}
+
+// 畫面篩選與統計用顯示狀態。舊資料沒有 displayStage 時退回存檔階段。
+export function shownStage(project) {
+  const display = text(project?.displayStage)
+  if (STAGE_KEYS.includes(display)) return display
+  const stage = project?.stage
+  return typeof stage === 'string' ? stage : ''
 }
 
 // 核定中→you，審查中／執行中→ai，等前置→wait，完成（含里程碑已全部完成）→done。
@@ -290,7 +355,7 @@ export function isMilestoneOrGateFlow(decision) {
 // 里程碑／閘門卡即使專案已經是待你決定也要再計；規劃書卡不要重複計。
 export function needsYouCount(projects = [], openDecisions = null) {
   const list = Array.isArray(projects) ? projects : []
-  const hyIds = new Set(list.filter(item => item?.stage === 'hy_decision').map(item => item.id))
+  const hyIds = new Set(list.filter(item => shownStage(item) === 'hy_decision').map(item => item.id))
   const seen = new Set()
   let extra = 0
   const take = (decision, projectId) => {
@@ -349,10 +414,10 @@ const EXEC_TRACK = [
   { key: 'hy_decision', name: '核定中', tone: 'you' },
 ]
 
-function cell(name, state, tone, { track = '', ids = [], caption = '' } = {}) {
+function cell(name, state, tone, { track = '', ids = [], caption = '', youText = '' } = {}) {
   const stateText = state === 'on' ? '進行中' : state === 'passed' ? '已經過' : '尚未到'
   const idText = ids.length ? ids.join('、') : ''
-  return { name, track, state, stateText, tone: state === 'on' ? tone : state === 'passed' ? 'done' : 'wait', ids, idText, caption }
+  return { name, track, state, stateText, tone: state === 'on' ? tone : state === 'passed' ? 'done' : 'wait', ids, idText, caption, youText }
 }
 
 // 開案永遠已經過。完成只在 stage=done 時亮。規劃三格跟 plan_step；執行期重寫規劃書時該格也亮。
@@ -377,12 +442,15 @@ export function diagramModel(flow = {}, stage = '') {
     return cell(item.name, state, item.tone, { track: '規劃' })
   })
   const planCaption = version != null && (phase === 'planning' || redo) ? `規劃書 v${version}` : ''
+  const blockedIds = new Set((Array.isArray(flow.blocked_milestones) ? flow.blocked_milestones : []).map(id => String(id)))
   const execution = EXEC_TRACK.map(item => {
     const ids = Array.isArray(board[item.key]) ? board[item.key] : []
     let state = 'idle'
     if (done || phase === 'done') state = 'passed'
     else if (phase === 'execution' && ids.length) state = 'on'
-    return cell(item.name, state, item.tone, { track: '執行', ids })
+    const youIds = item.key === 'running' ? ids.filter(id => blockedIds.has(id)) : []
+    const youText = youIds.length ? `${youIds.join('、')} 等你` : ''
+    return cell(item.name, state, item.tone, { track: '執行', ids, youText })
   })
   const nodes = [
     cell('開案', 'passed', 'done', { track: '開案' }),

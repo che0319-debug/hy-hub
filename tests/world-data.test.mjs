@@ -118,6 +118,22 @@ test('deriveOffice：狀態與 Bot Office 一致，歸屬看 owner_bot', () => {
   assert.equal(r.unowned, 1)                            // 沒有 owner_bot 的專案不算在任何人身上
 })
 
+test('deriveOffice：只剩等你的執行中專案改計入待你決定', () => {
+  const blocked = mapOffice({
+    buildings: [
+      { id: 'a', title: '觸覺手套簡報', owner_bot: '950157', stage: 'running' },
+      { id: 'p-002', title: '川泱', owner_bot: '950157', stage: 'running', milestones: [{ id: 'M4', step: 'running' }] },
+    ],
+    decisions: [{ id: 'd1', project: 'p-002', status: 'open', kind: 'intake', authority: 'owner_only', milestone: 'M4', title: '銀角' }],
+  }, { cards: [] })
+  const row = deriveOffice(blocked).byAgent['950157']
+  assert.equal(row.counts.running, 1)
+  assert.equal(row.counts.hyDecision, 1)
+  assert.equal(row.status, 'you')
+  assert.match(row.doing, /^執行中 1/)
+  assert.doesNotMatch(row.doing, /執行中 2/)
+})
+
 test('deriveOffice：沒有資料就是空，不編造', () => {
   const r = deriveOffice(null)
   assert.deepEqual(r.byAgent, {}); assert.equal(r.pending, null)

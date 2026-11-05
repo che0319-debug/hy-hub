@@ -3,6 +3,7 @@
 // 「我的小幫手」分頁與 3D 世界都讀這裡整理好的格式；後端欄位改了只要改這裡。
 import { HELPERS } from '../botRoster.js'
 import { freshness } from '../lib/memoryFreshness.js'
+import { shownStage } from '../lib/officeFlow.mjs'
 
 const clip = (text, n) => { const t = String(text || '').trim().replace(/\s+/g, ' '); return t.length > n ? t.slice(0, n - 1) + '…' : t }
 const num = v => { const n = Number(v); return Number.isFinite(n) ? n : 0 }
@@ -41,12 +42,12 @@ export function deriveOffice(office) {
   for (const h of HELPERS) {
     const mine = projects.filter(p => p.ownerBot === h.agent)
     const ids = new Set(mine.map(p => p.id))
-    const n = stage => mine.filter(p => p.stage === stage).length
-    // 只有 5 種階段；p.stage 已在 mapOffice 換算過舊值。waiting＝規劃中。
+    const n = stage => mine.filter(p => shownStage(p) === stage).length
+    // 只有 5 種階段；顯示狀態已在 mapOffice 換算過。waiting＝規劃中。
     const counts = { total: mine.length, running: n('running'), review: n('review'), hyDecision: n('hy_decision'), waiting: n('assigned'), done: n('done') }
     const asks = decisions.filter(d => ids.has(d.projectId)).length
     const active = counts.running + counts.review
-    const first = mine.find(p => p.stage === 'running') || mine.find(p => p.stage === 'review')
+    const first = mine.find(p => shownStage(p) === 'running') || mine.find(p => shownStage(p) === 'review')
     byAgent[h.agent] = {
       status: asks > 0 || counts.hyDecision > 0 ? 'you' : active > 0 ? 'ai' : 'wait',
       asks, counts,

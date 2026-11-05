@@ -21,7 +21,7 @@ import { OWNER_SHARED_ROSTER_STALE, refreshAfterOwnerSave } from '../lib/ownerBo
 
 const NOTES = TAB_NOTES
 const when = value => value ? new Date(value*1000).toLocaleString('zh-TW',{timeZone:'Asia/Taipei',hour12:false}) : '尚未記錄'
-const Pill = ({ project }) => <span className="hy-pill" data-s={project.tone}>{project.stageLabel}</span>
+const Pill = ({ project }) => <span className="hy-pill" data-s={project.displayTone || project.tone}>{project.displayLabel || project.stageLabel}</span>
 const STEP_TONE = { waiting: 'wait', running: 'ai', review: 'ai', hy_decision: 'you', done: 'done', cancelled: 'wait' }
 const stepTone = step => STEP_TONE[step] || 'wait'
 function timelineRows(rows, flow) {

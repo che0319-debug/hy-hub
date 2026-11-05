@@ -1,5 +1,6 @@
 import {useState} from 'react'
 import {progress, activityLabel} from '../lib/aiOffice.mjs'
+import {shownStage} from '../lib/officeFlow.mjs'
 import {PROJECT_STAGES} from '../lib/projectStages.mjs'
 
 // 統計卡與篩選只用 5 種專案階段的名稱（規劃中／待你決定／執行中／待審／完成），不用同義詞。
@@ -11,9 +12,9 @@ export default function OfficeHome({projects,details,inbox,loaded,error,creating
   const actions=inbox.filter(a=>a.project_id && ['owner','HY'].includes(a.assigned_to))
   const pending=id=>actions.filter(a=>a.project_id===id).length
   const missing=projects.length-Object.values(details).filter(Boolean).length
-  const inStage=key=>projects.filter(p=>p.stage===key).length
+  const inStage=key=>projects.filter(p=>shownStage(p)===key).length
   const stageCount=key=>key==='hy_decision'&&Number.isInteger(needsYou)?needsYou:inStage(key)
-  const match=p=>filter==='all'||p.stage===filter
+  const match=p=>filter==='all'||shownStage(p)===filter
   const visible=projects.filter(p=>(!query.trim() || `${p.title} ${p.goal || ''}`.toLowerCase().includes(query.trim().toLowerCase())) && match(p))
     .sort((a,b)=>pending(b.id)-pending(a.id))
   const ready=loaded&&!error

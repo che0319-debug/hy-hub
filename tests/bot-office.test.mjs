@@ -334,7 +334,15 @@ test('HY Hub home summary uses the five stage names from mapOffice totals', () =
 test('Bot Office home uses only the five stage names; no returned-count badge anywhere', () => {
   const home = readFileSync(new URL('../src/pages/OfficeHome.jsx', import.meta.url), 'utf8')
   assert.match(home, /\['all','全部'\],\.\.\.PROJECT_STAGES/)
+  assert.match(home, /shownStage\(p\)/)
   assert.doesNotMatch(home, /進行中|已完成/)
+  const page = readFileSync(new URL('../src/pages/BotOffice.jsx', import.meta.url), 'utf8')
+  assert.match(page, /displayLabel/)
+  assert.match(page, /displayTone/)
+  assert.match(page, /項待你處理/)
+  const control = readFileSync(new URL('../src/components/OfficeStageControl.jsx', import.meta.url), 'utf8')
+  assert.match(control, /project\?\.stage/)
+  assert.doesNotMatch(control, /displayStage/)
   for (const file of ['../src/components/BotOfficePanels.jsx','../src/components/OfficeActions.jsx','../src/components/BotRosterCards.jsx','../src/life-island/worldData.js','../src/life-island/projectBuilding.mjs']) {
     const src = readFileSync(new URL(file, import.meta.url), 'utf8')
     assert.doesNotMatch(src, /被退回|退回次數|退回 \{|returnedCount/, file)

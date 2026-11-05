@@ -46,6 +46,7 @@
 .of-cell{align-self:flex-start;flex:1 1 88px;min-width:0;max-width:100%;display:flex;flex-direction:column;gap:2px;border:1px solid var(--hy-line);border-radius:10px;padding:8px 10px;background:var(--hy-wait-bg);color:var(--hy-wait)}
 .of-cell b,.of-cell small,.of-caption,.of-meta,.of-loop{overflow-wrap:anywhere}
 .of-cell small{font-size:var(--hy-fs-tiny);line-height:1.4}
+.of-cell .of-you{color:var(--hy-you)}
 .of-cell[data-s="wait"]{background:var(--hy-wait-bg);color:var(--hy-wait)}
 .of-cell[data-s="ai"]{background:var(--hy-ai-bg);color:var(--hy-ai)}
 .of-cell[data-s="you"]{background:var(--hy-you-bg);color:var(--hy-you)}
