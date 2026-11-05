@@ -52,6 +52,35 @@ test('跑馬燈：沒標執行中時用第一個未完成里程碑，並跳過�
   assert.equal(items[0].href, '/bot-office?project=p%2F2')
 })
 
+test('跑馬燈：整案只剩等你、而且最前步驟是執行中，才改寫待你決定', () => {
+  const card = { id: 'd-silver', status: 'open', kind: 'intake', authority: 'owner_only', milestone: 'M4' }
+  const blocked = buildMarqueeItems([{
+    id: 'p-002', title: '川泱', stage: 'running', decisions: [card],
+    milestones: [
+      { id: 'M1', status: '完成', step: 'done' },
+      { id: 'M4', status: '執行中', step: 'running', depends_on: ['M1'] },
+      { id: 'G2', status: '需要你', step: 'waiting', depends_on: ['M4'] },
+    ],
+  }])
+  assert.equal(blocked[0].stageText, '待你決定')
+  const partial = buildMarqueeItems([{
+    id: 'p-002', title: '川泱', stage: 'running', decisions: [card],
+    milestones: [
+      { id: 'M4', status: '執行中', step: 'running' },
+      { id: 'M7', status: '執行中', step: 'running' },
+    ],
+  }])
+  assert.notEqual(partial[0].stageText, '待你決定')
+  const gate = buildMarqueeItems([{
+    id: 'p-002', title: '川泱', stage: 'running', decisions: [card],
+    milestones: [
+      { id: 'M4', status: '執行中', step: 'running' },
+      { id: 'G1', status: '核定中', step: 'hy_decision' },
+    ],
+  }])
+  assert.notEqual(gate[0].stageText, '待你決定')
+})
+
 test('個人待辦標記：只有待辦是藍點，和待你確認同時有則橘驚嘆號加小藍點', () => {
   const today = deriveAttention({ status: 'wait', todos: { overdue: 0, today: 1 } })
   assert.equal(today.level, 'todo')

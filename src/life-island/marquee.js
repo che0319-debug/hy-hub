@@ -1,6 +1,6 @@
 // Life 島頂部跑馬燈：把 Bot Office 已經載入的專案整理成一列文字。不打網路。
 import { isMilestoneDone, milestoneProgress, officeMilestones } from '../lib/botOfficeView.mjs'
-import { compareId, isPlanMilestone } from '../lib/officeFlow.mjs'
+import { compareId, isPlanMilestone, projectFlow } from '../lib/officeFlow.mjs'
 import { STAGE_LABEL, normalizeStage } from '../lib/projectStages.mjs'
 import { officeProjectPath } from './projectBuilding.mjs'
 
@@ -45,7 +45,8 @@ export function runningStageText(rows) {
   return '執行中'
 }
 
-export function marqueeStageText(stage, rows) {
+export function marqueeStageText(stage, rows, display) {
+  if (stage === 'running' && display?.displayStage === 'hy_decision' && display?.leadStep === 'running') return '待你決定'
   if (stage === 'running') return runningStageText(rows)
   return STAGE_LABEL[stage] || '狀態待確認'
 }
@@ -80,7 +81,14 @@ export function buildMarqueeItems(projects) {
     const progress = milestoneProgress(rows)
     const id = project.id == null ? '' : String(project.id).trim()
     const title = text(project.title) || '未命名專案'
-    const stageText = marqueeStageText(stage, rows)
+    const flow = projectFlow(project.source || project, {
+      decisions: project.allDecisions || project.decisions || [],
+      stage,
+    })
+    const stageText = marqueeStageText(stage, rows, {
+      displayStage: flow.display_stage,
+      leadStep: flow.lead_step?.step,
+    })
     const progressText = `${progress.done}/${progress.total}`
     ranked.push({
       index,

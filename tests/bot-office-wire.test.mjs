@@ -256,6 +256,13 @@ test('review stage is the normalized stage value and blocks delete like running'
   const running = mapOffice({ buildings: [{ id: 'a', title: '執行案', stage: 'running' }] }, {})
   assert.equal(officeDeleteHold(running.projects[0]), '目前專案執行中，需等結束後才能刪除。')
   assert.equal(officeDeleteHold(mapOffice({ buildings: [{ id: 'd', title: '完成案', stage: 'done' }] }, {}).projects[0]), '')
+  const waiting = mapOffice({
+    buildings: [{ id: 'p-002', title: '川泱', stage: 'running', milestones: [{ id: 'M4', step: 'running' }] }],
+    decisions: [{ id: 'd', project: 'p-002', status: 'open', kind: 'intake', authority: 'owner_only', milestone: 'M4' }],
+  }, {})
+  assert.equal(waiting.projects[0].stage, 'running')
+  assert.equal(waiting.projects[0].displayStage, 'hy_decision')
+  assert.equal(officeDeleteHold(waiting.projects[0]), '目前專案執行中，需等結束後才能刪除。')
 })
 
 test('delete client exposes status and committed body without calling the project deleted', async () => {

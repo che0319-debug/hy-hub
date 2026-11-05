@@ -3,7 +3,7 @@
 import { OFFICE_TABS as AI_OFFICE_TABS } from './lib/aiOffice.mjs'
 import { officeFailureMessage } from './lib/botOfficeView.mjs'
 import { STAGE_KEYS, STAGE_LABEL, STAGE_TONE, normalizeStage } from './lib/projectStages.mjs'
-import { decisionReviewView, needsYouCount } from './lib/officeFlow.mjs'
+import { decisionReviewView, needsYouCount, projectFlow, shownStage } from './lib/officeFlow.mjs'
 export const OFFICE_TABS = AI_OFFICE_TABS
 export const REFRESH_MS = 30000
 // 只有 5 種階段，名稱與顏色見 lib/projectStages.mjs。
@@ -82,6 +82,8 @@ export function mapOffice(state = {}, index = {}, metadata = {}) {
       || (projectIds.has(d.ref) ? d.ref : cards.find(c => c.id === d.ref)?.projectId) || null,
     flow: d.flow && typeof d.flow === 'object' ? { version: d.flow.version ?? null, target: text(d.flow.target), kind: text(d.flow.kind) } : null,
     review: decisionReviewView(d.review),
+    milestone: text(d.milestone),
+    authority: text(d.authority),
   }))
   const decisions = allDecisions.filter(d => d.status === 'open')
   // Decision summaries come from state; index may lag behind an answer.
@@ -97,6 +99,11 @@ export function mapOffice(state = {}, index = {}, metadata = {}) {
     const [stageLabel, tone] = STAGES[stage] || ['狀態待確認', 'wait']
     const planCard = cards.find(c => c.id === p.plan_card) || null
     const groups = Object.fromEntries(OFFICE_TABS.map(([key]) => [key, cards.filter(c => c.projectId === p.id && c.tab === key)]))
+    const projectDecisions = allDecisions.filter(d => d.projectId === p.id)
+    // 顯示狀態只在讀取時算。舊後端沒給 display_stage 時，用跟後端同一套規則補上。
+    const flow = projectFlow(p, { decisions: projectDecisions, stage })
+    const displayStage = STAGE_KEYS.includes(flow.display_stage) ? flow.display_stage : stage
+    const [displayLabel, displayTone] = STAGES[displayStage] || [stageLabel, tone]
     return {
       source: p, id: text(p.id), title: text(p.title) || '未命名專案', island: islands.get(p.island) || text(p.island) || '未分區',
       latestCardId: text(p.card), team: officeTeam(p, state.figures), reviewer: text(p.reviewer), reviewerBackup: text(p.reviewer_backup), planCard,
@@ -110,8 +117,11 @@ export function mapOffice(state = {}, index = {}, metadata = {}) {
       followUps: array(p.follow_ups).map((v, i) => typeof v === 'string' ? (v.trim() ? {id: `${text(p.id)}-follow-up-${i + 1}`, text: v.trim(), status: 'open', source: ''} : null) : v).filter(v => v && typeof v === 'object').map(v => ({id: text(v.id), text: text(v.text), status: text(v.status), source: text(v.source), sourceUrl: cardLink(v.source)})),
       pendingAdvances: allDecisions.filter(d => d.projectId === p.id && d.needsAdvance),
       logs: array(state.logs).filter(l => l && l.project === p.id), requests: array(state.requests).filter(r => r && r.project === p.id),
-      allDecisions: allDecisions.filter(d => d.projectId === p.id),
-      stage, stageLabel, tone, executor: text(p.executor) || '尚未指定', executorBackup: text(p.executor_backup), ownerBot: text(p.owner_bot),
+      allDecisions: projectDecisions,
+      stage, stageLabel, tone, displayStage, displayLabel, displayTone,
+      blockedOnUser: flow.blocked_on_user === true,
+      blockedMilestones: flow.blocked_milestones,
+      executor: text(p.executor) || '尚未指定', executorBackup: text(p.executor_backup), ownerBot: text(p.owner_bot),
       revision: Number.isInteger(p.revision) && p.revision >= 0 ? p.revision : 0,
       decisions: decisions.filter(d => d.projectId === p.id), cards: groups,
       finished: stage === 'done', active: ['running', 'review'].includes(stage),
@@ -125,7 +135,7 @@ export function mapOffice(state = {}, index = {}, metadata = {}) {
     updated: when(metadata.stateUpdated || state.updated), updatedAt: metadata.stateUpdated || state.updated || null, indexUpdated: when(metadata.indexUpdated || index.updated),
     // stages：5 種階段各有幾個專案（首頁統計卡用，與 Bot Office 首頁同一口徑）；pending 仍是待答題目數（提醒用）。
     totals: { pending: decisions.length, running: projects.filter(p => p.active).length, finished: projects.filter(p => p.finished).length, all: projects.length,
-      stages: Object.fromEntries(STAGE_KEYS.map(key => [key, projects.filter(p => p.stage === key).length])),
+      stages: Object.fromEntries(STAGE_KEYS.map(key => [key, projects.filter(p => shownStage(p) === key).length])),
       needsYou: needsYouCount(projects, decisions) },
   }
 }

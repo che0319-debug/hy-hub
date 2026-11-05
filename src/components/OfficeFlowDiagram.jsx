@@ -5,12 +5,14 @@ function FlowCell({ item }) {
     item.track && item.track !== item.name ? item.track : '',
     item.name,
     item.stateText,
+    item.youText,
     item.idText,
   ].filter(Boolean).join('，')
   return (
     <li className={`of-cell is-${item.state}`} data-s={item.tone} aria-current={item.state === 'on' ? 'step' : undefined} aria-label={label}>
       <b>{item.name}</b>
       <small className="of-state">{item.stateText}</small>
+      {item.youText && <small className="of-you">{item.youText}</small>}
       {item.idText && <small className="of-ids">{item.name}：{item.idText}</small>}
     </li>
   )
