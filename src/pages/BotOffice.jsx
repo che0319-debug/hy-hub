@@ -6,7 +6,8 @@ import { loadBotOffice, OFFICE_TABS, REFRESH_MS, OFFICE_NAMES } from '../botOffi
 import './bot-office.css'
 import { OfficeRequest, OfficeReassignQueue } from '../components/OfficeActions'
 import OfficeSettings from '../components/OfficeSettings'
-import { OfficeSnapshot, OfficeJournal, OfficeMeeting, OfficeExecution, OfficeResults, OfficeReportStrip, OfficeDelete, useOfficeReport, usePlanDocument } from '../components/BotOfficePanels'
+import { OfficeSnapshot, OfficeJournal, OfficeMeeting, OfficeExecution, OfficeResults, OfficeReportStrip, OfficeDelete, useOfficeReport, usePlanDocument, useOfficeCanonical } from '../components/BotOfficePanels'
+import { snapshotLines } from '../lib/officeDocuments.mjs'
 import { TAB_NOTES, milestones } from '../lib/aiOffice.mjs'
 import OfficeHome from './OfficeHome'
 import {officeView, officeMilestones, officePlan, currentMilestoneId, milestoneProgress, executionRounds, isHyOwnerSession} from '../lib/botOfficeView.mjs'
@@ -80,6 +81,10 @@ export default function BotOffice() {
   const project = data?.projects.find(p => p.id === projectId)
   const report = useOfficeReport(project?.id, data?.updatedRaw)
   const planDocument = usePlanDocument(project?.planCard?.id)
+  const documents = useOfficeCanonical(project, data?.state, data?.index)
+  const planningLines = snapshotLines(documents.currentView)
+  const reportStatus = reportSummaryStatus(report)
+  const snapStatus = reportStatus === 'empty' && documents.currentView?.hasPlanning ? 'planning' : reportStatus
   const views = (data?.projects || []).map(item => {
     const view = officeView(item)
     const fromBuilding = officeMilestones(item.source)
@@ -124,13 +129,13 @@ export default function BotOffice() {
       {editing&&<section className="ao-card"><h2>編輯專案（正式規格變更）</h2><p className="ao-muted">目標與範圍走正式規格變更，由你核准後才生效。</p><OfficeRequest type="spec_change" projects={data.projects} projectId={project.id} reload={reload}/></section>}
       <nav className="ao-tabs" aria-label="Bot Office 專案分頁">{OFFICE_TABS.map(([key,label])=><button key={key} aria-current={tab===key?'page':undefined} onClick={()=>setTab(key)}>{label}{key==='meeting'&&project.decisions.length>0&&<span>{project.decisions.length}</span>}</button>)}</nav>
       <p className="ao-tabnote">{NOTES[tab]}</p>
-      <div hidden={tab!=='overview'}><div className="ao-overview ao-overview-v2"><OfficeFlowDiagram flow={view._flow} stage={project.stage}/><OfficeReportStrip report={report} onOpen={()=>setTab('outputs')}/><OfficeSnapshot html={report.html} lines={report.lines} project={project} milestones={milestoneRows} status={reportSummaryStatus(report)} message={report.htmlError||report.error} stale={report.stale} modified={report.modified}/>
+      <div hidden={tab!=='overview'}><div className="ao-overview ao-overview-v2"><OfficeFlowDiagram flow={view._flow} stage={project.stage}/><OfficeReportStrip report={report} planning={documents.currentView?.hasPlanning && report.status!=='ready'} attention={project.pending} onOpen={()=>setTab('outputs')}/><OfficeSnapshot html={report.html} lines={snapStatus==='planning'?planningLines:report.lines} project={project} milestones={milestoneRows} status={snapStatus} message={report.htmlError||report.error} notice="規劃書與對應審查在「執行計畫」和「成果與審查」。執行期成果報告還沒建立。" stale={report.stale} modified={report.modified}/>
       <section className="ao-card ao-milestone-strip"><h2>里程碑</h2><ol className="ao-timeline">{shownMilestones.map(m=>{const current=m.id===headerMilestoneId;const cancelled=m.step==='cancelled';return <li key={m.id} className={[current?'is-current':'',m.step==='done'?'is-done':'',cancelled?'is-cancelled':''].filter(Boolean).join(' ')||undefined}><button onClick={()=>openExecution(m.id)}><b>{m.id} {m.name}</b><small><span className="hy-pill" data-s={stepTone(m.step)}>{STEP_LABEL[m.step]||'步驟待確認'}</span> 前置：{m.dependsOn.length?m.dependsOn.join('、'):'無'}{timelineExtra(m, current)}</small></button></li>})}</ol>{!shownMilestones.length&&<p className="ao-empty">正式規劃尚未提供里程碑。</p>}</section>
       <div className="ao-overview-main"><section className="ao-card"><h2>AI 正在做什麼</h2>{rounds.map(round=><button className="ao-row ao-work" key={round.id} onClick={()=>openExecution(round.cardId||round.id)}><span className="ao-lane">{OFFICE_NAMES[round.executor]||round.executor||'執行者'}</span><span className="ao-work-main"><b>{round.task}</b><small>{round.status||'執行回合'}</small></span><span className="hy-pill" data-s={round.status==='failed'?'bad':round.status==='blocked'?'you':'ai'}>{round.status||'執行中'}</span></button>)}{!rounds.length&&<p className="ao-empty">目前沒有執行中的回合。</p>}</section></div>
       </div><details className="hy rt-root hy-card"><summary>AI 執行配置</summary><p>執行者：{OFFICE_NAMES[project.executor]||project.executor}（備案 {OFFICE_NAMES[project.executorBackup]||project.executorBackup||'尚未指定'}）</p><p>審查者：{OFFICE_NAMES[project.reviewer]||project.reviewer||'尚未指定'}（備案 {OFFICE_NAMES[project.reviewerBackup]||project.reviewerBackup||'尚未指定'}）</p><OfficeReassignQueue project={project} reload={reload}/><OfficeRequest type="reassign" projects={data.projects} projectId={project.id} reload={reload} settings={data?.settings?.ai_defaults}/></details></div>
       <div hidden={tab!=='meeting'}><OfficeMeeting project={project} projects={data.projects} reload={reload} state={data.state} index={data.index}/></div>
-      <div hidden={tab!=='execution'}><OfficeExecution project={view} plan={view._plan} selected={selectedWork} select={setSelectedWork} planDocument={{...planDocument,url:project.planUrl}}/></div>
-      <div hidden={tab!=='outputs'}><OfficeResults project={project} milestones={milestoneRows} report={report} onOverview={()=>setTab('meeting')}/></div>
+      <div hidden={tab!=='execution'}><OfficeExecution project={view} plan={view._plan} selected={selectedWork} select={setSelectedWork} planDocument={{...planDocument,url:project.planUrl}} documents={documents}/></div>
+      <div hidden={tab!=='outputs'}><OfficeResults project={project} milestones={milestoneRows} report={report} documents={documents} onOverview={()=>setTab('meeting')}/></div>
       <div hidden={tab!=='log'}><OfficeJournal project={project} reload={reload} onOverview={()=>setTab('meeting')} onExecution={openExecution} state={data.state} index={data.index}/></div>
     </section>}
   </section>

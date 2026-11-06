@@ -35,6 +35,11 @@ export default function ReportSummaryCard({
       <Tags badges={badges} />
     </div>}
     {status === 'loading' && <p className="ao-muted">正在讀取專案報告…</p>}
+    {status === 'planning' && <div className="rs-report">
+      <p className="rs-kicker">目前規劃</p>
+      {message ? <p>{message}</p> : null}
+      {items.length > 0 && <ul className="rs-items">{items.map((item, index) => <li key={index}>{item.lead ? <><b>{item.lead}</b>：{item.text}</> : item.text}</li>)}</ul>}
+    </div>}
     {status === 'empty' && <p>這個專案還沒有專案報告</p>}
     {status === 'empty' && message ? <p className="ao-muted">{message}</p> : null}
     {status === 'error' && <p role="alert">{message || '報告讀取失敗。'}</p>}
