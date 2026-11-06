@@ -5,7 +5,7 @@ import {
   activeDocumentKey, bodyReads, canonicalOfficeDocuments, documentProblem, driveFileId,
   outcomeCopy, presentOfficeDocuments, safeMarkdown, snapshotLines,
 } from '../src/lib/officeDocuments.mjs'
-import { officeFailureMessage } from '../src/lib/botOfficeView.mjs'
+import { normalizeOfficeDocument, officeFailureMessage } from '../src/lib/botOfficeView.mjs'
 import { loadOfficeDriveDocument } from '../src/botOfficeData.js'
 
 const PLAN = '14m8hE1stISKuqRXkn1XoeH057T6hS9jCkW2IUhFtGo8'
@@ -278,6 +278,36 @@ test('side metadata and prose do not register an execution plan', () => {
   }, {}, [proseDecision])
   assert.equal(bundle.executionPlans.length, 0)
   assert.match(bundle.executionGap, /尚未登錄/)
+})
+
+test('backend drive-document fixture is accepted without relabeling a missing snapshot', () => {
+  const live = {
+    file_id: 'PlanDoc00001', name: '專案規劃書',
+    markdown: '## 目標\n\n測試規劃書全文，不是正式專案。\n\n## 里程碑\n\n- M1 定義驗收\n',
+    truncated: false, modified_time: '2026-11-06T01:34:52Z',
+  }
+  const historical = {
+    ...live,
+    markdown: '## 目標\n\nv1 全文，不是正式專案。\n',
+    modified_time: '2026-11-04T01:32:37Z',
+    historical: true, version: 1, content_status: 'snapshot',
+  }
+  assert.match(normalizeOfficeDocument(live).markdown, /測試規劃書全文/)
+  assert.match(normalizeOfficeDocument(historical).markdown, /v1 全文/)
+  assert.equal(normalizeOfficeDocument(historical).truncated, false)
+  const unavailable = officeFailureMessage(404, {
+    error: 'document_version_unavailable',
+    reason: '這版與較新版本共用同一個 Drive 檔，送出時沒有留下內文快照。不能把現況全文當成當時的版本。',
+    file_id: 'PlanDoc00001', version: 1, content_status: 'unrecoverable',
+  }, 'drive-document')
+  assert.match(unavailable, /沒有留下內文快照/)
+  assert.match(unavailable, /unrecoverable/)
+  assert.doesNotMatch(unavailable, /尚未部署/)
+  assert.doesNotMatch(unavailable, /測試規劃書全文/)
+  assert.match(officeFailureMessage(403, { error: 'document_forbidden', reason: '這份文件不在專案資料夾裡' }, 'drive-document'), /不在專案資料夾/)
+  assert.match(officeFailureMessage(413, { error: 'document_too_large', reason: '文件超過可讀上限' }, 'drive-document'), /大小上限/)
+  assert.match(officeFailureMessage(400, { error: 'document_version_invalid' }, 'drive-document'), /400/)
+  assert.doesNotMatch(officeFailureMessage(400, { error: 'document_version_invalid' }, 'drive-document'), /尚未部署/)
 })
 
 test('unreadable documents name the document and the reason', () => {
