@@ -81,7 +81,7 @@ async function loadCanonicalBody(projectId, spec, signal) {
     return { status: 'ready', markdown: safeMarkdown(doc.markdown), error: '', truncated: doc.truncated }
   }
   try {
-    if (spec.cardId) {
+    if (spec.cardId && !Number.isInteger(spec.version)) {
       try {
         return ready(await loadOfficeDocument(spec.cardId, opts))
       } catch (error) {
@@ -89,7 +89,7 @@ async function loadCanonicalBody(projectId, spec, signal) {
         if (!spec.fileId) return fail(error)
       }
     }
-    if (spec.fileId) return ready(await loadOfficeDriveDocument(projectId, spec.fileId, opts))
+    if (spec.fileId) return ready(await loadOfficeDriveDocument(projectId, spec.fileId, { ...opts, version: spec.version }))
     return fail(new Error('沒有可讀參照。'))
   } catch (error) {
     if (error?.name === 'AbortError') throw error

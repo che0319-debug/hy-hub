@@ -222,12 +222,75 @@ test('duplicate reviews of one target keep a single current file', () => {
   assert.equal(picked.plan.version, 3)
 })
 
+test('history_meta without a snapshot does not reread today\'s file as the old version', () => {
+  const bundle = canonicalOfficeDocuments({
+    id: 'p',
+    plan: {
+      version: 3,
+      doc_url: doc(PLAN),
+      drive_file_id: null,
+      table: [{ id: 'M1', name: '現況', output: '現在的表' }],
+      history_meta: [
+        { version: 2, doc_url: doc(PLAN), drive_file_id: null, submitted_at: '2026-11-05T01:25:31.000Z', status: 'returned' },
+      ],
+    },
+  }, {}, [])
+  const older = presentOfficeDocuments(bundle, 'plan:2')
+  assert.equal(older.plan.fetch, false)
+  assert.equal(older.plan.readKey, '')
+  assert.equal(older.plan.unsnapshotted, true)
+  assert.match(older.sameFileNote, /不會把目前文件內文標成 v2/)
+  assert.equal(bodyReads(older).some(item => item.fileId === PLAN), false)
+  assert.equal(bodyReads(presentOfficeDocuments(bundle, 'plan:3')).some(item => item.fileId === PLAN && item.version == null), true)
+})
+
+test('a captured snapshot on the same file is read with version and not as the live file', () => {
+  const bundle = canonicalOfficeDocuments({
+    id: 'p',
+    plan: {
+      version: 3,
+      doc_url: doc(PLAN),
+      history: [{
+        version: 2,
+        doc_url: doc(PLAN),
+        content_snapshot: { status: 'snapshot', version: 2 },
+        table: [{ id: 'M1', name: '舊', output: '快照表' }],
+      }],
+    },
+  }, {}, [])
+  const older = presentOfficeDocuments(bundle, 'plan:2')
+  assert.equal(older.plan.fetch, true)
+  assert.equal(older.plan.snapshotVersion, 2)
+  assert.equal(older.plan.readKey, `file:${PLAN}:v2`)
+  assert.equal(older.plan.cardId, '')
+  const reads = bodyReads(older)
+  assert.equal(reads[0].version, 2)
+  assert.equal(reads[0].fileId, PLAN)
+  assert.equal(reads[0].cardId, '')
+  assert.match(older.sameFileNote, /全文快照/)
+})
+
+test('side metadata and prose do not register an execution plan', () => {
+  const bundle = canonicalOfficeDocuments({
+    id: 'p-003',
+    plan: { version: 3, doc_url: doc(PLAN) },
+    document_roles: { ai_execution_plan: { drive_file_id: EXEC, doc_url: doc(EXEC) } },
+  }, {}, [proseDecision])
+  assert.equal(bundle.executionPlans.length, 0)
+  assert.match(bundle.executionGap, /尚未登錄/)
+})
+
 test('unreadable documents name the document and the reason', () => {
   assert.equal(officeFailureMessage(404, { detail: 'Not Found' }, 'drive-document'), '內文讀取介面尚未部署。')
   assert.equal(officeFailureMessage(404, { error: 'drive_document_unavailable' }, 'drive-document'), '內文讀取介面尚未部署。')
   assert.match(officeFailureMessage(404, { error: 'no_document', reason: '不在專案資料夾' }, 'drive-document'), /找不到這份文件/)
   assert.match(officeFailureMessage(403, { error: 'document_forbidden', reason: '沒有權限' }, 'drive-document'), /沒有讀取權限/)
   assert.match(officeFailureMessage(422, { error: 'report_unsafe', reason: 'script' }, 'drive-document'), /安全檢查/)
+  const missingSnapshot = officeFailureMessage(404, { error: 'document_version_unavailable', reason: '沒有留下快照', content_status: 'live_only' }, 'drive-document')
+  assert.match(missingSnapshot, /沒有留下快照/)
+  assert.match(missingSnapshot, /live_only/)
+  assert.doesNotMatch(missingSnapshot, /尚未部署/)
+  assert.doesNotMatch(officeFailureMessage(404, { error: 'document_version_unavailable', reason: '沒有快照', content_status: 'absent' }), /尚未部署/)
   assert.match(documentProblem('專案規劃書 v3', '沒有讀取權限。'), /專案規劃書 v3：沒有讀取權限/)
   assert.match(documentProblem('審查 plan-v3', '找不到這份文件。'), /審查 plan-v3/)
 })
@@ -250,6 +313,13 @@ test('drive document client stays on the office read route', async () => {
   const data = await loadOfficeDriveDocument('p-003', PLAN, { fetcher, base: 'https://example.test' })
   assert.equal(called, `https://example.test/api/office/projects/p-003/drive-document?file_id=${PLAN}`)
   assert.match(data.markdown, /全文/)
+  let versioned = ''
+  await loadOfficeDriveDocument('p-003', PLAN, {
+    version: 2,
+    fetcher: async url => { versioned = url; return new Response(JSON.stringify({ file_id: PLAN, name: '快照', markdown: '舊全文', truncated: false, modified_time: '2026-11-05T00:00:00Z' }), { status: 200, headers: { 'content-type': 'application/json' } }) },
+    base: 'https://example.test',
+  })
+  assert.equal(versioned, `https://example.test/api/office/projects/p-003/drive-document?file_id=${PLAN}&version=2`)
 })
 
 test('both tabs render the same official documents without an html frame', async () => {

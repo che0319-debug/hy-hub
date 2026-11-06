@@ -85,7 +85,7 @@ function DocCard({ doc, body, focus = false }) {
     {ready && body.truncated && <p className="ao-muted">文件超過上限，以下為截斷內容。</p>}
     {ready && <MarkdownBody markdown={body.markdown} />}
     <Snapshot table={doc.table} open={!ready} />
-    <DriveLink url={doc.url} />
+    {!doc.unsnapshotted && <DriveLink url={doc.url} />}
   </section>
 }
 

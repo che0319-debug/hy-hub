@@ -158,6 +158,11 @@ export function officeFailureMessage(status, body = {}, topic = 'office') {
   const error = textOf(body?.error)
   const reason = textOf(body?.reason)
   if (topic === 'delete') return deleteErrorMessage(status, body)
+  if (error === 'document_version_unavailable') {
+    const content = textOf(body?.content_status)
+    const detail = [reason, content ? `內容狀態：${content}` : ''].filter(Boolean).join('。')
+    return `這一版沒有可讀的全文快照。${detail ? `${detail}。` : ''}`
+  }
   if (topic === 'drive-document') {
     if (status === 404 && !error && textOf(body?.detail) === 'Not Found') return '內文讀取介面尚未部署。'
     if (status === 404 && error === 'drive_document_unavailable') return '內文讀取介面尚未部署。'

@@ -1,15 +1,12 @@
 // 執行計畫與成果與審查共用的正式文件參照。
 // 內文只走既有卡片讀取，或專案範圍的 drive-document。瀏覽器不直接讀 Drive。
-// drive-document 契約（後端尚未提供；未部署時 404 {"detail":"Not Found"}）：
-// GET /api/office/projects/{id}/drive-document?file_id=
-// 200 {file_id,name,markdown,truncated,modified_time}
-// 404 {error:"no_document",reason} 這份文件不可讀
-// 404 {error:"drive_document_unavailable"} 或 FastAPI {"detail":"Not Found"} 路由尚未部署
-// 403 {error:"document_forbidden",reason}
-// 422 {error:"report_unsafe",reason}
-// 後端只能匯出這個專案 state／index 已登錄的 file id，不能接受任意 Drive 檔。
-// AI 執行規劃書要有 building.execution_plan（或 plan.execution_plan、卡片 doc_role=execution_plan）：
-// { version, doc_url, drive_file_id, name, submitted_at }。不要從日誌句子猜網址。
+// GET /api/office/projects/{id}/drive-document?file_id={bareId}&version={n}
+// version 只在 content_snapshot.status=snapshot 時送。200 {file_id,name,markdown,truncated,modified_time}
+// 404 {error:"document_version_unavailable",reason,content_status} 是這一版沒有快照，不是路由未部署。
+// 404 {error:"no_document",reason} 文件不可讀。
+// 404 {error:"drive_document_unavailable"} 或 {"detail":"Not Found"} 才是路由未部署。
+// AI 執行規劃書只認 building.execution_plan、plan.execution_plan，或 doc_role=execution_plan 的卡片。
+// 登錄走 POST /api/office/projects/{id}/execution-plan，這支前端不代送。
 
 const list = value => Array.isArray(value) ? value : []
 const text = value => typeof value === 'string' ? value.trim() : ''
@@ -79,10 +76,32 @@ function byTime(a, b) {
 }
 
 function readOf(doc) {
-  if (doc.fetchBody === false) return { fetch: false, readKey: '' }
-  if (doc.cardId) return { fetch: true, readKey: `card:${doc.cardId}` }
-  if (doc.fileId) return { fetch: true, readKey: `file:${doc.fileId}` }
-  return { fetch: false, readKey: '' }
+  if (doc.fetchBody === false) return { fetch: false, readKey: '', snapshotVersion: null }
+  if (Number.isInteger(doc.snapshotVersion) && doc.fileId) {
+    return { fetch: true, readKey: `file:${doc.fileId}:v${doc.snapshotVersion}`, snapshotVersion: doc.snapshotVersion, cardId: '' }
+  }
+  if (doc.cardId) return { fetch: true, readKey: `card:${doc.cardId}`, snapshotVersion: null }
+  if (doc.fileId) return { fetch: true, readKey: `file:${doc.fileId}`, snapshotVersion: null }
+  return { fetch: false, readKey: '', snapshotVersion: null }
+}
+
+function planHistory(plan) {
+  const rich = list(plan?.history).filter(item => item && typeof item === 'object')
+  if (rich.length) return rich
+  return list(plan?.history_meta).filter(item => item && typeof item === 'object')
+}
+
+// 同一份 Drive 檔：只有留下全文快照才讀 ?version=。否則不把目前內文套到舊版。
+function historicalRead(item, currentFileId) {
+  const fileId = driveFileId(item?.drive_file_id) || driveFileId(item?.doc_url) || currentFileId
+  const snap = item?.content_snapshot && typeof item.content_snapshot === 'object' ? item.content_snapshot : null
+  const same = Boolean(fileId && currentFileId && fileId === currentFileId)
+  if (same && text(snap?.status) === 'snapshot') {
+    const version = Number.isInteger(snap.version) ? snap.version : item.version
+    return { fileId, snapshotVersion: Number.isInteger(version) ? version : null, fetchBody: Number.isInteger(version), unsnapshotted: false }
+  }
+  if (same || !fileId) return { fileId: fileId || '', snapshotVersion: null, fetchBody: false, unsnapshotted: true }
+  return { fileId, snapshotVersion: null, fetchBody: true, unsnapshotted: false }
 }
 
 function withRead(doc) {
@@ -148,23 +167,27 @@ export function canonicalOfficeDocuments(building, index, decisions = []) {
       submittedAt: text(plan?.submitted_at),
       table: tableRows(plan?.table),
       fetchBody: Boolean(fileId || cardId),
+      snapshotVersion: null,
+      unsnapshotted: false,
       missingReason: plan && !fileId && !cardId ? '專案規劃書沒有登錄 Drive 文件。' : '',
     })
-    for (const item of list(plan?.history)) {
-      if (!item || typeof item !== 'object' || !Number.isInteger(item.version) || item.version === version) continue
-      const historyFile = driveFileId(item.drive_file_id) || driveFileId(item.doc_url) || fileId
+    for (const item of planHistory(plan)) {
+      if (!Number.isInteger(item.version) || item.version === version) continue
+      const prior = historicalRead(item, fileId)
       plans.push({
         key: `plan:${item.version}`,
         role: 'plan',
         version: item.version,
         latest: false,
         title: `專案規劃書 v${item.version}`,
-        fileId: historyFile,
+        fileId: prior.fileId,
         url: text(item.doc_url) || url,
-        cardId: historyFile === fileId ? cardId : '',
+        cardId: prior.unsnapshotted || prior.snapshotVersion != null ? '' : (prior.fileId === fileId ? cardId : ''),
         submittedAt: text(item.submitted_at),
         table: tableRows(item.table),
-        fetchBody: Boolean(historyFile) && historyFile !== fileId,
+        fetchBody: prior.fetchBody,
+        snapshotVersion: prior.snapshotVersion,
+        unsnapshotted: prior.unsnapshotted,
         missingReason: '',
       })
     }
@@ -195,14 +218,34 @@ export function canonicalOfficeDocuments(building, index, decisions = []) {
       submittedAt: text(item.submitted_at),
       table: [],
       fetchBody: true,
+      snapshotVersion: null,
+      unsnapshotted: false,
       missingReason: '',
     })
   }
   if (executionRaw || executionCard) {
     pushExecution(executionRaw || { doc_url: executionCard?.drive_url, drive_file_id: executionCard?.drive_file_id, name: executionCard?.title }, true)
+    const currentExecFile = driveFileId(executionRaw?.drive_file_id) || driveFileId(executionRaw?.doc_url) || driveFileId(executionCard?.drive_url)
     for (const item of list(executionRaw?.history)) {
-      if (Number.isInteger(item?.version) && item.version === executionRaw?.version) continue
-      pushExecution(item, false)
+      if (!item || (Number.isInteger(item.version) && item.version === executionRaw?.version)) continue
+      const prior = historicalRead(item, currentExecFile)
+      if (!prior.fileId && !prior.fetchBody) continue
+      executionPlans.push({
+        key: Number.isInteger(item.version) ? `execution:${item.version}` : `execution:${prior.fileId}`,
+        role: 'execution_plan',
+        version: Number.isInteger(item.version) ? item.version : null,
+        latest: false,
+        title: Number.isInteger(item.version) ? `AI 執行規劃書 v${item.version}` : 'AI 執行規劃書',
+        fileId: prior.fileId,
+        url: text(item.doc_url),
+        cardId: '',
+        submittedAt: text(item.submitted_at),
+        table: [],
+        fetchBody: prior.fetchBody,
+        snapshotVersion: prior.snapshotVersion,
+        unsnapshotted: prior.unsnapshotted,
+        missingReason: '',
+      })
     }
   }
   const reviews = []
@@ -410,14 +453,18 @@ export function presentOfficeDocuments(bundle, key = '') {
     return null
   })()
   const registeredExecution = pack.executionPlans.find(item => item.latest) || pack.executionPlans[0] || null
-  const executionNote = plan && !execution && registeredExecution?.version != null && registeredExecution.version !== plan.version
-    ? `AI 執行規劃書登錄的版本是 v${registeredExecution.version}。`
-    : ''
+  const executionNote = execution?.unsnapshotted
+    ? `AI 執行規劃書 v${execution.version} 沒有留下全文快照。這裡不會把目前執行規劃書標成這一版。`
+    : (plan && !execution && registeredExecution?.version != null && registeredExecution.version !== plan.version
+      ? `AI 執行規劃書登錄的版本是 v${registeredExecution.version}。`
+      : '')
   const target = plan?.version != null ? `plan-v${plan.version}` : (milestone?.id || '')
   const review = directReview || (plan?.key === 'plan:card' ? pack.reviews.find(item => item.current) || null : (target ? chosenReview(pack.reviews, target) : null))
-  const sameFileNote = plan && latest && !plan.latest && plan.fileId && plan.fileId === latest.fileId
-    ? `規劃書 v${plan.version} 與最新 v${latest.version} 共用同一份 Drive 文件。這一節是 v${plan.version} 提交時寫入的里程碑表。文件內文現況在最新版本。`
-    : ''
+  const sameFileNote = plan && latest && !plan.latest && plan.unsnapshotted && plan.fileId && plan.fileId === latest.fileId
+    ? (plan.table?.length
+      ? `規劃書 v${plan.version} 與最新 v${latest.version} 是同一份 Drive 文件，沒有留下 v${plan.version} 全文快照。下面是提交時寫入的里程碑表。目前文件內文只屬於最新版本。`
+      : `規劃書 v${plan.version} 與最新 v${latest.version} 是同一份 Drive 文件，沒有留下 v${plan.version} 全文快照。這裡不會把目前文件內文標成 v${plan.version}。`)
+    : (plan && !plan.latest && Number.isInteger(plan.snapshotVersion) ? `規劃書 v${plan.version} 讀的是留下的全文快照。` : '')
   const history = pack.reviews.filter(item => !review || reviewIdentity(item) !== reviewIdentity(review)).slice().reverse()
   return {
     key: selected,
@@ -442,7 +489,14 @@ export function bodyReads(view) {
   const push = doc => {
     if (!doc?.fetch || !doc.readKey) return
     if (reads.some(item => item.key === doc.readKey)) return
-    reads.push({ key: doc.readKey, cardId: doc.cardId || '', fileId: doc.fileId || '', title: doc.title || '文件', role: doc.role || '' })
+    reads.push({
+      key: doc.readKey,
+      cardId: Number.isInteger(doc.snapshotVersion) ? '' : (doc.cardId || ''),
+      fileId: doc.fileId || '',
+      title: doc.title || '文件',
+      role: doc.role || '',
+      version: Number.isInteger(doc.snapshotVersion) ? doc.snapshotVersion : null,
+    })
   }
   if (!view) return reads
   push(view.plan)
