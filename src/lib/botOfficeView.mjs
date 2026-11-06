@@ -158,6 +158,18 @@ export function officeFailureMessage(status, body = {}, topic = 'office') {
   const error = textOf(body?.error)
   const reason = textOf(body?.reason)
   if (topic === 'delete') return deleteErrorMessage(status, body)
+  if (error === 'document_version_unavailable') {
+    const content = textOf(body?.content_status)
+    const detail = [reason, content ? `內容狀態：${content}` : ''].filter(Boolean).join('。')
+    return `這一版沒有可讀的全文快照。${detail ? `${detail}。` : ''}`
+  }
+  if (topic === 'drive-document') {
+    if (status === 404 && !error && textOf(body?.detail) === 'Not Found') return '內文讀取介面尚未部署。'
+    if (status === 404 && error === 'drive_document_unavailable') return '內文讀取介面尚未部署。'
+    if (status === 404 && error === 'no_document') return reason ? `找不到這份文件。${reason}` : '找不到這份文件。'
+    if (status === 403 || error === 'document_forbidden') return `沒有讀取權限。${reason}`.trim()
+    if (status === 422 && error === 'report_unsafe') return `文件未通過安全檢查。${reason}`
+  }
   if (status === 404 && error === 'no_document') return '這張卡片沒有可讀的 Drive 文件。'
   if (status === 422 && error === 'report_unsafe') return `報告未通過安全檢查。${reason}`
   if (status === 413) return '內容超過大小上限，沒有載入。'

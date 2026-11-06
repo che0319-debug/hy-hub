@@ -1,4 +1,4 @@
-import {useCallback,useEffect,useRef,useState} from 'react'
+import {useCallback,useEffect,useMemo,useRef,useState} from 'react'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import {PlanSummary,PlanDocument} from '../pages/PlanViews'
@@ -8,7 +8,9 @@ import {composeReportSummary,reportSummaryStatus} from '../lib/reportSummary.mjs
 import ReportSummaryCard,{ReportStaleNote} from './ReportSummaryCard'
 import {OfficeRequest,OfficeLog,OfficeFollowUps,OfficeReassignQueue} from './OfficeActions'
 import {Decision} from './OfficeDecisions'
-import {OFFICE_NAMES,OFFICE_TABS,loadOfficeReport,loadOfficeReportHtml,loadOfficeDocument,loadOfficeFiles,deleteOfficeProject,uploadOfficeFile,importOfficeReference,officeDeleteHold,advanceFollowUpLabel} from '../botOfficeData'
+import {OFFICE_NAMES,OFFICE_TABS,loadOfficeReport,loadOfficeReportHtml,loadOfficeDocument,loadOfficeDriveDocument,loadOfficeFiles,deleteOfficeProject,uploadOfficeFile,importOfficeReference,officeDeleteHold,advanceFollowUpLabel} from '../botOfficeData'
+import {canonicalOfficeDocuments,presentOfficeDocuments,activeDocumentKey,bodyReads,documentProblem,safeMarkdown,outcomeCopy} from '../lib/officeDocuments.mjs'
+import OfficialDocuments from './OfficialDocuments'
 import {authHeaders} from '../auth'
 import './project-report.css'
 import '../pages/control-center-v5.css'
@@ -70,12 +72,68 @@ export function usePlanDocument(cardId) {
   return state
 }
 
-export function OfficeReportStrip({report,onOpen}) {
+async function loadCanonicalBody(projectId, spec, signal) {
+  const opts = { headers: authHeaders(), signal }
+  const fail = error => ({ status: 'error', markdown: '', error: documentProblem(spec.title, error?.message || '讀取失敗。'), truncated: false })
+  const ready = data => {
+    const doc = normalizeOfficeDocument(data)
+    if (!doc || typeof doc.markdown !== 'string') return fail(new Error('文件格式無法辨識。'))
+    return { status: 'ready', markdown: safeMarkdown(doc.markdown), error: '', truncated: doc.truncated }
+  }
+  try {
+    if (spec.cardId && !Number.isInteger(spec.version)) {
+      try {
+        return ready(await loadOfficeDocument(spec.cardId, opts))
+      } catch (error) {
+        if (error?.name === 'AbortError') throw error
+        if (!spec.fileId) return fail(error)
+      }
+    }
+    if (spec.fileId) return ready(await loadOfficeDriveDocument(projectId, spec.fileId, { ...opts, version: spec.version }))
+    return fail(new Error('沒有可讀參照。'))
+  } catch (error) {
+    if (error?.name === 'AbortError') throw error
+    return fail(error)
+  }
+}
+
+export function useOfficeCanonical(project, state, index) {
+  const building = project?.source || null
+  const bundle = useMemo(() => canonicalOfficeDocuments(building, index, state?.decisions), [building, index, state])
+  const [selected, setSelected] = useState('')
+  const projectId = project?.id || ''
+  useEffect(() => { setSelected('') }, [projectId])
+  const selectedKey = activeDocumentKey(bundle, selected)
+  const view = useMemo(() => presentOfficeDocuments(bundle, selectedKey), [bundle, selectedKey])
+  const currentView = useMemo(() => presentOfficeDocuments(bundle, bundle.currentKey), [bundle])
+  const reads = useMemo(() => bodyReads(view), [view])
+  const [bodies, setBodies] = useState({})
+  useEffect(() => {
+    if (!projectId) { setBodies({}); return undefined }
+    const specs = reads
+    const ctrl = new AbortController()
+    let alive = true
+    setBodies(prev => {
+      const next = {}
+      for (const spec of specs) next[spec.key] = prev[spec.key]?.status === 'ready' ? prev[spec.key] : { status: 'loading', markdown: '', error: '', truncated: false }
+      return next
+    })
+    for (const spec of specs) {
+      loadCanonicalBody(projectId, spec, ctrl.signal).then(result => {
+        if (alive) setBodies(prev => ({ ...prev, [spec.key]: result }))
+      }).catch(error => { if (error?.name !== 'AbortError') return })
+    }
+    return () => { alive = false; ctrl.abort() }
+  }, [projectId, reads])
+  return { bundle, view, currentView, bodies, setSelected, selectedKey }
+}
+
+export function OfficeReportStrip({report,onOpen,planning=false,attention=false}) {
   const ready=report?.status==='ready'
-  const label=report?.status==='loading'?'讀取中':report?.status==='error'?'讀取失敗':ready?(report.stale?'狀態較新':'已有報告'):'還沒有'
+  const label=report?.status==='loading'?'讀取中':report?.status==='error'?'讀取失敗':ready?(report.stale?'狀態較新':'已有報告'):planning?(attention?'待你看規劃':'有規劃書'):'還沒有'
   return <button type="button" className="hy-card pr-strip" onClick={onOpen}>
     <span><b>專案報告</b>{ready&&report.modified&&<small> {when(report.modified)}</small>}</span>
-    <span className="hy-pill" data-s={report?.status==='error'?'bad':report?.stale?'you':ready?'done':'wait'}>{label}</span>
+    <span className="hy-pill" data-s={report?.status==='error'?'bad':report?.stale?'you':ready?'done':planning&&attention?'you':planning?'done':'wait'}>{label}</span>
   </button>
 }
 
@@ -84,11 +142,13 @@ function excerptLabel(modified) {
   return stamp === '尚未記錄' ? '摘自正式成果報告' : `摘自正式成果報告（${stamp}）`
 }
 
-export function OfficeSnapshot({html='',lines=[],project=null,milestones=[],status='empty',message='',stale=false,modified=''}) {
+export function OfficeSnapshot({html='',lines=[],project=null,milestones=[],status='empty',message='',stale=false,modified='',notice=''}) {
   const ready=status==='ready'
+  const planning=status==='planning'
   const model=composeReportSummary({html:ready?html:'',lines:ready?lines:[],project,milestones})
   const hasReport=model.metrics.length>0||Boolean(model.conclusion)||model.items.length>0
-  return <ReportSummaryCard title={model.title} source={ready&&hasReport?excerptLabel(modified):''} badges={model.badges} metrics={ready?model.metrics:[]} conclusion={ready?model.conclusion:''} items={ready?model.items:[]} status={status} message={message} stale={stale}/>
+  const planningItems=planning?lines.map(text=>({text})):[]
+  return <ReportSummaryCard title={model.title} source={ready&&hasReport?excerptLabel(modified):''} badges={model.badges} metrics={ready?model.metrics:[]} conclusion={ready?model.conclusion:''} items={planning?planningItems:(ready?model.items:[])} status={status} message={planning?notice:message} stale={stale}/>
 }
 export function OfficeCards({items}) {return items.map(c=><article className="ao-card" key={c.id}><h2>{c.title}</h2><p>{c.summary}</p><Link href={c.driveUrl}>開啟 Drive 原件</Link></article>)}
 export function OfficeTeam({project}) {
@@ -164,15 +224,16 @@ export function OfficeMeeting({project,projects,reload,state,index,now=Date.now(
   <MeetingClosed project={project} items={zones.closed} reload={reload}/>
  </div>
 }
-export function OfficeExecution({project,plan,selected,select,planDocument}) {
-  const [mode,setMode]=useState('summary'),[ratio,setRatio]=useState(60),[focus,setFocus]=useState('')
+export function OfficeExecution({project,plan,selected,select,planDocument,documents}) {
+  const [mode,setMode]=useState('document'),[ratio,setRatio]=useState(60),[focus,setFocus]=useState('')
   const container=useRef(null),dragging=useRef(false),[drag,setDrag]=useState(false)
   const rows=project._officeMilestones?.length?project._officeMilestones:milestones(project)
   const embedded=plan?.project_plan_markdown||plan?.ai_execution_plan_markdown
   const ready=planDocument?.status==='ready'
   const fromApi=ready?planDocument.markdown:''
   const merged=ready?{...(plan||{}),project_plan_markdown:fromApi}:plan
-  const showGap=planDocument?.status==='unavailable'||((!planDocument||planDocument.status==='none')&&!embedded)
+  const canonicalOn=Boolean(documents?.view && (documents.view.hasPlanning || documents.view.plan || documents.view.execution || documents.view.outputs?.length))
+  const showGap=!canonicalOn && (planDocument?.status==='unavailable'||((!planDocument||planDocument.status==='none')&&!embedded))
   const showList=value=>Array.isArray(value)?(value.filter(Boolean).join('、')||'尚未提供'):text(value)
   // 從概況點里程碑／工作包進來：切到「規劃文件」並跳到對應章節。
   useEffect(()=>{if(selected){const pkg=(project.packages||[]).find(p=>p.id===selected);setFocus(pkg?.milestone_id||selected);setMode(m=>m==='summary'?'split':m)}},[selected])
@@ -183,10 +244,11 @@ export function OfficeExecution({project,plan,selected,select,planDocument}) {
       <section className="ao-card ao-work-pane" hidden={mode==='document'} aria-label="時程與執行"><h2>時程與執行</h2>{rows.map(m=><details key={m.id} open={selected===m.id || (m.packages||[]).some(p=>p.id===selected) || !selected}><summary onClick={()=>{select(m.id);setFocus(m.id)}}><b>{m.id} {m.name}</b></summary><p>目標：{text(m.goal || m.objective)}</p><p>交付：{showList(m.deliverables)}</p><p>驗收條件：{showList(m.acceptance_criteria||m.acceptance)}</p>{(m.packages||[]).map(p=><article key={p.id} className="ao-package"><button className="ao-row" aria-pressed={selected===p.id} onClick={()=>{select(p.id);setFocus(m.id)}}><b>{p.task}</b><span>{PACKAGE_STATUS[p.status]} · {p.executor}</span></button><p>前置相依：{(p.dependencies||[]).length?(p.dependencies||[]).map(id=>(project.packages||[]).find(w=>w.id===id)?.task || id).join('、'):'無'}</p><p>交付成果：{text(p.expected_outputs)}</p><p>驗收條件：{text(p.acceptance_criteria)}</p>{p.status==='BLOCKED' && <p className="ao-muted">阻塞依據：{text(p.requires)}</p>}</article>)}</details>)}{!rows.length && <Empty>尚無正式 Milestone。小型專案不強制固定里程碑數量。</Empty>}{(project._rounds||[]).length>0&&<div><h3>執行回合</h3>{project._rounds.map(round=><article key={round.id} className="ao-package"><b>{round.task}</b><p>{OFFICE_NAMES[round.executor]||round.executor||'執行者'} · {round.status||'狀態未記'}{round.startedAt?` · ${when(round.startedAt)}`:''}</p></article>)}</div>}</section>
       <div className="ao-splitter" hidden={mode!=='split'} role="separator" aria-label="調整雙欄比例" aria-orientation="vertical" aria-valuemin={30} aria-valuemax={75} aria-valuenow={Math.round(ratio)} tabIndex={0} onPointerDown={()=>{dragging.current=true;setDrag(true)}} onKeyDown={e=>{if(['ArrowLeft','ArrowRight','Home'].includes(e.key)){e.preventDefault();setRatio(e.key==='Home'?60:Math.max(30,Math.min(75,ratio+(e.key==='ArrowLeft'?-5:5))))}}}/>
       <div className="ao-doc-slot" hidden={mode==='work'}>
-        {planDocument?.status==='loading'&&<p className="ao-muted" role="status">正在讀取規劃書…</p>}
-        {planDocument?.status!=='loading'&&showGap&&<section className="ao-card" aria-label="規劃書全文"><h2>規劃書</h2><p>規劃書全文讀取未接上</p>{(planDocument?.url)&&<p><Link href={planDocument.url}>開啟規劃書原件</Link></p>}{planDocument?.error&&<p className="ao-muted">{planDocument.error}</p>}</section>}
-        {fromApi&&planDocument.truncated&&<p className="ao-muted">文件超過上限，以下為截斷內容。</p>}
-        {(ready||embedded)&&<PlanDocument project={project} plan={merged} focus={focus}/>}
+        {canonicalOn&&<OfficialDocuments view={documents.view} bodies={documents.bodies} onSelect={documents.setSelected} mode="plan"/>}
+        {!canonicalOn&&planDocument?.status==='loading'&&<p className="ao-muted" role="status">正在讀取規劃書…</p>}
+        {!canonicalOn&&planDocument?.status!=='loading'&&showGap&&<section className="ao-card" aria-label="規劃書全文"><h2>規劃書</h2><p>規劃書全文讀取未接上</p>{(planDocument?.url)&&<p><Link href={planDocument.url}>開啟規劃書原件</Link></p>}{planDocument?.error&&<p className="ao-muted">{planDocument.error}</p>}</section>}
+        {!canonicalOn&&fromApi&&planDocument.truncated&&<p className="ao-muted">文件超過上限，以下為截斷內容。</p>}
+        {!canonicalOn&&(ready||embedded)&&<PlanDocument project={project} plan={merged} focus={focus}/>}
       </div>
     </div></>
 }
@@ -215,24 +277,36 @@ function ReviewDocument({cardId}) {
 }
 
 // HTML is supplied as content, never fetched from an arbitrary URL or inserted into the host DOM.
-export function OfficeResults({project,report,milestones=[],onOverview}) {
+export function OfficeResults({project,report,milestones=[],onOverview,documents}) {
  const [full,setFull]=useState(false)
  const versions=report?.versions||[]
  const html=report?.html||''
  useEffect(()=>{if(!full)return;const key=e=>{if(e.key==='Escape')setFull(false)};window.addEventListener('keydown',key);return()=>window.removeEventListener('keydown',key)},[full])
  const summaryStatus=reportSummaryStatus(report)
- const rounds=reviewRounds(projectCards(project))
+ const view=documents?.view
+ const canonicalOn=Boolean(view&&(view.hasPlanning||view.review||view.outputs?.length))
+ const known=new Set((documents?.bundle?.reviews||[]).flatMap(item=>[item.cardId,item.fileId]).filter(Boolean))
+ const rounds=reviewRounds(projectCards(project)).filter(round=>!known.has(round.reviewId))
  const checkpoints=Array.isArray(project.source?.quality?.checkpoints)?project.source.quality.checkpoints:[]
  const linked=new Set(rounds.map(round=>round.reviewId))
- const extraReviews=project.cards.outputs.filter(card=>card.isReview&&!linked.has(card.id))
- return <div className="ao-results"><Card title="成果報告" className={full?'ao-reader-full':''}><div className="ao-toolbar">{project.folderUrl&&<Link href={project.folderUrl}>開專案 Drive 資料夾</Link>}{report?.meta?.drive_url&&<Link href={report.meta.drive_url}>在 Drive 開啟</Link>}<label>報告版本<select aria-label="成果報告版本" value={report?.fileId||''} onChange={e=>report.setFileId(e.target.value)}>{!versions.length&&<option value="">尚無正式報告</option>}{versions.map(item=><option key={item.file_id} value={item.file_id}>{item.current?'目前版本':`第 ${item.version??''} 版`} · {when(item.modified_time)}</option>)}</select></label><button disabled={!html} onClick={()=>setFull(v=>!v)}>{full?'離開完整閱讀':'完整閱讀'}</button><button type="button" disabled={!html} onClick={()=>downloadHtml(`${project.title||'專案'}_專案報告.html`,html)}>下載</button></div>
+ const extraReviews=(project.cards?.outputs||[]).filter(card=>card.isReview&&!linked.has(card.id)&&!known.has(card.id))
+ const copy=outcomeCopy(view, report?.error||'')
+ const legacyReady=summaryStatus==='ready'&&Boolean(html)
+ return <div className="ao-results">
+  {canonicalOn&&<OfficialDocuments view={view} bodies={documents.bodies} onSelect={documents.setSelected} mode="review"/>}
+  <Card title={canonicalOn?'執行成果報告':'成果報告'} className={full?'ao-reader-full':''}>
+    {legacyReady&&<div className="ao-toolbar">{project.folderUrl&&<Link href={project.folderUrl}>開專案 Drive 資料夾</Link>}{report?.meta?.drive_url&&<Link href={report.meta.drive_url}>在 Drive 開啟</Link>}<label>報告版本<select aria-label="成果報告版本" value={report?.fileId||''} onChange={e=>report.setFileId(e.target.value)}>{versions.map(item=><option key={item.file_id} value={item.file_id}>{item.current?'目前版本':`第 ${item.version??''} 版`} · {when(item.modified_time)}</option>)}</select></label><button disabled={!html} onClick={()=>setFull(v=>!v)}>{full?'離開完整閱讀':'完整閱讀'}</button><button type="button" disabled={!html} onClick={()=>downloadHtml(`${project.title||'專案'}_專案報告.html`,html)}>下載</button></div>}
     <ReportStatus project={project}/>
-    {summaryStatus==='ready'&&html&&report?.stale&&<div className="rs-card"><ReportStaleNote/></div>}
-    <p className="ao-muted">最後更新：{report?.modified?when(report.modified):'尚未記錄'}</p>
-    {summaryStatus==='ready'&&html
-      ?<iframe title="正式 HTML 成果報告" sandbox={REPORT_FRAME.sandbox} referrerPolicy={REPORT_FRAME.referrerPolicy} srcDoc={html}/>
-      :<OfficeSnapshot html={html} lines={report?.lines} project={project} milestones={milestones} status={summaryStatus} message={report?.htmlError||report?.error||''} stale={Boolean(report?.stale)} modified={report?.modified||''}/>}
-  </Card><Card title="獨立審查"><p className="ao-muted">只審三個節點：規劃、重大里程碑、結案。審查結論只在卡片有 verdict 欄時顯示；是否核准在<button className="ao-inline" onClick={onOverview}>會議室</button>的「待你處理」決定。</p>
+    {legacyReady&&report?.stale&&<div className="rs-card"><ReportStaleNote/></div>}
+    {legacyReady&&<p className="ao-muted">最後更新：{report?.modified?when(report.modified):'尚未記錄'}</p>}
+    {legacyReady&&<iframe title="正式 HTML 成果報告" sandbox={REPORT_FRAME.sandbox} referrerPolicy={REPORT_FRAME.referrerPolicy} srcDoc={html}/>}
+    {!legacyReady&&copy.kind==='legacy'&&<p role="alert">執行成果報告已登錄，內文沒有讀到。{report?.htmlError||report?.error||''}</p>}
+    {!legacyReady&&copy.kind==='not-created'&&<p>{copy.text}</p>}
+    {!legacyReady&&copy.kind==='missing'&&!canonicalOn&&<OfficeSnapshot html={html} lines={report?.lines} project={project} milestones={milestones} status={summaryStatus} message={report?.htmlError||report?.error||''} stale={Boolean(report?.stale)} modified={report?.modified||''}/>}
+    {!legacyReady&&copy.kind==='missing'&&canonicalOn&&<><p>這個專案還沒有專案報告</p>{copy.reason&&<p className="ao-muted">{copy.reason}</p>}</>}
+    {!legacyReady&&project.folderUrl&&<p><Link href={project.folderUrl}>開專案 Drive 資料夾</Link></p>}
+  </Card>
+  <Card title="獨立審查"><p className="ao-muted">只審三個節點：規劃、重大里程碑、結案。審查結論只在卡片有 verdict 欄時顯示；是否核准在<button className="ao-inline" onClick={onOverview}>會議室</button>的「待你處理」決定。</p>
     {checkpoints.map(item=><details className="ao-review" key={item.checkpoint_id}><summary><span className="ao-review-kind">{item.kind}</span><b>{item.milestone_id||''} 第 {item.round} 輪</b>{item.verdict&&<Pill s={item.verdict==='PASS'||item.verdict==='pass'?'done':'you'}>{item.verdict}</Pill>}</summary><p>{text(item.findings||item.summary)}</p></details>)}
     {rounds.map(round=><details className="ao-review" key={`${round.outputId}:${round.round}`}><summary><b>第 {round.round} 輪</b> {round.outputTitle}{round.hasVerdict&&<Pill s={round.verdict==='pass'||round.verdict==='PASS'?'done':'you'}>{round.verdict}</Pill>}</summary>
       <p>成果版本：{round.outputTitle}</p>
@@ -242,12 +316,14 @@ export function OfficeResults({project,report,milestones=[],onOverview}) {
       {round.criteria?.length>0&&<ul>{round.criteria.map(item=><li key={item}>{item}</li>)}</ul>}
       <ReviewDocument cardId={round.reviewId}/>
     </details>)}
-    {!rounds.length&&<Empty>尚無由成果對到審查卡的輪次。</Empty>}
+    {!rounds.length&&!view?.review&&<Empty>尚無由成果對到審查卡的輪次。</Empty>}
     <p>最近審查：{reviewFieldLabel(project.review?.verdict)}</p>
-    {project.review?.url&&<Link href={project.review.url}>開啟審查報告</Link>}
-    {project.review?.requiredChanges?.length>0&&<><h3>必改清單</h3><ul>{project.review.requiredChanges.map((item,i)=><li key={i}>{item}</li>)}</ul></>}
+    {!view?.review&&project.review?.url&&<Link href={project.review.url}>開啟審查報告</Link>}
+    {!view?.review&&project.review?.requiredChanges?.length>0&&<><h3>必改清單</h3><ul>{project.review.requiredChanges.map((item,i)=><li key={i}>{item}</li>)}</ul></>}
     {extraReviews.map(card=><details className="ao-review" key={card.id}><summary>{card.title}</summary><p>{card.date}</p><p>{card.summary}</p><Link href={card.driveUrl}>審查報告</Link>{card.verdict?<p>結論：{card.verdict}</p>:<p>最近審查：{reviewFieldLabel(project.review?.verdict)}</p>}</details>)}
-  </Card><details><summary>執行前待辦（{project.followUps.length}）</summary><OfficeFollowUps project={project}/></details></div>
+  </Card>
+  <details><summary>執行前待辦（{project.followUps.length}）</summary><OfficeFollowUps project={project}/></details>
+ </div>
 }
 export function OfficeJournal({project,reload,onOverview,onExecution,state,index}) {
  const [filter,setFilter]=useState('all'), events=(state&&index?officeJournal(state,index,project.id):officeEvents(project)).filter(e=>filter==='all'||e.kind===filter)

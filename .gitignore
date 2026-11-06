@@ -3,4 +3,5 @@
 !.claude/skills/
 node_modules/
 .env
+preview/private/
 

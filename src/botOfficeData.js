@@ -389,6 +389,12 @@ const projectPath = id => `projects/${encodeURIComponent(id)}`
 export const loadOfficeReport = (id, opts) => officeApi(`${projectPath(id)}/report`, { ...opts, topic: 'report' })
 export const loadOfficeReportHtml = (id, fileId, opts) => officeApi(`${projectPath(id)}/report/html${fileId ? `?file_id=${encodeURIComponent(fileId)}` : ''}`, { ...opts, expect: 'html', topic: 'report' })
 export const loadOfficeDocument = (cardId, opts) => officeApi(`cards/${encodeURIComponent(cardId)}/document`, opts)
+export const loadOfficeDriveDocument = (id, fileId, opts = {}) => {
+  const version = Number.isInteger(opts.version) ? opts.version : null
+  const query = `file_id=${encodeURIComponent(fileId)}${version == null ? '' : `&version=${version}`}`
+  const { version: _version, ...rest } = opts
+  return officeApi(`${projectPath(id)}/drive-document?${query}`, { ...rest, topic: 'drive-document' })
+}
 export const loadOfficeFiles = (id, opts) => officeApi(`${projectPath(id)}/files`, opts)
 export const deleteOfficeProject = (id, payload, opts) => officeApi(`${projectPath(id)}/delete`, { ...opts, method: 'POST', body: payload, topic: 'delete' })
 export const uploadOfficeFile = (id, file, opts) => { const body = new FormData(); body.append('file', file); return officeApi(`${projectPath(id)}/files`, { ...opts, method: 'POST', body }) }
