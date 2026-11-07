@@ -49,6 +49,19 @@ const planMarkdown = [
   '| 改呈現 | 改規劃版本 |',
   '',
   '**有示範**與**缺口**留在原文。',
+  '',
+  '## 契約樣本',
+  '',
+  '```json',
+  '{',
+  '  "freedomIndex": { "deprecated": true, "display": false }',
+  '}',
+  '```',
+  '',
+  '```python',
+  'def keep(indent):',
+  '    return "<script>alert(1)</script>"',
+  '```',
 ].join('\n')
 
 const state = {
@@ -174,6 +187,14 @@ async function colorsOf(frame) {
   assert.ok(order.includes('依據'))
   await frame.getByText('青石摘要句').waitFor()
   await frame.getByText('子項保留').waitFor()
+  const codes = await frame.locator('pre.source code').evaluateAll(nodes => nodes.map(node => node.textContent))
+  assert.deepEqual(codes, [
+    '{\n  "freedomIndex": { "deprecated": true, "display": false }\n}\n',
+    'def keep(indent):\n    return "<script>alert(1)</script>"\n',
+  ])
+  const frameHtml = await frame.locator('body').evaluate(el => el.ownerDocument.documentElement.outerHTML)
+  assert.equal(frameHtml.includes('<script'), false)
+  assert.equal(frameHtml.includes('onerror='), false)
   await frame.getByText('隔離測試全綠而且備份存在').first().waitFor()
   report.colors = await colorsOf(frame)
   assert.deepEqual(report.colors, {
@@ -197,6 +218,14 @@ async function colorsOf(frame) {
   await frame.locator('header.hero').screenshot({ path: shot('desktop-plan-header.png') })
   await frame.locator('#summary').screenshot({ path: shot('desktop-plan-summary.png') })
   await frame.locator('.scroll').first().screenshot({ path: shot('desktop-plan-table.png') })
+  const codeFit = await frame.locator('pre.source').evaluateAll(nodes => nodes.map(el => ({ scrollWidth: el.scrollWidth, clientWidth: el.clientWidth })))
+  assert.ok(codeFit.every(item => item.scrollWidth <= item.clientWidth + 1), JSON.stringify(codeFit))
+  await frame.locator('pre.source').first().scrollIntoViewIfNeeded()
+  await desktop.page.screenshot({ path: shot('desktop-code-json-page.png') })
+  await frame.locator('pre.source').first().screenshot({ path: shot('desktop-code-json.png') })
+  await frame.locator('pre.source').nth(1).scrollIntoViewIfNeeded()
+  await desktop.page.screenshot({ path: shot('desktop-code-python-page.png') })
+  await frame.locator('pre.source').nth(1).screenshot({ path: shot('desktop-code-python.png') })
   await frame.locator('.wrap').screenshot({ path: shot('desktop-plan-full.png') })
   await desktop.page.getByRole('button', { name: '成果與審查', exact: true }).click()
   await desktop.page.getByText('執行成果報告還沒有').waitFor()
@@ -212,6 +241,8 @@ async function colorsOf(frame) {
   assert.equal(visibleSlate, 0)
   assert.equal(await desktop.page.locator('.ao-results iframe.ao-plan-slate').count(), 0)
   assert.equal(await desktop.page.locator('.ao-results').getByText('青石摘要句').count(), 0)
+  assert.equal(await desktop.page.locator('.ao-results').getByText('deprecated').count(), 0)
+  assert.equal(await desktop.page.locator('.ao-results').getByText('def keep').count(), 0)
   await desktop.page.screenshot({ path: shot('desktop-results-not-plan.png') })
 
   await openPlan(desktop.page, '缺文件')
@@ -252,6 +283,14 @@ async function colorsOf(frame) {
   await mobileFrame.locator('#summary').screenshot({ path: shot('mobile-plan-summary.png') })
   await mobileFrame.locator('.scroll').first().screenshot({ path: shot('mobile-plan-table.png') })
   await mobileFrame.locator('.timeline').screenshot({ path: shot('mobile-plan-timeline.png') })
+  const mobileCodeFit = await mobileFrame.locator('pre.source').evaluateAll(nodes => nodes.map(el => ({ scrollWidth: el.scrollWidth, clientWidth: el.clientWidth })))
+  assert.ok(mobileCodeFit.every(item => item.scrollWidth <= item.clientWidth + 1), JSON.stringify(mobileCodeFit))
+  await mobileFrame.locator('pre.source').first().scrollIntoViewIfNeeded()
+  await mobile.page.screenshot({ path: shot('mobile-code-json-page.png') })
+  await mobileFrame.locator('pre.source').first().screenshot({ path: shot('mobile-code-json.png') })
+  await mobileFrame.locator('pre.source').nth(1).scrollIntoViewIfNeeded()
+  await mobile.page.screenshot({ path: shot('mobile-code-python-page.png') })
+  await mobileFrame.locator('pre.source').nth(1).screenshot({ path: shot('mobile-code-python.png') })
   report.mobileScroll = mobileScroll
   report.mobileWrites = mobile.api.filter(([method]) => method !== 'GET')
   assert.deepEqual(report.mobileWrites, [])

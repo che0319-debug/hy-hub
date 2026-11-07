@@ -1,4 +1,5 @@
-// 規劃書轉成可讀 HTML。去掉程式碼區塊與純 JSON，保留標題、段落、清單、表格與決策文字。
+// 規劃書轉成可讀 HTML。成果審查用的預設版仍略過程式碼區塊。
+// 專案規劃分頁的淺灰藍版保留原文，包含程式碼與 JSON，只做 HTML 跳脫，不執行。
 // 產出放進沙盒 iframe，不在宿主頁插入未消毒的 HTML。
 
 const escapeHtml = value => String(value)
@@ -137,28 +138,68 @@ export function planDocumentHtml(markdown, options = {}) {
 }
 
 // 專案規劃分頁的閱讀版。只重排既有 Markdown：摘要章節放最前、其餘章節維持原順序。
-// 不寫入版本、核定或專案資料。程式碼與 JSON 區塊沿用原本的省略，圖表式純文字區塊保留。
-const IMPL_LANG = new Set(['python', 'py', 'javascript', 'js', 'typescript', 'ts', 'tsx', 'jsx', 'json', 'bash', 'sh', 'shell', 'zsh', 'html', 'css', 'go', 'rust', 'rs', 'sql', 'yaml', 'yml', 'toml', 'xml', 'java', 'c', 'cpp', 'cs', 'php', 'rb', 'ruby', 'swift', 'kt', 'kotlin'])
-
+// 不寫入版本、核定或專案資料。圍欄與 HTML 註解的內文原樣保留，只跳脫後放進 code。
 function unescapeSlate(value) {
   return String(value).replace(/\\([\\`*_{}\[\]()#+.!|:=-])/g, '$1')
 }
 
-function looksLikeCode(text) {
-  const lines = text.split('\n').map(line => line.trim()).filter(Boolean)
-  if (!lines.length || /[─►▲├└]/.test(text)) return false
-  return lines.some(line => /^(def |class |function |import |export |const |let |var |from |#include |package |SELECT |INSERT |<!DOCTYPE|<html)/.test(line))
-}
-
-function prepareSlateSource(markdown) {
-  const source = typeof markdown === 'string' ? markdown : ''
-  const withoutComments = source.replace(/\r\n/g, '\n').replace(/<!--[\s\S]*?-->/g, '')
-  return withoutComments.replace(/```([^\n`]*)\n?([\s\S]*?)(?:```|$)/g, (_match, info, body) => {
-    const lang = String(info || '').trim().split(/\s+/)[0].toLowerCase().replace(/[^a-z0-9_+-]/g, '')
-    const text = String(body || '').trim()
-    if (!text || IMPL_LANG.has(lang) || isJsonDump(text) || (!lang && looksLikeCode(text))) return '\n'
-    return `\n\`\`\`\n${text}\n\`\`\`\n`
-  })
+function spliceLiterals(markdown) {
+  const text = String(markdown ?? '').replace(/\r\n/g, '\n')
+  const pres = []
+  let out = ''
+  let index = 0
+  const pushPre = body => {
+    const id = pres.length
+    pres.push(body)
+    return `\n\u0000PRE${id}\u0000\n`
+  }
+  while (index < text.length) {
+    if (text.startsWith('<!--', index)) {
+      const end = text.indexOf('-->', index + 4)
+      const inner = end === -1 ? text.slice(index + 4) : text.slice(index + 4, end)
+      out += pushPre(inner)
+      index = end === -1 ? text.length : end + 3
+      continue
+    }
+    const lineStart = index === 0 || text[index - 1] === '\n'
+    if (lineStart) {
+      const nl = text.indexOf('\n', index)
+      const lineEnd = nl === -1 ? text.length : nl
+      const line = text.slice(index, lineEnd)
+      const open = /^( {0,3})(`{3,}|~{3,})(.*)$/.exec(line)
+      if (open) {
+        const marker = open[2]
+        const char = marker[0] === '`' ? '`' : '~'
+        const min = marker.length
+        if (nl === -1) {
+          out += pushPre('')
+          break
+        }
+        const contentStart = nl + 1
+        let scan = contentStart
+        let closedAt = -1
+        const closeRe = new RegExp(`^ {0,3}\\${char}{${min},}[ \\t]*$`)
+        while (scan <= text.length) {
+          const next = text.indexOf('\n', scan)
+          const end = next === -1 ? text.length : next
+          if (closeRe.test(text.slice(scan, end))) { closedAt = scan; break }
+          if (next === -1) break
+          scan = next + 1
+        }
+        if (closedAt === -1) {
+          out += pushPre(text.slice(contentStart))
+          break
+        }
+        out += pushPre(text.slice(contentStart, closedAt))
+        const closeNl = text.indexOf('\n', closedAt)
+        index = closeNl === -1 ? text.length : closeNl + 1
+        continue
+      }
+    }
+    out += text[index]
+    index += 1
+  }
+  return { text: out, pres }
 }
 
 function slateInline(value) {
@@ -209,30 +250,29 @@ function parseList(lines, start) {
 }
 
 function parseSlateBlocks(markdown) {
-  const lines = markdown.split('\n')
+  const lifted = spliceLiterals(markdown)
+  const lines = lifted.text.split('\n')
   const blocks = []
   let index = 0
   let paragraph = []
   const flush = () => {
-    const text = paragraph.join(' ').replace(/\s+/g, ' ').trim()
+    if (!paragraph.length) return
+    const collapsed = paragraph.join('\n').replace(/\s+/g, ' ').trim()
     paragraph = []
-    if (!text || isJsonDump(text)) return
-    blocks.push({ type: 'p', text })
+    if (!collapsed) return
+    blocks.push({ type: 'p', text: collapsed })
   }
   while (index < lines.length) {
     const line = lines[index]
-    if (/^\s*```/.test(line)) {
+    const preLine = /^\u0000PRE(\d+)\u0000$/.exec(line)
+    if (preLine) {
       flush()
-      const buf = []
+      blocks.push({ type: 'pre', text: lifted.pres[Number(preLine[1])] ?? '' })
       index += 1
-      while (index < lines.length && !/^\s*```/.test(lines[index])) { buf.push(lines[index]); index += 1 }
-      if (index < lines.length) index += 1
-      const text = buf.join('\n').trim()
-      if (text && !isJsonDump(text)) blocks.push({ type: 'pre', text })
       continue
     }
     if (!line.trim()) { flush(); index += 1; continue }
-    const heading = /^(#{1,4})\s+(.+?)\s*#*$/.exec(line)
+    const heading = /^(#{1,6})\s+(.+?)\s*#*$/.exec(line)
     if (heading) {
       flush()
       blocks.push({ type: 'h', level: heading[1].length, text: heading[2].trim() })
@@ -254,8 +294,8 @@ function parseSlateBlocks(markdown) {
       index = parsed.index
       continue
     }
-    if (/^\s*([-*_]\s*){3,}$/.test(line)) { flush(); index += 1; continue }
-    paragraph.push(line.trim())
+    if (/^\s*([-*_]\s*){3,}$/.test(line)) { flush(); blocks.push({ type: 'hr' }); index += 1; continue }
+    paragraph.push(line)
     index += 1
   }
   flush()
@@ -277,8 +317,10 @@ function isMetaList(block) {
 }
 
 function sectionVisible(section) {
+  if (section.title && section.title.trim()) return true
   return section.blocks.some(block => {
-    if (block.type === 'p' || block.type === 'h' || block.type === 'pre') return Boolean(block.text.trim())
+    if (block.type === 'pre') return true
+    if (block.type === 'p' || block.type === 'h') return Boolean(block.text.trim())
     if (block.type === 'table') return block.rows.some(row => row.some(cell => cell.trim()))
     if (block.type === 'list') return block.items.length > 0
     return false
@@ -389,7 +431,8 @@ function renderSlateBlock(block, sectionTitle, tableIndex) {
   if (block.type === 'h') return `<h${block.level}>${slateInline(block.text)}</h${block.level}>`
   if (block.type === 'p') return paragraphHtml(block.text)
   if (block.type === 'list') return listHtml(block.items, block.ordered)
-  if (block.type === 'pre') return `<pre class="diagram">${escapeHtml(block.text)}</pre>`
+  if (block.type === 'pre') return `<pre class="source"><code>${escapeHtml(block.text)}</code></pre>`
+  if (block.type === 'hr') return '<hr>'
   if (block.type === 'table') {
     const timeline = tableIndex === 0 && /里程碑/.test(sectionTitle || '') ? timelineHtml(block.rows) : ''
     return `${timeline}${slateTable(block.rows)}`
@@ -411,7 +454,8 @@ header.hero h1{margin:0 0 8px;font-size:1.7rem;line-height:1.35;font-weight:700;
 header.hero .sub{margin:0 0 12px;color:var(--header-text)}
 .meta{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px 20px;margin:0 0 12px}
 .meta div{min-width:0}.meta dt{font-size:12px;letter-spacing:.04em;color:#5d7894;font-weight:600}.meta dd{margin:0;color:var(--header-text);overflow-wrap:anywhere}
-.card{background:var(--card);border-radius:16px;padding:26px 28px;margin-bottom:16px;box-shadow:0 1px 2px rgba(36,48,64,.06)}
+.card{background:var(--card);border-radius:16px;padding:26px 28px;margin-bottom:16px;box-shadow:0 1px 2px rgba(36,48,64,.06);min-width:0}
+.wrap,header.hero{min-width:0}
 .card.summary{border-left:5px solid var(--header-text)}
 h2{margin:0 0 14px;font-size:1.28rem;color:var(--header-text);line-height:1.4}
 h3{margin:22px 0 10px;font-size:1.08rem;color:#3d5a75}h4{margin:18px 0 8px;font-size:1rem;color:#3d5a75}
@@ -430,14 +474,16 @@ th{background:var(--header-bg);color:var(--header-text);font-weight:600}
 .timeline{display:flex;gap:8px;margin:0 0 16px;overflow-x:auto;-webkit-overflow-scrolling:touch;padding-bottom:6px}
 .tl{flex:1 0 92px;background:var(--header-bg);color:var(--header-text);border-radius:12px;padding:10px 8px;text-align:center;min-width:92px}
 .tl .id{display:block;font-weight:800;font-size:1.05rem}.tl .date,.tl .name{display:block;font-size:12px;line-height:1.35}
-pre.diagram{white-space:pre-wrap;background:#f6f9fc;border:1px solid var(--line);border-radius:12px;padding:12px 14px;overflow-x:auto;font-family:ui-monospace,monospace;font-size:13px;line-height:1.45}
+pre.source{margin:0 0 12px;max-width:100%;overflow-x:auto;white-space:pre-wrap;overflow-wrap:anywhere;background:#f6f9fc;border:1px solid var(--line);border-radius:12px;padding:12px 14px}
+pre.source code{display:block;white-space:pre-wrap;overflow-wrap:anywhere;font-family:ui-monospace,monospace;font-size:13px;line-height:1.45}
+hr{border:0;border-top:1px solid var(--line);margin:16px 0}
 code{font-family:ui-monospace,monospace;font-size:.92em}
 @media(max-width:820px){.meta{grid-template-columns:1fr}}
 @media(max-width:640px){.wrap{padding:12px 10px 56px}header.hero,.card{padding:18px 16px}header.hero h1{font-size:1.35rem}h2{font-size:1.15rem}table{font-size:.86rem}th,td{padding:7px 8px}}
 `
 
 function slateDocumentHtml(markdown) {
-  const parsed = structureSlate(parseSlateBlocks(prepareSlateSource(markdown)))
+  const parsed = structureSlate(parseSlateBlocks(markdown))
   const preamble = takePreamble(parsed.preamble)
   const summaries = parsed.sections.filter(section => /摘要/.test(section.title) && sectionVisible(section))
   const rest = parsed.sections.filter(section => !/摘要/.test(section.title) && sectionVisible(section))
