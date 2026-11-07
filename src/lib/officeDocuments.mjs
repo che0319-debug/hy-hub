@@ -484,6 +484,10 @@ export function presentOfficeDocuments(bundle, key = '') {
   }
 }
 
+export function latestPlanDocument(bundle) {
+  return (bundle?.plans || []).find(item => item.latest) || null
+}
+
 export function bodyReads(view) {
   const reads = []
   const push = doc => {

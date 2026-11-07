@@ -123,7 +123,7 @@ test('P1 tabs, review activity, intake waiting, figures, review links and answer
     figures:[{id:'pi',owner:'sam',project:'p',island:'side',look_as:'PI',status:'waiting'}],
     decisions:[{id:'open',project:'p',kind:'intake',status:'open'}, {id:'closed',project:'p',status:'answered',revision:17,card:'decision',questions:[{no:1,q:'主力？',answer:'已確認',answered_by:'sam',answer_source:'proxy',confirmed_by:'hy',confirmed_at:'now',bot_suggestions:[{answer:'參考',answered_by:'sam',basis:'紀錄',confidence:'high'}]}],history:[{actor:'hy',action:'confirm'}]}]},
     {cards:[{id:'review',project:'p',type:'review',drive_url:'https://drive.google.com/report'}, {id:'decision',project:'p',type:'decision',summary:'過期摘要'}]})
-  assert.deepEqual(OFFICE_TABS.map(t=>t[1]),['概況','會議室','執行計畫','成果與審查','工作日誌'])
+  assert.deepEqual(OFFICE_TABS.map(t=>t[1]),['概況','會議室','專案規劃','成果與審查','工作日誌'])
   // 階段標籤只顯示 5 種名稱：有 intake 待答也仍是「規劃中」，待答題目另外顯示「N 項待你處理」。
   assert.equal(out.projects[0].stageLabel,'規劃中'); assert.equal(out.projects[0].pending,true)
   assert.equal(out.projects[0].review.verdict,'fail'); assert.equal(out.projects[0].review.returnedCount,2)

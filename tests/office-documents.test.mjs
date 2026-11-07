@@ -352,15 +352,13 @@ test('drive document client stays on the office read route', async () => {
   assert.equal(versioned, `https://example.test/api/office/projects/p-003/drive-document?file_id=${PLAN}&version=2`)
 })
 
-test('both tabs render the same official documents without an html frame', async () => {
+test('planning is sandboxed HTML and results do not render the plan picker', async () => {
   const panels = await readFile(new URL('../src/components/BotOfficePanels.jsx', import.meta.url), 'utf8')
-  const view = await readFile(new URL('../src/components/OfficialDocuments.jsx', import.meta.url), 'utf8')
-  assert.match(panels, /mode="plan"/)
-  assert.match(panels, /mode="review"/)
-  assert.match(panels, /useState\('document'\)/)
-  assert.match(panels, /規劃書全文讀取未接上/)
-  assert.match(view, /skipHtml/)
-  assert.equal(view.includes('srcDoc'), false)
-  assert.equal(view.includes('dangerouslySetInnerHTML'), false)
+  assert.match(panels, /planDocumentHtml/)
+  assert.match(panels, /執行成果報告還沒有/)
+  assert.equal(panels.includes('mode="plan"'), false)
+  assert.equal(panels.includes('mode="review"'), false)
+  assert.equal(panels.includes('文件版本'), false)
+  assert.equal(panels.includes('dangerouslySetInnerHTML'), false)
   assert.match(panels, /sandbox=\{REPORT_FRAME\.sandbox\}/)
 })

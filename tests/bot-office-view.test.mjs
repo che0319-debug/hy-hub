@@ -16,12 +16,13 @@ test('Office journal preserves human/Bot distinction, actual event categories an
  assert.equal(officeTime('invalid'),null)
 })
 
-test('Execution keeps the AI Office modes and reads the plan through the new document API',async()=>{
+test('Planning tab is one HTML document and the report frame stays sandboxed',async()=>{
  const {readFile}=await import('node:fs/promises')
  const {REPORT_FRAME}=await import('../src/lib/botOfficeView.mjs')
  const bot=await readFile(new URL('../src/components/BotOfficePanels.jsx',import.meta.url),'utf8')
- for(const label of ['規劃摘要','時程＋文件','時程與執行','完整文件','PlanDocument','ao-splitter']){assert.ok(bot.includes(label))}
- assert.match(bot,/規劃書全文讀取未接上/)
+ for(const label of ['規劃摘要','時程＋文件','時程與執行','完整文件','文件版本','成果報告版本']){assert.equal(bot.includes(label), false)}
+ assert.match(bot,/專案規劃書/)
+ assert.match(bot,/執行成果報告還沒有/)
  assert.equal(REPORT_FRAME.sandbox,'allow-popups allow-popups-to-escape-sandbox')
  assert.equal(REPORT_FRAME.sandbox.includes('allow-scripts'),false)
  assert.equal(REPORT_FRAME.sandbox.includes('allow-same-origin'),false)
