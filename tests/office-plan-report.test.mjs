@@ -105,4 +105,94 @@ test('planning and results panels have no version picker or internal document ta
   assert.match(panels, /sandbox=\{REPORT_FRAME\.sandbox\}/)
   assert.equal(REPORT_FRAME.sandbox.includes('allow-scripts'), false)
   assert.equal(REPORT_FRAME.sandbox.includes('allow-same-origin'), false)
+  const execution = panels.slice(panels.indexOf('export function OfficeExecution'), panels.indexOf('function downloadHtml'))
+  const results = panels.slice(panels.indexOf('export function OfficeResults'), panels.indexOf('export function OfficeJournal'))
+  assert.match(execution, /layout:\s*'slate'/)
+  assert.equal(results.includes("layout: 'slate'"), false)
+  assert.equal(execution.includes('<select'), false)
+})
+
+test('slate plan layout leads with the summary card and keeps the source wording', () => {
+  const markdown = [
+    '# 閱讀樣本規劃書',
+    '',
+    '- 狀態：待審查',
+    '- 期限：2026-12-01',
+    '',
+    '所有時間都是台北時間。',
+    '',
+    '依據：',
+    '',
+    '- 開案說明',
+    '',
+    '## 修訂說明',
+    '',
+    '先寫修訂，摘要在後面。',
+    '',
+    '## 一頁摘要',
+    '',
+    '- **要做什麼**：把規劃書排成卡片。',
+    '  - 子項保留',
+    '',
+    '禁止把分數寫進正式檔。',
+    '',
+    '## 里程碑',
+    '',
+    '| id | 名稱 | 到期 | 驗收標準 |',
+    '| --- | --- | --- | --- |',
+    '| M1 | 資料準備 | 2026-11-06 | 備份存在 |',
+    '| M2 | 頁面 | 2026-11-09 | 手機可讀 |',
+    '',
+    '## 範圍',
+    '',
+    '| 做 | 不做 |',
+    '| --- | --- |',
+    '| 改呈現 | 改規劃版本 |',
+    '',
+    '**有示範**與**缺口**都留在原文。',
+    '',
+    '<script>alert(1)</script>',
+    '',
+    '## 並行',
+    '',
+    '```',
+    'M1 ──► M2',
+    '```',
+    '',
+    '## 實作附錄',
+    '',
+    '```python',
+    'token_value = "do-not-show"',
+    '```',
+  ].join('\n')
+  const html = planDocumentHtml(markdown, { layout: 'slate' })
+  const plain = planDocumentHtml(markdown)
+  assert.match(html, /#eef5fc/)
+  assert.match(html, /#355575/)
+  assert.match(html, /#d8dee6/)
+  assert.match(html, /<header class="hero">/)
+  assert.match(html, /<h1>閱讀樣本規劃書<\/h1>/)
+  assert.match(html, /class="card summary"/)
+  assert.ok(html.indexOf('<h2>一頁摘要</h2>') < html.indexOf('<h2>依據</h2>'))
+  assert.ok(html.indexOf('<h2>依據</h2>') < html.indexOf('<h2>修訂說明</h2>'))
+  assert.match(html, /要做什麼/)
+  assert.match(html, /子項保留/)
+  assert.match(html, /開案說明/)
+  assert.match(html, /所有時間都是台北時間/)
+  assert.match(html, /<td>備份存在<\/td>/)
+  assert.match(html, /class="timeline"/)
+  assert.match(html, /class="scroll"/)
+  assert.match(html, /tag-green/)
+  assert.match(html, /tag-amber/)
+  assert.match(html, /M1 ──► M2/)
+  assert.match(html, /&lt;script&gt;/)
+  assert.equal(html.includes('<script'), false)
+  assert.equal(html.includes('<select'), false)
+  assert.equal(html.includes('實作附錄'), false)
+  assert.equal(html.includes('token_value'), false)
+  assert.equal(html.includes('do-not-show'), false)
+  assert.equal(html.includes('p-003'), false)
+  assert.equal(html.includes('七維'), false)
+  assert.equal(plain.includes('#eef5fc'), false)
+  assert.equal(planDocumentHtml('', { layout: 'slate' }).includes('規劃書沒有可讀的正文'), true)
 })

@@ -225,14 +225,14 @@ export function OfficeMeeting({project,projects,reload,state,index,now=Date.now(
 export function OfficeExecution({documents}) {
   const plan = documents?.plan
   const body = plan?.readKey ? documents.bodies?.[plan.readKey] : null
-  if (!plan) return <section className="ao-card" aria-label="專案規劃書"><h2>專案規劃書</h2><p className="ao-empty">正式規劃書尚未提供。</p></section>
-  return <section className="ao-card" aria-label="專案規劃書">
+  if (!plan) return <section className="ao-card ao-plan-shell" aria-label="專案規劃書"><h2>專案規劃書</h2><p className="ao-empty">正式規劃書尚未提供。</p></section>
+  return <section className="ao-card ao-plan-shell" aria-label="專案規劃書">
     <div className="ao-card-head"><h2>{plan.title || '專案規劃書'}</h2></div>
     {plan.missingReason && <p role="status">{plan.missingReason}</p>}
     {(!body || body.status === 'loading') && plan.fetch && <p className="ao-muted" role="status">正在讀取規劃書…</p>}
     {body?.status === 'error' && <p role="alert">{body.error}</p>}
     {body?.status === 'ready' && body.truncated && <p className="ao-muted">文件超過上限，以下為截斷內容。</p>}
-    {body?.status === 'ready' && <iframe className="ao-plan-frame" title="專案規劃書" sandbox={REPORT_FRAME.sandbox} referrerPolicy={REPORT_FRAME.referrerPolicy} srcDoc={planDocumentHtml(body.markdown)} />}
+    {body?.status === 'ready' && <iframe className="ao-plan-frame ao-plan-slate" title="專案規劃書" sandbox={REPORT_FRAME.sandbox} referrerPolicy={REPORT_FRAME.referrerPolicy} srcDoc={planDocumentHtml(body.markdown, { layout: 'slate' })} />}
   </section>
 }
 

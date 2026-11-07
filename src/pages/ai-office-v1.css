@@ -202,3 +202,9 @@
 .ao-overview-v2 .ao-overview-main{display:flex;flex-direction:column}
 .ao-overview-v2 .ao-decide{order:0}
 @media(max-width:700px){.ao-overview-v2 .ao-milestone-strip .ao-timeline li{flex-basis:42%}}
+
+/* 專案規劃閱讀版：淺灰藍頁首在 iframe 內，外框跟著同一底色。審查分頁仍用白底 ao-plan-frame。 */
+.ao-plan-shell{background:#d8dee6;border-color:#d5e0ea;color:#243040}
+.ao-plan-shell h2{color:#355575}
+.ao-plan-frame.ao-plan-slate{background:#d8dee6;border-color:#c5d6e8;height:72vh;min-height:560px}
+@media(max-width:640px){.ao-plan-frame.ao-plan-slate{height:68vh;min-height:420px}}
