@@ -25,12 +25,97 @@ export function driveFileId(value) {
   }
 }
 
+// 圍欄、HTML 註解、同一行的行內碼原樣保留。規劃頁會再跳脫，不能先把裡面的
+// <script> 這類字樣刪掉。圍欄外的 script/style 與嵌入標籤仍移除。
+function maskPreservedLiterals(text) {
+  const held = []
+  const parts = []
+  let index = 0
+  const hold = (start, end) => {
+    const id = held.length
+    held.push(text.slice(start, end))
+    parts.push(`\u0000LIT${id}\u0000`)
+  }
+  while (index < text.length) {
+    if (text.startsWith('<!--', index)) {
+      const end = text.indexOf('-->', index + 4)
+      const stop = end === -1 ? text.length : end + 3
+      hold(index, stop)
+      index = stop
+      continue
+    }
+    const lineStart = index === 0 || text[index - 1] === '\n'
+    if (lineStart) {
+      const nl = text.indexOf('\n', index)
+      const lineEnd = nl === -1 ? text.length : nl
+      const line = text.slice(index, lineEnd).replace(/\r$/, '')
+      const open = /^( {0,3})(`{3,}|~{3,})(.*)$/.exec(line)
+      if (open) {
+        const marker = open[2]
+        const char = marker[0]
+        const min = marker.length
+        if (nl === -1) {
+          hold(index, text.length)
+          break
+        }
+        let scan = nl + 1
+        let closedAt = -1
+        const closeRe = new RegExp(`^ {0,3}\\${char}{${min},}[ \\t]*$`)
+        while (scan <= text.length) {
+          const next = text.indexOf('\n', scan)
+          const end = next === -1 ? text.length : next
+          if (closeRe.test(text.slice(scan, end).replace(/\r$/, ''))) {
+            closedAt = scan
+            break
+          }
+          if (next === -1) break
+          scan = next + 1
+        }
+        if (closedAt === -1) {
+          hold(index, text.length)
+          break
+        }
+        const closeNl = text.indexOf('\n', closedAt)
+        const stop = closeNl === -1 ? text.length : closeNl + 1
+        hold(index, stop)
+        index = stop
+        continue
+      }
+    }
+    if (text[index] === '`') {
+      let size = 1
+      while (text[index + size] === '`') size += 1
+      const limit = text.indexOf('\n', index)
+      const lineLimit = limit === -1 ? text.length : limit
+      const marker = '`'.repeat(size)
+      let search = index + size
+      let close = -1
+      while (search < lineLimit) {
+        const found = text.indexOf(marker, search)
+        if (found === -1 || found + size > lineLimit) break
+        if (text[found + size] !== '`') { close = found; break }
+        search = found + size
+      }
+      if (close !== -1) {
+        hold(index, close + size)
+        index = close + size
+        continue
+      }
+    }
+    parts.push(text[index])
+    index += 1
+  }
+  return { text: parts.join(''), held }
+}
+
 export function safeMarkdown(value) {
   if (typeof value !== 'string') return ''
-  return value
+  const masked = maskPreservedLiterals(value)
+  const cleaned = masked.text
     .replace(/<script\b[\s\S]*?<\/script>/gi, '')
     .replace(/<style\b[\s\S]*?<\/style>/gi, '')
     .replace(/<\/?(iframe|object|embed|link|meta)\b[^>]*>/gi, '')
+  return cleaned.replace(/\u0000LIT(\d+)\u0000/g, (_, id) => masked.held[Number(id)])
 }
 
 export function documentProblem(title, message) {

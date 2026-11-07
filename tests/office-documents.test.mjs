@@ -334,6 +334,45 @@ test('markdown rendering input drops active content', () => {
   assert.match(cleaned, /正文/)
 })
 
+test('safeMarkdown keeps code, JSON, and comments that only look like active markup', () => {
+  const source = [
+    '<!-- keep <script>alert(1)</script> -->',
+    '前文',
+    '```html',
+    '<style>body{color:red}</style>',
+    '<iframe src="https://evil.example"></iframe>',
+    '<meta charset="utf-8">',
+    '```',
+    '行內 `return "<script>alert(9)</script>"` 留住',
+    '<script>alert(2)</script>',
+    '正文<style>bad{}</style>之後',
+    '<iframe src="https://evil.example"></iframe>',
+    '<link rel="stylesheet" href="https://evil.example/a.css">',
+    '',
+    '~~~json',
+    '{ "deprecated": true }',
+    '~~~',
+  ].join('\n')
+  const cleaned = safeMarkdown(source)
+  assert.match(cleaned, /keep <script>alert\(1\)<\/script>/)
+  assert.match(cleaned, /<style>body\{color:red\}<\/style>/)
+  assert.match(cleaned, /<iframe src="https:\/\/evil\.example"><\/iframe>/)
+  assert.match(cleaned, /<meta charset="utf-8">/)
+  assert.match(cleaned, /return "<script>alert\(9\)<\/script>"/)
+  assert.match(cleaned, /\{ "deprecated": true \}/)
+  assert.equal(cleaned.includes('alert(2)'), false)
+  assert.equal(cleaned.includes('bad{}'), false)
+  assert.equal((cleaned.match(/<iframe/g) || []).length, 1)
+  assert.equal(cleaned.includes('<link'), false)
+  assert.match(cleaned, /前文/)
+  assert.match(cleaned, /正文之後/)
+  const crlf = '前文\r\n```python\r\n    return "<script>alert(1)</script>"\r\n```\r\n<script>alert(3)</script>\r\n'
+  const kept = safeMarkdown(crlf)
+  assert.match(kept, /return "<script>alert\(1\)<\/script>"/)
+  assert.equal(kept.includes('alert(3)'), false)
+  assert.match(kept, /\r\n```python\r\n/)
+})
+
 test('drive document client stays on the office read route', async () => {
   let called = ''
   const fetcher = async url => {
