@@ -232,6 +232,38 @@ test('slate layout stays generic on a structurally different English fixture', a
   assert.ok(html.indexOf('Purpose') < html.indexOf('Open questions'))
 })
 
+test('reading-draft contract fixture answers four questions and folds the appendix', async () => {
+  const markdown = await readFile(new URL('./fixtures/plan-reading-synthetic.md', import.meta.url), 'utf8')
+  const html = planDocumentHtml(markdown, { layout: 'slate' })
+  assert.match(html, /專案規劃書 · 閱讀整理稿/)
+  assert.match(html, /合成fixture，非真實業務/)
+  assert.match(html, /要得到什麼成果/)
+  assert.match(html, /下一步誰做/)
+  assert.match(html, /卡在哪/)
+  assert.match(html, /哪些真要館長決定/)
+  assert.match(html, /以下為計畫，實際完成狀態未核實/)
+  assert.match(html, /class="callout callout-amber"/)
+  assert.match(html, /class="cardlet"/)
+  assert.match(html, /kind-decision/)
+  assert.match(html, /kind-pending/)
+  assert.match(html, /kind-appendix/)
+  assert.match(html, /展開附錄原文/)
+  assert.match(html, /<details>/)
+  assert.match(html, /count_shelf/)
+  assert.match(html, /&quot;schemaVersion&quot;: 1/)
+  assert.match(html, /synthetic-fixture/)
+  assert.match(html, /revision alone is not atomic/)
+  assert.match(html, /文件記載／非即時/)
+  assert.match(html, /規劃值/)
+  assert.ok(html.indexOf('要得到什麼成果') < html.indexOf('展開附錄原文'))
+  assert.ok(html.indexOf('<h2>一頁摘要</h2>') < html.indexOf('<h2>待決事項</h2>'))
+  assert.equal(html.includes('七維'), false)
+  assert.equal(html.includes('p-003'), false)
+  assert.equal(html.includes('p003'), false)
+  assert.equal(html.includes('<script'), false)
+  assert.equal(html.includes('<select'), false)
+})
+
 test('slate nav keeps full titles and labels document-recorded status', () => {
   const html = planDocumentHtml([
     '# 標題',

@@ -313,6 +313,19 @@ test('read-chain sanitizer keeps fenced code for the slate page and still escape
   assert.equal(plain.includes('<script'), false)
 })
 
+test('synthetic reading-draft fixture keeps appendix literals', async () => {
+  const markdown = await readFile(new URL('./fixtures/plan-reading-synthetic.md', import.meta.url), 'utf8')
+  const html = planDocumentHtml(markdown, { layout: 'slate' })
+  const literals = extractLiterals(markdown)
+  const rendered = renderedLiterals(html)
+  assert.ok(literals.some(item => item.kind === 'comment' || item.kind === 'fence'))
+  for (const item of literals) {
+    assert.ok(rendered.some(text => text.includes(item.text.trim()) || text.includes(item.text)), `missing ${item.kind}`)
+  }
+  assert.match(html, /count_shelf/)
+  assert.equal(html.includes('<script'), false)
+})
+
 test('english fixture keeps every literal and prose atom', async () => {
   const markdown = await readFile(new URL('./fixtures/plan-brief-en.md', import.meta.url), 'utf8')
   const html = planDocumentHtml(safeMarkdown(markdown), { layout: 'slate' })

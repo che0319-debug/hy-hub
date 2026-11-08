@@ -396,7 +396,7 @@ function paragraphHtml(text) {
   const body = `<p>${slateInline(raw)}</p>`
   if (raw.startsWith('禁止')) return `<div class="callout callout-rose">${body}</div>`
   if (raw.startsWith('共同護欄')) return `<div class="callout callout-green">${body}</div>`
-  if (/^(本版不|閱讀基準|停工|答覆前)/.test(raw)) return `<div class="callout callout-amber">${body}</div>`
+  if (/^(本版不|閱讀基準|停工|答覆前|以下為計畫|本稿只)/.test(raw)) return `<div class="callout callout-amber">${body}</div>`
   return body
 }
 
@@ -478,7 +478,7 @@ function classifySection(title, blocks = []) {
   if (/例行|週期/i.test(text)) return 'routine'
   if (/風險/i.test(text)) return 'risk'
   if (/護欄|原則/i.test(text)) return 'guard'
-  if (/拍板|決策|已決定/i.test(text)) return 'decision'
+  if (/拍板|決策|已決定|已定案/i.test(text)) return 'decision'
   if (/修訂/i.test(text)) return 'revision'
   const pres = blocks.filter(block => block.type === 'pre').length
   if (pres >= 3) return 'technical'
@@ -536,7 +536,6 @@ function summaryView(section) {
             rest.push({ type: 'list', ordered: false, items: [row.item] })
             continue
           }
-          if (!lead && row.label.body) lead = row.label.body
           highlights.push({
             title: row.label.title,
             html: `${row.label.body ? `<p>${slateInline(row.label.body)}</p>` : ''}${row.item.children.length ? listHtml(row.item.children, row.item.children.every(child => child.ordered)) : ''}`,
@@ -738,9 +737,12 @@ function slateDocumentHtml(markdown) {
   const { heroMeta, extraMeta } = splitMeta(preamble.meta)
   const tags = statusTags(preamble.meta)
   const stats = sourceStats(parsed, preamble.meta)
+  const draftMeta = preamble.meta.find(item => /^(稿別)$/.test(item.label.trim()))
+  const draftShort = draftMeta ? draftMeta.value.replace(/[（(][\s\S]*$/, '').replace(/\*\*/g, '').trim().slice(0, 18) : ''
+  const overline = draftShort ? `專案規劃書 · ${draftShort}` : '專案規劃書'
   const header = [
     '<header class="hero"><div class="inner">',
-    '<p class="overline">專案規劃書</p>',
+    `<p class="overline">${slateInline(overline)}</p>`,
     titleParts.heading ? `<h1>${slateInline(titleParts.heading)}</h1>` : '',
     metaHtml(heroMeta),
     '</div></header>',
@@ -757,12 +759,12 @@ function slateDocumentHtml(markdown) {
     let inner = ''
     if (section.summary) {
       const view = summaryView(section)
-      inner += tags.length ? `<div class="tags">${tags.map(tag => `<span class="tag tag-${tag.tone}">${slateInline(tag.text)}</span>`).join('')}<span class="tag-note">文件記載／非即時</span></div>` : ''
-      inner += stats.length ? `<div class="stats">${stats.map(stat => `<div class="stat"><strong>${slateInline(stat.value)}</strong><span>${slateInline(stat.label)}</span></div>`).join('')}</div>` : ''
+      inner += tags.length || draftShort ? `<div class="tags">${tags.map(tag => `<span class="tag tag-${tag.tone}">${slateInline(tag.text)}</span>`).join('')}${draftShort ? `<span class="tag-note">${slateInline(draftShort)}</span>` : ''}${tags.length ? '<span class="tag-note">文件記載／非即時</span>' : ''}</div>` : ''
       if (view.lead) inner += `<p class="lead">${slateInline(view.lead)}</p>`
       if (view.highlights.length) {
         inner += `<div class="grid">${view.highlights.map(item => `<div class="cardlet"><h3>${slateInline(item.title)}</h3>${item.html}</div>`).join('')}</div>`
       }
+      inner += stats.length ? `<div class="stats">${stats.map(stat => `<div class="stat"><strong>${slateInline(stat.value)}</strong><span>${slateInline(stat.label)}</span></div>`).join('')}</div>` : ''
       inner += view.rest.map(block => renderSlateBlock(block, section.title, -1)).join('\n')
       inner += '<div class="callout callout-amber"><p>閱讀基準：日期、狀態與期限依規劃書原文列出（文件記載／非即時），未接 Office 即時狀態；規劃日期為規劃值，不視為已完成。</p></div>'
       if (leftoverHtml) { inner += leftoverHtml; leftoverHtml = '' }
