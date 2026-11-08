@@ -24,8 +24,8 @@ test('名冊：四位小幫手＋執行者與 Atlas，id 不重複', () => {
   assert.equal(HELPERS.length, 4)
   assert.equal(ROSTER.filter(r => r.group === 'executor').length, 3)
   assert.equal(ROSTER.filter(r => r.group === 'coo').length, 1)
-  assert.equal(ROSTER.length, 9)
-  assert.equal(new Set(ROSTER.map(r => r.id)).size, 9)
+  assert.equal(ROSTER.length, 10)
+  assert.equal(new Set(ROSTER.map(r => r.id)).size, 10)
   assert.deepEqual(HELPERS.map(h => h.agent), ['hy', '950157', 'family', 'sam'])
 })
 
@@ -66,9 +66,9 @@ test('Wade 在 Life 島名單，駐在健身房，不進 owner-bot，卡片不�
     assert.ok(dist(spot, gym) < dist(spot, p), b.id)
   }
 
-  assert.equal(WADE_LOOK.body, 0x3dbe72)
+  assert.equal(WADE_LOOK.body, 0xf63898)
   assert.equal(WADE_LOOK.eye, 0xffffff)
-  for (const [name, color] of Object.entries(BOT_COLORS)) assert.notEqual(WADE_LOOK.body, color, name)
+  assert.equal(WADE_LOOK.body, BOT_COLORS.xiaoyin)
   assert.notEqual(WADE_LOOK.body, BOT_COLORS.hy)
   assert.notEqual(WADE_LOOK.body, BOT_COLORS.gpt)
   const mesh = makeBot('wade', new MeshBasicMaterial(), null, 'wait')
@@ -95,6 +95,43 @@ test('Wade 在 Life 島名單，駐在健身房，不進 owner-bot，卡片不�
   assert.equal(off.byAgent.fitness, undefined)
   assert.equal(off.byAgent.wade, undefined)
   assert.equal(off.unowned, 1)
+})
+
+test('Nana 只在島上介紹身分，駐點川泱且不接入任何工作歸屬', () => {
+  const nana = ROSTER.find(r => r.id === 'nana')
+  const fig = FIGURES.find(f => f.id === 'nana')
+  assert.equal(nana.post, '川泱購物 CEO')
+  assert.equal(nana.agent, null)
+  assert.equal(nana.board, null)
+  assert.equal(HELPERS.includes(nana), false)
+  assert.equal(LIVE_FIGS.has('nana'), false)
+  assert.equal(canonicalOwnerBot('nana'), '')
+  assert.equal(fig.island, 'side')
+  assert.equal(fig.zone, 'chuan')
+  assert.equal(fig.status, 'wait')
+  assert.deepEqual(figureHome(fig), buildingWorld('side', 'chuan'))
+  const live = new Proxy({}, { get() { throw new Error('Nana must not read live data') } })
+  assert.deepEqual(islandBotCard(fig, live, false), {
+    staticInfo: true, name: 'Nana', role: '川泱購物 CEO', intro: 'Nana 是川泱購物的 CEO。',
+  })
+  const office = deriveOffice({ projects: [{ id: 'p-002', ownerBot: 'sam', stage: 'running' }], decisions: [], totals: { pending: 0 } })
+  assert.equal(office.byAgent.sam.counts.running, 1)
+  assert.equal(office.byAgent.nana, undefined)
+})
+
+test('所有名冊角色都可產生有效、可點選的 3D 模型', () => {
+  const mat = new MeshBasicMaterial()
+  for (const fig of FIGURES) {
+    const bot = makeBot(fig.kind, mat, null)
+    const g = bot.mesh.geometry
+    assert.ok(g.attributes.position.count > 0, fig.id)
+    assert.ok([...g.attributes.position.array].every(Number.isFinite), fig.id)
+    assert.ok([...g.attributes.normal.array].every(Number.isFinite), fig.id)
+    assert.ok(g.boundingBox.max.y < 0.65 && g.boundingBox.min.y >= 0, fig.id)
+    assert.ok(g.boundingBox.max.z > g.boundingBox.min.z, fig.id)
+    bot.root.traverse(o => { if (o.geometry) o.geometry.dispose(); if (o.material && o.material !== mat) o.material.dispose() })
+  }
+  mat.dispose()
 })
 
 test('mapOffice 帶出 ownerBot', () => {
