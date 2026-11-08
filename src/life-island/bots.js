@@ -1,57 +1,99 @@
-// Agent 小人：Atlas（黑圓＋星章）、小因（棕色水滴）、Sam（粉紅六邊形）、950157（紅圓）、HY（青綠圓角方塊）、Wade（中綠圓角方塊）。
-// 共通特徵：兩顆白色直長眼（Wade 的眼睛色在 WADE_LOOK）。身高約 0.45，腳底在 y=0。
-import { Group, Mesh, TorusGeometry, SphereGeometry, MeshBasicMaterial, CylinderGeometry, RingGeometry } from 'three';
-import { B, sph, cyl, cone, box } from './geo.js';
+// 依 HY 2026-11-08 角色截圖：黑色 HY 四瓣星、Atlas 黑圓、Sam 橘六邊形、
+// Wade 粉紅水滴、小因粉紅圓角塊、950157 藍圓、Nana 橘色雲朵。
+// 角色本色與腳下工作狀態色分開；執行者造型維持不變。
+import { Group, Mesh, TorusGeometry, SphereGeometry, MeshBasicMaterial, Shape, ExtrudeGeometry } from 'three';
+import { B, sph, cyl, box } from './geo.js';
 
-export const BOT_COLORS = { atlas: 0x15171c, xiaoyin: 0x9c6a3c, sam: 0xf0409a, p950157: 0xf23d4b, hy: 0x37b5a4, claude: 0xff8a1f, gpt: 0x9bd62c, grokbuild: 0xeceff3 };
-// Wade 的外觀只改這裡。中綠，跟 HY 的青綠、GPT／Grok Build 的黃綠分開。身體是圓角方塊，正中兩顆白色直立橢圓眼，沒有其他特徵。
-export const WADE_LOOK = {
-  body: 0x3dbe72,
-  eye: 0xffffff,
-  size: [0.4, 0.4, 0.34],
-  radius: 0.14,
-  segments: 3,
-  y: 0.235,
-  shade: [0.9, 1.04],
-  eyeRadius: 0.022,
-  eyeScale: [0.7, 1.9, 0.45],
-  eyeDx: 0.064,
-  eyeY: 0.25,
-  eyeZ: 0.178,
-};
+export const BOT_COLORS = { atlas: 0x000000, xiaoyin: 0xf63898, sam: 0xf39825, p950157: 0x2d85f7, hy: 0x000000, nana: 0xf39825, claude: 0xff8a1f, gpt: 0x9bd62c, grokbuild: 0xeceff3 };
+export const WADE_LOOK = { body: 0xf63898, eye: 0xffffff };
 export const STATUS_COLORS = { wait: 0x8d99ab, ai: 0x2f6bff, you: 0xf2a93a, done: 0x2fb36f, bad: 0xe5484d };
 
-function eyes(b, z, y = 0.27, dx = 0.075) {
-  for (const s of [-1, 1]) b.add(sph(0.03, 10, 8), 0xffffff, { x: s * dx, y, z, s: [0.62, 1.55, 0.5], rz: s * -0.16 });
+// 截圖的兩眼朝同一方向傾斜，右眼略高；不影響執行者的眼睛。
+function portraitEyes(b, z, y = 0.285, dx = 0.065) {
+  for (const side of [-1, 1]) b.add(sph(0.027, 12, 10), 0xffffff,
+    { x: side * dx, y: y + side * 0.018, z, s: [0.72, 1.65, 0.5], rz: 0.42 });
+}
+
+// 平滑輪廓加厚及圓邊，讓正面符合截圖、旋轉時仍保有 3D 體積。
+function silhouette(kind) {
+  const s = new Shape();
+  if (kind === 'hy') {
+    s.moveTo(-0.105, 0.10);
+    s.bezierCurveTo(-0.10, 0.20, -0.035, 0.29, 0.015, 0.24);
+    s.bezierCurveTo(0.06, 0.21, 0.085, 0.16, 0.105, 0.11);
+    s.bezierCurveTo(0.27, 0.09, 0.30, -0.015, 0.12, -0.085);
+    s.bezierCurveTo(0.095, -0.24, -0.005, -0.29, -0.09, -0.11);
+    s.bezierCurveTo(-0.27, -0.09, -0.30, -0.01, -0.105, 0.10);
+  } else if (kind === 'wade') {
+    s.moveTo(-0.15, 0.16);
+    s.bezierCurveTo(-0.12, 0.25, -0.055, 0.20, 0.07, 0.15);
+    s.bezierCurveTo(0.23, 0.07, 0.23, -0.09, 0.11, -0.17);
+    s.bezierCurveTo(-0.02, -0.27, -0.23, -0.18, -0.19, -0.02);
+    s.bezierCurveTo(-0.18, 0.05, -0.17, 0.11, -0.15, 0.16);
+  } else if (kind === 'xiaoyin') {
+    s.moveTo(-0.10, 0.20);
+    s.bezierCurveTo(-0.06, 0.24, 0.00, 0.20, 0.11, 0.15);
+    s.quadraticCurveTo(0.15, 0.13, 0.17, 0.07);
+    s.lineTo(0.23, -0.10);
+    s.quadraticCurveTo(0.25, -0.16, 0.17, -0.18);
+    s.lineTo(-0.10, -0.25);
+    s.quadraticCurveTo(-0.15, -0.26, -0.17, -0.20);
+    s.lineTo(-0.24, -0.03);
+    s.quadraticCurveTo(-0.26, 0.02, -0.22, 0.08);
+    s.lineTo(-0.10, 0.20);
+  } else if (kind === 'sam') {
+    // 圓角六邊形，保留截圖的不對稱傾角。
+    s.moveTo(-0.04, 0.21);
+    s.quadraticCurveTo(-0.07, 0.23, -0.10, 0.20);
+    s.lineTo(-0.23, 0.05); s.quadraticCurveTo(-0.25, 0.02, -0.23, -0.02);
+    s.lineTo(-0.15, -0.19); s.quadraticCurveTo(-0.14, -0.21, -0.10, -0.22);
+    s.lineTo(0.06, -0.26); s.quadraticCurveTo(0.09, -0.27, 0.12, -0.24);
+    s.lineTo(0.24, -0.09); s.quadraticCurveTo(0.26, -0.06, 0.24, -0.02);
+    s.lineTo(0.17, 0.15); s.quadraticCurveTo(0.16, 0.18, 0.12, 0.19);
+    s.lineTo(-0.04, 0.21);
+  } else if (kind === 'nana') {
+    s.moveTo(-0.21, 0.02);
+    s.bezierCurveTo(-0.27, 0.16, -0.12, 0.25, -0.025, 0.19);
+    s.bezierCurveTo(0.065, 0.27, 0.19, 0.21, 0.19, 0.12);
+    s.bezierCurveTo(0.32, 0.07, 0.29, -0.09, 0.16, -0.10);
+    s.bezierCurveTo(0.12, -0.20, 0.01, -0.21, -0.06, -0.16);
+    s.bezierCurveTo(-0.23, -0.23, -0.30, -0.08, -0.21, 0.02);
+  }
+  s.closePath();
+  const g = new ExtrudeGeometry(s, { depth: 0.24, steps: 1, bevelEnabled: true, bevelThickness: 0.025, bevelSize: 0.018, bevelSegments: 3, curveSegments: 16 });
+  g.translate(0, 0, -0.12);
+  return g;
+}
+
+function leaderBadge(b) {
+  const x = 0.18, y = 0.12, z = 0.175;
+  b.add(cyl(0.077, 0.077, 0.018, 24), 0xffffff, { x, y, z, rx: Math.PI / 2 });
+  b.add(cyl(0.065, 0.065, 0.022, 24), BOT_COLORS.sam, { x, y, z: z + 0.012, rx: Math.PI / 2 });
+  const star = new Shape();
+  for (let i = 0; i < 10; i++) {
+    const a = Math.PI / 2 + i * Math.PI / 5, r = i % 2 ? 0.019 : 0.039;
+    if (i) star.lineTo(Math.cos(a) * r, Math.sin(a) * r);
+    else star.moveTo(Math.cos(a) * r, Math.sin(a) * r);
+  }
+  star.closePath();
+  b.add(new ExtrudeGeometry(star, { depth: 0.006, bevelEnabled: false }), 0xffffff, { x, y, z: z + 0.025 });
 }
 
 function bodyGeo(kind) {
   const b = new B();
   switch (kind) {
-    case 'atlas': {
-      b.add(sph(0.215, 22, 16), BOT_COLORS.atlas, { y: 0.235, g: [0.82, 1.05] });
-      eyes(b, 0.195);
-      // 隊長星章（右下）
-      b.add(cyl(0.055, 0.055, 0.025, 16), 0xf5a02b, { x: 0.15, y: 0.1, z: 0.14, rx: Math.PI / 2, ry: 0 });
-      b.add(sph(0.022, 5, 4), 0xffffff, { x: 0.15, y: 0.1, z: 0.158, s: [1, 1, 0.5] });
-      break; }
-    case 'xiaoyin': {
-      // 水滴：下圓、左上尖
-      b.add(sph(0.2, 20, 14), BOT_COLORS.xiaoyin, { y: 0.21, s: [1, 0.96, 0.95], g: [0.82, 1.05] });
-      b.add(cone(0.15, 0.24, 14), BOT_COLORS.xiaoyin, { x: -0.07, y: 0.4, z: -0.01, rz: 0.55, g: [0.9, 1.0] });
-      eyes(b, 0.18, 0.23, 0.07);
-      break; }
-    case 'sam': {
-      b.add(cyl(0.225, 0.225, 0.34, 6), BOT_COLORS.sam, { y: 0.235, rx: Math.PI / 2, ry: Math.PI / 6, g: [0.86, 1.04] });
-      eyes(b, 0.18, 0.25);
-      break; }
+    case 'atlas':
     case 'p950157': {
-      b.add(sph(0.215, 22, 16), BOT_COLORS.p950157, { y: 0.235, g: [0.84, 1.05] });
-      eyes(b, 0.195);
+      b.add(sph(0.215, 24, 18), BOT_COLORS[kind], { y: 0.235, g: [0.86, 1.04] });
+      portraitEyes(b, 0.197);
       break; }
-    case 'hy': {
-      b.add(box(0.4, 0.38, 0.36, 0.1, 3), BOT_COLORS.hy, { y: 0.235, rz: -0.12, ry: 0.0, g: [0.86, 1.05] });
-      eyes(b, 0.187, 0.25);
+    case 'hy':
+    case 'xiaoyin':
+    case 'sam':
+    case 'nana': {
+      b.add(silhouette(kind), BOT_COLORS[kind], { y: 0.29, g: [0.90, 1.04] });
+      portraitEyes(b, 0.151, 0.31);
+      if (kind === 'hy') leaderBadge(b);
       break; }
     case 'claude': {   // 橘色像素小怪物：方身、兩側方手、四隻短腳、兩顆黑色直長眼
       const O = BOT_COLORS.claude;
@@ -71,10 +113,9 @@ function bodyGeo(kind) {
       b.add(box(0.4, 0.14, 0.34, 0.08, 2), 0x2b2d33, { y: 0.4, z: -0.0, g: [0.9, 1] });
       for (const [x, y, r] of [[-0.065, 0.2, 0.55], [0.1, 0.28, 0.55]]) b.add(sph(0.03, 10, 8), 0x1c1d22, { x, y, z: 0.172, s: [0.8, 2.0, 0.5], rz: r });
       break; }
-    case 'wade': { // 側邊欄圖示：綠色圓角方塊，正中兩顆白色直立橢圓眼
-      const L = WADE_LOOK;
-      b.add(box(L.size[0], L.size[1], L.size[2], L.radius, L.segments), L.body, { y: L.y, g: L.shade });
-      for (const s of [-1, 1]) b.add(sph(L.eyeRadius, 10, 8), L.eye, { x: s * L.eyeDx, y: L.eyeY, z: L.eyeZ, s: L.eyeScale });
+    case 'wade': {
+      b.add(silhouette(kind), WADE_LOOK.body, { y: 0.26, g: [0.90, 1.04] });
+      portraitEyes(b, 0.151, 0.29, 0.06);
       break; }
   }
   return b.build();

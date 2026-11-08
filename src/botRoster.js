@@ -23,6 +23,10 @@ export const ROSTER = [
   { id: 'wade', group: 'coach', name: 'Wade', role: '健身教練', post: '健身教練', island: 'family', zone: 'gym', kind: 'wade',
     agent: null, persona: null, source: null, board: null, ownerId: 'fitness', staticInfo: true,
     intro: '使用者的專職健身教練，負責訓練課表、器材教學與進度追蹤。' },
+  // 島上身分介紹；沿用散步與跨島，不加入專案 owner、待辦或記憶。
+  { id: 'nana', group: 'resident', name: 'Nana', role: '川泱購物 CEO', post: '川泱購物 CEO', island: 'side', zone: 'chuan', kind: 'nana',
+    agent: null, persona: null, source: null, board: null, staticInfo: true,
+    intro: 'Nana 是川泱購物的 CEO。' },
 ]
 
 export const HELPERS = ROSTER.filter(r => r.group === 'helper')
