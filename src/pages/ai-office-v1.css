@@ -203,8 +203,14 @@
 .ao-overview-v2 .ao-decide{order:0}
 @media(max-width:700px){.ao-overview-v2 .ao-milestone-strip .ao-timeline li{flex-basis:42%}}
 
-/* 專案規劃閱讀版：淺灰藍頁首在 iframe 內，外框跟著同一底色。審查分頁仍用白底 ao-plan-frame。 */
-.ao-plan-shell{background:#d8dee6;border-color:#d5e0ea;color:#243040}
-.ao-plan-shell h2{color:#355575}
-.ao-plan-frame.ao-plan-slate{background:#d8dee6;border-color:#c5d6e8;height:72vh;min-height:560px}
-@media(max-width:640px){.ao-plan-frame.ao-plan-slate{height:68vh;min-height:420px}}
+/* 專案規劃閱讀版：外層不跟著文件長，只在 iframe 內捲動。審查分頁仍用白底 ao-plan-frame。 */
+.ao-project.is-plan-tab{padding-bottom:0;overflow:hidden}
+.ao-project.is-plan-tab>.ao-tabnote{display:none}
+.ao-plan-shell{background:#f2f5f9;border-color:#dce3ed;color:#17263b;display:flex;flex-direction:column;padding:0;overflow:hidden;min-height:360px}
+.ao-plan-shell .ao-card-head{margin:0;padding:10px 16px 8px;border-bottom:1px solid #dce3ed}
+.ao-plan-shell h2{color:#172e50}
+.ao-plan-shell>p,.ao-plan-shell>[role]{padding:0 16px}
+.ao .ao-plan-shell iframe.ao-plan-frame.ao-plan-slate{flex:1;width:100%;height:min(70vh,calc(100dvh - 14rem));min-height:480px;background:#f2f5f9;border:0;border-radius:0 0 16px 16px}
+@media(max-width:640px){
+  .ao .ao-plan-shell iframe.ao-plan-frame.ao-plan-slate{height:min(62vh,calc(100dvh - 11rem));min-height:380px}
+}

@@ -335,6 +335,11 @@ function takePreamble(blocks) {
   let started = false
   while (index < blocks.length) {
     const block = blocks[index]
+    if (block.type === 'pre' || block.type === 'hr') {
+      loose.push(block)
+      index += 1
+      continue
+    }
     if (!started && isMetaList(block)) {
       for (const item of block.items) {
         const metaItem = metaFromItem(item.text)
@@ -391,7 +396,7 @@ function paragraphHtml(text) {
   const body = `<p>${slateInline(raw)}</p>`
   if (raw.startsWith('禁止')) return `<div class="callout callout-rose">${body}</div>`
   if (raw.startsWith('共同護欄')) return `<div class="callout callout-green">${body}</div>`
-  if (raw.startsWith('本版不')) return `<div class="callout callout-amber">${body}</div>`
+  if (/^(本版不|閱讀基準|停工|答覆前)/.test(raw)) return `<div class="callout callout-amber">${body}</div>`
   return body
 }
 
@@ -427,15 +432,30 @@ function timelineHtml(rows) {
   return `<div class="timeline" aria-label="里程碑時間軸">${chips}</div>`
 }
 
+function preHtml(text) {
+  return `<pre class="source"><code>${escapeHtml(text)}</code></pre>`
+}
+
+function doDontCards(rows) {
+  const head = (rows[0] || []).map(cell => cell.trim())
+  if (head.length !== 2) return ''
+  const left = /^(做|範圍內|in|include)/i.test(head[0])
+  const right = /^(不做|範圍外|out|exclude)/i.test(head[1])
+  if (!left || !right) return ''
+  const card = (title, cells) => `<div class="cardlet"><h3>${slateInline(title)}</h3><ul>${cells.filter(Boolean).map(cell => `<li>${slateInline(cell)}</li>`).join('')}</ul></div>`
+  return `<div class="grid">${card(head[0], rows.slice(1).map(row => row[0] || ''))}${card(head[1], rows.slice(1).map(row => row[1] || ''))}</div>`
+}
+
 function renderSlateBlock(block, sectionTitle, tableIndex) {
   if (block.type === 'h') return `<h${block.level}>${slateInline(block.text)}</h${block.level}>`
   if (block.type === 'p') return paragraphHtml(block.text)
   if (block.type === 'list') return listHtml(block.items, block.ordered)
-  if (block.type === 'pre') return `<pre class="source"><code>${escapeHtml(block.text)}</code></pre>`
+  if (block.type === 'pre') return preHtml(block.text)
   if (block.type === 'hr') return '<hr>'
   if (block.type === 'table') {
-    const timeline = tableIndex === 0 && /里程碑/.test(sectionTitle || '') ? timelineHtml(block.rows) : ''
-    return `${timeline}${slateTable(block.rows)}`
+    const timeline = tableIndex === 0 && /里程碑|時程|排程/.test(sectionTitle || '') ? timelineHtml(block.rows) : ''
+    const split = tableIndex === 0 ? doDontCards(block.rows) : ''
+    return `${timeline}${split}${slateTable(block.rows)}`
   }
   return ''
 }
@@ -444,49 +464,238 @@ function renderLoose(blocks) {
   return blocks.map(block => renderSlateBlock(block, '', -1)).join('\n')
 }
 
+function classifySection(title, blocks = []) {
+  const text = title || ''
+  if (/摘要|總覽|overview|summary/i.test(text)) return 'summary'
+  if (/待決|待釐清|待答|待補|請.{0,12}補充|open questions?/i.test(text)) return 'pending'
+  if (/附錄|appendix|原文留存|修訂對照/i.test(text)) return 'appendix'
+  if (/資料結構|契約|API|schema|\bJSON\b|寫入接口|實作附錄|技術規格|payload/i.test(text)) return 'technical'
+  if (/里程碑|時程|排程|timeline/i.test(text)) return 'milestone'
+  if (/範圍|目標與終點|交付|不做|purpose|scope/i.test(text)) return 'scope'
+  if (/分工|負責|角色/i.test(text)) return 'roles'
+  if (/評分|計分/i.test(text)) return 'scoring'
+  if (/驗收|交件/i.test(text)) return 'accept'
+  if (/例行|週期/i.test(text)) return 'routine'
+  if (/風險/i.test(text)) return 'risk'
+  if (/護欄|原則/i.test(text)) return 'guard'
+  if (/拍板|決策|已決定/i.test(text)) return 'decision'
+  if (/修訂/i.test(text)) return 'revision'
+  const pres = blocks.filter(block => block.type === 'pre').length
+  if (pres >= 3) return 'technical'
+  return 'body'
+}
+
+function isFoldedKind(kind) {
+  return kind === 'technical' || kind === 'appendix'
+}
+
+const KIND_EYEBROW = {
+  summary: '一頁摘要',
+  scope: '範圍',
+  roles: '分工',
+  scoring: '評分',
+  milestone: '里程碑',
+  accept: '驗收',
+  routine: '例行',
+  pending: '待決',
+  decision: '決策',
+  guard: '護欄',
+  risk: '風險',
+  technical: '技術原文',
+  appendix: '附錄',
+  revision: '修訂',
+  body: '章節',
+}
+
+function splitTitle(title) {
+  const text = String(title || '').trim()
+  const parts = text.split('｜').map(part => part.trim()).filter(Boolean)
+  return { heading: text, rest: parts.length >= 2 ? parts.slice(1).join('｜') : '' }
+}
+
+function labeledItem(text) {
+  const raw = String(text || '').trim()
+  const bold = /^\*\*([^*]+)\*\*[：:]\s*(.*)$/.exec(raw)
+  if (bold) return { title: bold[1].trim(), body: bold[2].trim() }
+  const plain = /^([^：:]{1,24})[：:]\s+(.+)$/.exec(raw)
+  if (plain && !/[。！？]/.test(plain[1])) return { title: plain[1].trim(), body: plain[2].trim() }
+  return null
+}
+
+function summaryView(section) {
+  const highlights = []
+  const rest = []
+  let lead = ''
+  for (const block of section.blocks) {
+    if (block.type === 'list') {
+      const rows = block.items.map(item => ({ item, label: labeledItem(item.text) }))
+      const hits = rows.filter(row => row.label).length
+      if (hits && hits >= Math.ceil(rows.length / 2)) {
+        for (const row of rows) {
+          if (!row.label) {
+            rest.push({ type: 'list', ordered: false, items: [row.item] })
+            continue
+          }
+          if (!lead && row.label.body) lead = row.label.body
+          highlights.push({
+            title: row.label.title,
+            html: `${row.label.body ? `<p>${slateInline(row.label.body)}</p>` : ''}${row.item.children.length ? listHtml(row.item.children, row.item.children.every(child => child.ordered)) : ''}`,
+          })
+        }
+        continue
+      }
+    }
+    if (block.type === 'p' && !lead) lead = block.text
+    rest.push(block)
+  }
+  return { lead, highlights, rest }
+}
+
+function statusTags(meta) {
+  const tags = []
+  for (const item of meta) {
+    if (!/^(狀態|status)$/i.test(item.label.trim())) continue
+    const value = item.value.replace(/\*\*/g, '').trim()
+    if (!value) continue
+    const tone = /(PASS|通過|已核准|已通過)/i.test(value) ? 'green' : /(待|缺口|未|RETURN|退回|草稿)/i.test(value) ? 'amber' : 'blue'
+    const short = value.length > 42 ? `${value.slice(0, 42)}…` : value
+    tags.push({ tone, text: `${item.label}：${short}` })
+  }
+  return tags
+}
+
+function splitMeta(meta) {
+  const preferred = []
+  const rest = []
+  for (const item of meta) {
+    if (preferred.length < 4 && /^(狀態|status|日期|date|Owner|PI|期限|到期|due)/i.test(item.label.trim())) preferred.push(item)
+    else rest.push(item)
+  }
+  while (preferred.length < 4 && rest.length) preferred.push(rest.shift())
+  return { heroMeta: preferred, extraMeta: rest }
+}
+
+function metaHtml(items) {
+  if (!items.length) return ''
+  return `<dl class="meta">${items.map(item => `<div><dt>${slateInline(item.label)}</dt><dd title="${escapeHtml(item.value)}">${slateInline(item.value)}</dd></div>`).join('')}</dl>`
+}
+
+function sourceStats(parsed, meta) {
+  const stats = []
+  let milestones = 0
+  for (const section of parsed.sections) {
+    if (!/里程碑|時程|排程/.test(section.title || '')) continue
+    for (const block of section.blocks) {
+      if (block.type !== 'table') continue
+      milestones += block.rows.slice(1).filter(row => /^[MG]\d+/i.test(String(row[0] || '').replace(/\*/g, '').trim())).length
+    }
+  }
+  if (milestones) stats.push({ value: String(milestones), label: '來源列明的里程碑' })
+  const due = meta.find(item => /期限|到期|due/i.test(item.label))
+  if (due) {
+    const date = chipDate(due.value)
+    stats.push({ value: date || due.value.slice(0, 16), label: `規劃${due.label}（未當成已完成）` })
+  }
+  const owner = meta.find(item => /Owner|PI|負責/i.test(item.label))
+  if (owner) stats.push({ value: owner.value.replace(/\*\*/g, '').slice(0, 18), label: owner.label })
+  return stats.slice(0, 4)
+}
+
+function navLabel(title) {
+  const text = String(title || '章節').replace(/\s+/g, ' ').trim()
+  const numbered = /^([一二三四五六七八九十]+、[^（(]{1,10})/.exec(text)
+  if (numbered) return numbered[1].trim()
+  return text.slice(0, 12)
+}
+
 const SLATE_CSS = `
-:root{--header-bg:#eef5fc;--header-text:#355575;--page-bg:#d8dee6;--card:#ffffff;--ink:#243040;--muted:#5b6b7c;--line:#d5e0ea;--green:#1b6b43;--green-bg:#e6f5ec;--amber:#8a5a10;--amber-bg:#f8eed8;--rose:#8a3040;--rose-bg:#f8e6e9}
-*{box-sizing:border-box}html,body{margin:0;padding:0}
-body{background:var(--page-bg);color:var(--ink);font-family:"PingFang TC","Noto Sans TC","Microsoft JhengHei",sans-serif;line-height:1.7;font-size:16px}
-.wrap{max-width:1080px;margin:0 auto;padding:20px 14px 72px}
-header.hero{background:var(--header-bg);color:var(--header-text);border-radius:16px;padding:28px 28px 24px;margin-bottom:18px}
-header.hero h1{margin:0 0 8px;font-size:1.7rem;line-height:1.35;font-weight:700;color:var(--header-text)}
-header.hero .sub{margin:0 0 12px;color:var(--header-text)}
-.meta{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px 20px;margin:0 0 12px}
-.meta div{min-width:0}.meta dt{font-size:12px;letter-spacing:.04em;color:#5d7894;font-weight:600}.meta dd{margin:0;color:var(--header-text);overflow-wrap:anywhere}
-.card{background:var(--card);border-radius:16px;padding:26px 28px;margin-bottom:16px;box-shadow:0 1px 2px rgba(36,48,64,.06);min-width:0}
-.wrap,header.hero{min-width:0}
-.card.summary{border-left:5px solid var(--header-text)}
-h2{margin:0 0 14px;font-size:1.28rem;color:var(--header-text);line-height:1.4}
-h3{margin:22px 0 10px;font-size:1.08rem;color:#3d5a75}h4{margin:18px 0 8px;font-size:1rem;color:#3d5a75}
-p,ul,ol{margin:0 0 12px}ul,ol{padding-left:1.25em}li{margin:0 0 6px}
-p,li,dd{overflow-wrap:break-word}a{color:var(--header-text)}
-.toc{display:flex;flex-wrap:wrap;gap:8px;margin:8px 0 0}
-.toc a{text-decoration:none;background:#fff;border:1px solid #c5d6e8;color:var(--header-text);border-radius:999px;padding:4px 10px;font-size:13px}
-.tag{display:inline-block;border-radius:999px;padding:3px 10px;font-size:12px;font-weight:600}
-.tag-green{background:var(--green-bg);color:var(--green)}.tag-amber{background:var(--amber-bg);color:var(--amber)}
-.callout{border-radius:12px;padding:12px 14px;margin:12px 0}.callout p{margin:0}
-.callout-green{background:var(--green-bg);color:#163d2a}.callout-amber{background:var(--amber-bg);color:#5c3d0c}.callout-rose{background:var(--rose-bg);color:#5c2230}
-table{width:100%;border-collapse:collapse;font-size:.95rem;margin:0}
-th,td{border:1px solid var(--line);padding:8px 10px;text-align:left;vertical-align:top}
-th{background:var(--header-bg);color:var(--header-text);font-weight:600}
+:root{--navy:#172e50;--blue:#294f85;--ink:#17263b;--muted:#63748c;--line:#dce3ed;--bg:#f2f5f9;--card:#fff;--green:#329b61;--amber:#d38a21;--rose:#a33b4a}
+*{box-sizing:border-box}html{scroll-behavior:smooth;scroll-padding-top:56px}html,body{margin:0;padding:0}
+body{background:var(--bg);color:var(--ink);font-family:"PingFang TC","Noto Sans TC","Microsoft JhengHei",sans-serif;font-size:16px;line-height:1.8}
+a{color:#285b9a;text-underline-offset:3px}
+.page{min-width:0}
+header.hero{background-color:#162b4b;background-image:linear-gradient(115deg,#162b4b,#285288);color:#fff;padding:16px 22px 14px}
+header.hero .inner,main,.nav-inner{max-width:1100px;margin:0 auto;min-width:0}
+.overline{font-size:12px;letter-spacing:.14em;color:#b9cce6;font-weight:700;margin:0 0 4px}
+header.hero h1{margin:2px 0 4px;font-size:clamp(20px,3vw,30px);line-height:1.28;font-weight:700;color:#fff}
+header.hero .sub{margin:0 0 6px;font-size:15px;color:#e0e9f7;line-height:1.45}
+.meta{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:4px 16px;margin:8px 0 0}
+.meta div{min-width:0}.meta dt{font-size:11px;letter-spacing:.04em;color:var(--muted);font-weight:650}.meta dd{margin:0;color:var(--ink);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:13px}
+header.hero .meta{color:#cbd9ec}header.hero .meta dt{color:#9fb4d0}header.hero .meta dd{color:#eef3fb}
+nav.toc{position:sticky;top:0;z-index:5;background:#fffffff2;backdrop-filter:blur(8px);border-bottom:1px solid var(--line)}
+.nav-inner{display:flex;gap:16px;padding:10px 24px;overflow:auto;white-space:nowrap}
+nav.toc a{color:var(--muted);text-decoration:none;font-size:14px}
+nav.toc a:hover{color:var(--blue)}
+main{padding:18px 24px 48px;display:flex;flex-direction:column}
+details.source-notes{order:99}
+.card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:22px 24px;margin:0 0 16px;box-shadow:0 3px 12px #192f4e08;min-width:0}
+.card.summary{border-left:7px solid var(--green)}
+.card.kind-pending{border-left:7px solid var(--amber)}
+.card.kind-guard,.card.kind-decision{border-left:7px solid var(--blue)}
+.card.kind-milestone{border-top:4px solid #6c8fbb}
+.card.kind-technical,.card.kind-appendix{background:#f7f9fc}
+.eyebrow{font-size:11px;letter-spacing:.16em;color:#7c8da5;font-weight:700;margin:0 0 4px}
+h2{margin:0 0 14px;font-size:1.35rem;line-height:1.4;color:var(--navy)}
+h3{margin:20px 0 8px;font-size:1.08rem;color:#294e7b}
+h4{margin:16px 0 8px;font-size:1rem;color:#294e7b}
+p,ul,ol{margin:0 0 12px}ul,ol{padding-left:1.3em}li{margin:0 0 6px}
+p,li,dd{overflow-wrap:break-word}
+.lead{font-size:18px;font-weight:650;line-height:1.75;margin:0 0 14px}
+.tags{display:flex;flex-wrap:wrap;gap:8px;margin:0 0 14px}
+.tag{display:inline-block;border-radius:999px;padding:4px 12px;font-size:12px;font-weight:650;color:#fff;background:#7d8999}
+.tag-green{background:var(--green)}.tag-amber{background:var(--amber)}.tag-blue{background:var(--blue)}
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:12px;margin:0 0 16px}
+.stat{border:1px solid var(--line);border-radius:12px;padding:14px 16px}
+.stat strong{display:block;font-size:28px;line-height:1.25;color:var(--navy)}
+.stat span{font-size:13px;color:var(--muted)}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin:0 0 14px}
+.cardlet{border:1px solid var(--line);border-radius:10px;padding:14px 16px;background:#fbfcfe}
+.cardlet h3{margin:0 0 8px}
+.callout{border-radius:10px;padding:12px 16px;margin:12px 0;border-left:4px solid #4878b3;background:#edf4fc}
+.callout p{margin:0}.callout-green{background:#edf7f1;border-color:var(--green);color:#163d2a}
+.callout-amber{background:#fcf3e2;border-color:var(--amber);color:#5c3d0c}
+.callout-rose{background:#f8e6e9;border-color:var(--rose);color:#5c2230}
+table{width:100%;border-collapse:collapse;font-size:14px;margin:0}
+th,td{padding:11px 12px;text-align:left;vertical-align:top;border-bottom:1px solid var(--line)}
+th{background:#eef3f9;color:#355171;font-weight:700}
+td:first-child{font-weight:650}
 .scroll{overflow-x:auto;-webkit-overflow-scrolling:touch;margin:0 0 12px}
 .timeline{display:flex;gap:8px;margin:0 0 16px;overflow-x:auto;-webkit-overflow-scrolling:touch;padding-bottom:6px}
-.tl{flex:1 0 92px;background:var(--header-bg);color:var(--header-text);border-radius:12px;padding:10px 8px;text-align:center;min-width:92px}
-.tl .id{display:block;font-weight:800;font-size:1.05rem}.tl .date,.tl .name{display:block;font-size:12px;line-height:1.35}
-pre.source{margin:0 0 12px;max-width:100%;overflow-x:auto;white-space:pre-wrap;overflow-wrap:anywhere;background:#f6f9fc;border:1px solid var(--line);border-radius:12px;padding:12px 14px}
-pre.source code{display:block;white-space:pre-wrap;overflow-wrap:anywhere;font-family:ui-monospace,monospace;font-size:13px;line-height:1.45}
+.tl{flex:1 0 88px;background:#eef3f9;color:var(--navy);border-radius:10px;padding:10px 8px;text-align:center;min-width:88px;border-top:3px solid #6c8fbb}
+.tl .id{display:block;font-weight:800}.tl .date,.tl .name{display:block;font-size:12px;line-height:1.35;color:var(--muted)}
+pre.source{margin:0 0 12px;max-width:100%;overflow-x:auto;white-space:pre-wrap;overflow-wrap:anywhere;background:#172b46;color:#dce7f8;border-radius:10px;padding:16px}
+pre.source code{display:block;white-space:pre-wrap;overflow-wrap:anywhere;font-family:ui-monospace,Consolas,monospace;font-size:13px;line-height:1.55;color:inherit;background:none}
+code{font-family:ui-monospace,Consolas,monospace;font-size:.88em;background:#eef2f7;color:#36587d;padding:1px 5px;border-radius:4px}
+pre.source code,pre.source code *{background:none;padding:0;color:inherit}
 hr{border:0;border-top:1px solid var(--line);margin:16px 0}
-code{font-family:ui-monospace,monospace;font-size:.92em}
-@media(max-width:820px){.meta{grid-template-columns:1fr}}
-@media(max-width:640px){.wrap{padding:12px 10px 56px}header.hero,.card{padding:18px 16px}header.hero h1{font-size:1.35rem}h2{font-size:1.15rem}table{font-size:.86rem}th,td{padding:7px 8px}}
+details{border:1px solid var(--line);border-radius:10px;background:#fff;margin:8px 0 0}
+details.source-notes{margin:0 0 16px}
+summary{cursor:pointer;padding:14px 16px;font-weight:700;color:#294e7b}
+.detail-body{padding:0 16px 16px}
+footer.note{max-width:1100px;margin:0 auto;padding:0 24px 28px;color:var(--muted);font-size:13px}
+@media(max-width:820px){.meta,.stats{grid-template-columns:1fr 1fr}.grid{grid-template-columns:1fr}}
+@media(max-width:640px){
+  body{font-size:15px}
+  header.hero{padding:12px 16px 10px}
+  header.hero h1{font-size:1.2rem}
+  header.hero .sub{font-size:14px}
+  .nav-inner{gap:14px;padding:8px 16px}
+  main{padding:12px 12px 36px}
+  .card{padding:16px}
+  h2{font-size:1.15rem}
+  .lead{font-size:16px}
+  .stat strong{font-size:22px}
+  th,td{padding:8px 9px;min-width:92px}
+  footer.note{padding:0 12px 24px}
+}
 `
 
 function slateDocumentHtml(markdown) {
   const parsed = structureSlate(parseSlateBlocks(markdown))
   const preamble = takePreamble(parsed.preamble)
-  const summaries = parsed.sections.filter(section => /摘要/.test(section.title) && sectionVisible(section))
-  const rest = parsed.sections.filter(section => !/摘要/.test(section.title) && sectionVisible(section))
+  const summaries = parsed.sections.filter(section => /摘要|總覽|overview|summary/i.test(section.title) && sectionVisible(section))
+  const rest = parsed.sections.filter(section => !/摘要|總覽|overview|summary/i.test(section.title) && sectionVisible(section))
+  const sourceNotes = preamble.loose.filter(block => block.type === 'pre')
   const ordered = [
     ...summaries.map(section => ({ ...section, summary: true })),
     ...preamble.cards.filter(sectionVisible).map(section => ({ ...section, summary: false })),
@@ -494,32 +703,73 @@ function slateDocumentHtml(markdown) {
   ]
   let summaryUsed = false
   const placed = ordered.map((section, index) => {
+    const kind = section.summary ? 'summary' : classifySection(section.title, section.blocks)
     const id = section.summary && !summaryUsed ? 'summary' : `s${index}`
     if (section.summary && id === 'summary') summaryUsed = true
-    return { ...section, id }
+    return { ...section, id, kind }
   })
-  const looseParas = preamble.loose.filter(block => block.type === 'p')
-  const looseOther = preamble.loose.filter(block => block.type !== 'p')
+  const leftoverParas = preamble.loose.filter(block => block.type === 'p')
+  const looseOther = preamble.loose.filter(block => block.type !== 'p' && block.type !== 'pre')
+  const titleParts = splitTitle(parsed.title)
+  const { heroMeta, extraMeta } = splitMeta(preamble.meta)
+  const tags = statusTags(preamble.meta)
+  const stats = sourceStats(parsed, preamble.meta)
   const header = [
-    '<header class="hero">',
-    parsed.title ? `<h1>${slateInline(parsed.title)}</h1>` : '',
-    looseParas.map(block => `<p class="sub">${slateInline(block.text)}</p>`).join(''),
-    preamble.meta.length ? `<dl class="meta">${preamble.meta.map(item => `<div><dt>${slateInline(item.label)}</dt><dd>${slateInline(item.value)}</dd></div>`).join('')}</dl>` : '',
-    renderLoose(looseOther),
-    placed.length ? `<nav class="toc" aria-label="章節">${placed.map(section => `<a href="#${section.id}">${slateInline(section.title)}</a>`).join('')}</nav>` : '',
-    '</header>',
+    '<header class="hero"><div class="inner">',
+    '<p class="overline">專案規劃書</p>',
+    titleParts.heading ? `<h1>${slateInline(titleParts.heading)}</h1>` : '',
+    metaHtml(heroMeta),
+    '</div></header>',
+    placed.length ? `<nav class="toc" aria-label="章節導覽"><div class="nav-inner">${placed.map(section => `<a href="#${section.id}">${slateInline(navLabel(section.title))}</a>`).join('')}</div></nav>` : '',
   ].filter(Boolean).join('\n')
-  const cards = placed.map(section => {
-    let tableCount = 0
-    const inner = section.blocks.map(block => {
-      const tableIndex = block.type === 'table' ? tableCount++ : -1
-      return renderSlateBlock(block, section.title, tableIndex)
-    }).join('\n')
-    return `<section class="${section.summary ? 'card summary' : 'card'}" id="${section.id}"><h2>${slateInline(section.title)}</h2>\n${inner}</section>`
+  let leftoverHtml = [
+    extraMeta.length ? metaHtml(extraMeta) : '',
+    leftoverParas.length || looseOther.length ? renderLoose([...leftoverParas, ...looseOther]) : '',
+  ].filter(Boolean).join('\n')
+  const cards = placed.map((section, index) => {
+    const kind = section.kind || 'body'
+    const classes = ['card', section.summary ? 'summary' : '', `kind-${kind}`].filter(Boolean).join(' ')
+    const eyebrow = `<p class="eyebrow">${String(index + 1).padStart(2, '0')} · ${KIND_EYEBROW[kind] || '章節'}</p>`
+    let inner = ''
+    if (section.summary) {
+      const view = summaryView(section)
+      inner += tags.length ? `<div class="tags">${tags.map(tag => `<span class="tag tag-${tag.tone}">${slateInline(tag.text)}</span>`).join('')}</div>` : ''
+      inner += stats.length ? `<div class="stats">${stats.map(stat => `<div class="stat"><strong>${slateInline(stat.value)}</strong><span>${slateInline(stat.label)}</span></div>`).join('')}</div>` : ''
+      if (view.lead) inner += `<p class="lead">${slateInline(view.lead)}</p>`
+      if (view.highlights.length) {
+        inner += `<div class="grid">${view.highlights.map(item => `<div class="cardlet"><h3>${slateInline(item.title)}</h3>${item.html}</div>`).join('')}</div>`
+      }
+      inner += view.rest.map(block => renderSlateBlock(block, section.title, -1)).join('\n')
+      inner += '<div class="callout callout-amber"><p>閱讀基準：日期、狀態與期限依規劃書原文列出，未查核即時專案狀態；規劃日期不視為已完成。</p></div>'
+      if (leftoverHtml) { inner += leftoverHtml; leftoverHtml = '' }
+    } else {
+      let tableCount = 0
+      inner += section.blocks.map(block => {
+        const tableIndex = block.type === 'table' ? tableCount++ : -1
+        return renderSlateBlock(block, section.title, tableIndex)
+      }).join('\n')
+    }
+    if (leftoverHtml && section.id === placed.find(item => !item.summary)?.id) {
+      inner += leftoverHtml
+      leftoverHtml = ''
+    }
+    const heading = `<h2>${slateInline(section.title)}</h2>`
+    if (isFoldedKind(kind)) {
+      const label = kind === 'appendix'
+        ? '展開附錄原文，內容與來源一致、僅跳脫不執行'
+        : '展開技術原文，內容與來源一致、僅跳脫不執行'
+      return `<section class="${classes}" id="${section.id}">${eyebrow}${heading}<details><summary>${label}</summary><div class="detail-body">${inner}</div></details></section>`
+    }
+    return `<section class="${classes}" id="${section.id}">${eyebrow}${heading}\n${inner}</section>`
   }).join('\n')
+  const notesHtml = sourceNotes.length
+    ? `<details class="source-notes"><summary>來源註記（與來源一致、僅跳脫不執行）</summary><div class="detail-body">${sourceNotes.map(block => preHtml(block.text)).join('\n')}</div></details>`
+    : ''
   const hasBody = Boolean(parsed.title || preamble.meta.length || preamble.loose.length || placed.length)
-  const main = hasBody ? `${header}\n${cards}` : '<section class="card"><p>規劃書沒有可讀的正文。</p></section>'
-  return `<!DOCTYPE html><html lang="zh-Hant"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><style>${SLATE_CSS}</style></head><body><div class="wrap">${main}</div></body></html>`
+  const main = hasBody
+    ? `${header}<main>${notesHtml}${cards}</main><footer class="note">本章節導覽來自文件標題；技術區塊折疊後仍保留原文，可核對來源。</footer>`
+    : '<main><section class="card"><p>規劃書沒有可讀的正文。</p></section></main>'
+  return `<!DOCTYPE html><html lang="zh-Hant"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><style>${SLATE_CSS}</style></head><body><div class="page">${main}</div></body></html>`
 }
 
 export function executionReportReviews(reviews = []) {

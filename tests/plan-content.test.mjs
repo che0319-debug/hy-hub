@@ -223,7 +223,7 @@ function assertSafeHtml(html) {
     if (at === -1) break
     const match = html.slice(at).match(/^<\/?[A-Za-z!][^<>]*>/)
     assert.ok(match, `raw < at ${at}: ${html.slice(at, at + 40)}`)
-    assert.match(match[0], /^<\/?(?:html|head|meta|style|body|div|header|h[1-6]|p|dl|dt|dd|nav|a|section|ul|ol|li|table|thead|tbody|tr|th|td|pre|code|span|strong|hr)\b|^<!DOCTYPE html>$/i)
+    assert.match(match[0], /^<\/?(?:html|head|meta|style|body|div|header|h[1-6]|p|dl|dt|dd|nav|a|section|ul|ol|li|table|thead|tbody|tr|th|td|pre|code|span|strong|hr|main|footer|details|summary)\b|^<!DOCTYPE html>$/i)
     index = at + match[0].length
   }
 }
@@ -287,7 +287,8 @@ test('slate keeps every fenced block, comment, and prose atom', () => {
   const html = planDocumentHtml(attack, { layout: 'slate' })
   assertComplete(attack, html)
   assert.match(html, /deprecated&quot;: true/)
-  assert.match(html, /#eef5fc/)
+  assert.match(html, /#162b4b/)
+  assert.match(html, /linear-gradient/)
   assert.equal(planDocumentHtml(attack).includes('deprecated'), false)
   assert.equal(planDocumentHtml(attack).includes('<script'), false)
 })
@@ -310,6 +311,14 @@ test('read-chain sanitizer keeps fenced code for the slate page and still escape
   assert.equal(plain.includes('deprecated'), false)
   assert.equal(plain.includes('def keep'), false)
   assert.equal(plain.includes('<script'), false)
+})
+
+test('english fixture keeps every literal and prose atom', async () => {
+  const markdown = await readFile(new URL('./fixtures/plan-brief-en.md', import.meta.url), 'utf8')
+  const html = planDocumentHtml(safeMarkdown(markdown), { layout: 'slate' })
+  assertComplete(markdown, html)
+  assert.equal(html.includes('七維'), false)
+  assert.equal(html.includes('<script'), false)
 })
 
 test('slate source file keeps every literal and prose atom when PLAN_SOURCE is set', async () => {
@@ -362,7 +371,7 @@ async function sandboxedCodeText(html) {
     await page.setContent('<!DOCTYPE html><meta charset="utf-8"><iframe id="f" sandbox="allow-popups allow-popups-to-escape-sandbox"></iframe>', { waitUntil: 'load' })
     await page.locator('#f').evaluate((frame, doc) => { frame.srcdoc = doc }, html)
     const frame = page.frameLocator('#f')
-    await frame.locator('pre.source code').first().waitFor()
+    await frame.locator('pre.source code').first().waitFor({ state: 'attached' })
     const texts = await frame.locator('pre.source code').evaluateAll(nodes => nodes.map(node => node.textContent))
     const raw = await frame.locator('html').evaluate(node => node.outerHTML)
     return { texts, raw }

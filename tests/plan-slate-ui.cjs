@@ -64,6 +64,10 @@ const planMarkdown = [
   '```',
 ].join('\n')
 
+const p003Path = process.env.PLAN_SOURCE || '/workspace/office-plan-html-build/source-p003-main-plan.md'
+const p003Markdown = fs.existsSync(p003Path) ? fs.readFileSync(p003Path, 'utf8') : ''
+const fixtureMarkdown = fs.readFileSync(path.join(__dirname, 'fixtures/plan-brief-en.md'), 'utf8')
+
 const state = {
   updated: '2026-11-07T09:00:00+08:00',
   islands: [{ id: 'company', name: '公司' }],
@@ -72,6 +76,8 @@ const state = {
     { id: 'p-miss', title: '缺文件', island: 'company', stage: 'assigned', executor: 'grok-build', goal: '沒有登錄文件。', plan: { version: 1, status: 'draft' } },
     { id: 'p-fail', title: '讀取失敗', island: 'company', stage: 'assigned', executor: 'grok-build', goal: '讀取會失敗。', plan: { version: 2, status: 'draft', doc_url: 'https://docs.google.com/document/d/FailDocRead0001/edit' } },
     { id: 'p-trunc', title: '截斷文件', island: 'company', stage: 'assigned', executor: 'grok-build', goal: '文件超過上限。', plan: { version: 2, status: 'draft', doc_url: 'https://docs.google.com/document/d/TruncDocRead001/edit' } },
+    { id: 'p-p003', title: 'p003真來源', island: 'company', stage: 'assigned', executor: 'grok-build', goal: '真來源閱讀品質。', plan: { version: 3, status: 'draft', doc_url: 'https://docs.google.com/document/d/P003DocRead00001/edit' } },
+    { id: 'p-en', title: '英文測試fixture', island: 'company', stage: 'assigned', executor: 'grok-build', goal: '結構不同的測試fixture。', plan: { version: 1, status: 'draft', doc_url: 'https://docs.google.com/document/d/EnFixDocRead0001/edit' } },
   ],
   decisions: [],
 }
@@ -81,6 +87,8 @@ function documentBody(fileId) {
   if (fileId === 'PlanDocRead0001') return { status: 200, body: { file_id: fileId, name: '閱讀樣本規劃書', markdown: planMarkdown, truncated: false } }
   if (fileId === 'TruncDocRead001') return { status: 200, body: { file_id: fileId, name: '截斷文件', markdown: planMarkdown, truncated: true } }
   if (fileId === 'FailDocRead0001') return { status: 403, body: { error: 'document_forbidden', reason: '測試用拒絕' } }
+  if (fileId === 'P003DocRead00001' && p003Markdown) return { status: 200, body: { file_id: fileId, name: 'p003真來源', markdown: p003Markdown, truncated: false } }
+  if (fileId === 'EnFixDocRead0001') return { status: 200, body: { file_id: fileId, name: '英文測試fixture', markdown: fixtureMarkdown, truncated: false } }
   return { status: 404, body: { error: 'no_document', reason: '沒有這份文件' } }
 }
 
@@ -141,6 +149,38 @@ async function launch(width, height) {
   return { browser, page, api, external }
 }
 
+async function captureReading(page, title, prefix, heading) {
+  await openPlan(page, title)
+  const frame = page.frameLocator('iframe.ao-plan-slate')
+  if (heading) await frame.getByRole('heading', { name: heading }).first().waitFor()
+  else await frame.locator('header.hero').waitFor()
+  await page.screenshot({ path: shot(`${prefix}-first.png`) })
+  await frame.locator('header.hero').screenshot({ path: shot(`${prefix}-header.png`) })
+  await frame.locator('nav.toc').screenshot({ path: shot(`${prefix}-nav.png`) })
+  const summary = frame.locator('#summary')
+  const summaryTarget = (await summary.count()) ? summary : frame.locator('main .card').first()
+  await summaryTarget.scrollIntoViewIfNeeded()
+  await page.screenshot({ path: shot(`${prefix}-summary.png`) })
+  const table = frame.locator('.scroll').first()
+  if (await table.count()) {
+    await table.scrollIntoViewIfNeeded()
+    await table.screenshot({ path: shot(`${prefix}-table.png`) })
+  }
+  const details = frame.locator('details')
+  const count = await details.count()
+  if (count) {
+    const target = details.nth(count > 1 ? count - 1 : 0)
+    await target.locator('summary').click()
+    await target.scrollIntoViewIfNeeded()
+    await target.screenshot({ path: shot(`${prefix}-appendix.png`) })
+  }
+  const hero = await frame.locator('header.hero').evaluate(el => {
+    const view = el.ownerDocument.defaultView
+    return { height: el.getBoundingClientRect().height, view: view.innerHeight }
+  })
+  assert.ok(hero.height < hero.view * 0.55, `${prefix} hero ${JSON.stringify(hero)}`)
+}
+
 async function openPlan(page, title) {
   const home = page.getByRole('heading', { name: 'Bot Office', exact: true })
   if (!page.url().includes('#/bot-office')) await page.goto(`${base}/#/bot-office`)
@@ -185,8 +225,8 @@ async function colorsOf(frame) {
   assert.equal(order[0], '一頁摘要')
   assert.ok(order.indexOf('一頁摘要') < order.indexOf('修訂說明'))
   assert.ok(order.includes('依據'))
-  await frame.getByText('青石摘要句').waitFor()
-  await frame.getByText('子項保留').waitFor()
+  await frame.getByText('青石摘要句').first().waitFor()
+  await frame.getByText('子項保留').first().waitFor()
   const codes = await frame.locator('pre.source code').evaluateAll(nodes => nodes.map(node => node.textContent))
   assert.deepEqual(codes, [
     '{\n  "freedomIndex": { "deprecated": true, "display": false }\n}\n',
@@ -198,12 +238,12 @@ async function colorsOf(frame) {
   await frame.getByText('隔離測試全綠而且備份存在').first().waitFor()
   report.colors = await colorsOf(frame)
   assert.deepEqual(report.colors, {
-    headerBg: 'rgb(238, 245, 252)',
-    headerColor: 'rgb(53, 85, 117)',
-    pageBg: 'rgb(216, 222, 230)',
+    headerBg: 'rgb(22, 43, 75)',
+    headerColor: 'rgb(255, 255, 255)',
+    pageBg: 'rgb(242, 245, 249)',
     cardBg: 'rgb(255, 255, 255)',
-    thBg: 'rgb(238, 245, 252)',
-    thColor: 'rgb(53, 85, 117)',
+    thBg: 'rgb(238, 243, 249)',
+    thColor: 'rgb(53, 81, 113)',
   })
   report.scroll = await frame.locator('.scroll').first().evaluate(el => ({ scrollWidth: el.scrollWidth, clientWidth: el.clientWidth }))
   assert.ok(report.scroll.scrollWidth > report.scroll.clientWidth, JSON.stringify(report.scroll))
@@ -214,10 +254,26 @@ async function colorsOf(frame) {
   assert.equal(await desktop.page.locator('[aria-label="文件版本"]').count(), 0)
   const hostOverflow = await desktop.page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth + 1)
   assert.equal(hostOverflow, true)
+  report.hero = await frame.locator('header.hero').evaluate(el => {
+    const view = el.ownerDocument.defaultView
+    return { height: el.getBoundingClientRect().height, view: view.innerHeight }
+  })
+  assert.ok(report.hero.height < report.hero.view * 0.55, JSON.stringify(report.hero))
+  report.hostScroll = await desktop.page.evaluate(() => ({
+    scrollHeight: document.documentElement.scrollHeight,
+    clientHeight: document.documentElement.clientHeight,
+  }))
+  assert.ok(report.hostScroll.scrollHeight <= report.hostScroll.clientHeight + 24, JSON.stringify(report.hostScroll))
   await desktop.page.screenshot({ path: shot('desktop-plan-1280.png') })
   await frame.locator('header.hero').screenshot({ path: shot('desktop-plan-header.png') })
+  await frame.locator('nav.toc').screenshot({ path: shot('desktop-plan-nav.png') })
   await frame.locator('#summary').screenshot({ path: shot('desktop-plan-summary.png') })
   await frame.locator('.scroll').first().screenshot({ path: shot('desktop-plan-table.png') })
+  const appendix = frame.locator('details').first()
+  if (await appendix.count()) {
+    await appendix.locator('summary').click()
+    await appendix.screenshot({ path: shot('desktop-plan-appendix.png') })
+  }
   const codeFit = await frame.locator('pre.source').evaluateAll(nodes => nodes.map(el => ({ scrollWidth: el.scrollWidth, clientWidth: el.clientWidth })))
   assert.ok(codeFit.every(item => item.scrollWidth <= item.clientWidth + 1), JSON.stringify(codeFit))
   await frame.locator('pre.source').first().scrollIntoViewIfNeeded()
@@ -226,7 +282,7 @@ async function colorsOf(frame) {
   await frame.locator('pre.source').nth(1).scrollIntoViewIfNeeded()
   await desktop.page.screenshot({ path: shot('desktop-code-python-page.png') })
   await frame.locator('pre.source').nth(1).screenshot({ path: shot('desktop-code-python.png') })
-  await frame.locator('.wrap').screenshot({ path: shot('desktop-plan-full.png') })
+  await frame.locator('.page').screenshot({ path: shot('desktop-plan-full.png') })
   await desktop.page.getByRole('button', { name: '成果與審查', exact: true }).click()
   await desktop.page.getByText('執行成果報告還沒有').waitFor()
   const visibleSlate = await desktop.page.locator('iframe.ao-plan-slate').evaluateAll(nodes => nodes.filter(node => {
@@ -260,6 +316,9 @@ async function colorsOf(frame) {
   await desktop.page.frameLocator('iframe.ao-plan-slate').getByRole('heading', { name: '一頁摘要', exact: true }).waitFor()
   await desktop.page.screenshot({ path: shot('desktop-truncated.png') })
 
+  if (p003Markdown) await captureReading(desktop.page, 'p003真來源', 'desktop-p003', '一頁摘要')
+  await captureReading(desktop.page, '英文測試fixture', 'desktop-fixture', 'Purpose')
+
   report.writes = desktop.api.filter(([method]) => method !== 'GET')
   report.external = desktop.external
   assert.deepEqual(report.writes, [])
@@ -280,9 +339,15 @@ async function colorsOf(frame) {
   assert.equal(mobileOverflow, true)
   await mobile.page.screenshot({ path: shot('mobile-plan-390.png') })
   await mobileFrame.locator('header.hero').screenshot({ path: shot('mobile-plan-header.png') })
+  await mobileFrame.locator('nav.toc').screenshot({ path: shot('mobile-plan-nav.png') })
   await mobileFrame.locator('#summary').screenshot({ path: shot('mobile-plan-summary.png') })
   await mobileFrame.locator('.scroll').first().screenshot({ path: shot('mobile-plan-table.png') })
   await mobileFrame.locator('.timeline').screenshot({ path: shot('mobile-plan-timeline.png') })
+  const mobileAppendix = mobileFrame.locator('details').first()
+  if (await mobileAppendix.count()) {
+    await mobileAppendix.locator('summary').click()
+    await mobileAppendix.screenshot({ path: shot('mobile-plan-appendix.png') })
+  }
   const mobileCodeFit = await mobileFrame.locator('pre.source').evaluateAll(nodes => nodes.map(el => ({ scrollWidth: el.scrollWidth, clientWidth: el.clientWidth })))
   assert.ok(mobileCodeFit.every(item => item.scrollWidth <= item.clientWidth + 1), JSON.stringify(mobileCodeFit))
   await mobileFrame.locator('pre.source').first().scrollIntoViewIfNeeded()
@@ -294,6 +359,8 @@ async function colorsOf(frame) {
   report.mobileScroll = mobileScroll
   report.mobileWrites = mobile.api.filter(([method]) => method !== 'GET')
   assert.deepEqual(report.mobileWrites, [])
+  if (p003Markdown) await captureReading(mobile.page, 'p003真來源', 'mobile-p003', '一頁摘要')
+  await captureReading(mobile.page, '英文測試fixture', 'mobile-fixture', 'Purpose')
   await mobile.browser.close()
 
   fs.writeFileSync(shot('qa.json'), JSON.stringify(report, null, 2))
