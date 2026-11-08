@@ -11,6 +11,7 @@ import {planDocumentHtml,executionReportReviews} from '../lib/planHtml.mjs'
 import {meetingConversationOrder} from '../lib/meetingThread.mjs'
 import {authHeaders} from '../auth'
 import { STEP_LABEL } from '../lib/officeFlow.mjs'
+import {reportFrameHtml} from '../lib/reportFrame.mjs'
 import './project-report.css'
 import '../pages/control-center-v5.css'
 
@@ -252,16 +253,16 @@ export function OfficeResults({project,report,documents}) {
  const legacyReady=summaryStatus==='ready'&&Boolean(html)
  const execReviews=documents?.bundle?.reviews||[]
  return <div className="ao-results">
-  <Card title="專案報告" className={full?'ao-reader-full':''}>
+  <Card title="專案報告" className={full?'bo-document-reader ao-reader-full':'bo-document-reader'}>
     {legacyReady&&<div className="ao-toolbar">{project.folderUrl&&<Link href={project.folderUrl}>開專案 Drive 資料夾</Link>}{report?.meta?.drive_url&&<Link href={report.meta.drive_url}>在 Drive 開啟</Link>}<button disabled={!html} onClick={()=>setFull(v=>!v)}>{full?'離開完整閱讀':'完整閱讀'}</button><button type="button" disabled={!html} onClick={()=>downloadHtml(`${project.title||'專案'}_執行成果.html`,html)}>下載</button></div>}
-    <ReportStatus project={project}/>
+    {!full&&<ReportStatus project={project}/>}
     {legacyReady&&report?.stale&&<div className="rs-card"><ReportStaleNote/></div>}
     {legacyReady&&<p className="ao-muted">最後更新：{report?.modified?when(report.modified):'尚未記錄'}</p>}
-    {legacyReady&&<iframe title="正式 HTML 成果報告" sandbox={REPORT_FRAME.sandbox} referrerPolicy={REPORT_FRAME.referrerPolicy} srcDoc={html}/>}
+    {legacyReady&&<iframe title="正式 HTML 成果報告" sandbox={REPORT_FRAME.sandbox} referrerPolicy={REPORT_FRAME.referrerPolicy} srcDoc={reportFrameHtml(html)}/>}
     {!legacyReady&&<p>HTML 專案報告尚未登錄；目前既有文件與成果連結保留在下方。</p>}
     {!legacyReady&&report?.status==='error'&&<p role="alert">{report.htmlError||report.error}</p>}
   </Card>
-  {execReviews.map(review=>{
+  {execReviews.length>0&&<details className="ao-card"><summary>GPT 審查紀錄（{execReviews.length}）</summary>{execReviews.map(review=>{
     const body=review.readKey?documents?.bodies?.[review.readKey]:null
     return <section className="ao-card" key={review.key||review.target} aria-label={review.title||review.target}>
       <div className="ao-card-head"><h2>{review.title||`審查 ${review.target}`}</h2>{(review.verdictText||review.verdict)&&<span className="hy-pill" data-s={/fail/i.test(review.verdict||'')?'bad':'done'}>{review.verdictText||review.verdict}</span>}</div>
@@ -270,7 +271,7 @@ export function OfficeResults({project,report,documents}) {
       {body?.status==='error'&&<p role="alert">{body.error}</p>}
       {body?.status==='ready'&&<iframe className="ao-plan-frame" title={review.title||'執行審查'} sandbox={REPORT_FRAME.sandbox} referrerPolicy={REPORT_FRAME.referrerPolicy} srcDoc={planDocumentHtml(body.markdown)}/>}
     </section>
-  })}
+  })}</details>}
  </div>
 }
 export function OfficeJournal({project,reload,onOverview,onExecution,state,index}) {
@@ -307,6 +308,8 @@ export function OfficeUnifiedReport({project, report, documents, milestones=[]})
  const next=milestones.find(m=>m.step==='running')
  const decisions=project.decisions||[]
  return <div className="bo-unified-report">
+  <OfficeResults project={project} report={report} documents={documents}/>
+  <details className="ao-card bo-live-state" open={!report?.html}><summary>專案即時狀態與進度</summary>
   <section className="ao-card" aria-label="專案即時摘要"><h2>目標與現況</h2><dl className="hy-kv">
    <dt>目標</dt><dd>{project.goal||project.source?.goal||'尚未提供'}</dd>
    <dt>現況</dt><dd>{project.displayLabel||project.stageLabel} · GPT 執行 · {project.ownerBot||'待指定 Bot'} 推進</dd>
@@ -315,13 +318,12 @@ export function OfficeUnifiedReport({project, report, documents, milestones=[]})
    <dt>待你決定</dt><dd>{decisions.length?decisions.map(d=>d.title).join('；'):'沒有未決事項'}</dd>
    <dt>下一步</dt><dd>{next?`${next.id} ${next.name}`:decisions.length?'到會議室處理未決事項':'請負責 Bot 更新下一步'}</dd>
   </dl></section>
-  <OfficeResults project={project} report={report} documents={documents}/><OfficeFormalHistory project={project}/>
   {!report?.html && <OfficeExecution documents={documents}/>}
   <section className="ao-card"><h2>進度與成果</h2><ol className="ao-timeline">{milestones.map(m=><li key={m.id}><b>{m.id} {m.name}</b><p>{m.step==='review'?'待 Bot 檢查既有交件':STEP_LABEL[m.step]||m.step} · 前置：{(m.dependsOn||[]).join('、')||'無'}</p></li>)}</ol>
    <ul>{(project.cards?.outputs||[]).map(c=><li key={c.id}><Link href={c.driveUrl}>{c.title}</Link></li>)}</ul>
    {project.folderUrl&&<Link href={project.folderUrl}>所有文件、附件與歷史原件</Link>}
   </section>
- </div>
+ </details><OfficeFormalHistory project={project}/></div>
 }
 
 
