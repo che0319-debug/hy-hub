@@ -27,7 +27,7 @@ const makeState=()=>({updated:'2026-10-24T16:44:00+08:00',buildings:[{id:'qa-pil
  }else if(url.pathname.includes('dispatch-sessions'))data=[];
  await route.fulfill({status,contentType:'application/json',body:JSON.stringify(data)});
  });
- await page.goto('http://127.0.0.1:5173/#/bot-office');await page.addStyleTag({content:font+' body{font-family:"Noto Sans TC",sans-serif}'});await page.evaluate(()=>document.fonts.ready);
+ await page.goto((process.env.OFFICE_QA_BASE_URL||'http://127.0.0.1:5173')+'/#/bot-office');await page.addStyleTag({content:font+' body{font-family:"Noto Sans TC",sans-serif}'});await page.evaluate(()=>document.fonts.ready);
  await page.getByRole('button',{name:/P0 工程驗證專案/}).click();
  await page.getByRole('navigation',{name:'Bot Office 專案分頁'}).getByRole('button',{name:/會議室/}).click();
  const intake=page.getByRole('article',{name:'開案提問・工程示範 12 題',exact:true});await intake.waitFor();

@@ -1,4 +1,4 @@
-// HY 本人把專案設為完成，或把誤結案的專案改回執行中。
+// HY 本人把專案送結案審查，或把誤結案的專案改回執行中。
 // 待你決定、規劃書不在審查或核定、也還沒展開後續里程碑時，可以退回規劃中（stage 改為 assigned），讓負責 Bot 重送規劃書。
 import { useRef, useState } from 'react'
 import { authHeaders, expireSession } from '../auth'
@@ -17,7 +17,8 @@ export default function OfficeStageControl({ project, milestones = [], allMilest
   if (!project?.id) return null
 
   const progress = milestoneProgress(milestones)
-  const blocked = closureReason(milestones)
+  const planPending = allMilestones.some(m => (m.id === 'M0' || m.kind === 'plan') && m.step !== 'done')
+  const blocked = planPending ? '規劃書尚未核定，不能送結案審查。' : closureReason(milestones)
   const incomplete = progress.total > 0 && progress.done < progress.total
   const unfinished = progress.total - progress.done
   const warning = incomplete ? `里程碑只完成 ${progress.done}／${progress.total}（還有 ${unfinished} 個未完成），確定要結案？` : ''
@@ -63,7 +64,7 @@ export default function OfficeStageControl({ project, milestones = [], allMilest
       setAck(true)
       return
     }
-    submit({ stage: 'done', closure_summary: closure })
+    submit({ closure_request: true, closure_summary: closure })
   }
 
   const alert = error && (
@@ -117,7 +118,7 @@ export default function OfficeStageControl({ project, milestones = [], allMilest
   if (blocked) {
     return (
       <div className="ao-stage is-blocked">
-        <button type="button" disabled>設為完成</button>
+        <button type="button" disabled>送結案審查</button>
         {returnButton}
         <p className="ao-stage-reason">{blocked}</p>
       </div>
@@ -127,7 +128,7 @@ export default function OfficeStageControl({ project, milestones = [], allMilest
   if (mode !== 'close') {
     return (
       <div className="ao-stage">
-        <button type="button" aria-expanded="false" disabled={busy} onClick={() => { setError(null); setMode('close') }}>設為完成</button>
+        <button type="button" aria-expanded="false" disabled={busy} onClick={() => { setError(null); setMode('close') }}>送結案審查</button>
         {returnButton}
       </div>
     )
@@ -136,7 +137,7 @@ export default function OfficeStageControl({ project, milestones = [], allMilest
   return (
     <div className="ao-stage is-open">
       <form className="ao-stage-panel" onSubmit={confirmClose}>
-        <p className="hy-note">只有全部里程碑結束、寫好結案摘要才設完成。</p>
+        <p className="hy-note">全部里程碑結束並登錄 HTML 報告後，先交 GPT 結案審查，再由 HY 核准結案。</p>
         {warning && <p className="hy-alert" role="status" id={warnId}>{warning}</p>}
         <label>結案摘要
           <textarea aria-label="結案摘要" value={summary} disabled={busy} onChange={event => { setSummary(event.target.value); setAck(false) }} />
@@ -145,7 +146,7 @@ export default function OfficeStageControl({ project, milestones = [], allMilest
         <div className="ao-stage-actions">
           <button type="button" disabled={busy} onClick={reset}>取消</button>
           <button type="submit" className="ao-primary" disabled={busy || !summary.trim()} aria-describedby={warning ? warnId : undefined}>
-            {busy ? '送出中…' : incomplete && ack ? '確定要結案' : '設為完成'}
+            {busy ? '送出中…' : incomplete && ack ? '確定要結案' : '送結案審查'}
           </button>
         </div>
       </form>

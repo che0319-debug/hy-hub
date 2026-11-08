@@ -20,7 +20,7 @@ export default function OfficeHome({projects,details,inbox,loaded,error,creating
   const ready=loaded&&!error
   const tiles=[...PROJECT_STAGES.map(s=>[s.key,s.label,stageCount(s.key),s.tone]),['all','專案總數',projects.length,'wait']]
   return <section className="ao-home" aria-label={`${title} 專案總表`}>
-    <header className="ao-home-head"><div><small>HY Life OS</small><h1>{title}</h1></div><div className="ao-home-actions"><button className="ao-btn" aria-label="重新整理專案" onClick={onReload}>重新整理</button><button className="ao-btn" type="button" aria-haspopup="dialog" aria-label="全系統預設 AI 設定" onClick={onSettings}>設定</button><button className="ao-btn ao-primary" aria-expanded={creating} onClick={onCreate}>新增專案</button></div></header>
+    <header className="ao-home-head"><div><small>HY Life OS</small><h1>{title}</h1></div><div className="ao-home-actions"><button className="ao-btn" aria-label="重新整理專案" onClick={onReload}>重新整理</button><button className="ao-btn ao-primary" aria-expanded={creating} onClick={onCreate}>新增專案</button></div></header>
     <div className="ao-tiles" role="group" aria-label="工作摘要">{tiles.map(([key,name,value,tone])=><button key={name} className={`ao-tile${key==='hy_decision'&&value?' needs-you':''}`} data-s={tone} aria-pressed={filter===key} onClick={()=>setFilter(key)}><small>{name}</small><strong>{ready&&value!=null?value:'—'}</strong></button>)}</div>
     {missing>0&&!error&&!hidePackageGap&&<p className="ao-muted">有 {missing} 個專案詳情未讀取；工作包數量尚不完整。</p>}
     {error&&<div role="alert"><p>{error}</p><button className="ao-btn" onClick={onReload}>重試讀取</button></div>}
