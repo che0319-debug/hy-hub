@@ -1,12 +1,12 @@
-// Match the actual AIOfficeV1 five-tab structure; data stays on the new Office APIs.
+// Office presents one continuous report, project conversations and the existing journal.
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { authHeaders, expireSession, getAccessToken } from '../auth'
 import { loadBotOffice, OFFICE_TABS, REFRESH_MS, OFFICE_NAMES } from '../botOfficeData'
 import './bot-office.css'
-import { OfficeRequest, OfficeReassignQueue } from '../components/OfficeActions'
-import OfficeSettings from '../components/OfficeSettings'
-import { OfficeSnapshot, OfficeJournal, OfficeMeeting, OfficeExecution, OfficeResults, OfficeReportStrip, OfficeDelete, useOfficeReport, useOfficeCanonical } from '../components/BotOfficePanels'
+import { OfficeRequest } from '../components/OfficeActions'
+
+import { OfficeJournal, OfficeMeeting, OfficeUnifiedReport, OfficeDelete, useOfficeReport, useOfficeCanonical } from '../components/BotOfficePanels'
 import { snapshotLines } from '../lib/officeDocuments.mjs'
 import { TAB_NOTES, milestones } from '../lib/aiOffice.mjs'
 import OfficeHome from './OfficeHome'
@@ -15,12 +15,11 @@ import {reportSummaryStatus} from '../lib/reportSummary.mjs'
 import { useInbox } from '../inbox/InboxContext'
 import OwnerBotPicker from '../components/OwnerBotPicker'
 import OfficeStageControl from '../components/OfficeStageControl'
-import OfficeFlowDiagram from '../components/OfficeFlowDiagram'
 import { STEP_LABEL, projectFlow } from '../lib/officeFlow.mjs'
 import { createLatestRead, readOfficeLatest } from '../lib/latestRead.js'
 import { OWNER_SHARED_ROSTER_STALE, refreshAfterOwnerSave } from '../lib/ownerBotUi.js'
 
-const NOTES = TAB_NOTES
+const NOTES = { overview: '同一份 HTML 報告，從規劃持續更新到結案。', meeting: '你、Bot 與 GPT 的建議、要求、待決定與補資料事項。一般留言不等於核准。', log: '專案推進與決策歷程。' }
 const when = value => value ? new Date(value*1000).toLocaleString('zh-TW',{timeZone:'Asia/Taipei',hour12:false}) : '尚未記錄'
 const Pill = ({ project }) => <span className="hy-pill" data-s={project.displayTone || project.tone}>{project.displayLabel || project.stageLabel}</span>
 const STEP_TONE = { waiting: 'wait', running: 'ai', review: 'ai', hy_decision: 'you', done: 'done', cancelled: 'wait' }
@@ -96,7 +95,7 @@ export default function BotOffice() {
   const view = views.find(item => item.id === projectId) || null
   const details = Object.fromEntries(views.map(item => [item.id, item]))
   const inbox = views.flatMap(item => item.actions.filter(action => action.status === 'OPEN'))
-  const openExecution = work => {setSelectedWork(work);setTab('execution')}
+  const openExecution = work => {setSelectedWork(work);setTab('overview')}
   const rounds = (view?._rounds || []).filter(round => round.active)
   const milestoneRows = view?._milestoneRows || []
   const shownMilestones = timelineRows(milestoneRows, view?._flow)
@@ -119,22 +118,17 @@ export default function BotOffice() {
           throw failure
         }
       }} />
-      <OfficeHome title="Bot Office" projects={views} details={details} inbox={inbox} loaded={!loading} error={null} creating={creating} onReload={reload} onCreate={()=>setCreating(v=>!v)} onSettings={()=>setSettingsOpen(true)} onSelect={id=>{setDeleteNote('');setProjectId(id);setTab('overview');setEditing(false);setSelectedWork(null)}} creation={creating&&<OfficeRequest type="new_project" projects={data?.projects || []} inline reload={reload} settings={data?.settings?.ai_defaults}/>} showModelsLink={false} progressOf={item => progressLabel(timelineRows(item._milestoneRows, item._flow))} progressEmpty="里程碑尚未提供" hidePackageGap needsYou={data?.totals?.needsYou}/>
-      {settingsOpen && <OfficeSettings canEdit={hy} onClose={()=>setSettingsOpen(false)} onSaved={reload} />}
-    </>} 
+      <OfficeHome title="Bot Office" projects={views} details={details} inbox={inbox} loaded={!loading} error={null} creating={creating} onReload={reload} onCreate={()=>setCreating(v=>!v)} onSelect={id=>{setDeleteNote('');setProjectId(id);setTab('overview');setEditing(false);setSelectedWork(null)}} creation={creating&&<OfficeRequest type="new_project" projects={data?.projects || []} inline reload={reload} settings={data?.settings?.ai_defaults}/>} showModelsLink={false} progressOf={item => progressLabel(timelineRows(item._milestoneRows, item._flow))} progressEmpty="里程碑尚未提供" hidePackageGap needsYou={data?.totals?.needsYou}/>
+
+    </>}
     {project && view && <section className="ao ao-project">
       <button className="ao-back" onClick={()=>{setProjectId(null);setEditing(false)}}>‹ Bot Office</button>
       <header className="ao-header"><div className="ao-header-top"><h1>{project.title}</h1><span className="ao-type">{project.island}</span><Pill project={project}/>{project.pending&&<button type="button" className="hy-pill ao-pending-pill" data-s="you" onClick={()=>{setTab('meeting');setTimeout(()=>{const el=document.getElementById(`mr-pending-${project.id}`);el?.scrollIntoView({behavior:'smooth',block:'start'});el?.focus({preventScroll:true})},0)}} title="到會議室的「待你處理」">{project.decisions.length} 項待你處理</button>}<div className="ao-header-actions"><button aria-expanded={editing} onClick={()=>setEditing(v=>!v)}>編輯專案</button>{hy && <OfficeStageControl project={project} milestones={(view._flow?.milestones || milestoneRows).filter(m => m?.kind !== 'plan' && !/^m0$/i.test(String(m?.id || '')))} allMilestones={view._flow?.milestones || milestoneRows} onChanged={reload} />}{hy ? <div className="cc5"><OfficeDelete project={project} updatedRaw={data.updatedRaw} onDeleted={async note => { setDeleteNote(typeof note === 'string' ? note : ''); setProjectId(null); await reload() }} /></div> : <span className="ao-muted">刪除專案僅限 HY 本人</span>}</div></div><p className="ao-goal" title={view.goal}>{view.goal||'目標尚未記錄'}</p><div className="ao-header-meta"><span>階段 <b>{view.phase} {headerMilestoneId}</b></span><span>里程碑 <b>{shownMilestones.length ? `${headerCount.done}／${shownMilestones.length}` : '尚未提供'}</b></span><span>開始 <b>{when(view.started_at)}</b></span><span>最近紀錄 <b>{when(view.updated_at)}</b></span>{project.folderUrl&&<span>Drive <a href={project.folderUrl} target="_blank" rel="noopener noreferrer">專案資料夾 ↗</a></span>}</div></header>
       {editing&&<section className="ao-card"><h2>編輯專案（正式規格變更）</h2><p className="ao-muted">目標與範圍走正式規格變更，由你核准後才生效。</p><OfficeRequest type="spec_change" projects={data.projects} projectId={project.id} reload={reload}/></section>}
       <nav className="ao-tabs" aria-label="Bot Office 專案分頁">{OFFICE_TABS.map(([key,label])=><button key={key} aria-current={tab===key?'page':undefined} onClick={()=>setTab(key)}>{label}{key==='meeting'&&project.decisions.length>0&&<span>{project.decisions.length}</span>}</button>)}</nav>
       <p className="ao-tabnote">{NOTES[tab]}</p>
-      <div hidden={tab!=='overview'}><div className="ao-overview ao-overview-v2"><OfficeFlowDiagram flow={view._flow} stage={project.stage}/><OfficeReportStrip report={report} planning={documents.currentView?.hasPlanning && report.status!=='ready'} attention={project.pending} onOpen={()=>setTab('outputs')}/><OfficeSnapshot html={report.html} lines={snapStatus==='planning'?planningLines:report.lines} project={project} milestones={milestoneRows} status={snapStatus} message={report.htmlError||report.error} notice="完整規劃書在「專案規劃」。執行成果出來後會出現在「成果與審查」。" stale={report.stale} modified={report.modified}/>
-      <section className="ao-card ao-milestone-strip"><h2>里程碑</h2><ol className="ao-timeline">{shownMilestones.map(m=>{const current=m.id===headerMilestoneId;const cancelled=m.step==='cancelled';return <li key={m.id} className={[current?'is-current':'',m.step==='done'?'is-done':'',cancelled?'is-cancelled':''].filter(Boolean).join(' ')||undefined}><button onClick={()=>openExecution(m.id)}><b>{m.id} {m.name}</b><small><span className="hy-pill" data-s={stepTone(m.step)}>{STEP_LABEL[m.step]||'步驟待確認'}</span> 前置：{m.dependsOn.length?m.dependsOn.join('、'):'無'}{timelineExtra(m, current)}</small></button></li>})}</ol>{!shownMilestones.length&&<p className="ao-empty">正式規劃尚未提供里程碑。</p>}</section>
-      <div className="ao-overview-main"><section className="ao-card"><h2>AI 正在做什麼</h2>{rounds.map(round=><button className="ao-row ao-work" key={round.id} onClick={()=>openExecution(round.cardId||round.id)}><span className="ao-lane">{OFFICE_NAMES[round.executor]||round.executor||'執行者'}</span><span className="ao-work-main"><b>{round.task}</b><small>{round.status||'執行回合'}</small></span><span className="hy-pill" data-s={round.status==='failed'?'bad':round.status==='blocked'?'you':'ai'}>{round.status||'執行中'}</span></button>)}{!rounds.length&&<p className="ao-empty">目前沒有執行中的回合。</p>}</section></div>
-      </div><details className="hy rt-root hy-card"><summary>AI 執行配置</summary><p>執行者：{OFFICE_NAMES[project.executor]||project.executor}（備案 {OFFICE_NAMES[project.executorBackup]||project.executorBackup||'尚未指定'}）</p><p>審查者：{OFFICE_NAMES[project.reviewer]||project.reviewer||'尚未指定'}（備案 {OFFICE_NAMES[project.reviewerBackup]||project.reviewerBackup||'尚未指定'}）</p><OfficeReassignQueue project={project} reload={reload}/><OfficeRequest type="reassign" projects={data.projects} projectId={project.id} reload={reload} settings={data?.settings?.ai_defaults}/></details></div>
+      <div hidden={tab!=='overview'}><OfficeUnifiedReport project={project} report={report} documents={documents} milestones={shownMilestones}/></div>
       <div hidden={tab!=='meeting'}><OfficeMeeting project={project} projects={data.projects} reload={reload} state={data.state} index={data.index}/></div>
-      <div hidden={tab!=='execution'}><OfficeExecution documents={documents}/></div>
-      <div hidden={tab!=='outputs'}><OfficeResults project={project} report={report} documents={documents}/></div>
       <div hidden={tab!=='log'}><OfficeJournal project={project} reload={reload} onOverview={()=>setTab('meeting')} onExecution={openExecution} state={data.state} index={data.index}/></div>
     </section>}
   </section>

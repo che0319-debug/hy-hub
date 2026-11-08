@@ -123,7 +123,7 @@ test('P1 tabs, review activity, intake waiting, figures, review links and answer
     figures:[{id:'pi',owner:'sam',project:'p',island:'side',look_as:'PI',status:'waiting'}],
     decisions:[{id:'open',project:'p',kind:'intake',status:'open'}, {id:'closed',project:'p',status:'answered',revision:17,card:'decision',questions:[{no:1,q:'主力？',answer:'已確認',answered_by:'sam',answer_source:'proxy',confirmed_by:'hy',confirmed_at:'now',bot_suggestions:[{answer:'參考',answered_by:'sam',basis:'紀錄',confidence:'high'}]}],history:[{actor:'hy',action:'confirm'}]}]},
     {cards:[{id:'review',project:'p',type:'review',drive_url:'https://drive.google.com/report'}, {id:'decision',project:'p',type:'decision',summary:'過期摘要'}]})
-  assert.deepEqual(OFFICE_TABS.map(t=>t[1]),['概況','會議室','專案規劃','成果與審查','工作日誌'])
+  assert.deepEqual(OFFICE_TABS.map(t=>t[1]),['報告','會議室','日誌'])
   // 階段標籤只顯示 5 種名稱：有 intake 待答也仍是「規劃中」，待答題目另外顯示「N 項待你處理」。
   assert.equal(out.projects[0].stageLabel,'規劃中'); assert.equal(out.projects[0].pending,true)
   assert.equal(out.projects[0].review.verdict,'fail'); assert.equal(out.projects[0].review.returnedCount,2)
@@ -253,12 +253,12 @@ test('Bot Office wires stage labels and the HY-only control', () => {
   assert.doesNotMatch(page, /待推進完成/)
   assert.match(page, /\{hy && <OfficeStageControl /)
   assert.match(page, /allMilestones=\{view\._flow\?\.milestones \|\| milestoneRows\}/)
-  assert.match(control, /只有全部里程碑結束、寫好結案摘要才設完成。/)
+  assert.match(control, /先交 GPT 結案審查，再由 HY 核准結案。/)
   assert.match(control, /重新開啟（改回執行中）/)
   assert.match(control, /退回規劃中/)
   assert.match(control, /退回後這個專案會回到規劃中，負責 Bot 要重送規劃書，經審查後才會開核准卡給你。/)
   assert.match(control, /確認退回/)
-  assert.match(control, /stage: 'done', closure_summary: closure/)
+  assert.match(control, /closure_request: true, closure_summary: closure/)
   assert.match(control, /stage: 'running'/)
   assert.match(control, /stage: 'assigned'/)
   assert.match(control, /authHeaders\(\)/)

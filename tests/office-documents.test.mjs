@@ -394,7 +394,7 @@ test('drive document client stays on the office read route', async () => {
 test('planning is sandboxed HTML and results do not render the plan picker', async () => {
   const panels = await readFile(new URL('../src/components/BotOfficePanels.jsx', import.meta.url), 'utf8')
   assert.match(panels, /planDocumentHtml/)
-  assert.match(panels, /執行成果報告還沒有/)
+  assert.match(panels, /HTML 專案報告尚未登錄/)
   assert.equal(panels.includes('mode="plan"'), false)
   assert.equal(panels.includes('mode="review"'), false)
   assert.equal(panels.includes('文件版本'), false)

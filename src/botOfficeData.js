@@ -4,7 +4,7 @@ import { OFFICE_TABS as AI_OFFICE_TABS } from './lib/aiOffice.mjs'
 import { officeFailureMessage } from './lib/botOfficeView.mjs'
 import { STAGE_KEYS, STAGE_LABEL, STAGE_TONE, normalizeStage } from './lib/projectStages.mjs'
 import { decisionReviewView, needsYouCount, projectFlow, shownStage } from './lib/officeFlow.mjs'
-export const OFFICE_TABS = AI_OFFICE_TABS
+export const OFFICE_TABS = [['overview','報告'],['meeting','會議室'],['log','日誌']]
 export const REFRESH_MS = 30000
 // 只有 5 種階段，名稱與顏色見 lib/projectStages.mjs。
 const STAGES = Object.fromEntries(Object.keys(STAGE_LABEL).map(key => [key, [STAGE_LABEL[key], STAGE_TONE[key]]]))
@@ -98,7 +98,7 @@ export function mapOffice(state = {}, index = {}, metadata = {}) {
     const stage = normalizeStage(p.stage, p.owner_bot)
     const [stageLabel, tone] = STAGES[stage] || ['狀態待確認', 'wait']
     const planCard = cards.find(c => c.id === p.plan_card) || null
-    const groups = Object.fromEntries(OFFICE_TABS.map(([key]) => [key, cards.filter(c => c.projectId === p.id && c.tab === key)]))
+    const groups = Object.fromEntries(AI_OFFICE_TABS.map(([key]) => [key, cards.filter(c => c.projectId === p.id && c.tab === key)]))
     const projectDecisions = allDecisions.filter(d => d.projectId === p.id)
     // 顯示狀態只在讀取時算。舊後端沒給 display_stage 時，用跟後端同一套規則補上。
     const flow = projectFlow(p, { decisions: projectDecisions, stage })
@@ -391,7 +391,7 @@ export const loadOfficeReportHtml = (id, fileId, opts) => officeApi(`${projectPa
 export const loadOfficeDocument = (cardId, opts) => officeApi(`cards/${encodeURIComponent(cardId)}/document`, opts)
 export const loadOfficeDriveDocument = (id, fileId, opts = {}) => {
   const version = Number.isInteger(opts.version) ? opts.version : null
-  const query = `file_id=${encodeURIComponent(fileId)}${version == null ? '' : `&version=${version}`}`
+  const query = `file_id=${encodeURIComponent(fileId)}${version == null ? '' : `&version=${version}`}${opts.snapshot ? `&snapshot=${encodeURIComponent(opts.snapshot)}` : ''}`
   const { version: _version, ...rest } = opts
   return officeApi(`${projectPath(id)}/drive-document?${query}`, { ...rest, topic: 'drive-document' })
 }
