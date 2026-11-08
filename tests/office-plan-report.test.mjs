@@ -185,6 +185,15 @@ test('slate plan layout leads with the summary card and keeps the source wording
   assert.match(html, /class="scroll"/)
   assert.match(html, /tag-green/)
   assert.match(html, /tag-amber/)
+  assert.match(html, /文件記載／非即時/)
+  assert.match(html, /規劃值/)
+  assert.match(html, /data-meta="status"/)
+  assert.match(html, /data-meta="plan-date"/)
+  assert.match(html, /flex-wrap:wrap/)
+  assert.match(html, /scroll-margin-top/)
+  assert.match(html, /<base href="about:srcdoc">/)
+  assert.match(html, /href="#summary"/)
+  assert.match(html, />一頁摘要<\/a>/)
   assert.match(html, /M1 ──► M2/)
   assert.match(html, /<pre class="source"><code>M1 ──► M2\n<\/code><\/pre>/)
   assert.match(html, /<pre class="source"><code>token_value = &quot;do-not-show&quot;\n<\/code><\/pre>/)
@@ -208,6 +217,9 @@ test('slate layout stays generic on a structurally different English fixture', a
   assert.match(html, /#162b4b/)
   assert.match(html, /aria-label="章節導覽"/)
   assert.match(html, /Open questions/)
+  assert.match(html, />Open questions<\/a>/)
+  assert.match(html, /文件記載／非即時/)
+  assert.match(html, /規劃值/)
   assert.match(html, /kind-pending/)
   assert.match(html, /Who prints the Sunday exception report/)
   assert.match(html, /Pallet photos/)
@@ -218,4 +230,33 @@ test('slate layout stays generic on a structurally different English fixture', a
   assert.equal(html.includes('4 Bot'), false)
   assert.equal(html.includes('<script'), false)
   assert.ok(html.indexOf('Purpose') < html.indexOf('Open questions'))
+})
+
+test('slate nav keeps full titles and labels document-recorded status', () => {
+  const html = planDocumentHtml([
+    '# 標題',
+    '',
+    '- 狀態：待審查',
+    '- 期限：2026-12-01',
+    '',
+    '## 一頁摘要',
+    '',
+    '摘要句。',
+    '',
+    '## 一、目標與終點',
+    '',
+    '終點說明。',
+    '',
+    '## 這是一段很長的章節標題用來確認導覽不會從中間截斷',
+    '',
+    '內文。',
+  ].join('\n'), { layout: 'slate' })
+  assert.match(html, />一、目標與終點<\/a>/)
+  assert.match(html, />這是一段很長的章節標題用來確認導覽不會從中間截斷<\/a>/)
+  assert.equal(html.includes('這是一段很長的章</a>'), false)
+  assert.match(html, /文件記載／非即時/)
+  assert.match(html, /規劃值/)
+  assert.match(html, /tag-note/)
+  assert.equal(html.includes('<select'), false)
+  assert.equal(html.includes('layout:tabs'), false)
 })

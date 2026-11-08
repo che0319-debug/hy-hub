@@ -149,6 +149,103 @@ async function launch(width, height) {
   return { browser, page, api, external }
 }
 
+async function assertShellTabs(page, width, shotPath) {
+  const nav = page.getByRole('navigation', { name: 'Bot Office 專案分頁' })
+  const names = ['概況', '會議室', '專案規劃', '成果與審查', '工作日誌']
+  const boxes = []
+  for (const name of names) {
+    const btn = nav.getByRole('button', { name, exact: true })
+    await btn.scrollIntoViewIfNeeded()
+    const box = await btn.boundingBox()
+    assert.ok(box, `${width} missing tab ${name}`)
+    assert.ok(box.width >= 36, `${width} ${name} too narrow ${JSON.stringify(box)}`)
+    assert.ok(box.x >= -1, `${width} ${name} off left ${JSON.stringify(box)}`)
+    assert.ok(box.x + box.width <= width + 2, `${width} ${name} clipped ${JSON.stringify(box)}`)
+    boxes.push({ name, ...box })
+  }
+  await page.screenshot({ path: shotPath })
+  await nav.getByRole('button', { name: '工作日誌', exact: true }).click()
+  await page.getByRole('heading', { name: '工作日誌' }).waitFor()
+  await page.screenshot({ path: shotPath.replace('.png', '-log.png') })
+  await nav.getByRole('button', { name: '專案規劃', exact: true }).click()
+  await page.frameLocator('iframe.ao-plan-slate').locator('nav.toc a').first().waitFor()
+  return boxes
+}
+
+async function assertAnchors(page, label, shots) {
+  const frame = page.frameLocator('iframe.ao-plan-slate')
+  await frame.locator('nav.toc a').first().waitFor()
+  const count = await frame.locator('nav.toc a').count()
+  assert.ok(count > 0, `${label} no nav links`)
+  const wrap = await frame.locator('.nav-inner').evaluate(el => {
+    const style = getComputedStyle(el)
+    return { wrap: style.flexWrap, white: style.whiteSpace, overflow: style.overflow }
+  })
+  assert.equal(wrap.wrap, 'wrap', `${label} nav ${JSON.stringify(wrap)}`)
+  const seen = []
+  for (let index = 0; index < count; index += 1) {
+    const link = frame.locator('nav.toc a').nth(index)
+    const text = (await link.textContent()).trim()
+    assert.ok(text.length > 0, `${label} empty nav ${index}`)
+    await link.evaluate(el => el.scrollIntoView({ block: 'nearest', inline: 'nearest' }))
+    const vis = await link.evaluate(el => {
+      const r = el.getBoundingClientRect()
+      const nav = el.closest('nav')
+      const nr = nav.getBoundingClientRect()
+      return {
+        text: el.textContent.trim(),
+        w: r.width,
+        h: r.height,
+        top: r.top,
+        bottom: r.bottom,
+        left: r.left,
+        right: r.right,
+        navTop: nr.top,
+        navBottom: nr.bottom,
+        navLeft: nr.left,
+        navRight: nr.right,
+        scrollW: el.scrollWidth,
+        clientW: el.clientWidth,
+        overflow: getComputedStyle(el).textOverflow,
+      }
+    })
+    assert.ok(vis.w > 8 && vis.h > 8, `${label} tiny ${JSON.stringify(vis)}`)
+    assert.ok(vis.left >= vis.navLeft - 2, `${label} left-clip ${JSON.stringify(vis)}`)
+    assert.ok(vis.right <= vis.navRight + 2, `${label} right-clip ${JSON.stringify(vis)}`)
+    assert.ok(vis.top >= vis.navTop - 2, `${label} top-clip ${JSON.stringify(vis)}`)
+    assert.ok(vis.bottom <= vis.navBottom + 2, `${label} bottom-clip ${JSON.stringify(vis)}`)
+    assert.ok(vis.overflow !== 'ellipsis' || vis.scrollW <= vis.clientW + 1, `${label} ellipsis ${JSON.stringify(vis)}`)
+    const id = await link.evaluate(el => (el.getAttribute('href') || '').split('#').pop())
+    await link.click()
+    assert.match(page.url(), /bot-office/)
+    let placed
+    for (let attempt = 0; attempt < 12; attempt += 1) {
+      placed = await frame.locator('nav.toc').evaluate((nav, sectionId) => {
+        const heading = nav.ownerDocument.getElementById(sectionId)?.querySelector('h2')
+        if (!heading) return { ok: false, reason: 'missing', sectionId }
+        const nr = nav.getBoundingClientRect()
+        const hr = heading.getBoundingClientRect()
+        return {
+          ok: hr.top >= nr.bottom - 4 && hr.top < nr.bottom + 180,
+          navBottom: nr.bottom,
+          headingTop: hr.top,
+          heading: heading.textContent,
+          navH: nr.height,
+          sectionId,
+        }
+      }, id)
+      if (placed.ok) break
+      await page.waitForTimeout(80)
+    }
+    assert.ok(placed.ok, `${label} heading under sticky ${JSON.stringify(placed)}`)
+    seen.push({ text, heading: placed.heading, navH: placed.navH })
+    if (shots && (index === 0 || index === Math.floor(count / 2) || index === count - 1)) {
+      await page.screenshot({ path: shots(`${index}-${id || 'section'}.png`) })
+    }
+  }
+  return seen
+}
+
 async function captureReading(page, title, prefix, heading) {
   await openPlan(page, title)
   const frame = page.frameLocator('iframe.ao-plan-slate')
@@ -258,6 +355,8 @@ async function colorsOf(frame) {
     const view = el.ownerDocument.defaultView
     return { height: el.getBoundingClientRect().height, view: view.innerHeight }
   })
+  await frame.getByText('文件記載／非即時').first().waitFor()
+  await frame.getByText('規劃值').first().waitFor()
   assert.ok(report.hero.height < report.hero.view * 0.55, JSON.stringify(report.hero))
   report.hostScroll = await desktop.page.evaluate(() => ({
     scrollHeight: document.documentElement.scrollHeight,
@@ -359,9 +458,38 @@ async function colorsOf(frame) {
   report.mobileScroll = mobileScroll
   report.mobileWrites = mobile.api.filter(([method]) => method !== 'GET')
   assert.deepEqual(report.mobileWrites, [])
-  if (p003Markdown) await captureReading(mobile.page, 'p003真來源', 'mobile-p003', '一頁摘要')
+  report.mobileTabs = await assertShellTabs(mobile.page, 390, shot('mobile-plan-390-tabs.png'))
+  report.mobileAnchors = await assertAnchors(mobile.page, '390-sample', name => shot(`mobile-plan-390-anchor-${name}`))
+  await mobileFrame.getByText('文件記載／非即時').first().waitFor()
+  await mobileFrame.getByText('規劃值').first().waitFor()
+  if (p003Markdown) {
+    await captureReading(mobile.page, 'p003真來源', 'mobile-p003', '一頁摘要')
+    report.p003Anchors390 = await assertAnchors(mobile.page, '390-p003', name => shot(`mobile-p003-390-anchor-${name}`))
+    await mobile.page.screenshot({ path: shot('mobile-p003-390-status.png') })
+  }
   await captureReading(mobile.page, '英文測試fixture', 'mobile-fixture', 'Purpose')
   await mobile.browser.close()
+
+  const narrow = await launch(320, 720)
+  await openPlan(narrow.page, '閱讀樣本')
+  const narrowFrame = narrow.page.frameLocator('iframe.ao-plan-slate')
+  await narrowFrame.getByRole('heading', { name: '一頁摘要', exact: true }).waitFor()
+  const narrowOverflow = await narrow.page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth + 1)
+  assert.equal(narrowOverflow, true)
+  await narrow.page.screenshot({ path: shot('mobile-plan-320.png') })
+  await narrowFrame.locator('nav.toc').screenshot({ path: shot('mobile-plan-320-nav.png') })
+  await narrowFrame.locator('header.hero').screenshot({ path: shot('mobile-plan-320-header.png') })
+  report.narrowTabs = await assertShellTabs(narrow.page, 320, shot('mobile-plan-320-tabs.png'))
+  report.narrowAnchors = await assertAnchors(narrow.page, '320-sample', name => shot(`mobile-plan-320-anchor-${name}`))
+  if (p003Markdown) {
+    await captureReading(narrow.page, 'p003真來源', 'mobile-p003-320', '一頁摘要')
+    report.p003Anchors320 = await assertAnchors(narrow.page, '320-p003', name => shot(`mobile-p003-320-anchor-${name}`))
+    await narrow.page.screenshot({ path: shot('mobile-p003-320-status.png') })
+  }
+  await captureReading(narrow.page, '英文測試fixture', 'mobile-fixture-320', 'Purpose')
+  report.narrowWrites = narrow.api.filter(([method]) => method !== 'GET')
+  assert.deepEqual(report.narrowWrites, [])
+  await narrow.browser.close()
 
   fs.writeFileSync(shot('qa.json'), JSON.stringify(report, null, 2))
   console.log(JSON.stringify(report, null, 2))

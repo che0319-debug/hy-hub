@@ -223,7 +223,7 @@ function assertSafeHtml(html) {
     if (at === -1) break
     const match = html.slice(at).match(/^<\/?[A-Za-z!][^<>]*>/)
     assert.ok(match, `raw < at ${at}: ${html.slice(at, at + 40)}`)
-    assert.match(match[0], /^<\/?(?:html|head|meta|style|body|div|header|h[1-6]|p|dl|dt|dd|nav|a|section|ul|ol|li|table|thead|tbody|tr|th|td|pre|code|span|strong|hr|main|footer|details|summary)\b|^<!DOCTYPE html>$/i)
+    assert.match(match[0], /^<\/?(?:html|head|meta|base|style|body|div|header|h[1-6]|p|dl|dt|dd|nav|a|section|ul|ol|li|table|thead|tbody|tr|th|td|pre|code|span|strong|hr|main|footer|details|summary)\b|^<!DOCTYPE html>$/i)
     index = at + match[0].length
   }
 }

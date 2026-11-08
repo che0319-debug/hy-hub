@@ -551,6 +551,13 @@ function summaryView(section) {
   return { lead, highlights, rest }
 }
 
+function metaKind(label) {
+  const name = String(label || '').trim()
+  if (/^(狀態|status)$/i.test(name)) return 'status'
+  if (/^(日期|date|期限|到期|due)/i.test(name)) return 'plan-date'
+  return ''
+}
+
 function statusTags(meta) {
   const tags = []
   for (const item of meta) {
@@ -577,7 +584,16 @@ function splitMeta(meta) {
 
 function metaHtml(items) {
   if (!items.length) return ''
-  return `<dl class="meta">${items.map(item => `<div><dt>${slateInline(item.label)}</dt><dd title="${escapeHtml(item.value)}">${slateInline(item.value)}</dd></div>`).join('')}</dl>`
+  return `<dl class="meta">${items.map(item => {
+    const kind = metaKind(item.label)
+    const hint = kind === 'status'
+      ? '<span class="meta-hint">文件記載／非即時</span>'
+      : kind === 'plan-date'
+        ? '<span class="meta-hint">規劃值</span>'
+        : ''
+    const attr = kind ? ` data-meta="${kind}"` : ''
+    return `<div${attr}><dt>${slateInline(item.label)}</dt>${hint}<dd title="${escapeHtml(item.value)}">${slateInline(item.value)}</dd></div>`
+  }).join('')}</dl>`
 }
 
 function sourceStats(parsed, meta) {
@@ -603,14 +619,15 @@ function sourceStats(parsed, meta) {
 
 function navLabel(title) {
   const text = String(title || '章節').replace(/\s+/g, ' ').trim()
-  const numbered = /^([一二三四五六七八九十]+、[^（(]{1,10})/.exec(text)
+  const stripped = text.replace(/[（(][^）)]*[）)]/g, '').replace(/\s+/g, ' ').trim() || text
+  const numbered = /^([一二三四五六七八九十]+、.{1,24})/.exec(stripped)
   if (numbered) return numbered[1].trim()
-  return text.slice(0, 12)
+  return stripped
 }
 
 const SLATE_CSS = `
-:root{--navy:#172e50;--blue:#294f85;--ink:#17263b;--muted:#63748c;--line:#dce3ed;--bg:#f2f5f9;--card:#fff;--green:#329b61;--amber:#d38a21;--rose:#a33b4a}
-*{box-sizing:border-box}html{scroll-behavior:smooth;scroll-padding-top:56px}html,body{margin:0;padding:0}
+:root{--navy:#172e50;--blue:#294f85;--ink:#17263b;--muted:#63748c;--line:#dce3ed;--bg:#f2f5f9;--card:#fff;--green:#329b61;--amber:#d38a21;--rose:#a33b4a;--toc:3.5rem}
+*{box-sizing:border-box}html,body{margin:0;padding:0}
 body{background:var(--bg);color:var(--ink);font-family:"PingFang TC","Noto Sans TC","Microsoft JhengHei",sans-serif;font-size:16px;line-height:1.8}
 a{color:#285b9a;text-underline-offset:3px}
 .page{min-width:0}
@@ -621,11 +638,13 @@ header.hero h1{margin:2px 0 4px;font-size:clamp(20px,3vw,30px);line-height:1.28;
 header.hero .sub{margin:0 0 6px;font-size:15px;color:#e0e9f7;line-height:1.45}
 .meta{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:4px 16px;margin:8px 0 0}
 .meta div{min-width:0}.meta dt{font-size:11px;letter-spacing:.04em;color:var(--muted);font-weight:650}.meta dd{margin:0;color:var(--ink);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:13px}
-header.hero .meta{color:#cbd9ec}header.hero .meta dt{color:#9fb4d0}header.hero .meta dd{color:#eef3fb}
+.meta-hint{display:block;font-size:10px;font-weight:600;letter-spacing:.02em;margin-top:1px;opacity:.9}
+header.hero .meta{color:#cbd9ec}header.hero .meta dt{color:#9fb4d0}header.hero .meta dd{color:#eef3fb}header.hero .meta-hint{color:#9fb4d0}
 nav.toc{position:sticky;top:0;z-index:5;background:#fffffff2;backdrop-filter:blur(8px);border-bottom:1px solid var(--line)}
-.nav-inner{display:flex;gap:16px;padding:10px 24px;overflow:auto;white-space:nowrap}
-nav.toc a{color:var(--muted);text-decoration:none;font-size:14px}
+.nav-inner{display:flex;flex-wrap:wrap;gap:6px 12px;padding:8px 24px;overflow:visible;white-space:normal}
+nav.toc a{color:var(--muted);text-decoration:none;font-size:14px;line-height:1.3;white-space:normal;overflow-wrap:anywhere;padding:4px 0}
 nav.toc a:hover{color:var(--blue)}
+section[id]{scroll-margin-top:var(--toc)}
 main{padding:18px 24px 48px;display:flex;flex-direction:column}
 details.source-notes{order:99}
 .card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:22px 24px;margin:0 0 16px;box-shadow:0 3px 12px #192f4e08;min-width:0}
@@ -644,6 +663,7 @@ p,li,dd{overflow-wrap:break-word}
 .tags{display:flex;flex-wrap:wrap;gap:8px;margin:0 0 14px}
 .tag{display:inline-block;border-radius:999px;padding:4px 12px;font-size:12px;font-weight:650;color:#fff;background:#7d8999}
 .tag-green{background:var(--green)}.tag-amber{background:var(--amber)}.tag-blue{background:var(--blue)}
+.tag-note{display:inline-block;border-radius:999px;padding:4px 10px;font-size:11px;font-weight:650;color:#5c4a28;background:#f4ead6;border:1px solid #e2cf9a}
 .stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:12px;margin:0 0 16px}
 .stat{border:1px solid var(--line);border-radius:12px;padding:14px 16px}
 .stat strong{display:block;font-size:28px;line-height:1.25;color:var(--navy)}
@@ -674,12 +694,16 @@ summary{cursor:pointer;padding:14px 16px;font-weight:700;color:#294e7b}
 .detail-body{padding:0 16px 16px}
 footer.note{max-width:1100px;margin:0 auto;padding:0 24px 28px;color:var(--muted);font-size:13px}
 @media(max-width:820px){.meta,.stats{grid-template-columns:1fr 1fr}.grid{grid-template-columns:1fr}}
+@media(max-width:360px){header.hero h1{font-size:1rem}.meta{gap:2px 8px}}
 @media(max-width:640px){
+  :root{--toc:8rem}
   body{font-size:15px}
-  header.hero{padding:12px 16px 10px}
-  header.hero h1{font-size:1.2rem}
+  header.hero{padding:10px 12px 8px}
+  header.hero h1{font-size:1.1rem}
   header.hero .sub{font-size:14px}
-  .nav-inner{gap:14px;padding:8px 16px}
+  nav.toc{max-height:7.25rem;overflow-y:auto;-webkit-overflow-scrolling:touch;scrollbar-width:thin}
+  .nav-inner{gap:4px 10px;padding:6px 12px}
+  nav.toc a{font-size:13px;padding:3px 0}
   main{padding:12px 12px 36px}
   .card{padding:16px}
   h2{font-size:1.15rem}
@@ -733,14 +757,14 @@ function slateDocumentHtml(markdown) {
     let inner = ''
     if (section.summary) {
       const view = summaryView(section)
-      inner += tags.length ? `<div class="tags">${tags.map(tag => `<span class="tag tag-${tag.tone}">${slateInline(tag.text)}</span>`).join('')}</div>` : ''
+      inner += tags.length ? `<div class="tags">${tags.map(tag => `<span class="tag tag-${tag.tone}">${slateInline(tag.text)}</span>`).join('')}<span class="tag-note">文件記載／非即時</span></div>` : ''
       inner += stats.length ? `<div class="stats">${stats.map(stat => `<div class="stat"><strong>${slateInline(stat.value)}</strong><span>${slateInline(stat.label)}</span></div>`).join('')}</div>` : ''
       if (view.lead) inner += `<p class="lead">${slateInline(view.lead)}</p>`
       if (view.highlights.length) {
         inner += `<div class="grid">${view.highlights.map(item => `<div class="cardlet"><h3>${slateInline(item.title)}</h3>${item.html}</div>`).join('')}</div>`
       }
       inner += view.rest.map(block => renderSlateBlock(block, section.title, -1)).join('\n')
-      inner += '<div class="callout callout-amber"><p>閱讀基準：日期、狀態與期限依規劃書原文列出，未查核即時專案狀態；規劃日期不視為已完成。</p></div>'
+      inner += '<div class="callout callout-amber"><p>閱讀基準：日期、狀態與期限依規劃書原文列出（文件記載／非即時），未接 Office 即時狀態；規劃日期為規劃值，不視為已完成。</p></div>'
       if (leftoverHtml) { inner += leftoverHtml; leftoverHtml = '' }
     } else {
       let tableCount = 0
@@ -769,7 +793,7 @@ function slateDocumentHtml(markdown) {
   const main = hasBody
     ? `${header}<main>${notesHtml}${cards}</main><footer class="note">本章節導覽來自文件標題；技術區塊折疊後仍保留原文，可核對來源。</footer>`
     : '<main><section class="card"><p>規劃書沒有可讀的正文。</p></section></main>'
-  return `<!DOCTYPE html><html lang="zh-Hant"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><style>${SLATE_CSS}</style></head><body><div class="page">${main}</div></body></html>`
+  return `<!DOCTYPE html><html lang="zh-Hant"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><base href="about:srcdoc"><style>${SLATE_CSS}</style></head><body><div class="page">${main}</div></body></html>`
 }
 
 export function executionReportReviews(reviews = []) {
