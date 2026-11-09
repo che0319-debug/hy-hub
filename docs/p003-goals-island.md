@@ -37,7 +37,7 @@
 
 ## 尚未通過的驗收
 
-1. 原 `goals-mockup.jpg`／`goals-mockup-mobile.jpg` 尚未取得；已查 Library 與 Drive 的相應檔名，不能宣稱與原模擬圖比對完成。
+1. 原 `goals-mockup.png`／`goals-mockup-mobile.png` 尚未取得；已查 Library 與 Drive 的相應檔名，不能宣稱與原模擬圖比對完成。
 2. 本次瀏覽器不能啟動 WebGL；已驗證幾何、方位格及清單／卡片回退，但未驗證完整 3D 場景的標籤重疊、實際動線與同機前後效能，仍需後續有 WebGL 的隔離環境補驗。
 3. 人生準則原文沒有在本次可讀正式 goals 資料中取得；不把個人 values 欄位或規劃摘要當作原準則，也不自行代填。
 4. 尚未做正式來源首評、各 Bot 真實工具配置、校正記憶候選閉環、正式雙份備份或完整結案審查。
