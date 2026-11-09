@@ -11,6 +11,10 @@ import { LIVE_FIGS, deriveAttention, todoMarker } from '../life-island/worldData
 import ProjectMarquee from '../life-island/ProjectMarquee'
 import { PROJECT_STAGES } from '../lib/projectStages.mjs'
 import { rosterById } from '../botRoster'
+import { useLifeGoals } from '../life-goals/useLifeGoals'
+import { BUILDING_DIMENSIONS, dimensionForBuilding } from '../life-goals/model.mjs'
+import { ScoreSummary, EvidenceStatus, GoalLines, HistoryRows } from '../life-goals/DimensionCard'
+import '../life-goals/goals.css'
 
 const ATTN_LABEL = { bad: '有問題', you: '待處理', todo: '待辦' }
 
@@ -322,13 +326,21 @@ function MemorialCard({ card, onClose, floating }) {
   )
 }
 
-function BuildingCard({ b, presentation, onClose, floating }) {
+function GoalBuildingCard({ b, dimension, onClose }) {
+  return <section className="hy-card is-focus goals-island-card" aria-live="polite"><div className="hy-card-head"><h2 className="hy-card-title">{b.title} · {dimension.name}</h2><button type="button" className="hy-btn" onClick={onClose}>關閉</button></div>
+    <ScoreSummary dimension={dimension} /><p className="goals-caption">{dimension.scoreSourceText}</p><EvidenceStatus dimension={dimension} />
+    <GoalLines dimension={dimension} /><h3 className="goals-caption">最近三筆評分紀錄</h3><HistoryRows entries={dimension.recent} />
+    <div className="li-links"><Link className="hy-btn is-primary" to="/goals">查看完整人生目標</Link>{b.links.filter(l => l.to !== '/goals').map(l => <Link key={l.to} className="hy-btn" to={l.to}>{l.label}</Link>)}</div></section>
+}
+function BuildingCard({ b, presentation, onClose, floating, goals }) {
   if (presentation?.kind === 'live' && presentation.card) return <LiveBuildingCard card={presentation.card} onClose={onClose} floating={floating} />
   if (presentation?.kind === 'memorial' && presentation.card) return <MemorialCard card={presentation.card} onClose={onClose} floating={floating} />
-  return <StaticBuildingCard b={b} onClose={onClose} floating={floating} />
+  const dimension = goals?.status === 'loaded' ? dimensionForBuilding(goals.document, b.id) : null
+  if (dimension) return <GoalBuildingCard b={b} dimension={dimension} onClose={onClose} />
+  return <StaticBuildingCard b={b} onClose={onClose} floating={floating} goalStatus={BUILDING_DIMENSIONS[b.id] ? goals?.status : null} />
 }
 
-function StaticBuildingCard({ b, onClose, floating }) {
+function StaticBuildingCard({ b, onClose, floating, goalStatus }) {
   const [min, setMin] = useStored('li_card_min', false)
   if (floating && min) {
     return (
@@ -350,6 +362,7 @@ function StaticBuildingCard({ b, onClose, floating }) {
         </div>
       </div>
       <p className="hy-lede" style={{ marginTop: 8 }}>{b.blurb}</p>
+      {goalStatus && <p className="goals-source-warning" role="status">{goalStatus === 'failed' ? '七維資料讀取失敗，先顯示建築介紹。' : '七維資料載入中，先顯示建築介紹。'}</p>}
       <dl className="hy-kv">
         <dt>所在島</dt><dd>{b.islandName}</dd>
         <dt>負責</dt><dd>{b.agent}</dd>
@@ -371,15 +384,30 @@ export default function LifeIsland() {
   const stageRef = useRef(null)
   const layerRef = useRef(null)
   const apiRef = useRef(null)
+  const fallbackCardRef = useRef(null)
   const [sel, setSel] = useState(null)
   const [gl, setGl] = useState(() => webglOk())
   const [mapCur, setMapCur] = useState('central')
   const [sky, setSky] = useState(null)
   const { info, roster: data } = useInbox()
+  const goals = useLifeGoals()
   const { search } = useLocation()
   const fixtureOn = memorialFixture(search)
   const [panel, setPanel] = useState(null)
   const [sceneTick, setSceneTick] = useState(0)
+
+  useEffect(() => {
+    if (!gl && sel && fallbackCardRef.current) {
+      fallbackCardRef.current.focus({ preventScroll: true })
+      fallbackCardRef.current.scrollIntoView({ block: 'start' })
+    }
+  }, [gl, sel])
+
+  useEffect(() => {
+    const api = apiRef.current
+    if (!api) return
+    for (const building of Object.keys(BUILDING_DIMENSIONS)) api.setGoalBuilding(building, dimensionForBuilding(goals.document, building), goals.status)
+  }, [goals.document, goals.status, info.today, gl, sceneTick])
 
   function slotOf(building) {
     if (!fixtureOn || building?.id !== 'chuan') return building
@@ -457,7 +485,7 @@ export default function LifeIsland() {
             </div>
           </div>
           {panel && <InfoPanel kind={panel} info={info} onClose={() => setPanel(null)} />}
-          {(b || fig) && <div className="li-float">{fig ? <BotCard f={fig} live={data.bots[fig.id]} loaded={data.loaded} onClose={() => choose(null)} /> : <BuildingCard floating b={b} presentation={presentation} onClose={() => choose(null)} />}</div>}
+          {(b || fig) && <div className="li-float">{fig ? <BotCard f={fig} live={data.bots[fig.id]} loaded={data.loaded} onClose={() => choose(null)} /> : <BuildingCard floating b={b} presentation={presentation} onClose={() => choose(null)} goals={goals} />}</div>}
           <div className="li-hint">拖曳旋轉、滾輪或雙指縮放、Shift＋拖曳平移</div>
         </div>
       ) : (
@@ -465,9 +493,9 @@ export default function LifeIsland() {
           <div className="hy-empty">這台裝置不支援 3D，改用下方清單。內容與 3D 相同。</div>
           <StatusBar onGo={choose} info={info} data={data} panel={panel} setPanel={setPanel} projects={data.office?.projects} />
           {panel && <InfoPanel kind={panel} info={info} onClose={() => setPanel(null)} />}
-          {b && <BuildingCard b={b} presentation={presentation} onClose={() => choose(null)} />}
+          {b && <div ref={fallbackCardRef} tabIndex={-1}><BuildingCard b={b} presentation={presentation} onClose={() => choose(null)} goals={goals} /></div>}
           <section className="hy-card">
-            <h2 className="hy-card-title">中央島的建築</h2>
+            <h2 className="hy-card-title">各島建築</h2>
             <ul className="hy-list li-bldlist">
               {BUILDINGS.map(x => (
                 <li key={x.id} style={{ padding: 0 }}>

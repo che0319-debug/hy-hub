@@ -35,6 +35,41 @@ export async function fetchLifeGoals() {
   return res.json();
 }
 
+export async function submitHumanGoals(requestId, operations) {
+  const response = await fetch(`${API_BASE}/api/life-goals/human`, {
+    method: 'POST', headers: { ...authHeaders(), 'Content-Type': 'application/json' },
+    body: JSON.stringify({ requestId, operations }),
+  })
+  const result = await response.json().catch(() => ({}))
+  if (!response.ok || !result.ok) {
+    const error = new Error(result.error === 'STALE_USER_EDIT' ? '內容已更新，請重新讀取後再修改。' : '請稍後重試。')
+    error.definitive = response.status < 500 && result.error !== 'UNKNOWN_COMMIT_OUTCOME_RETRY_SAME_REQUEST'
+    throw error
+  }
+  return result
+}
+
+export async function fetchLifeGoalsHistory(dimensionId) {
+  const response = await fetch(`${API_BASE}/api/life-goals/history/${encodeURIComponent(dimensionId)}`, { headers: authHeaders(), cache: 'no-store' })
+  const result = await response.json()
+  if (!response.ok || !Array.isArray(result.history)) throw new Error('完整紀錄讀取失敗。')
+  return result
+}
+
+export async function submitWeeklyGoalsControl(requestId, control) {
+  const response = await fetch(`${API_BASE}/api/life-goals/weekly/control`, {
+    method: 'POST', headers: { ...authHeaders(), 'Content-Type': 'application/json' },
+    body: JSON.stringify({ ...control, requestId }),
+  })
+  const result = await response.json().catch(() => ({}))
+  if (!response.ok || !result.ok) {
+    const error = new Error('週評分設定尚未確認，請重新讀取或重試。')
+    error.definitive = response.status < 500 && result.error !== 'UNKNOWN_COMMIT_OUTCOME_RETRY_SAME_REQUEST'
+    throw error
+  }
+  return result
+}
+
 export async function fetchStrategyProjects() {
   const res = await fetch(`${API_BASE}/api/strategy-projects`, {
     method: "GET",

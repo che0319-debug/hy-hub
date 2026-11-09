@@ -1,0 +1,79 @@
+{
+  "method": "Native browser viewport captures stitched at observed scrollTop positions; no generated screen content.",
+  "mobile": [
+    {
+      "height": 5712,
+      "top": 0,
+      "viewport": 936,
+      "file": "mobile-0.jpg"
+    },
+    {
+      "height": 5712,
+      "top": 749,
+      "viewport": 936,
+      "file": "mobile-1.jpg"
+    },
+    {
+      "height": 5712,
+      "top": 1498,
+      "viewport": 936,
+      "file": "mobile-2.jpg"
+    },
+    {
+      "height": 5712,
+      "top": 2246,
+      "viewport": 936,
+      "file": "mobile-3.jpg"
+    },
+    {
+      "height": 5712,
+      "top": 2995,
+      "viewport": 936,
+      "file": "mobile-4.jpg"
+    },
+    {
+      "height": 5712,
+      "top": 3744,
+      "viewport": 936,
+      "file": "mobile-5.jpg"
+    },
+    {
+      "height": 5712,
+      "top": 4493,
+      "viewport": 936,
+      "file": "mobile-6.jpg"
+    },
+    {
+      "height": 5712,
+      "top": 4776,
+      "viewport": 936,
+      "file": "mobile-7.jpg"
+    }
+  ],
+  "desktop": [
+    {
+      "height": 2470,
+      "top": 0,
+      "viewport": 936,
+      "file": "desktop-0.jpg"
+    },
+    {
+      "height": 2470,
+      "top": 749,
+      "viewport": 936,
+      "file": "desktop-1.jpg"
+    },
+    {
+      "height": 2470,
+      "top": 1498,
+      "viewport": 936,
+      "file": "desktop-2.jpg"
+    },
+    {
+      "height": 2470,
+      "top": 1534,
+      "viewport": 936,
+      "file": "desktop-3.jpg"
+    }
+  ]
+}
