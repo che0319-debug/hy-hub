@@ -7,6 +7,7 @@ import {
 import { B, box, cyl, sph, cone, rng, prismTri } from './geo.js';
 import { toon, outline, U } from './mats.js';
 import { makeBuilding } from './buildings.js';
+import { makeVault, makeLakeside } from './goalBuildings.js';
 import { treeGeos, instanced, fence, lamp } from './props.js';
 import { makeBot, animateBot, STATUS_COLORS } from './bots.js';
 import { makePlaza } from './plaza.js';
@@ -45,7 +46,7 @@ const ISL_CFG = { central: { cityR: 13, seed: 3, col: '#d9a441' }, biz: { cityR:
 const ISLANDS = ISLANDS_DATA.map(d => ({ id: d.id, name: d.name, sub: d.sub, c: d.c, ...ISL_CFG[d.id],
   bs: d.buildings.map(b => ({ id: b.id, title: b.title, type: b.type, form: b.form, height: b.height * 1.15 })),
   keys: d.buildings.map(b => ({ id: b.id, bi: KEYPOS[b.id][0], bj: KEYPOS[b.id][1], park: false })) }));
-const BESPOKE = ['plaza', 'dispatch', 'meeting', 'syscenter', 'hq', 'lab', 'brain', 'dojo', 'sandtable', 'home', 'gym', 'sidehq', 'phoneshop', 'cuyu', 'chuan'];
+const BESPOKE = ['plaza', 'dispatch', 'meeting', 'syscenter', 'hq', 'lab', 'brain', 'dojo', 'sandtable', 'home', 'gym', 'sidehq', 'phoneshop', 'cuyu', 'chuan', 'vault', 'lakeside'];
 const DECO = [
   { id: 'd1', deco: true, allPark: true, seed: 5, c: [10, 33], cityR: 3, bs: [{ id: 'd1b', title: '', type: 'system', form: 'lighthouse', height: 2.4 }], keys: [{ id: 'd1b', bi: 0, bj: 0, park: true }] },
   { id: 'd2', deco: true, allPark: true, seed: 7, c: [-3, -27], cityR: 3, bs: [{ id: 'd2b', title: '', type: 'business', form: 'tent', height: 1.5 }], keys: [{ id: 'd2b', bi: 0, bj: 0, park: true }] },
@@ -305,7 +306,7 @@ for (const isl of ISLANDS) {
   for (const bd of isl.bs) {
     const kb = (isl.keys || []).find(k => k.id === bd.id); if (!kb || kb.wx === undefined) continue;
     if (bd.form === 'chuan') { mountChuan(bd, isl, kb); continue; }
-    const made = bd.form === 'scaffold' ? scaffold() : bd.form === 'plaza' ? makePlaza() : bd.form === 'dispatch' ? makeDispatch() : bd.form === 'meeting' ? makeMeeting() : bd.form === 'syscenter' ? makeSysCenter() : bd.form === 'hq' ? makeHQ() : bd.form === 'lab' ? makeLab() : bd.form === 'brain' ? makeBrain() : bd.form === 'dojo' ? makeDojo() : bd.form === 'sandtable' ? makeBoard() : bd.form === 'home' ? makeHome() : bd.form === 'gym' ? makeGym() : bd.form === 'sidehq' ? makeSideHQ() : bd.form === 'phoneshop' ? makePhoneShop() : bd.form === 'cuyu' ? makeCuyu() : makeBuilding(bd, bi2++ + 3), SC = BESPOKE.includes(bd.form) ? (bd.form === 'sidehq' ? 1.3 : 1) : bd.form === 'tent' ? 2.3 : 3.2;
+    const made = bd.form === 'vault' ? makeVault() : bd.form === 'lakeside' ? makeLakeside() : bd.form === 'scaffold' ? scaffold() : bd.form === 'plaza' ? makePlaza() : bd.form === 'dispatch' ? makeDispatch() : bd.form === 'meeting' ? makeMeeting() : bd.form === 'syscenter' ? makeSysCenter() : bd.form === 'hq' ? makeHQ() : bd.form === 'lab' ? makeLab() : bd.form === 'brain' ? makeBrain() : bd.form === 'dojo' ? makeDojo() : bd.form === 'sandtable' ? makeBoard() : bd.form === 'home' ? makeHome() : bd.form === 'gym' ? makeGym() : bd.form === 'sidehq' ? makeSideHQ() : bd.form === 'phoneshop' ? makePhoneShop() : bd.form === 'cuyu' ? makeCuyu() : makeBuilding(bd, bi2++ + 3), SC = BESPOKE.includes(bd.form) ? (bd.form === 'sidehq' ? 1.3 : 1) : bd.form === 'tent' ? 2.3 : 3.2;
     const g = new Group(), m = new Mesh(made.geo, matToon); m.castShadow = m.receiveShadow = true; g.add(m); m.userData.bid = bd.id; pickMeshes.push(m);
     g.position.set(kb.wx, 0, kb.wz); g.rotation.y = CAMAZ + (BESPOKE.includes(bd.form) ? 0 : 0.2 * (bi2 % 3 - 1)); g.scale.setScalar(SC);
     scene.add(g); bldList.push({ bd, isl, x: kb.wx, z: kb.wz, top: made.top * SC, sc: SC });
@@ -687,6 +688,21 @@ const api = {
     l.el.title = b.lp.name + '：' + STATUS_INFO[b.lp.status] + (reasons.length ? '\n' + reasons.join('\n') : '');
   },
   home() { Object.assign(target, HOME); },
+  setGoalBuilding(id, dimension, status) {
+    const rec = labels.find(x => x.p.kind === 'bldg' && x.p.id === id);
+    if (!rec) return;
+    const score = status === 'loaded' && dimension ? dimension.scoreText : status === 'failed' ? '資料讀取失敗' : '資料載入中';
+    const activity = status === 'loaded' && dimension ? dimension.activity : 'unknown';
+    const source = status === 'loaded' && dimension?.evidenceStatus !== 'ok' ? dimension?.evidenceStatus === 'source_down' ? ' · 來源中斷' : ' · 證據不足' : '';
+    const signature = JSON.stringify([score, activity, source]);
+    if (rec.goalSignature === signature) return;
+    rec.goalSignature = signature; rec.el.classList.add('li-label-goal'); rec.el.dataset.activity = activity;
+    const title = document.createElement('span'); title.className = 'goals-label-title'; title.textContent = rec.p.name;
+    const state = document.createElement('span'); state.className = 'goals-label-score';
+    const dot = document.createElement('i'); dot.className = 'goals-label-dot'; dot.setAttribute('aria-hidden', 'true');
+    state.append(dot, document.createTextNode(score + source)); rec.el.replaceChildren(title, state);
+    rec.el.setAttribute('aria-label', `${rec.p.name} ${score}${source}`); rec.el.title = `${rec.p.name} ${score}${source}`;
+  },
   focus(islandId) { const isl = ISLANDS.find(x => x.id === islandId); if (!isl) return; selected = null; placeRing(selRing, null); target.tx = isl.c[0] + (islandId === 'central' ? 0.5 : 0); target.tz = isl.c[1] + 2.5; target.dist = islandId === 'central' ? 72 : 46; opts.onSelect && opts.onSelect(null); },
   // presentation.view 為 null：回到這格原本的靜態外觀，並清掉即時名牌。簽章沒變就不重做網格。
   // 專案從下一輪清單消失時，kind 變成 absent／failed，網格與名牌一起換掉，不留上一輪的吊車或進度。

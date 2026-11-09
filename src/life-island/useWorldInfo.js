@@ -1,6 +1,7 @@
 // 世界頂欄用的真實資料：待辦（逾期＋今天＋近 3 天）與今日行程。資料來源與首頁相同（fetchAllMilestones／fetchTodaySchedule）。
 import { useEffect, useState } from 'react'
 import { fetchAllMilestones, fetchTodaySchedule } from '../api'
+import { lifeGoalsStore } from '../life-goals/useLifeGoals'
 
 const TZ_MS = 8 * 3600 * 1000
 export const todayTaipei = () => new Date(Date.now() + TZ_MS).toISOString().slice(0, 10)
@@ -21,6 +22,7 @@ export function useWorldInfo() {
   useEffect(() => {
     let alive = true
     const load = () => {
+      lifeGoalsStore.refresh()
       fetchAllMilestones().then(d => { if (alive) setTodos(Array.isArray(d) ? d : false) }).catch(() => { if (alive) setTodos(prev => prev || false) })
       fetchTodaySchedule().then(d => { if (alive) setEvents(d && !d.error && Array.isArray(d.events) ? d.events : false) }).catch(() => { if (alive) setEvents(prev => prev || false) })
     }

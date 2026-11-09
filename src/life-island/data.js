@@ -61,6 +61,8 @@ export const BUSINESS_ISLAND = {
 export const LIFE_ISLAND = {
   id: 'life', name: '隱地島', sub: 'HY', c: [14, -26], R: 3,
   buildings: [
+    { id: 'lakeside', title: '湖畔小屋', type: 'personal', form: 'lakeside', height: 2.05, q: -1, r: 0,
+      kind: '人生維度', agent: 'HY', status: '現有', blurb: '休閒：保留探索新體驗的空間。', links: [{ label: '開啟休閒目標', to: '/goals' }] },
     {
       id: 'brain', title: '大腦圖書館', type: 'system', form: 'brain', height: 3.0, q: 0, r: 0,
       kind: '功能', agent: 'HY', status: '待補',
@@ -103,6 +105,8 @@ export const FAMILY_ISLAND = {
 export const SIDE_ISLAND = {
   id: 'side', name: '金融島', sub: 'Sam', c: [26, 5], R: 3,
   buildings: [
+    { id: 'vault', title: '金庫', type: 'business', form: 'vault', height: 2.25, q: 0, r: 0,
+      kind: '人生維度', agent: 'Sam', status: '現有', blurb: '財務：以真實紀錄累積穩定與自由。', links: [{ label: '開啟財務目標', to: '/goals' }] },
     {
       id: 'sidehq', title: '副業總部', type: 'business', form: 'sidehq', height: 3.3, q: 0, r: 0,
       kind: '分身總部', agent: 'Sam', status: '現有',
@@ -134,7 +138,7 @@ export const ISLANDS_DATA = [CENTRAL_ISLAND, BUSINESS_ISLAND, LIFE_ISLAND, FAMIL
 export const ALL_BUILDINGS = ISLANDS_DATA.flatMap(isl => isl.buildings.map(b => ({ ...b, islandId: isl.id, islandName: isl.name })));
 
 // 建築在島上的街區（bi, bj）。3D 場景把建築放在島心 + (bi, bj) × BLOCK。角色的 zone 用同一個 id。
-export const BUILDING_BLOCK = { today: [0, 0], dispatch: [1, -1], meeting: [2, 1], syscenter: [-1, 0], hq: [0, 0], lab: [1, 0], brain: [0, 0], dojo: [1, 0], board: [0, 1], home: [0, 0], gym: [1, 0], sidehq: [-1, -1], phone: [1, -1], cuyu: [-1, 1], chuan: [1, 1] };
+export const BUILDING_BLOCK = { today: [0, 0], dispatch: [1, -1], meeting: [2, 1], syscenter: [-1, 0], hq: [0, 0], lab: [1, 0], brain: [0, 0], dojo: [1, 0], board: [0, 1], lakeside: [-1, 0], home: [0, 0], gym: [1, 0], sidehq: [-1, -1], phone: [1, -1], cuyu: [-1, 1], chuan: [1, 1], vault: [0, 0] };
 export const BLOCK = 4;
 
 export function buildingWorld(islandId, buildingId) {
