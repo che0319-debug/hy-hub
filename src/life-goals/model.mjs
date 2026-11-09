@@ -37,7 +37,7 @@ export function dimensionView(d, now = Date.now()) {
     activity: activityOf(d.lastActionAt, now), evidenceStatus: d.evidenceStatus || 'insufficient',
     vision, visionLabel: vision.confirmedByUser ? '已確認' : vision.source === 'hy' ? '待你點頭' : '草稿・待你改',
     nowSummary: d.nowSummary || '等待負責 Bot 整理真實證據。', nextStep: d.nextStep || '由負責 Bot 補上具體下一步。',
-    history, recent: history.filter(h => ['initial', 'action', 'setback', 'decay', 'correction', 'revert'].includes(h.kind)).slice(-3).reverse(),
+    history, recent: history.filter(h => ['initial', 'assessment', 'action', 'setback', 'decay', 'correction', 'revert'].includes(h.kind)).slice(-3).reverse(),
     updatedAt: history.at(-1)?.at || d.statusAt || d.initializedAt || null }
 }
 export function dimensionForBuilding(document, buildingId, now) {

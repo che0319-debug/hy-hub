@@ -70,3 +70,13 @@ test('新建築只占 3×3 格，沒有非有限座標或獨立動態效果',()=
  assert.notDeepEqual(BUILDING_BLOCK.vault,BUILDING_BLOCK.sidehq)
  assert.notDeepEqual(BUILDING_BLOCK.lakeside,BUILDING_BLOCK.brain)
 })
+
+test('Bot 最終評估直接呈現在卡片與島，保留原分數與最近評估',()=>{
+ const doc=fixture(),d=doc.dimensions.find(x=>x.id==='dim-growth')
+ d.progress=87;d.initializedAt='2026-11-01T00:00:00Z'
+ d.history=[{id:'first',kind:'initial',scoreAfter:10},{id:'report-2',kind:'assessment',scoreAfter:87,delta:77}]
+ assert.equal(dimensionView(d,now).score,87)
+ assert.equal(dimensionView(d,now).recent[0].id,'report-2')
+ assert.equal(dimensionForBuilding(doc,'dojo',now).score,87)
+ assert.equal(dimensionForBuilding(doc,'dojo',now).recent[0].kind,'assessment')
+})
