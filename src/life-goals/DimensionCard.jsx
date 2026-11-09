@@ -19,7 +19,7 @@ export function EvidenceStatus({ dimension }) {
 export function GoalLines({ dimension }) {
   return <dl className="goals-lines"><dt>十年後的樣子 <span className="goals-caption">{dimension.visionLabel}</span></dt><dd>{dimension.vision.text || '待你填寫方向。'}</dd><dt>現在在哪</dt><dd>{dimension.nowSummary}</dd><dt>下一小步</dt><dd>{dimension.nextStep}</dd></dl>
 }
-const KIND = { initial: '首評', action: '行動', setback: '倒退', decay: '長期無行動', correction: '使用者校正', revert: '回復', note: '關聯紀錄' }
+const KIND = { assessment: 'Bot 評估', initial: '首評', action: '行動', setback: '倒退', decay: '長期無行動', correction: '使用者校正', revert: '回復', note: '關聯紀錄' }
 export function HistoryRows({ entries = [] }) {
   if (!entries.length) return <p className="goals-caption">尚無評分紀錄；不以舊分當作新制成長。</p>
   return <ol className="goals-history">{entries.map((h, i) => <li key={h.id || i}>
