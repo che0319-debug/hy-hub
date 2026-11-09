@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, useSyncExternalStore } from 'react'
-import { fetchLifeGoals, submitHumanGoals } from '../api'
+import { fetchLifeGoals, submitHumanGoals, submitWeeklyGoalsControl } from '../api'
 import { validateGoals } from './model.mjs'
 import { createGoalsStore } from './store.mjs'
 
@@ -13,7 +13,7 @@ export function useLifeGoals() {
   useEffect(() => { lifeGoalsStore.ensure() }, [])
   return { ...snapshot, refresh: lifeGoalsStore.refresh }
 }
-export function useHumanGoalsMutation() {
+export function useHumanGoalsMutation(submitter = submitHumanGoals) {
   const pending = useRef(null)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
@@ -26,7 +26,7 @@ export function useHumanGoalsMutation() {
     pending.current ||= { signature, requestId: crypto.randomUUID(), operations }
     setSaving(true); setError('')
     try {
-      const result = await submitHumanGoals(pending.current.requestId, pending.current.operations)
+      const result = await submitter(pending.current.requestId, pending.current.operations)
       pending.current = null
       await lifeGoalsStore.refresh({ force: true })
       return result
@@ -35,3 +35,4 @@ export function useHumanGoalsMutation() {
   }
   return { run, saving, error, unconfirmed: !!pending.current }
 }
+export function useWeeklyGoalsControl() { return useHumanGoalsMutation(submitWeeklyGoalsControl) }

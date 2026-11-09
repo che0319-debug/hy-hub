@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom'
 import '../../public/hy-ui/hy-ui.css'
 import '../life-goals/goals.css'
 import { fetchLifeGoalsHistory } from '../api'
-import { useLifeGoals, useHumanGoalsMutation } from '../life-goals/useLifeGoals'
+import { useLifeGoals, useHumanGoalsMutation, useWeeklyGoalsControl } from '../life-goals/useLifeGoals'
 import { DIMENSIONS, LAYERS, dimensionView, principlesText, dateText } from '../life-goals/model.mjs'
 import { ScoreSummary, EvidenceStatus, GoalLines, HistoryRows } from '../life-goals/DimensionCard'
 
@@ -75,6 +75,30 @@ function Dimension({ dimension: d, enabled }) {
     </details>
   </article>
 }
+function WeeklyControls({ status, enabled }) {
+  const [editing, setEditing] = useState(null)
+  const [reason, setReason] = useState('')
+  const [notice, setNotice] = useState('')
+  const source = useRef(null)
+  const mutation = useWeeklyGoalsControl()
+  if (!status?.paused && !status?.lastFinalCycle) return null
+  const open = action => { source.current = 'goals-weekly-ui:' + crypto.randomUUID(); setReason(''); setNotice(''); setEditing({ action, cycle: status.lastFinalCycle }) }
+  return <section className="hy-card" aria-label="週評分回饋">
+    <h2 className="hy-card-title">週評分回饋</h2>
+    {status.paused && <p className="goals-source-warning" role="status">自動評分已暫停，改由 HY 每週整理。修復後由你確認恢復。</p>}
+    {status.lastFinalCycle && <p className="goals-caption">最近一期：{status.lastFinalCycle}。回饋會保留紀錄；個別分數可在各卡片提出校正。</p>}
+    {!editing && <div className="goals-actions">
+      {status.lastFinalCycle && <button type="button" className="hy-btn" disabled={!enabled} onClick={() => open('wrong_score_week')}>回報這週評分不準</button>}
+      {status.paused && <button type="button" className="hy-btn" disabled={!enabled} onClick={() => open('resume')}>恢復自動評分</button>}
+    </div>}
+    {editing && <HumanForm title={editing.action === 'resume' ? '確認恢復自動評分' : '記錄這週的評分問題'} mutation={mutation} onCancel={() => setEditing(null)} onSubmit={async e => {
+      e.preventDefault()
+      const result = await mutation.run({ action: editing.action, reason, sourceRef: source.current, ...(editing.action === 'wrong_score_week' ? { cycle: editing.cycle } : {}) })
+      if (result) { setNotice(editing.action === 'resume' ? '已記錄你的恢復確認。' : '已記錄評分問題，交由 HY 追蹤。'); setEditing(null) }
+    }}><label>{editing.action === 'resume' ? '修復確認與恢復原因' : '哪些評分與實際情況不符？'}<textarea required rows={3} maxLength={2000} value={reason} onChange={e => setReason(e.target.value)} disabled={mutation.saving || mutation.unconfirmed} /></label></HumanForm>}
+    {notice && <p className="goals-notice" role="status">{notice}</p>}
+  </section>
+}
 export default function Goals() {
   const { document, status, error, refresh } = useLifeGoals()
   const dimensions = (document?.dimensions || []).filter(d => DIMENSIONS[d.id]).map(d => dimensionView(d))
@@ -84,6 +108,7 @@ export default function Goals() {
     <section className="goals-overview" aria-label="目前狀態"><div><strong>{status === 'pending' ? '正在讀取七維資料' : !document ? '七維資料暫時無法讀取' : drafts ? `${drafts} 份願景草稿，待你確認` : '七維方向已確認'}</strong><p className="goals-caption">推進分看長期累積；燈號看最近已知行動。證據不足不扣分。</p></div><button type="button" className="hy-btn" onClick={() => refresh()}>重新讀取</button></section>
     {status === 'failed' && <p className="goals-source-warning" role="alert">{error} {document ? '目前顯示上次紀錄，暫停編輯。' : '請重新讀取。'}</p>}
     <Principles document={document} enabled={enabled} />
+    <WeeklyControls status={document?.routineStatus} enabled={enabled} />
     {!document && <div className="hy-empty">{status === 'pending' ? '資料載入中…' : '等資料恢復後，再顯示七維狀態。'}</div>}
     {document && <div className="goals-layers">{LAYERS.map(layer => <section className="goals-layer" key={layer.id} aria-label={layer.name}><div className="goals-layer-title"><h2>{layer.name}</h2><span className="goals-caption">{layer.note}</span></div><div className="goals-layer-cards">{dimensions.filter(d => d.layer === layer.id).map(d => <Dimension key={d.id} dimension={d} enabled={enabled} />)}</div></section>)}</div>}
   </div>

@@ -56,6 +56,20 @@ export async function fetchLifeGoalsHistory(dimensionId) {
   return result
 }
 
+export async function submitWeeklyGoalsControl(requestId, control) {
+  const response = await fetch(`${API_BASE}/api/life-goals/weekly/control`, {
+    method: 'POST', headers: { ...authHeaders(), 'Content-Type': 'application/json' },
+    body: JSON.stringify({ ...control, requestId }),
+  })
+  const result = await response.json().catch(() => ({}))
+  if (!response.ok || !result.ok) {
+    const error = new Error('週評分設定尚未確認，請重新讀取或重試。')
+    error.definitive = response.status < 500 && result.error !== 'UNKNOWN_COMMIT_OUTCOME_RETRY_SAME_REQUEST'
+    throw error
+  }
+  return result
+}
+
 export async function fetchStrategyProjects() {
   const res = await fetch(`${API_BASE}/api/strategy-projects`, {
     method: "GET",

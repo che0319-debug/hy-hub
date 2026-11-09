@@ -22,6 +22,7 @@ const documentFixture={revision:1,lifePrinciples:{text:'合成測試資料：整
  {id:'action-'+id,kind:'action',at:days(2),scoreAfter:[46,52,61,30,73,35,62][i],delta:3,author:'測試 Bot',reason:'合成測試：完成一項具體行動，附來源以便追溯。',evidence:[{source:'synthetic',ref:'fixture-action-'+id,at:days(2)}]}]
 }))}
 window.__p003Requests=[]
+if(params.get('routine')==='paused')documentFixture.routineStatus={paused:true,lastFinalCycle:'2026-11-06',fallback:'HY_MANUAL_WEEKLY_SUMMARY'}
 window.fetch=async (input,options={})=>{
  const url=typeof input==='string'?input:input.url
  window.__p003Requests.push({url,method:options.method||'GET'})
@@ -37,6 +38,11 @@ window.fetch=async (input,options={})=>{
    if(op.kind==='principles')documentFixture.lifePrinciples={text:op.text}
   }
   return new Response(JSON.stringify({ok:true,results:[],revision:++documentFixture.revision}),{status:200})
+ }
+ if(url.endsWith('/api/life-goals/weekly/control')){
+  const body=JSON.parse(options.body)
+  if(body.action==='resume')documentFixture.routineStatus.paused=false
+  return new Response(JSON.stringify({ok:true,paused:documentFixture.routineStatus.paused}),{status:200})
  }
  if(url.includes('bot-office'))return new Response(JSON.stringify({projects:[],decisions:[],version:1}),{status:200})
  if(url.includes('schedule'))return new Response(JSON.stringify({events:[]}),{status:200})
