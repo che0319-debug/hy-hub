@@ -80,3 +80,11 @@ test('Bot 最終評估直接呈現在卡片與島，保留原分數與最近評�
  assert.equal(dimensionForBuilding(doc,'dojo',now).score,87)
  assert.equal(dimensionForBuilding(doc,'dojo',now).recent[0].kind,'assessment')
 })
+
+test('清空分數後卡片與島顯示未評分，狀態歷史可見且不當扣分',()=>{
+ const doc=fixture(),d=doc.dimensions[0];d.progress=null;d.initializedAt='2026-11-01T00:00:00Z'
+ d.history=[{id:'clear',kind:'score_clear',scoreAfter:null,delta:null},{id:'status',kind:'assessment_status',scoreAfter:null,delta:null}]
+ const v=dimensionView(d,now);assert.equal(v.score,null);assert.equal(v.scoreText,'未評分')
+ assert.deepEqual(v.recent.map(x=>x.kind),['assessment_status','score_clear'])
+ assert.equal(dimensionForBuilding(doc,'sidehq',now).score,null)
+})
