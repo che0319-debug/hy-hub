@@ -24,12 +24,13 @@ export default function App() {
   const worldRoute = location.pathname.startsWith('/life-island')   // 桌面版一律不顯示頂欄（站名與手機版入口在側欄）；世界頁內容再貼齊最上緣
 
   useEffect(() => {
+    if (location.pathname === '/goals') return
     let active = true
     fetchDispatchSessions()
       .then(data => { if (active) setSessions(data) })
       .catch(err => console.warn('[App] fetchDispatchSessions failed:', err))
     return () => { active = false }
-  }, [])
+  }, [location.pathname === '/goals'])
 
   function addSession(session) {
     setSessions(prev => [...prev, session])
@@ -53,7 +54,7 @@ export default function App() {
   return (
     <SessionContext.Provider value={{ sessions, addSession, removeSession, refreshSessions }}>
       <InboxProvider>
-      <div className="app-shell min-h-screen bg-slate-50 text-slate-800">
+      <div className={"app-shell min-h-screen bg-slate-50 text-slate-800" + (location.pathname === '/goals' ? ' is-goals' : '')}>
         <Sidebar pilot={pilotRoute} world={!pilotRoute} collapsed={collapsed} />
         <BottomNav />
         <button

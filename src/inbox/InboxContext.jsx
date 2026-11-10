@@ -1,3 +1,4 @@
+import { useLocation } from 'react-router-dom'
 // 整個 App 共用一份 Inbox 資料：底部導覽的數字、Inbox 頁、Life 島頂部都讀這裡，數字一定一致，也不重複打 API。
 import { createContext, useContext, useMemo } from 'react'
 import { useWorldInfo } from '../life-island/useWorldInfo'
@@ -7,7 +8,7 @@ import { buildInbox, inboxCounts } from './inboxData.js'
 const Ctx = createContext(null)
 export const useInbox = () => useContext(Ctx)
 
-export function InboxProvider({ children }) {
+function ActiveInboxProvider({ children }) {
   const info = useWorldInfo()
   const roster = useBotRoster(info)
   const items = useMemo(() => buildInbox({
@@ -17,4 +18,10 @@ export function InboxProvider({ children }) {
   const counts = useMemo(() => inboxCounts(items), [items])
   const loaded = roster.loaded
   return <Ctx.Provider value={{ info, roster, items, counts, loaded, reloadOffice: roster.reloadOffice, officeFailed: roster.loaded && !roster.office && !roster.officeEmpty }}>{children}</Ctx.Provider>
+}
+
+const quietInbox = { info:{},roster:{},items:[],counts:{total:0},loaded:false,reloadOffice:()=>{},officeFailed:false }
+export function InboxProvider({ children }) {
+  const { pathname } = useLocation()
+  return pathname === '/goals' ? <Ctx.Provider value={quietInbox}>{children}</Ctx.Provider> : <ActiveInboxProvider>{children}</ActiveInboxProvider>
 }

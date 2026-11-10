@@ -1,11 +1,13 @@
-import { useState, useRef } from 'react'
+import WeeklyDirection, { refreshWeeklyDirection } from '../life-goals/WeeklyDirection'
+import { goalPageSummary } from '../life-goals/summary.mjs'
+import { useState, useRef, useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import '../../public/hy-ui/hy-ui.css'
 import '../life-goals/goals.css'
 import { fetchLifeGoalsHistory } from '../api'
 import { useLifeGoals, useHumanGoalsMutation } from '../life-goals/useLifeGoals'
-import { DIMENSIONS, LAYERS, dimensionView, principlesText, dateText } from '../life-goals/model.mjs'
-import { ScoreSummary, EvidenceStatus, GoalLines, HistoryRows } from '../life-goals/DimensionCard'
+import { LAYERS, principlesText, dateText } from '../life-goals/model.mjs'
+import { EvidenceStatus, GoalLines, HistoryRows } from '../life-goals/DimensionCard'
 
 function HumanForm({ title, children, mutation, onCancel, onSubmit }) {
   return <form className="goals-editor" onSubmit={onSubmit}><h3>{title}</h3>{children}
@@ -42,7 +44,7 @@ function Principles({ document, enabled }) {
   const [draft, setDraft] = useState('')
   const base = useRef('')
   const mutation = useHumanGoalsMutation()
-  return <details className="hy-card goals-principles"><summary><span className="hy-card-title">人生準則</span><span className="goals-caption">整份收合 · 不計分</span></summary>
+  return <details className="hy-card goals-principles"><summary><span className="hy-card-title">人生準則</span></summary>
     {editing ? <HumanForm title="編輯整份人生準則" mutation={mutation} onCancel={() => setEditing(false)} onSubmit={async e => {
       e.preventDefault(); const r = await mutation.run([{ kind: 'principles', text: draft, expectedText: base.current }]); if (r) setEditing(false)
     }}><label>人生準則<textarea rows={10} maxLength={20000} value={draft} onChange={e => setDraft(e.target.value)} disabled={mutation.saving || mutation.unconfirmed} /></label></HumanForm>
@@ -55,17 +57,22 @@ function Dimension({ dimension: d, enabled }) {
   const [history, setHistory] = useState(null)
   const [historyError, setHistoryError] = useState('')
   const [loading, setLoading] = useState(false)
-  return <article className="hy-card goals-dimension" id={d.id} aria-label={d.name}>
-    <div className="hy-card-head"><h3 className="hy-card-title">{d.name}</h3><span className="goals-caption">{d.bot} 負責</span></div>
-    <ScoreSummary dimension={d} /><p className="goals-caption">{d.scoreSourceText}</p><EvidenceStatus dimension={d} />
-    <GoalLines dimension={d} />
+  return <article className="hy-card goals-dimension" data-scored={d.score !== null} id={d.id} aria-label={d.name}>
+    <div className="goals-summary-head"><h2>{d.name}</h2><span className="goals-layer-tag">{LAYERS.find(l => l.id === d.layer)?.name}</span></div>
+    <dl className="goals-four-lines">
+      <div><dt>十年大目標</dt><dd title={d.vision.text}>{d.vision.text || '待確認'}</dd></div>
+      <div><dt>現在在哪</dt><dd title={d.nowSummary}>{d.nowSummary}</dd></div>
+      <div><dt>分數</dt><dd className={d.score === null ? 'is-unscored' : 'is-scored'}>{d.score === null ? '未評分' : d.score}</dd></div>
+      <div><dt>下一步</dt><dd title={d.nextStep}>{d.nextStep}</dd></div>
+    </dl>
+    <details className="goals-card-details"><summary>細節</summary>
+    <GoalLines dimension={d} /><EvidenceStatus dimension={d} />
     <div className="goals-actions"><button type="button" className="hy-btn" disabled={!enabled || !!editor} onClick={() => { setEditor('vision'); setNotice('') }}>確認／修改願景</button>
       <button type="button" className="hy-btn" disabled={!enabled || !!editor || d.score === null} onClick={() => { setEditor('correction'); setNotice('') }}>提出分數校正</button></div>
     {editor === 'vision' && <VisionEditor dimension={d} onClose={() => setEditor(null)} />}
     {editor === 'correction' && <CorrectionEditor dimension={d} onClose={() => setEditor(null)} onRecorded={setNotice} />}
     {notice && <p className="goals-notice" role="status">{notice}</p>}
-    <div className="goals-record-head"><h4>最近三筆評分紀錄</h4><span className="goals-caption">{dateText(d.updatedAt)}</span></div>
-    <HistoryRows entries={d.recent} />
+    <details className="goals-recent-history"><summary>最近三筆評分紀錄 <span>{dateText(d.updatedAt)}</span></summary><HistoryRows entries={d.recent} /></details>
     <details className="goals-full-history"><summary>完整紀錄{d.archives?.length ? '（含封存）' : ''}</summary>
       <button type="button" className="hy-btn" disabled={loading || !enabled} onClick={async () => {
         setLoading(true); setHistoryError('')
@@ -73,18 +80,28 @@ function Dimension({ dimension: d, enabled }) {
       }}>{loading ? '讀取中…' : history ? '重新讀取完整紀錄' : '讀取完整紀錄'}</button>
       {historyError && <p role="alert" className="goals-source-warning">{historyError}</p>}{history && <HistoryRows entries={history} />}
     </details>
+    </details>
   </article>
 }
-export default function Goals() {
-  const { document, status, error, refresh } = useLifeGoals()
-  const dimensions = (document?.dimensions || []).filter(d => DIMENSIONS[d.id]).map(d => dimensionView(d))
-  const drafts = dimensions.filter(d => !d.vision.confirmedByUser).length
+export function GoalsContent({ document, status, error, refresh = () => {}, weekly = null }) {
+  const { dimensions, assessed } = goalPageSummary(document)
   const enabled = status === 'loaded'
-  return <div className="hy goals-page"><header className="hy-pagehead"><div><h1 className="hy-title">七維人生推進</h1><p className="hy-lede">看清方向，推進下一小步。</p></div><Link className="hy-btn" to="/life-island">回 Life 島</Link></header>
-    <section className="goals-overview" aria-label="目前狀態"><div><strong>{status === 'pending' ? '正在讀取七維資料' : !document ? '七維資料暫時無法讀取' : drafts ? `${drafts} 份願景草稿，待你確認` : '七維方向已確認'}</strong><p className="goals-caption">推進分看長期累積；燈號看最近已知行動。證據不足不扣分。</p></div><button type="button" className="hy-btn" onClick={() => refresh()}>重新讀取</button></section>
+  return <div className="hy goals-page"><header className="goals-pagehead"><div><h1>人生目標</h1><p>十年方向，今天的一小步。</p></div><div className="goals-header-actions"><strong className="goals-assessed">{document ? `已評分 ${assessed}/7 維` : '讀取中'}</strong><Link className="hy-btn" to="/life-island">前往 Life 島</Link><button type="button" className="hy-btn" onClick={() => refresh()}>重新讀取</button></div></header>
     {status === 'failed' && <p className="goals-source-warning" role="alert">{error} {document ? '目前顯示上次紀錄，暫停編輯。' : '請重新讀取。'}</p>}
+    {weekly || <WeeklyDirection />}
     <Principles document={document} enabled={enabled} />
     {!document && <div className="hy-empty">{status === 'pending' ? '資料載入中…' : '等資料恢復後，再顯示七維狀態。'}</div>}
-    {document && <div className="goals-layers">{LAYERS.map(layer => <section className="goals-layer" key={layer.id} aria-label={layer.name}><div className="goals-layer-title"><h2>{layer.name}</h2><span className="goals-caption">{layer.note}</span></div><div className="goals-layer-cards">{dimensions.filter(d => d.layer === layer.id).map(d => <Dimension key={d.id} dimension={d} enabled={enabled} />)}</div></section>)}</div>}
+    {document && <div className="goals-summary-grid">{dimensions.map(d => <Dimension key={d.id} dimension={d} enabled={enabled} />)}</div>}
   </div>
+}
+export default function Goals() {
+  const snapshot = useLifeGoals()
+  const refresh = () => Promise.all([snapshot.refresh(),refreshWeeklyDirection()])
+  useEffect(() => {
+    snapshot.refresh()
+    const onFocus = () => { if (window.document.visibilityState === 'visible') refresh() }
+    window.addEventListener('focus',onFocus)
+    return () => window.removeEventListener('focus',onFocus)
+  },[snapshot.refresh])
+  return <GoalsContent {...snapshot} refresh={refresh} />
 }
