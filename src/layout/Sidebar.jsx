@@ -1,4 +1,4 @@
-import { NavLink } from 'react-router-dom'
+import { NavLink, useLocation } from 'react-router-dom'
 import {
   Home, Bot, Inbox,
   MessageSquare, Settings, Target, LayoutDashboard, Map
@@ -44,13 +44,14 @@ function NavItem({ to, label, Icon }) {
 }
 
 export default function Sidebar({ pilot = false, world = false, collapsed = false }) {
+  const { pathname } = useLocation()
   return (
     <aside className={`hidden md:flex fixed ${pilot ? 'top-0 w-[216px] pilot-sidebar' : 'top-0 w-[200px]'} left-0 bottom-0 bg-white flex-col py-4 px-2 overflow-y-auto z-40 border-r border-slate-200 transition-transform duration-200 ${collapsed ? 'md:-translate-x-full' : 'md:translate-x-0'}`}>
       {pilot && <div className="pilot-sidebar-title">HY Life OS</div>}
       {world && <div className="hidden md:block px-3 pb-3 text-lg font-bold tracking-wide text-slate-800">HY World</div>}
       <nav className="flex flex-col gap-0.5">
         {navItems.map(({ to, label, icon: Icon }) => (
-          <NavItem key={to} to={to} label={label} Icon={Icon} />
+          <NavItem key={to} to={to} label={pathname === '/goals' && label === '950157' ? '本業' : label} Icon={Icon} />
         ))}
 
       </nav>
@@ -58,14 +59,14 @@ export default function Sidebar({ pilot = false, world = false, collapsed = fals
       <div className="mt-4 mb-1 px-3 text-xs text-slate-400 font-medium tracking-wider">── Bot 團隊 ──</div>
       <nav className="flex flex-col gap-0.5">
         {botItems.map(({ to, label, icon: Icon }) => (
-          <NavItem key={to} to={to} label={label} Icon={Icon} />
+          <NavItem key={to} to={to} label={pathname === '/goals' && label === '950157' ? '本業' : label} Icon={Icon} />
         ))}
       </nav>
 
       <div className="mt-4 mb-1 px-3 text-xs text-slate-400 font-medium tracking-wider">── 其他 ──</div>
       <nav className="flex flex-col gap-0.5">
         {otherItems.map(({ to, label, icon: Icon }) => (
-          <NavItem key={to} to={to} label={label} Icon={Icon} />
+          <NavItem key={to} to={to} label={pathname === '/goals' && label === '950157' ? '本業' : label} Icon={Icon} />
         ))}
       </nav>
     </aside>

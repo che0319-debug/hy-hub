@@ -7,7 +7,7 @@ export function ActivityPill({ dimension }) {
 export function ScoreSummary({ dimension }) {
   return <div className="goals-score-row"><div><p className="goals-caption">推進分</p><strong className="goals-score">{dimension.scoreText}</strong></div><ActivityPill dimension={dimension} /></div>
 }
-const BOT_NAMES = { sam: 'Sam', family: '小因', '950157': '950157', hy: 'HY' }
+const BOT_NAMES = { sam: 'Sam', family: '小因', '950157': '本業', hy: 'HY' }
 function AssessmentAttribution({ provenance }) {
   if (provenance?.uploadedBy !== 'hy' || !BOT_NAMES[provenance?.assessedBy]) return null
   return <p className="goals-caption">評估署名：{BOT_NAMES[provenance.assessedBy]} · HY 統一上傳</p>
