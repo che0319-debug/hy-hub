@@ -26,6 +26,7 @@
       { key: 'legal_state', label: '法律主體', options: ['已確認', '待確認', '未知'] },
       { key: 'status', label: '近三月狀態', options: STATUSES },
       { key: 'status_source', label: '狀態來源' },
+      { key: 'business', label: '業務', multi: true },
       { sec: '公開登記' },
       { key: 'tax_id', label: '統一編號' },
       { key: 'registry', label: '登記資料', multi: true, hint: '一行一項，例如「登記現況：核准設立」。查不到寫未知。' },
@@ -88,6 +89,7 @@
   function show(v) { var s = str(v); return s || UNKNOWN }
 
   var SEED_DATE = '2026-11-11T08:00:00.000Z' // 公司資料草稿 v0 整理日 2026-11-11（台北）
+  var DIVIOS_DATE = '2026-11-11T09:40:00.000Z' // 使用者 17:34 確認帝爾 90895872 後更新（台北 17:40）
 
   function seedCompanies() {
     return [
@@ -185,41 +187,46 @@
         maintainer: 'Sam', followup_due: '', updated_at: SEED_DATE,
       },
       {
-        id: 'divios', kind: 'company', name: '迪繆斯 DIVIOS', legal_name: '待確認候選：帝爾股份有限公司（90895872）', legal_state: '待確認',
+        id: 'divios', kind: 'company', name: '迪繆斯 DIVIOS', legal_name: '帝爾股份有限公司', legal_state: '已確認',
         status: '未知', status_source: '沒有入帳憑證或近三月數字',
-        tax_id: '待確認（候選 90895872）',
+        tax_id: '90895872',
         registry: [
-          '公開登記名稱沒有「迪繆斯」或「DIVIOS」；最接近的候選是帝爾股份有限公司（待你確認）',
-          '帝爾｜90895872｜核准設立（案件狀態欄「復業」，只照錄）｜核准設立 110-05-17',
+          '公司名稱：帝爾股份有限公司（品牌名迪繆斯 DIVIOS；使用者 2026-11-11 17:34 確認）',
+          '登記現況：核准設立（官方 API 案件狀態欄「復業」，只照錄）',
+          '核准設立日：110-05-17（2021-05-17）；二手歷程寫當時為「帝爾有限公司」，2024-08 改股份有限公司',
           '資本總額／實收資本額：各新臺幣 8,300,000 元（登記資本，不是帳戶現金）',
-          '代表人：劉姿廷（董事長）；董事鄭有倫、林秋翠；監察人王忻瀅（官方董監事 API）。登記董監不代表 HY 的權益',
+          '代表人：劉姿廷（董事長）；董事鄭有倫、林秋翠；監察人王忻瀅（官方董監事 API）。登記代表人與董監不代表 HY 的權益',
           '現登記地址：臺中市西區四維街5號（2024-03 起曾登記南港園區街58巷5號1樓，二手歷程）',
-          '登記機關：臺中市政府；最後核准變更日 115-07-01',
-          '品牌寫 2019 成立，公司 2021 才核准設立，時間不一致，本次不選邊',
+          '登記機關：臺中市政府',
+          '最後核准變更日：115-07-01（2026-07-01）',
+          '分公司（二手）：帝爾股份有限公司台中分公司 00181239，臺中市西區利民里四維街5號1樓',
+          '品牌寫 2019 成立，公司 2021 才核准設立；中間是否另有主體，未知',
         ].join('\n'),
+        business: '形象顧問：色彩鑑定、風格分析、形象策略；開設 DCA（高階色彩分析師）、DFA（時裝風格分析師）課程。門市：南港旗艦店、台中店；2025-10-10 開美麗華本館一樓專櫃。',
         stake_role: HIDDEN_ROLE, stake_ratio: UNKNOWN, stake_via: UNKNOWN, stake_written: UNKNOWN, stake_invested: UNKNOWN,
-        stake_note: '帝爾是否為主體仍待確認；董監持股表加總不等於資本總額，不可反推比例。',
-        income_actual: '無（本公司憑證）。',
-        income_leads: '品牌有門市（南港旗艦店、台中街邊店、美麗華專櫃）、課程與選品；媒體轉述「13 萬會員」，不轉成營收。',
-        income_unknown: '各門市／專櫃營收、課程收入、公司損益。',
-        costs: UNKNOWN + '（租金、專櫃抽成、人事等皆無帳單）', gaps: '法律主體未經你點頭；持股比例未知；近三月沒有數字。',
+        stake_note: '登記代表人與董監不代表 HY 的權益；董監持股表加總不等於資本總額，不可反推比例。',
+        income_actual: UNKNOWN + '（沒有本公司憑證）',
+        income_leads: '品牌有門市、專櫃、課程與選品；媒體轉述「13 萬會員」，不轉成營收。',
+        income_unknown: '各門市／專櫃營收、課程收入、公司損益與現金。',
+        costs: UNKNOWN + '（租金、專櫃抽成、人事等皆無帳單）', gaps: '持股比例未知；近三月收入、損益、現金都沒有數字。',
         questions: [
-          '迪繆斯 DIVIOS 的公司，是不是帝爾股份有限公司（90895872）？若不是，正式名稱與統編是什麼？',
           '隱名股權透過誰持有、比例多少、有無書面約定？',
-          '近三個月大概是賺、打平，還是虧？2019 品牌到 2021 公司之間是否還有別的主體？',
+          '近三個月大概是賺、打平，還是虧？',
+          '2019 品牌到 2021 公司設立之間，是否還有別的主體？',
         ].join('\n'),
         sources: [
-          '官網 diviosartgallery.easy.co；《警政時報》2025-10-13；誠品合作品牌頁（2026-11-11 讀回）',
+          '使用者 2026-11-11 17:34 口述：「Divios 是 帝爾｜90895872」',
           '經濟部開放資料 API（90895872 基本資料＋董監事），2026-11-11；twfile 歷程（二手）',
+          '官網 diviosartgallery.easy.co；《警政時報》2025-10-13；誠品合作品牌頁（2026-11-11 讀回）',
           '使用者 2026-11-11 16:51 口述：隱名入股',
         ].join('\n'),
-        maintainer: 'Sam', followup_due: '', updated_at: SEED_DATE,
+        maintainer: 'Sam', followup_due: '', updated_at: DIVIOS_DATE,
       },
     ]
   }
 
   function seedEdges() {
-    var notes = { lechuan: '比例未知', rm: '比例未知；店與法律主體仍待確認', shangmiao: '約 45%（內部約數）', divios: '比例未知；帝爾是否為主體仍待確認' }
+    var notes = { lechuan: '比例未知', rm: '比例未知；店與法律主體仍待確認', shangmiao: '約 45%（內部約數）', divios: '比例未知' }
     return COMPANY_IDS.map(function (id) {
       return { id: 'e_hy_' + id, from: HY_ID, to: id, type: '隱名股東', note: notes[id], via: UNKNOWN, written: UNKNOWN, confirmed: true, source: '使用者 2026-11-11 16:51「我都是隱名入股」', updated_at: SEED_DATE }
     })

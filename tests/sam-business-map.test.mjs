@@ -89,3 +89,17 @@ test('layout puts HY at centre, companies on ring 1, people/resources further ou
     assert.ok(r.y * f.scale + f.ty >= 23 && (r.y + r.h) * f.scale + f.ty <= 800 - 23)
   }
 })
+
+test('DIVIOS card uses the user-confirmed legal entity 帝爾 90895872, with unknowns kept unknown', () => {
+  const M = load()
+  const { map } = M.ensureMap({})
+  const d = M.getNode(map, 'divios')
+  assert.equal(d.legal_name, '帝爾股份有限公司')
+  assert.equal(d.tax_id, '90895872')
+  assert.equal(d.legal_state, '已確認')
+  assert.equal(d.status, '未知')
+  assert.equal(d.stake_ratio, '未知')
+  assert.match(d.registry, /登記資本，不是帳戶現金/)
+  assert.match(d.registry, /劉姿廷/)
+  assert.match(d.business, /美麗華/)
+})

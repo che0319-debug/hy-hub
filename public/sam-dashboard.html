@@ -570,7 +570,7 @@ input[type="date"] { color-scheme: light; }
 .contrib-table tfoot td { font-weight:700; border-top:2px solid var(--border); }
 
 /* 事業版圖 v2：滿版關聯圖（只用 hy-ui.css token；規格 /workspace/sam-companies/business-map-page-plan-v0.md）
- * 中心 HY、第一圈公司、外圈人物與資源；點卡片自右側滑出詳細面板。舊「本週焦點」與五欄表已移除。 */
+ * 中心 HY、第一圈公司、外圈人物與資源；點卡片自右側滑出詳細面板。 */
 #tab-map.active{display:flex;flex-direction:column;background:var(--hy-bg);overflow:hidden;font-family:'Noto Sans TC',system-ui,sans-serif;color:var(--hy-ink);font-size:var(--hy-fs-body);line-height:1.6}
 .bm-bar{height:56px;flex:none;display:flex;align-items:center;gap:12px;padding:0 16px 0 24px;background:var(--hy-header);position:relative;z-index:8}
 .bm-title{font-size:15px;font-weight:700;color:#fff;white-space:nowrap;margin:0}
@@ -1765,6 +1765,7 @@ async function loadData() {
     document.getElementById('saveBtn').disabled = true;
     showToast('⚠️ 無法載入資料：' + e.message, 'error');
     document.getElementById('lastUpdated').textContent = '⚠ 離線模式（禁止儲存）';
+    const ms=document.getElementById('mapSaveState');if(ms){ms.textContent='載入失敗：'+e.message+'，按右上「重新整理」再試';ms.classList.add('is-dirty')}
   }
 }
 
