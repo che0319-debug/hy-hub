@@ -8,18 +8,12 @@ export const OFFICE_TABS = [['overview','報告'],['meeting','會議室'],['log'
 export const REFRESH_MS = 30000
 // 只有 5 種階段，名稱與顏色見 lib/projectStages.mjs。
 const STAGES = Object.fromEntries(Object.keys(STAGE_LABEL).map(key => [key, [STAGE_LABEL[key], STAGE_TONE[key]]]))
-const DELETE_HOLD = {
-  running: '目前專案執行中，需等結束後才能刪除。',
-  review: '目前專案在審查中，需等審查結束後才能刪除。',
-}
 const CARD_GROUP = { meeting: 'meeting', note: 'meeting', execution: 'execution', plan: 'execution', output: 'outputs', log: 'log', decision: 'overview', review: 'outputs' }
 const array = value => Array.isArray(value) ? value : []
 const text = value => typeof value === 'string' ? value : ''
-// project.stage 是 normalizeStage(p.stage)，與 STAGES 的鍵相同；審查階段是 'review'，不是 stageLabel「待審」。
-export function officeDeleteHold(project) {
-  const stage = text(project?.stage)
-  if (!Object.prototype.hasOwnProperty.call(STAGES, stage)) return ''
-  return DELETE_HOLD[stage] || ''
+// 執行中與審查中都可以刪；名稱確認與後端備份保護仍在。
+export function officeDeleteHold(_project) {
+  return ''
 }
 export const safeDriveUrl = value => {
   try { const url = new URL(value); return url.protocol === 'https:' ? url.href : null } catch { return null }

@@ -395,7 +395,7 @@ test('mapOffice fills display stage for an old payload and keeps stored stage fo
   assert.deepEqual(out.totals.stages, { assigned: 0, hy_decision: 1, running: 0, review: 0, done: 0 })
   assert.equal(out.totals.running, 1)
   assert.equal(out.totals.needsYou, 1)
-  assert.equal(officeDeleteHold(project), '目前專案執行中，需等結束後才能刪除。')
+  assert.equal(officeDeleteHold(project), '')
   assert.equal(canReturnToPlanning(project, []), false)
   const view = officeView(project)
   assert.equal(view.stage, 'running')
