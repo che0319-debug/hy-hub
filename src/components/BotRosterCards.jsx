@@ -74,7 +74,7 @@ export default function BotRosterCards({ roster }) {
       <div className="bot-tools">
         <p className="hy-note">
           {roster.officeEmpty ? 'Bot Office 還沒有資料，等 Atlas 產生第一份狀態。'
-            : roster.unowned > 0 ? `有 ${roster.unowned} 個專案沒有指定負責 Bot。到 Inbox 的「專案歸屬」按處理，或在 Bot Office 上方直接指定。` : ' '}
+            : roster.unowned > 0 ? `有 ${roster.unowned} 個專案沒有指定負責 Bot。到 Bot Office「待你處理」的「專案歸屬」按處理，或在 Bot Office 上方直接指定。` : ' '}
         </p>
         <button type="button" className="hy-btn" onClick={toggleAll}>{allOpen ? '全部收合' : '全部展開'}</button>
       </div>

@@ -78,6 +78,9 @@ export function mapOffice(state = {}, index = {}, metadata = {}) {
     review: decisionReviewView(d.review),
     milestone: text(d.milestone),
     authority: text(d.authority),
+    // 單一入口欄位：不掛專案的小案卡 project 為空。
+    isItem: !d.project, ownerBot: text(d.owner_bot), category: text(d.category), source: text(d.source),
+    sourceRef: text(d.source_ref), sourceUrl: safeDriveUrl(d.source_ref), light: d.light === true,
   }))
   const decisions = allDecisions.filter(d => d.status === 'open')
   // Decision summaries come from state; index may lag behind an answer.
@@ -122,8 +125,10 @@ export function mapOffice(state = {}, index = {}, metadata = {}) {
       pending: decisions.some(d => d.projectId === p.id),
     }
   }).sort((a, b) => Number(b.pending) - Number(a.pending))
+  // 小案卡（未決＋已回覆待 Bot 結案）；結案（closed）的不再顯示，資料仍留在 state。
+  const items = allDecisions.filter(d => d.isItem).map(d => ({ ...d, logs: array(state.logs).filter(l => l && l.card_id === d.id) }))
   return {
-    projects, decisions, allDecisions, requests: array(state.requests), stale: Boolean(metadata.stale),
+    projects, decisions, allDecisions, items, requests: array(state.requests), stale: Boolean(metadata.stale),
     settings: state.settings && typeof state.settings === 'object' ? state.settings : null,
     state, index, updatedRaw: text(state.updated),
     updated: when(metadata.stateUpdated || state.updated), updatedAt: metadata.stateUpdated || state.updated || null, indexUpdated: when(metadata.indexUpdated || index.updated),
@@ -393,3 +398,9 @@ export const loadOfficeFiles = (id, opts) => officeApi(`${projectPath(id)}/files
 export const deleteOfficeProject = (id, payload, opts) => officeApi(`${projectPath(id)}/delete`, { ...opts, method: 'POST', body: payload, topic: 'delete' })
 export const uploadOfficeFile = (id, file, opts) => { const body = new FormData(); body.append('file', file); return officeApi(`${projectPath(id)}/files`, { ...opts, method: 'POST', body }) }
 export const importOfficeReference = (id, fileId, opts) => officeApi(`${projectPath(id)}/drive-reference`, { ...opts, method: 'POST', body: { file_id: fileId } })
+
+// 小案卡結案（HY 本人）。同一張卡用固定 request_id，重按不會重寫。
+export const closeOfficeItem = (item, opts = {}) => officeApi(`items/${encodeURIComponent(item.id)}/close`, {
+  ...opts, method: 'POST', topic: 'office',
+  body: { request_id: `hy-close-${item.id}-r${item.revision}`, answered_by: item.ownerBot || 'hy', expected_revision: item.revision },
+})

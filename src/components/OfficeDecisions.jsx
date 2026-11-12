@@ -5,6 +5,8 @@ import { closedLabel, decisionOwner, waitingLabel } from '../lib/botOfficeView.m
 import { verdictLabel } from '../lib/officeFlow.mjs'
 const NAMES = { sam: 'Sam', family: '小因', '950157': '950157', hy: 'HY Bot' }
 const CONFIDENCE = { high: '高', medium: '中', low: '低' }
+// 小案卡的標籤用屬性名稱（核示／確認資料／建議／報告）。
+const ITEM_TAG = { approval: '核示', data: '確認資料', suggestion: '建議', report: '報告' }
 
 function Attribution({ item }) {
   if (!item.answer) return null
@@ -54,9 +56,9 @@ export function Decision({ item, readOnly, reload, project = null, now = Date.no
   const disabled = busy || readOnly
   const closed = item.status === 'answered'
   return <article className="bo-decision-form cc5-panel" aria-label={item.title}>
-    <div className="cc5-tags"><span className="cc5-tag">{({intake:'補資料',approval:'待核准',pi_decision:'PI 決策'})[item.kind]||'待確認'}</span></div>{project && <p className="bo-decision-meta"><span>負責 <b>{decisionOwner(item, project)}</b></span><span>{item.status === 'answered' ? closedLabel(item.answeredAt) : waitingLabel(item.askedAt, now)}</span></p>}<h2 className="cc5-q">{item.title}</h2>{item.suggestion && <p>{item.suggestion}</p>}
+    <div className="cc5-tags"><span className="cc5-tag">{item.isItem && ITEM_TAG[item.category] ? ITEM_TAG[item.category] : ({intake:'補資料',approval:'待核准',pi_decision:'PI 決策'})[item.kind]||'待確認'}</span></div>{project && <p className="bo-decision-meta"><span>負責 <b>{decisionOwner(item, project)}</b></span><span>{item.status === 'answered' ? closedLabel(item.answeredAt) : waitingLabel(item.askedAt, now)}</span></p>}<h2 className="cc5-q">{item.title}</h2>{item.suggestion && <p>{item.suggestion}</p>}
     {item.why && <p><b>為什麼要你決定：</b>{item.why}</p>}
-    {item.choiceOptions?.length > 0 && <ol className="ao-options">{item.choiceOptions.map(option => <li key={option.label}><b>{option.label}</b>{option.impact && <small>{option.impact}</small>}</li>)}</ol>}
+    {!item.isItem && item.choiceOptions?.length > 0 && <ol className="ao-options">{item.choiceOptions.map(option => <li key={option.label}><b>{option.label}</b>{option.impact && <small>{option.impact}</small>}</li>)}</ol>}
     {item.evidence?.length > 0 && <p className="ao-muted">證據：{item.evidence.join('、')}</p>}
     {item.deadline && <p className="ao-muted">最晚：{item.deadline}</p>}
     {item.questions.map(question => <section key={question.no} className="bo-question" aria-label={`第 ${question.no} 題`}>
