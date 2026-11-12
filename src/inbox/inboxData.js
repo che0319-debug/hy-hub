@@ -4,6 +4,8 @@
 // 數字（total）＝需要你動手的：decide ＋ problem ＋ overdue。今日任務是提醒，不算進數字。
 import { ROSTER, HELPERS } from '../botRoster.js'
 import { deriveAttention } from '../life-island/worldData.js'
+import { isOfficeHealthItem, kanbanTodosForOffice, kanbanTodosForProject, linkedOfficeProjectId, officePendingItems } from '../lib/officeKanban.mjs'
+export { isOfficeHealthItem, kanbanTodosForOffice, kanbanTodosForProject, linkedOfficeProjectId, officePendingItems }
 
 export const INBOX_KINDS = [['decide', '待我處理'], ['problem', '問題回報'], ['overdue', '過期'], ['today', '今日任務']]
 // Bot Office「待你處理」的屬性。前四種是 Office 卡片；問題與待辦來自巡檢和看板。
@@ -62,7 +64,8 @@ export function buildInbox({ decisions = [], projects = [], bots = {}, todos = n
       const due = normDue(m.due)
       if (!due || !today) continue
       const h = HELPERS.find(x => x.source === m._source)
-      const base = { owner: OWNER_OF_ROSTER[h?.id] || '', category: 'todo', source: h?.name || m._source || '待辦', meta: '', title: m.title, detail: '', due, to: h?.board || null, action: h?.board ? '開看板' : '' }
+      const officeProjectId = linkedOfficeProjectId(m, projects)
+      const base = { owner: OWNER_OF_ROSTER[h?.id] || '', category: 'todo', source: h?.name || m._source || '待辦', meta: officeProjectId ? projectTitle(officeProjectId) : '', title: m.title, detail: '', due, to: officeProjectId ? '/bot-office?project=' + encodeURIComponent(officeProjectId) + '&tab=overview' : (h?.board || null), action: officeProjectId ? '開專案' : (h?.board ? '開看板' : ''), officeProjectId }
       if (due < today) items.push({ ...base, id: `td:${m._source}:${m.title}:${due}`, kind: 'overdue' })
       else if (due === today) items.push({ ...base, id: `td:${m._source}:${m.title}:${due}`, kind: 'today' })
     }

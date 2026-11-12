@@ -1,5 +1,4 @@
-// Bot Office 首頁最上方「待你處理」：原本的 Inbox 併進來（Office 決策與小案卡、問題回報、過期／今日待辦）。
-// 依負責 Bot 與屬性篩選。資料來源與底部導覽數字相同（buildInbox）。
+// Bot Office 首頁最上方：只列有專案的核示。健康問題與沒關聯的看板待辦不進這裡。
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { INBOX_CATEGORIES, INBOX_OWNERS, filterInbox, assignOwnerPanelId } from '../inbox/inboxData.js'
@@ -21,8 +20,7 @@ function Row({ it, projects, onSaved, onOpenItem, onOpenProject }) {
   return <li className={`oi-row${it.kind === 'decide' ? ' needs-you' : ''}`} data-kind={it.kind}>
     <div className="oi-tags">
       <span className="hy-pill" data-s={TONE[it.category] || 'wait'}>{CATEGORY_LABEL[it.category] || '其他'}</span>
-      {it.light && it.isItem && <span className="hy-pill" data-s="wait">小案</span>}
-      <span className="oi-meta">{OWNER_LABEL[it.owner] || it.source}{it.meta ? `・${it.meta}` : it.isItem && it.source ? `・${it.source}` : ''}</span>
+      <span className="oi-meta">{OWNER_LABEL[it.owner] || it.source}{it.meta ? `・${it.meta}` : ''}</span>
       {it.due && <span className="oi-meta oi-due">{it.kind === 'overdue' ? '逾期 ' : '到期 '}{fmtDue(it.due)}</span>}
       {it.time && <span className="oi-meta oi-due">{it.time}</span>}
     </div>
@@ -42,7 +40,7 @@ export default function OfficeInbox({ items = [], loaded = true, officeFailed = 
   </div>
   return <section className={`ao-card oi${needs ? ' needs-you' : ''}`} aria-label="待你處理" id="office-inbox">
     <div className="ao-card-head"><h2>待你處理</h2>{loaded && <span className="hy-pill" data-s={needs ? 'you' : 'done'}>{needs ? `${needs} 件要處理` : '都處理完了'}</span>}</div>
-    <p className="ao-muted">Bot 的核示、要你確認的資料、需要你決定的建議與小案報告，還有問題回報和待辦，都集中在這裡。</p>
+    <p className="ao-muted">要你拍板的核示掛在對應專案。點進去到會議室處理。</p>
     <div className="oi-filters"><span className="oi-label">負責</span>{chips('owner', INBOX_OWNERS, owner, setOwner)}</div>
     <div className="oi-filters"><span className="oi-label">屬性</span>{chips('category', INBOX_CATEGORIES, category, setCategory)}</div>
     {!loaded && <p role="status">讀取中…</p>}

@@ -56,3 +56,34 @@ test('待你處理：每張卡都有負責 Bot 與屬性，可依兩者篩選', 
   assert.equal(decisionCategory({ kind: 'approval', category: 'report' }), 'report')
   assert.equal(decisionCategory({ category: 'weird' }), 'approval')
 })
+
+test('Office 首頁不收健康問題、舊小案卡、沒關聯的看板待辦', async () => {
+  const { officePendingItems, kanbanTodosForOffice } = await import('../src/lib/officeKanban.mjs')
+  const items = buildInbox({
+    ...base,
+    decisions: [
+      { id: 'd1', title: '要不要補件', projectId: 'p1', suggestion: '補' },
+      { id: 'd2', title: '週六記帳？', projectId: null, isItem: true, light: true, ownerBot: 'hy' },
+    ],
+    todos: [
+      { title: '展開甘特圖', due: '2026-10-25', _source: '950157', _project: 'A+ BP', office_project_id: 'p1' },
+      { title: '報價單', due: '2026/10/25', _source: 'Sam' },
+    ],
+  })
+  const office = officePendingItems(items)
+  assert.deepEqual(office.map(i => i.decisionId), ['d1'])
+  assert.equal(office.some(i => i.kind === 'problem'), false)
+  assert.equal(office.some(i => i.isItem), false)
+  assert.equal(office.some(i => i.kind === 'overdue'), false)
+  const linked = items.find(i => i.title === '展開甘特圖')
+  assert.equal(linked.officeProjectId, 'p1')
+  assert.equal(linked.to, '/bot-office?project=p1&tab=overview')
+  const unlinked = items.find(i => i.title === '報價單')
+  assert.equal(unlinked.officeProjectId, '')
+  assert.equal(unlinked.to, '/line/sam')
+  const under = kanbanTodosForOffice(base.todos.concat([
+    { title: '展開甘特圖', due: '2026-10-25', _source: '950157', _project: 'A+ BP', office_project_id: 'p1' },
+  ]), [{ id: 'p1', title: '補件卡' }], '2026-10-26')
+  assert.deepEqual(under.map(t => t.title), ['展開甘特圖'])
+  assert.equal(under[0].projectId, 'p1')
+})

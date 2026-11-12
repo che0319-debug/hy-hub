@@ -1,5 +1,6 @@
 import { authHeaders } from './auth'
 import { parseOfficeSettings } from './lib/officeAiDefaults.mjs'
+import { extractKanbanMilestones } from './lib/officeKanban.mjs'
 
 const API_BASE = import.meta.env.VITE_API_BASE || "";
 
@@ -355,7 +356,7 @@ export async function saveWeeklyPriorities(items) {
   return result
 }
 
-// 聚合四隻 bot 的所有 milestone，回 [{title, due, _source, _project}]
+// 聚合四隻 bot 的所有 milestone，回 [{title, due, _source, _project, _projectId, office_project_id}]
 export async function fetchAllMilestones() {
   const headers = { ...authHeaders() };
   const [hy, itri, family, sam] = await Promise.allSettled([
@@ -368,14 +369,7 @@ export async function fetchAllMilestones() {
   const out = [];
   const extract = (result, getProjects, source) => {
     if (result.status !== "fulfilled") return;
-    for (const p of getProjects(result.value) || []) {
-      for (const m of p.milestones || []) {
-        const isCompleted = Boolean(m.completed)
-          || ['done', 'cancelled'].includes(String(m.execute_status || '').toLowerCase());
-        if (isCompleted) continue;
-        out.push({ title: m.title, due: m.due || "", _source: source, _project: p.name });
-      }
-    }
+    out.push(...extractKanbanMilestones(result.value, getProjects, source));
   };
 
   extract(hy,     v => v.projects,              "HY");
