@@ -1,4 +1,4 @@
-// 「待你處理」：把散在各處的訊息整理成一張一張的卡片（Bot Office 首頁最上方；舊 /inbox 已導到 Bot Office）。純函式，不碰網路也不碰畫面。
+// 全站待辦彙整（底部導覽數字、Life 島）。Bot Office 首頁不再另畫這一區；專案上的 open 核示掛在該專案卡片。純函式，不碰網路也不碰畫面。
 // 四類：decide 待我處理（Bot Office 待決定）、problem 問題回報（Atlas 與各 Bot 的紅色警示）、
 //       overdue 過期（逾期待辦）、today 今日任務（今日待辦＋今日行程）。
 // 數字（total）＝需要你動手的：decide ＋ problem ＋ overdue。今日任務是提醒，不算進數字。
