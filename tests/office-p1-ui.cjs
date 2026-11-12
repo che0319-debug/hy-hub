@@ -39,6 +39,8 @@ const font=fs.readFileSync(path.join(fontDir,'400.css'),'utf8').replace(/url\(([
  });
  await page.goto((process.env.OFFICE_QA_BASE_URL||'http://127.0.0.1:5173')+'/#/bot-office');await page.addStyleTag({content:font});await page.evaluate(()=>document.fonts.ready);
  await page.getByRole('button',{name:/工程驗證專案/}).click();const nav=page.getByRole('navigation',{name:'Bot Office 專案分頁'});
+ // 首頁列表：有待決的專案直接進會議室；回報告分頁檢查概況。
+ assert.equal(await nav.getByRole('button',{name:/會議室/}).getAttribute('aria-current'),'page');await nav.getByRole('button',{name:'報告',exact:true}).click();
  assert.equal(await nav.getByRole('button').count(),3);assert.deepEqual(await nav.getByRole('button').allTextContents(),['報告','會議室1','日誌']);
  // 待你處理只在會議室第一區；概況不放待處理項目。
  assert.equal(await page.locator('.bo-decision-form:visible, .bo-follow-ups:visible').count(),0);await nav.getByRole('button',{name:/會議室/}).click();const pendingZone=page.getByRole('region',{name:'待你處理',exact:true});await pendingZone.getByText('負責 Sam',{exact:false}).first().waitFor();assert.equal(await page.locator('.ao-header .ao-pending-pill').textContent(),'1 項待你處理');assert.equal(await pendingZone.locator('.bo-decision-form').count(),1);await page.getByText('Sam 建議・僅供參考').first().waitFor();await page.getByText('代答仍有待確認內容，請先補充或改答，再確認。').waitFor();
