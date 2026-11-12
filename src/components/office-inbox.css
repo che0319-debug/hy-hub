@@ -16,3 +16,8 @@
 .oi-item-head{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
 .oi-item-meta{display:flex;gap:12px;flex-wrap:wrap;font-size:13px;color:#475569;margin-top:6px}
 @media (max-width:640px){.oi-row{grid-template-columns:1fr}.oi-go{justify-self:start}.oi-due{margin-left:0}}
+.oi-unified-filters{display:grid;gap:2px;margin:4px 0 10px}
+.oi-group{display:grid;gap:0}
+.oi-group-list{list-style:none;margin:-4px 0 0;padding:10px 18px;border:1px solid #e2e8f0;border-top:0;border-radius:0 0 12px 12px;background:#fff;display:grid;gap:8px}
+.oi-group-list li{display:flex;gap:8px;align-items:center;flex-wrap:wrap;font-size:14px}
+.oi-group-list .ao-btn{margin-left:auto;min-height:36px;display:inline-flex;align-items:center}

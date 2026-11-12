@@ -79,7 +79,8 @@ export function mapOffice(state = {}, index = {}, metadata = {}) {
     milestone: text(d.milestone),
     authority: text(d.authority),
     // 單一入口欄位：不掛專案的小案卡 project 為空。
-    isItem: !d.project, ownerBot: text(d.owner_bot), category: text(d.category), source: text(d.source),
+    // 舊卡用 ref/card 掛專案，也不算小案。
+    isItem: !d.project && !d.card && !d.ref, ownerBot: text(d.owner_bot), category: text(d.category), source: text(d.source),
     sourceRef: text(d.source_ref), sourceUrl: safeDriveUrl(d.source_ref), light: d.light === true,
   }))
   const decisions = allDecisions.filter(d => d.status === 'open')
