@@ -13,6 +13,9 @@ import OfficeHome from './OfficeHome'
 import {officeView, officeMilestones, officePlan, currentMilestoneId, milestoneProgress, executionRounds, isHyOwnerSession} from '../lib/botOfficeView.mjs'
 import {reportSummaryStatus} from '../lib/reportSummary.mjs'
 import { useInbox } from '../inbox/InboxContext'
+import { buildInbox } from '../inbox/inboxData.js'
+import OfficeInbox from '../components/OfficeInbox'
+import OfficeItem from '../components/OfficeItem'
 import OwnerBotPicker from '../components/OwnerBotPicker'
 import OfficeStageControl from '../components/OfficeStageControl'
 import { STEP_LABEL, projectFlow } from '../lib/officeFlow.mjs'
@@ -51,7 +54,7 @@ export default function BotOffice() {
   const hub = useInbox()
   const [data, setData] = useState(null), [error, setError] = useState(null), [loading, setLoading] = useState(true), [deleteNote, setDeleteNote] = useState(''), [sharedNote, setSharedNote] = useState('')
   const [searchParams] = useSearchParams()
-  const [projectId, setProjectId] = useState(() => searchParams.get('project') || null), [tab, setTab] = useState('overview'), [editing, setEditing] = useState(false), [creating,setCreating] = useState(false), [selectedWork,setSelectedWork] = useState(null), [settingsOpen, setSettingsOpen] = useState(false)
+  const [projectId, setProjectId] = useState(() => searchParams.get('project') || null), [tab, setTab] = useState(() => OFFICE_TABS.some(([key]) => key === searchParams.get('tab')) ? searchParams.get('tab') : 'overview'), [itemId, setItemId] = useState(() => searchParams.get('item') || null), [editing, setEditing] = useState(false), [creating,setCreating] = useState(false), [selectedWork,setSelectedWork] = useState(null), [settingsOpen, setSettingsOpen] = useState(false)
   const reads = useRef(null)
   if (!reads.current) reads.current = createLatestRead()
   const controller = useRef(null), initialLoad = useRef(true)
@@ -102,11 +105,21 @@ export default function BotOffice() {
   const headerMilestoneId = currentMilestoneId(shownMilestones)
   const headerCount = milestoneProgress(shownMilestones)
   const hy = isHyOwnerSession(getAccessToken())
+  // 「待你處理」：Office 卡片用這頁剛讀的資料（答完立刻更新），問題與待辦沿用共用 Inbox 的來源。
+  const pendingItems = buildInbox({ decisions: data?.decisions || [], projects: data?.projects || [], bots: hub?.roster?.bots || {},
+    todos: hub?.info?.list ?? null, sched: hub?.info?.sched ?? null, today: hub?.info?.today || '' })
+  const item = itemId ? (data?.items || []).find(entry => entry.id === itemId) || null : null
+  const reloadAll = async () => { await reload(); await hub?.reloadOffice?.() }
+  const openProject = (id, nextTab = 'overview') => { setDeleteNote(''); setItemId(null); setProjectId(id); setTab(nextTab); setEditing(false); setSelectedWork(null) }
   return <section className="ao bo-page" aria-label="Bot Office">
     {data?.stale && <p className="bo-notice" role="status">資料過期：目前顯示後端保留的舊資料。</p>}
     {deleteNote && <p className="bo-notice" role="status">{deleteNote}</p>}
     {error && <section className="ao-card" role={error.kind==='empty'?'status':'alert'}><h2>{error.kind==='empty'?'尚無資料':error.kind==='auth'?'請重新登入':'暫時無法更新'}</h2><p>{error.message}</p><button onClick={error.kind==='auth'?expireSession:reload}>{error.kind==='auth'?'重新登入':'重試讀取'}</button></section>}
-    {!project && <>
+    {item && !project && <OfficeItem item={item} reload={reloadAll} canClose={hy} onBack={() => setItemId(null)} />}
+    {itemId && !item && !project && data && <section className="ao-card" role="status"><h2>找不到這張小案卡</h2><p>可能已經結案。</p><button onClick={() => setItemId(null)}>回 Bot Office</button></section>}
+    {!project && !itemId && <>
+      <OfficeInbox items={pendingItems} loaded={!loading && Boolean(hub?.loaded ?? true)} officeFailed={Boolean(error) && error.kind !== 'empty'} projects={data?.projects || []}
+        onSaved={reloadAll} onOpenItem={id => { setProjectId(null); setItemId(id) }} onOpenProject={id => openProject(id, 'meeting')} />
       {sharedNote && <p className="bo-notice" role="status">{sharedNote}</p>}
       <OwnerBotPicker projects={data?.projects || []} onSaved={async () => {
         // 這一頁的清單先落地。共用名單失敗只留在選擇器外面，不掛到已經離開的那一列。
@@ -118,7 +131,7 @@ export default function BotOffice() {
           throw failure
         }
       }} />
-      <OfficeHome title="Bot Office" projects={views} details={details} inbox={inbox} loaded={!loading} error={null} creating={creating} onReload={reload} onCreate={()=>setCreating(v=>!v)} onSelect={id=>{setDeleteNote('');setProjectId(id);setTab('overview');setEditing(false);setSelectedWork(null)}} creation={creating&&<OfficeRequest type="new_project" projects={data?.projects || []} inline reload={reload} settings={data?.settings?.ai_defaults}/>} showModelsLink={false} progressOf={item => progressLabel(timelineRows(item._milestoneRows, item._flow))} progressEmpty="里程碑尚未提供" hidePackageGap needsYou={data?.totals?.needsYou}/>
+      <OfficeHome title="Bot Office" projects={views} details={details} inbox={inbox} loaded={!loading} error={null} creating={creating} onReload={reload} onCreate={()=>setCreating(v=>!v)} onSelect={id=>openProject(id)} creation={creating&&<OfficeRequest type="new_project" projects={data?.projects || []} inline reload={reload} settings={data?.settings?.ai_defaults}/>} showModelsLink={false} progressOf={item => progressLabel(timelineRows(item._milestoneRows, item._flow))} progressEmpty="里程碑尚未提供" hidePackageGap needsYou={data?.totals?.needsYou}/>
 
     </>}
     {project && view && <section className="ao ao-project">

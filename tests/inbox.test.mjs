@@ -32,3 +32,27 @@ test('資料還沒載入（null）時不產生卡片，也不出錯', () => {
   assert.equal(items.length, 0)
   assert.equal(inboxCounts(items).total, 0)
 })
+
+test('待你處理：每張卡都有負責 Bot 與屬性，可依兩者篩選', async () => {
+  const { filterInbox, decisionCategory } = await import('../src/inbox/inboxData.js')
+  const items = buildInbox({ ...base,
+    projects: [{ id: 'p1', title: '補件卡', ownerBot: 'sam' }],
+    decisions: [
+      { id: 'd1', title: '要不要補件', projectId: 'p1', kind: 'intake' },
+      { id: 'd2', title: '週六記帳時段一起整理收支？', projectId: null, isItem: true, ownerBot: 'hy', category: 'suggestion', source: '晨會', deadline: '2026-11-14' },
+      { id: 'd3', title: '規劃書核准', projectId: 'p1', kind: 'approval' },
+    ] })
+  const d1 = items.find(i => i.decisionId === 'd1'), d2 = items.find(i => i.decisionId === 'd2'), d3 = items.find(i => i.decisionId === 'd3')
+  assert.equal(d1.owner, 'sam'); assert.equal(d1.category, 'data'); assert.equal(d1.to, '/bot-office?project=p1&tab=meeting'); assert.equal(d1.isItem, false)
+  assert.equal(d2.owner, 'hy'); assert.equal(d2.category, 'suggestion'); assert.equal(d2.source, '晨會'); assert.equal(d2.isItem, true)
+  assert.equal(d2.to, '/bot-office?item=d2'); assert.equal(d2.due, '2026-11-14')
+  assert.equal(d3.category, 'approval')
+  assert.equal(items.find(i => i.kind === 'problem').owner, 'atlas')
+  assert.equal(items.find(i => i.kind === 'overdue').owner, 'sam')
+  assert.deepEqual(filterInbox(items, { owner: 'sam' }).map(i => i.id).sort(), items.filter(i => i.owner === 'sam').map(i => i.id).sort())
+  assert.deepEqual(filterInbox(items, { category: 'suggestion' }).map(i => i.decisionId), ['d2'])
+  assert.deepEqual(filterInbox(items, { owner: 'hy', category: 'approval' }), [])
+  assert.equal(filterInbox(items).length, items.length)
+  assert.equal(decisionCategory({ kind: 'approval', category: 'report' }), 'report')
+  assert.equal(decisionCategory({ category: 'weird' }), 'approval')
+})

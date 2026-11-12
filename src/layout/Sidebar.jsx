@@ -1,12 +1,11 @@
 import { NavLink, useLocation } from 'react-router-dom'
 import {
-  Home, Bot, Inbox,
+  Home, Bot,
   MessageSquare, Settings, Target, LayoutDashboard, Map
 } from 'lucide-react'
 
 const navItems = [
   { to: '/life-island', label: 'HY Life 島', icon: Map },
-  { to: '/inbox',      label: 'Inbox',    icon: Inbox },
   { to: '/home',       label: '首頁',     icon: Home },
   { to: '/ai-army',    label: 'AI 軍團', icon: Bot },
   { to: '/bot-office', label: 'Bot Office', icon: LayoutDashboard },
