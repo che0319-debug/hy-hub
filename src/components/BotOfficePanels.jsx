@@ -274,9 +274,9 @@ export function OfficeResults({project,report,documents}) {
   })}</details>}
  </div>
 }
-export function OfficeJournal({project,reload,onOverview,onExecution,state,index}) {
+export function OfficeJournal({project,reload,onOverview,onExecution,state,index,kanbanTodos=[]}) {
  const [filter,setFilter]=useState('all'), events=(state&&index?officeJournal(state,index,project.id):officeEvents(project)).filter(e=>filter==='all'||e.kind===filter)
- return <><Card title="工作日誌"><div className="ao-toolbar" role="group" aria-label="工作日誌篩選">{[['all','全部'],['human','HY 與代理'],['system','系統與工作包'],['artifact','成果登錄']].map(([k,l])=><button key={k} aria-pressed={filter===k} onClick={()=>setFilter(k)}>{l}</button>)}</div><ol className="ao-journal">{events.map(e=><li key={e.id}><time>{e.dateLabel||when(e.at)}</time><b>{e.actor}</b><p>{e.text}</p>{e.detail&&<details><summary>詳情</summary><p>{e.detail}</p></details>}{e.action&&<button onClick={onOverview}>到會議室</button>}{e.work&&<button onClick={()=>onExecution(e.work)}>關聯工作包 {e.milestone}</button>}{e.url&&<Link href={e.url}>成果</Link>}</li>)}</ol>{!events.length&&<Empty>這個篩選沒有事件。</Empty>}</Card><details><summary>新增 HY 留言</summary><OfficeLog project={{...project,logs:[]}} reload={reload}/></details></>
+ return <><OfficeKanbanTodos todos={kanbanTodos} placement="log"/><Card title="工作日誌"><div className="ao-toolbar" role="group" aria-label="工作日誌篩選">{[['all','全部'],['human','HY 與代理'],['system','系統與工作包'],['artifact','成果登錄']].map(([k,l])=><button key={k} aria-pressed={filter===k} onClick={()=>setFilter(k)}>{l}</button>)}</div><ol className="ao-journal">{events.map(e=><li key={e.id}><time>{e.dateLabel||when(e.at)}</time><b>{e.actor}</b><p>{e.text}</p>{e.detail&&<details><summary>詳情</summary><p>{e.detail}</p></details>}{e.action&&<button onClick={onOverview}>到會議室</button>}{e.work&&<button onClick={()=>onExecution(e.work)}>關聯工作包 {e.milestone}</button>}{e.url&&<Link href={e.url}>成果</Link>}</li>)}</ol>{!events.length&&<Empty>這個篩選沒有事件。</Empty>}</Card><details><summary>新增 HY 留言</summary><OfficeLog project={{...project,logs:[]}} reload={reload}/></details></>
 }
 
 export function OfficeDelete({project,updatedRaw,onDeleted}) {
@@ -302,7 +302,17 @@ export function OfficeDelete({project,updatedRaw,onDeleted}) {
 
 
 
-export function OfficeUnifiedReport({project, report, documents, milestones=[]}) {
+export function OfficeKanbanTodos({todos=[], placement='milestones'}) {
+ if (!todos.length) return null
+ const title = placement === 'log' ? '看板待辦（日誌）' : '看板待辦'
+ return <section className="ao-card" aria-label={title}>
+  <h2>{title}</h2>
+  <p className="ao-muted">已關聯到這個專案的看板逾期或今日待辦。沒有關聯的仍在 Dashboard。</p>
+  <ol className="ao-timeline">{todos.map(t=><li key={t.id}><b>{t.title}</b><p><span className="hy-pill" data-s={t.kind==='overdue'?'bad':'you'}>{t.kind==='overdue'?'逾期':'今日'}</span>{t.source?` · ${t.source}`:''}{t.projectName?` · ${t.projectName}`:''}{t.due?` · ${t.due}`:''}</p></li>)}</ol>
+ </section>
+}
+
+export function OfficeUnifiedReport({project, report, documents, milestones=[], kanbanTodos=[]}) {
  const done=milestones.filter(m=>m.step==='done').length
  const waiting=milestones.filter(m=>m.step==='waiting')
  const next=milestones.find(m=>m.step==='running')
@@ -323,6 +333,7 @@ export function OfficeUnifiedReport({project, report, documents, milestones=[]})
    <ul>{(project.cards?.outputs||[]).map(c=><li key={c.id}><Link href={c.driveUrl}>{c.title}</Link></li>)}</ul>
    {project.folderUrl&&<Link href={project.folderUrl}>所有文件、附件與歷史原件</Link>}
   </section>
+  <OfficeKanbanTodos todos={kanbanTodos}/>
  </details><OfficeFormalHistory project={project}/></div>
 }
 

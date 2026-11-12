@@ -105,6 +105,9 @@ export function mapOffice(state = {}, index = {}, metadata = {}) {
       source: p, id: text(p.id), title: text(p.title) || '未命名專案', island: islands.get(p.island) || text(p.island) || '未分區',
       latestCardId: text(p.card), team: officeTeam(p, state.figures), reviewer: text(p.reviewer), reviewerBackup: text(p.reviewer_backup), planCard,
       ownerBot: text(p.owner_bot), planUrl: cardLink(p.plan_card), folderUrl: safeDriveUrl(p.drive_folder_url),
+      kanbanSource: p.kanban_source && typeof p.kanban_source === 'object' ? {
+        bot: text(p.kanban_source.bot), project_id: text(p.kanban_source.project_id), project_name: text(p.kanban_source.project_name),
+      } : null,
       review: { verdict: text(p.last_review?.verdict) || text(p.last_review) || 'none',
         url: cardLink(p.review_card) || cards.filter(c => c.projectId === p.id).map(c => array(index.cards).find(raw => raw.id === c.id)?.review_card).map(cardLink).find(Boolean) || null,
         requiredChanges: array(p.required_changes || p.must_fix || p.last_review?.required_changes).filter(v => typeof v === 'string'),

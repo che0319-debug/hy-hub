@@ -65,6 +65,27 @@ test('unknown stages and extra fields are tolerated, unsafe links are not active
 })
 
 
+test('mapOffice keeps optional kanban_source and reads old closed light cards without making projects', () => {
+  const out = mapOffice({
+    ...state,
+    buildings: [
+      { id: 'p-002', title: '川泱購物', island: 'central', stage: 'running', owner_bot: 'sam',
+        kanban_source: { bot: '950157', project_id: 'APB', project_name: 'A+ BP' } },
+    ],
+    decisions: [
+      { id: 'd-open', project: 'p-002', status: 'open', title: '核示' },
+      { id: 'd-d0ff25fe499944e186710542df91766d', project: null, status: 'closed', light: true, title: '舊小案', owner_bot: 'hy' },
+      { id: 'd-open-item', project: null, status: 'open', light: true, title: '未掛專案的舊卡', owner_bot: 'hy' },
+    ],
+  }, { cards: [] })
+  assert.deepEqual(out.projects.map(p => p.id), ['p-002'])
+  assert.deepEqual(out.projects[0].kanbanSource, { bot: '950157', project_id: 'APB', project_name: 'A+ BP' })
+  assert.equal(out.projects[0].ownerBot, 'sam')
+  assert.equal(out.decisions.map(d => d.id).join(), 'd-open,d-open-item')
+  assert.equal(out.items.find(i => i.id === 'd-open-item').light, true)
+  assert.equal(out.items.some(i => i.id === 'd-d0ff25fe499944e186710542df91766d'), false)
+})
+
 test('decisions accept project, card and legacy ref with project > card > ref priority', () => {
   const decisions = [
     { id: 'project', project: 'b' }, { id: 'card', card: 'meeting' },

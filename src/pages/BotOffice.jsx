@@ -13,7 +13,7 @@ import OfficeHome from './OfficeHome'
 import {officeView, officeMilestones, officePlan, currentMilestoneId, milestoneProgress, executionRounds, isHyOwnerSession} from '../lib/botOfficeView.mjs'
 import {reportSummaryStatus} from '../lib/reportSummary.mjs'
 import { useInbox } from '../inbox/InboxContext'
-import { buildInbox } from '../inbox/inboxData.js'
+import { buildInbox, kanbanTodosForOffice, kanbanTodosForProject, officePendingItems } from '../inbox/inboxData.js'
 import OfficeInbox from '../components/OfficeInbox'
 import OfficeItem from '../components/OfficeItem'
 import OwnerBotPicker from '../components/OwnerBotPicker'
@@ -86,6 +86,7 @@ export default function BotOffice() {
   const planningLines = snapshotLines(documents.currentView)
   const reportStatus = reportSummaryStatus(report)
   const snapStatus = reportStatus === 'empty' && documents.currentView?.hasPlanning ? 'planning' : reportStatus
+  const linkedKanban = kanbanTodosForOffice(hub?.info?.list, data?.projects || [], hub?.info?.today || '')
   const views = (data?.projects || []).map(item => {
     const view = officeView(item)
     const fromBuilding = officeMilestones(item.source)
@@ -93,7 +94,7 @@ export default function BotOffice() {
     const current = fromBuilding.length ? currentMilestoneId(fromBuilding) : (view.milestone_id || '')
     const flowSource = Array.isArray(item.source?.milestones) && item.source.milestones.length ? item.source : { ...(item.source || {}), milestones: rows }
     const flow = projectFlow(flowSource, { decisions: item.allDecisions || [], stage: item.stage })
-    return { ...view, milestone_id: fromBuilding.length ? current : (view.milestone_id || ''), _officeMilestones: fromBuilding, _milestoneRows: rows, _flow: flow, _rounds: executionRounds(data.state, data.index, item.id), _plan: fromBuilding.length ? officePlan(item.source, view.plan) : view.plan }
+    return { ...view, milestone_id: fromBuilding.length ? current : (view.milestone_id || ''), _officeMilestones: fromBuilding, _milestoneRows: rows, _flow: flow, _rounds: executionRounds(data.state, data.index, item.id), _plan: fromBuilding.length ? officePlan(item.source, view.plan) : view.plan, _kanbanTodos: kanbanTodosForProject(linkedKanban, item.id) }
   })
   const view = views.find(item => item.id === projectId) || null
   const details = Object.fromEntries(views.map(item => [item.id, item]))
@@ -105,9 +106,10 @@ export default function BotOffice() {
   const headerMilestoneId = currentMilestoneId(shownMilestones)
   const headerCount = milestoneProgress(shownMilestones)
   const hy = isHyOwnerSession(getAccessToken())
-  // 「待你處理」：Office 卡片用這頁剛讀的資料（答完立刻更新），問題與待辦沿用共用 Inbox 的來源。
-  const pendingItems = buildInbox({ decisions: data?.decisions || [], projects: data?.projects || [], bots: hub?.roster?.bots || {},
+  // Office 首頁只掛有專案的核示。健康問題留在巡視／Dashboard；看板待辦有關聯才進該專案。
+  const inboxItems = buildInbox({ decisions: data?.decisions || [], projects: data?.projects || [], bots: hub?.roster?.bots || {},
     todos: hub?.info?.list ?? null, sched: hub?.info?.sched ?? null, today: hub?.info?.today || '' })
+  const pendingItems = officePendingItems(inboxItems)
   const item = itemId ? (data?.items || []).find(entry => entry.id === itemId) || null : null
   const reloadAll = async () => { await reload(); await hub?.reloadOffice?.() }
   const openProject = (id, nextTab = 'overview') => { setDeleteNote(''); setItemId(null); setProjectId(id); setTab(nextTab); setEditing(false); setSelectedWork(null) }
@@ -140,9 +142,9 @@ export default function BotOffice() {
       {editing&&<section className="ao-card"><h2>編輯專案（正式規格變更）</h2><p className="ao-muted">目標與範圍走正式規格變更，由你核准後才生效。</p><OfficeRequest type="spec_change" projects={data.projects} projectId={project.id} reload={reload}/></section>}
       <nav className="ao-tabs" aria-label="Bot Office 專案分頁">{OFFICE_TABS.map(([key,label])=><button key={key} aria-current={tab===key?'page':undefined} onClick={()=>setTab(key)}>{label}{key==='meeting'&&project.decisions.length>0&&<span>{project.decisions.length}</span>}</button>)}</nav>
       <p className="ao-tabnote">{NOTES[tab]}</p>
-      <div hidden={tab!=='overview'}><OfficeUnifiedReport project={project} report={report} documents={documents} milestones={shownMilestones}/></div>
+      <div hidden={tab!=='overview'}><OfficeUnifiedReport project={project} report={report} documents={documents} milestones={shownMilestones} kanbanTodos={view._kanbanTodos}/></div>
       <div hidden={tab!=='meeting'}><OfficeMeeting project={project} projects={data.projects} reload={reload} state={data.state} index={data.index}/></div>
-      <div hidden={tab!=='log'}><OfficeJournal project={project} reload={reload} onOverview={()=>setTab('meeting')} onExecution={openExecution} state={data.state} index={data.index}/></div>
+      <div hidden={tab!=='log'}><OfficeJournal project={project} reload={reload} onOverview={()=>setTab('meeting')} onExecution={openExecution} state={data.state} index={data.index} kanbanTodos={view._kanbanTodos}/></div>
     </section>}
   </section>
 }
