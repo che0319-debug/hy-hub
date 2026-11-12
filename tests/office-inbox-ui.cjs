@@ -49,6 +49,10 @@ for(const spec of [{name:'1440',width:1440,height:900},{name:'390',width:390,hei
  assert.match(await lines.nth(0).innerText(),/川泱購物/);
  assert.match(await lines.nth(0).innerText(),/待你核示 1 則/);
  assert.doesNotMatch(await lines.nth(1).innerText(),/待你核示/);
+ const tiles=await page.locator('.ao-tile').evaluateAll(els=>els.map(e=>[e.querySelector('small').textContent,e.querySelector('strong').textContent]));
+ assert.deepEqual(tiles,[['規劃中','1'],['待你決定','1'],['執行中','1'],['待審','0'],['完成','0'],['專案總數','2']]);
+ const pillSum=await page.locator('.ao-pending-pill').evaluateAll(els=>els.reduce((sum,el)=>{const m=el.textContent.match(/待你核示 (\d+) 則/);return sum+(m?Number(m[1]):0)},0));
+ assert.equal(Number(tiles.find(([name])=>name==='待你決定')[1]), pillSum);
  const filters=await page.evaluate(()=>{
   const bots=document.querySelector('[aria-label="負責 Bot"]').getBoundingClientRect();
   const stages=document.querySelector('[aria-label="屬性"]').getBoundingClientRect();
@@ -92,6 +96,14 @@ for(const spec of [{name:'1440',width:1440,height:900},{name:'390',width:390,hei
  await logTodos.waitFor();
  await logTodos.getByText('展開甘特圖').waitFor();
  assert(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),'project overflow '+spec.name);
+ await page.goto(base+'/#/home');
+ await page.addStyleTag({content:font+' body{font-family:"Noto Sans TC",sans-serif}'});
+ const summary=page.locator('.office-summary');
+ await summary.waitFor();
+ await page.waitForFunction(()=>[...document.querySelectorAll('.office-summary strong')].every(e=>e.textContent!=='—'));
+ const homeCards=await summary.locator('.office-stat').evaluateAll(els=>els.map(e=>[e.querySelector('.office-stat-copy>span').textContent,e.querySelector('strong').textContent]));
+ assert.deepEqual(homeCards,[['規劃中','1'],['待你決定','1'],['執行中','1'],['待審','0'],['完成','0'],['專案總數','2']]);
+ assert.equal(await page.getByText('未掛專案的舊卡不該出現').count(),0);
  assert.deepEqual(writes,[]);
  assert.deepEqual(errors,[]);
  results.push({scenario:spec.name,writes:writes.length});await browser.close();

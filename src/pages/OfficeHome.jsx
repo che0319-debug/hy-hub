@@ -1,22 +1,23 @@
 import {useState} from 'react'
 import {activityLabel, progress} from '../lib/aiOffice.mjs'
 import {shownStage} from '../lib/officeFlow.mjs'
-import {openApprovalCount, pendingLabel, sortByPending} from '../lib/officeHomeList.mjs'
+import {listedPendingTotal, openApprovalCount, pendingLabel, sortByPending} from '../lib/officeHomeList.mjs'
 import {PROJECT_STAGES} from '../lib/projectStages.mjs'
 import {ownerBotChoices} from '../life-island/worldData'
 
 // 統計卡與篩選只用 5 種專案階段的名稱（規劃中／待你決定／執行中／待審／完成），不用同義詞。
+// 「待你決定」是整份專案列表上「待你核示 N 則」的總和，不跟搜尋或篩選一起變，也不含沒掛專案的舊核示。
 const FILTERS=[['all','全部'],...PROJECT_STAGES.map(s=>[s.key,s.label])]
 const BOTS=[['all','全部'],...ownerBotChoices().map(bot=>[bot.value,bot.label])]
 const OWNER=Object.fromEntries(ownerBotChoices().map(bot=>[bot.value,bot.label]))
 const date=value=>value?new Date(value*1000).toLocaleString('zh-TW',{hour12:false}):'尚未記錄'
 
-export default function OfficeHome({projects,details,inbox=[],loaded,error,creating,onReload,onCreate,onSelect,onOpenMeeting,creation,registry,title = 'Bot Office', progressOf = null, progressEmpty = '工作包詳情未讀取', hidePackageGap = false, needsYou = null, updated = ''}){
+export default function OfficeHome({projects,details,inbox=[],loaded,error,creating,onReload,onCreate,onSelect,onOpenMeeting,creation,registry,title = 'Bot Office', progressOf = null, progressEmpty = '工作包詳情未讀取', hidePackageGap = false, updated = ''}){
   const [query,setQuery]=useState(''),[filter,setFilter]=useState('all'),[bot,setBot]=useState('all')
   const pending=id=>openApprovalCount(id,inbox)
   const missing=projects.length-Object.values(details).filter(Boolean).length
   const inStage=key=>projects.filter(p=>shownStage(p)===key).length
-  const stageCount=key=>key==='hy_decision'&&Number.isInteger(needsYou)?needsYou:inStage(key)
+  const stageCount=key=>key==='hy_decision'?listedPendingTotal(projects,inbox):inStage(key)
   const ownerOf=p=>p.owner_bot||p.ownerBot||''
   const match=p=>(filter==='all'||shownStage(p)===filter)&&(bot==='all'||ownerOf(p)===bot)
   const countOf=p=>{const detail=details[p.id];return progressOf?progressOf(p,detail):(detail?progress(detail):null)}

@@ -6,6 +6,12 @@ export function openApprovalCount(projectId, inbox = []) {
   return (inbox || []).filter(action => action && action.project_id === projectId && isPending(action)).length
 }
 
+// 首頁「待你決定」＝列表上各專案卡「待你核示 N 則」的總和。
+// 沒有對到列表專案的 open 核示（含 project_id 為空）不計，也不另顯示。
+export function listedPendingTotal(projects, inbox = []) {
+  return (projects || []).reduce((sum, project) => sum + openApprovalCount(project?.id, inbox), 0)
+}
+
 export function pendingLabel(count) {
   const n = Number(count) || 0
   return n > 0 ? `待你核示 ${n} 則` : ''

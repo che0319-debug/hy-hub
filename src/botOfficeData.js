@@ -3,7 +3,8 @@
 import { OFFICE_TABS as AI_OFFICE_TABS } from './lib/aiOffice.mjs'
 import { officeFailureMessage } from './lib/botOfficeView.mjs'
 import { STAGE_KEYS, STAGE_LABEL, STAGE_TONE, normalizeStage } from './lib/projectStages.mjs'
-import { decisionReviewView, needsYouCount, projectFlow, shownStage } from './lib/officeFlow.mjs'
+import { decisionReviewView, projectFlow, shownStage } from './lib/officeFlow.mjs'
+import { listedPendingTotal } from './lib/officeHomeList.mjs'
 export const OFFICE_TABS = [['overview','報告'],['meeting','會議室'],['log','日誌']]
 export const REFRESH_MS = 30000
 // 只有 5 種階段，名稱與顏色見 lib/projectStages.mjs。
@@ -135,10 +136,11 @@ export function mapOffice(state = {}, index = {}, metadata = {}) {
     settings: state.settings && typeof state.settings === 'object' ? state.settings : null,
     state, index, updatedRaw: text(state.updated),
     updated: when(metadata.stateUpdated || state.updated), updatedAt: metadata.stateUpdated || state.updated || null, indexUpdated: when(metadata.indexUpdated || index.updated),
-    // stages：5 種階段各有幾個專案（首頁統計卡用，與 Bot Office 首頁同一口徑）；pending 仍是待答題目數（提醒用）。
+    // stages：5 種階段各有幾個專案。needsYou 是首頁「待你決定」：各專案 open 核示的總和，與卡片「待你核示」同一套。
+    // 沒掛上專案的舊 open 核示不進 needsYou。pending 仍是全部待答題目數（Life 島與提醒用，口徑不同）。
     totals: { pending: decisions.length, running: projects.filter(p => p.active).length, finished: projects.filter(p => p.finished).length, all: projects.length,
       stages: Object.fromEntries(STAGE_KEYS.map(key => [key, projects.filter(p => shownStage(p) === key).length])),
-      needsYou: needsYouCount(projects, decisions) },
+      needsYou: listedPendingTotal(projects, projects.flatMap(project => (project.decisions || []).map(() => ({ project_id: project.id, status: 'OPEN', assigned_to: 'HY' })))) },
   }
 }
 

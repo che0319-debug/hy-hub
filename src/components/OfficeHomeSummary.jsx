@@ -3,7 +3,7 @@ import { PROJECT_STAGES } from '../lib/projectStages.mjs'
 import './office-home-summary.css'
 
 // 首頁 Bot Office 統計卡。數字來自 Bot Office（mapOffice 的 totals），和 Bot Office 首頁同一口徑：
-// 5 種專案階段（規劃中／待你決定／執行中／待審／完成）＋專案總數，不用其他同義詞。
+// 「待你決定」是列表上「待你核示 N 則」的總和（totals.needsYou）。其他格是該階段的專案數。不用其他同義詞。
 const ICONS = { assigned: ClipboardList, hy_decision: Inbox, running: CirclePlay, review: Eye, done: Check }
 const CARDS = [
   ...PROJECT_STAGES.map(s => ({ key: s.key, label: s.label, tone: s.tone, Icon: ICONS[s.key], value: t => s.key === 'hy_decision' && Number.isInteger(t?.needsYou) ? t.needsYou : (t.stages?.[s.key] ?? null) })),

@@ -82,6 +82,8 @@ test('mapOffice keeps optional kanban_source and reads old closed light cards wi
   assert.deepEqual(out.projects[0].kanbanSource, { bot: '950157', project_id: 'APB', project_name: 'A+ BP' })
   assert.equal(out.projects[0].ownerBot, 'sam')
   assert.equal(out.decisions.map(d => d.id).join(), 'd-open,d-open-item')
+  assert.equal(out.totals.needsYou, 1)
+  assert.equal(out.projects[0].decisions.length, 1)
   assert.equal(out.items.find(i => i.id === 'd-open-item').light, true)
   assert.equal(out.items.some(i => i.id === 'd-d0ff25fe499944e186710542df91766d'), false)
 })

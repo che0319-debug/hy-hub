@@ -127,7 +127,7 @@ export default function BotOffice() {
           throw failure
         }
       }} />
-      <OfficeHome title="Bot Office" projects={views} details={details} inbox={inbox} loaded={!loading} error={null} creating={creating} onReload={reload} onCreate={()=>setCreating(v=>!v)} onSelect={id=>openProject(id)} onOpenMeeting={id=>openProject(id,'meeting')} updated={data?.updated || ''} creation={creating&&<OfficeRequest type="new_project" projects={data?.projects || []} inline reload={reload} settings={data?.settings?.ai_defaults}/>} showModelsLink={false} progressOf={item => progressLabel(timelineRows(item._milestoneRows, item._flow))} progressEmpty="里程碑尚未提供" hidePackageGap needsYou={data?.totals?.needsYou}/>
+      <OfficeHome title="Bot Office" projects={views} details={details} inbox={inbox} loaded={!loading} error={null} creating={creating} onReload={reload} onCreate={()=>setCreating(v=>!v)} onSelect={id=>openProject(id)} onOpenMeeting={id=>openProject(id,'meeting')} updated={data?.updated || ''} creation={creating&&<OfficeRequest type="new_project" projects={data?.projects || []} inline reload={reload} settings={data?.settings?.ai_defaults}/>} showModelsLink={false} progressOf={item => progressLabel(timelineRows(item._milestoneRows, item._flow))} progressEmpty="里程碑尚未提供" hidePackageGap/>
 
     </>}
     {project && view && <section className="ao ao-project">
