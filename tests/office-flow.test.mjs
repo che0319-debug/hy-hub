@@ -184,6 +184,26 @@ test('needsYou counts milestone and gate cards without double-counting a plan ca
   assert.equal(needsYouCount(projects), 3)
 })
 
+test('homepage needsYou sums open approvals on listed projects and skips unattached ones', () => {
+  const out = mapOffice({
+    buildings: [
+      { id: 'quiet', stage: 'hy_decision', owner_bot: 'sam', title: '只有階段' },
+      { id: 'busy', stage: 'running', owner_bot: 'hy', title: '有兩則' },
+    ],
+    decisions: [
+      { id: 'a', project: 'busy', status: 'open', title: '一' },
+      { id: 'b', project: 'busy', status: 'open', title: '二' },
+      { id: 'done', project: 'busy', status: 'answered', title: '已答' },
+      { id: 'loose', status: 'open', title: '沒掛專案' },
+    ],
+  }, { cards: [] })
+  assert.equal(out.totals.stages.hy_decision, 1)
+  assert.equal(out.projects.find(project => project.id === 'quiet').decisions.length, 0)
+  assert.equal(out.decisions.some(decision => decision.id === 'loose'), true)
+  assert.equal(out.totals.needsYou, 2)
+  assert.equal(out.totals.pending, 3)
+})
+
 test('mapOffice keeps stage totals and adds needsYou plus flow review', () => {
   const out = mapOffice({
     buildings: [

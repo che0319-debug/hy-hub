@@ -21,8 +21,11 @@ for(const spec of [{name:'desktop',width:1280,height:900},{name:'mobile',width:3
   // 統計卡與篩選只用 5 種階段名稱，舊值讀取時換算：returned→規劃中；沒有負責 Bot 的 unassigned 只算進總數。
   const tiles=await page.locator('.ao-tile').evaluateAll(els=>els.map(e=>[e.querySelector('small').textContent,e.querySelector('strong').textContent]));
   assert.deepEqual(tiles,[['規劃中','2'],['待你決定','1'],['執行中','1'],['待審','1'],['完成','1'],['專案總數','7']]);
-  const chips=await page.locator('.ao-chips button, [aria-label="專案篩選"] button').allTextContents();
+  const chips=await page.locator('[aria-label="屬性"] button').allTextContents();
   assert.deepEqual(chips,['全部','規劃中','待你決定','執行中','待審','完成']);
+  const bots=await page.locator('[aria-label="負責 Bot"] button').allTextContents();
+  assert.deepEqual(bots,['全部','Sam','小因','950157','HY']);
+  assert.equal(await page.locator('#office-inbox').count(),0);
   const body=await page.locator('.ao-home').innerText();
   for(const word of ['待派','已派','退回','進行中','已完成','待 HY 決定','執行中專案'])assert(!body.includes(word),'old stage word '+word);
   await page.locator('.ao-tiles').screenshot({path:out+'/'+spec.name+'-tiles.png'});

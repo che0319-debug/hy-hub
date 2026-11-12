@@ -35,7 +35,7 @@ function AppRoutes() {
       <Route path="/" element={<App />}>
         <Route index element={<Navigate to="/life-island" replace />} />
         <Route path="home" element={<Home />} />
-        {/* Inbox 併進 Bot Office 首頁「待你處理」（HY 2026-11-12） */}
+        {/* 舊 /inbox 導到 Bot Office 專案列表。待決核示在各專案卡片上。 */}
         <Route path="inbox" element={<Navigate to="/bot-office" replace />} />
         <Route path="decide" element={<Navigate to="/bot-office" replace />} />
         <Route path="more" element={<More />} />

@@ -13,8 +13,7 @@ import OfficeHome from './OfficeHome'
 import {officeView, officeMilestones, officePlan, currentMilestoneId, milestoneProgress, executionRounds, isHyOwnerSession} from '../lib/botOfficeView.mjs'
 import {reportSummaryStatus} from '../lib/reportSummary.mjs'
 import { useInbox } from '../inbox/InboxContext'
-import { buildInbox, kanbanTodosForOffice, kanbanTodosForProject, officePendingItems } from '../inbox/inboxData.js'
-import OfficeInbox from '../components/OfficeInbox'
+import { kanbanTodosForOffice, kanbanTodosForProject } from '../inbox/inboxData.js'
 import OfficeItem from '../components/OfficeItem'
 import OwnerBotPicker from '../components/OwnerBotPicker'
 import OfficeStageControl from '../components/OfficeStageControl'
@@ -106,10 +105,7 @@ export default function BotOffice() {
   const headerMilestoneId = currentMilestoneId(shownMilestones)
   const headerCount = milestoneProgress(shownMilestones)
   const hy = isHyOwnerSession(getAccessToken())
-  // Office 首頁只掛有專案的核示。健康問題留在巡視／Dashboard；看板待辦有關聯才進該專案。
-  const inboxItems = buildInbox({ decisions: data?.decisions || [], projects: data?.projects || [], bots: hub?.roster?.bots || {},
-    todos: hub?.info?.list ?? null, sched: hub?.info?.sched ?? null, today: hub?.info?.today || '' })
-  const pendingItems = officePendingItems(inboxItems)
+  // 首頁不再另列「待你處理」。open 核示掛在專案卡片上；健康問題留在巡視／Dashboard。
   const item = itemId ? (data?.items || []).find(entry => entry.id === itemId) || null : null
   const reloadAll = async () => { await reload(); await hub?.reloadOffice?.() }
   const openProject = (id, nextTab = 'overview') => { setDeleteNote(''); setItemId(null); setProjectId(id); setTab(nextTab); setEditing(false); setSelectedWork(null) }
@@ -120,8 +116,6 @@ export default function BotOffice() {
     {item && !project && <OfficeItem item={item} reload={reloadAll} canClose={hy} onBack={() => setItemId(null)} />}
     {itemId && !item && !project && data && <section className="ao-card" role="status"><h2>找不到這張小案卡</h2><p>可能已經結案。</p><button onClick={() => setItemId(null)}>回 Bot Office</button></section>}
     {!project && !itemId && <>
-      <OfficeInbox items={pendingItems} loaded={!loading && Boolean(hub?.loaded ?? true)} officeFailed={Boolean(error) && error.kind !== 'empty'} projects={data?.projects || []}
-        onSaved={reloadAll} onOpenItem={id => { setProjectId(null); setItemId(id) }} onOpenProject={id => openProject(id, 'meeting')} />
       {sharedNote && <p className="bo-notice" role="status">{sharedNote}</p>}
       <OwnerBotPicker projects={data?.projects || []} onSaved={async () => {
         // 這一頁的清單先落地。共用名單失敗只留在選擇器外面，不掛到已經離開的那一列。
@@ -133,7 +127,7 @@ export default function BotOffice() {
           throw failure
         }
       }} />
-      <OfficeHome title="Bot Office" projects={views} details={details} inbox={inbox} loaded={!loading} error={null} creating={creating} onReload={reload} onCreate={()=>setCreating(v=>!v)} onSelect={id=>openProject(id)} creation={creating&&<OfficeRequest type="new_project" projects={data?.projects || []} inline reload={reload} settings={data?.settings?.ai_defaults}/>} showModelsLink={false} progressOf={item => progressLabel(timelineRows(item._milestoneRows, item._flow))} progressEmpty="里程碑尚未提供" hidePackageGap needsYou={data?.totals?.needsYou}/>
+      <OfficeHome title="Bot Office" projects={views} details={details} inbox={inbox} loaded={!loading} error={null} creating={creating} onReload={reload} onCreate={()=>setCreating(v=>!v)} onSelect={id=>openProject(id)} onOpenMeeting={id=>openProject(id,'meeting')} updated={data?.updated || ''} creation={creating&&<OfficeRequest type="new_project" projects={data?.projects || []} inline reload={reload} settings={data?.settings?.ai_defaults}/>} showModelsLink={false} progressOf={item => progressLabel(timelineRows(item._milestoneRows, item._flow))} progressEmpty="里程碑尚未提供" hidePackageGap/>
 
     </>}
     {project && view && <section className="ao ao-project">

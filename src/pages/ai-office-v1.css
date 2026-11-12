@@ -32,6 +32,7 @@
 /* 首頁：專案列表 */
 .ao-home{display:grid;gap:var(--hy-gap);padding:4px 0 28px}
 .ao-home-head{display:flex;justify-content:space-between;gap:12px;align-items:flex-end;flex-wrap:wrap}
+.ao-lede{margin:0;color:var(--hy-muted);font-size:var(--hy-fs-meta)}
 .ao-home-actions{display:flex;gap:8px;flex-wrap:wrap}
 .ao-tiles{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:12px}
 @media(max-width:1050px){.ao-tiles{grid-template-columns:repeat(3,minmax(0,1fr))}}
@@ -40,9 +41,17 @@
 .ao .ao-tile[data-s=you] strong{color:var(--hy-you)}.ao .ao-tile[data-s=ai] strong{color:var(--hy-ai)}.ao .ao-tile[data-s=done] strong{color:var(--hy-done)}
 .ao .ao-tile.needs-you{border-color:#f2d39b;box-shadow:inset 3px 0 0 var(--hy-you-line)}
 .ao .ao-tile[aria-pressed=true]{background:var(--hy-surface);color:var(--hy-ink);border-color:var(--hy-brand);box-shadow:0 0 0 1px var(--hy-brand)}
-.ao-home-controls{display:flex;gap:12px;flex-wrap:wrap;align-items:center}.ao-home-controls input{flex:1;max-width:420px;margin:0}
+.ao-home-controls{display:grid;gap:10px}.ao-home-controls input{width:100%;max-width:420px;margin:0}
+.ao-filter-row{display:flex;gap:8px;align-items:flex-start;flex-wrap:wrap}
+.ao-filter-row>span{flex:0 0 4.5em;min-height:var(--hy-tap);display:flex;align-items:center;color:var(--hy-muted);font-size:var(--hy-fs-meta)}
 .ao-home-projects{display:grid;gap:10px}
-.ao .ao-project-line{display:grid;grid-template-columns:minmax(0,1fr) 120px 150px auto 150px;align-items:center;gap:16px;text-align:left;padding:14px 18px;border-radius:var(--hy-r-card);min-width:0;height:auto}
+.ao .ao-project-line{display:grid;grid-template-columns:minmax(0,1fr) 132px 168px auto 148px;align-items:center;gap:16px;text-align:left;padding:14px 18px;border:1px solid var(--hy-line);border-radius:var(--hy-r-card);background:var(--hy-surface);color:var(--hy-ink);min-width:0;cursor:pointer}
+.ao .ao-project-open{display:grid;grid-template-columns:subgrid;grid-column:1 / -1;grid-row:1;align-items:center;column-gap:16px;border:0;background:transparent;padding:0;min-height:var(--hy-tap);text-align:left;color:inherit;border-radius:0}
+.ao .ao-project-open:hover{background:transparent}
+.ao .ao-line-status{grid-column:4;grid-row:1;justify-self:start;align-self:center;position:relative;z-index:1}
+.ao .ao-project-time{grid-column:5;grid-row:1}
+.ao .ao-project-line>.ao-pending-pill{z-index:1;width:auto}
+.ao .ao-project-line>.ao-pending-pill:hover{background:var(--hy-you-bg);color:var(--hy-you)}
 .ao .ao-project-line.needs-you{border-color:#f2d39b;box-shadow:inset 3px 0 0 var(--hy-you-line)}
 .ao-project-title{display:grid;gap:2px;min-width:0}.ao-project-title b{font-size:var(--hy-fs-body)}
 .ao-project-goal{color:var(--hy-muted);font-size:var(--hy-fs-meta);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
@@ -131,11 +140,13 @@
 .ao .cc5{--ink:var(--hy-ink);--muted:var(--hy-muted);--line:var(--hy-line);--accent:var(--hy-brand);background:transparent}
 .ao .cc5-panel,.ao .cc5-card{border-radius:var(--hy-r-card);border-color:var(--hy-line);box-shadow:none;background:var(--hy-surface)}
 
-@media(max-width:1050px){.ao .ao-project-line{grid-template-columns:minmax(0,1fr) 120px auto}.ao-home-progress{display:none}.ao-project-time{display:none}}
+@media(max-width:1050px){.ao .ao-project-line{grid-template-columns:minmax(0,1fr) 120px auto}.ao-home-progress{display:none}.ao-project-time{display:none}.ao .ao-line-status{grid-column:3}}
 @media(max-width:640px){
   .ao-tiles{grid-template-columns:repeat(2,minmax(0,1fr))}
-  .ao-home-controls input{max-width:none;flex-basis:100%}
-  .ao .ao-project-line{grid-template-columns:minmax(0,1fr) auto;gap:8px}.ao-project-stage{grid-column:1}.ao-project-goal{white-space:normal;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}
+  .ao-home-controls input{max-width:none}
+  .ao-filter-row{display:grid;grid-template-columns:1fr}
+  .ao-filter-row>span{min-height:0}
+  .ao .ao-project-line{grid-template-columns:minmax(0,1fr) auto;gap:8px}.ao-project-stage{grid-column:1}.ao .ao-line-status{grid-column:2;grid-row:1}.ao-project-goal{white-space:normal;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}
   .ao-header{padding:16px}.ao-header-actions{margin-left:0;width:100%}
   .ao-overview,.ao-meeting{grid-template-columns:1fr}
   .ao-card{padding:14px}.ao-card.is-focus{padding:18px 16px 18px 20px}
