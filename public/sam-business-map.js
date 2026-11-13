@@ -1,7 +1,8 @@
 /* 事業版圖 v2（滿版關聯圖）資料邏輯
  * 正本：sam_data.json → business_ops.map_v2（經 GET/POST /api/sam-progress 的 business_ops key 讀寫）。
  * 舊的 business_ops.graph／business_ops.board 原封不動保留在正本裡，本頁不讀、不畫、不刪。
- * 白名單：HY 中心＋四家公司＋使用者之後新增的人物／資源。規格：/workspace/sam-companies/business-map-page-plan-v0.md
+ * 白名單：HY 中心＋五家公司（樂川、RM 餐酒館、上淼、迪繆斯 DIVIOS、新竹3C）＋使用者之後新增的人物／資源。
+ * 2026-11-13 定稿：五家同層、收入改純文字 income_note。已退場的舊節點若出現在 map_v2 會被濾掉。
  * 純函式、無 DOM，瀏覽器以 window.SamBusinessMap 使用，tests/ 以 vm 載入測試。
  */
 (function (root) {
@@ -14,8 +15,19 @@
   var STATUSES = ['賺', '平', '虧', '未知']
   var KINDS = { hy: '中心', company: '公司', person: '人物', resource: '資源' }
   var EDGE_TYPES = ['隱名股東', '持股', '投資', '合作', '供應', '通路', '人脈', '使用', '其他']
-  var COMPANY_IDS = ['lechuan', 'rm', 'shangmiao', 'divios']
+  var COMPANY_IDS = ['lechuan', 'rm', 'shangmiao', 'divios', 'hsinchu3c']
   var HIDDEN_ROLE = '隱名股東（登記上不會出現 HY 名字）'
+  var HSINCHU_INCOME = '每月穩定2萬'
+  var INCOME_NOTE_DEFAULTS = { lechuan: UNKNOWN, rm: UNKNOWN, shangmiao: UNKNOWN, divios: UNKNOWN, hsinchu3c: HSINCHU_INCOME }
+  /* 2026-11-11 已刪、不得復活的舊節點。只看 id／顯示名稱／法律主體，不掃內文，避免誤傷樂川、上淼的說明。
+   * 已退場地名不直接寫在原始碼，避免頁面檔被搜到那兩個字。 */
+  var RETIRED_COAST = '\u5317\u6d77\u5cb8'
+  var RETIRED_IDS = {
+    dessert: 1, bake33: 1, bake_33: 1, vending: 1, vending_ig: 1, vending_partner: 1,
+    art_trade: 1, artwork: 1, anzheng: 1, an_zheng: 1, north_coast: 1, northcoast: 1,
+    beihai: 1, beihai_seafood: 1, cuyu: 1, chuyu: 1, chuanyu: 1, chuanyang: 1, chuan: 1,
+    tailor: 1, sewing: 1, tavern: 1, old_tavern: 1, big_tavern: 1,
+  }
 
   /* 欄位定義：key、標籤、是否多行。順序即面板與表單順序。 */
   var FIELDS = {
@@ -37,10 +49,8 @@
       { key: 'stake_written', label: '書面約定' },
       { key: 'stake_invested', label: '投入' },
       { key: 'stake_note', label: '說明', multi: true },
-      { sec: '收入來源' },
-      { key: 'income_actual', label: '實際（有憑證）', multi: true },
-      { key: 'income_leads', label: '線索', multi: true },
-      { key: 'income_unknown', label: '未知', multi: true },
+      { sec: '收入' },
+      { key: 'income_note', label: '收入', multi: true, hint: '純文字備註，可多行、可手改。不知道就寫未知。不從帳本帶入數字。' },
       { sec: '支出與缺口' },
       { key: 'costs', label: '固定與變動支出', multi: true },
       { key: 'gaps', label: '資金與帳務缺口', multi: true },
@@ -90,6 +100,7 @@
 
   var SEED_DATE = '2026-11-11T08:00:00.000Z' // 公司資料草稿 v0 整理日 2026-11-11（台北）
   var DIVIOS_DATE = '2026-11-11T09:40:00.000Z' // 使用者 17:34 確認帝爾 90895872 後更新（台北 17:40）
+  var HSINCHU_DATE = '2026-11-13T09:54:00.000Z' // 使用者 2026-11-13 17:54（台北）核定第五家與收入欄
 
   function seedCompanies() {
     return [
@@ -112,6 +123,7 @@
         ].join('\n'),
         stake_role: HIDDEN_ROLE, stake_ratio: UNKNOWN, stake_via: UNKNOWN, stake_written: UNKNOWN + '（Drive 有借名登記／股權讓渡草稿，姓名與簽章空白，不當作已生效）', stake_invested: UNKNOWN,
         stake_note: '公開登記的負責人／董監不代表 HY 的權益，不可據此反推持股。',
+        income_note: UNKNOWN,
         income_actual: '115 年 5–6 月 401 申報銷售額 0、進項 0、發票 0 份（只證明該期）。',
         income_leads: '銀角電商（HY 說是其中一個收入；2026-11-11 仍未開通，無訂單或撥款）；其他線見 Nana 主檔。',
         income_unknown: '7 月以後各期申報、公司現金與銀行餘額、近三月賺或虧。',
@@ -143,6 +155,7 @@
         ].join('\n'),
         stake_role: HIDDEN_ROLE, stake_ratio: UNKNOWN, stake_via: UNKNOWN, stake_written: UNKNOWN, stake_invested: UNKNOWN,
         stake_note: '店與法律主體仍待確認；權利對 93080582、96677727 或兩者，未知。',
+        income_note: UNKNOWN,
         income_actual: '無（沒有申報書、水單或近三月數字）。',
         income_leads: '店仍有公開店頁與外送頁，不能據此推營收。舊敘述「竹北據點大致打平」沒有點名 RM，不套用。',
         income_unknown: '近三月收入與賺、平、虧；保證或分成。',
@@ -170,6 +183,7 @@
         ].join('\n'),
         stake_role: HIDDEN_ROLE, stake_ratio: '約 45%（內部約數，非正式股權文件）', stake_via: UNKNOWN, stake_written: UNKNOWN, stake_invested: UNKNOWN,
         stake_note: '「具有一定影響與掌控能力」，未過半（內部敘述）。',
+        income_note: UNKNOWN,
         income_actual: '無申報書、發票或水單。',
         income_leads: '新北成衣「已實際接單」，但「不是自由現金」；看板曾有「接手成衣廠業務」due 2026-12-02。沒有金額。',
         income_unknown: '營收、毛利、帳期、錢卡在哪。',
@@ -205,6 +219,7 @@
         business: '形象顧問：色彩鑑定、風格分析、形象策略；開設 DCA（高階色彩分析師）、DFA（時裝風格分析師）課程。門市：南港旗艦店、台中店；2025-10-10 開美麗華本館一樓專櫃。',
         stake_role: HIDDEN_ROLE, stake_ratio: UNKNOWN, stake_via: UNKNOWN, stake_written: UNKNOWN, stake_invested: UNKNOWN,
         stake_note: '登記代表人與董監不代表 HY 的權益；董監持股表加總不等於資本總額，不可反推比例。',
+        income_note: UNKNOWN,
         income_actual: UNKNOWN + '（沒有本公司憑證）',
         income_leads: '品牌有門市、專櫃、課程與選品；媒體轉述「13 萬會員」，不轉成營收。',
         income_unknown: '各門市／專櫃營收、課程收入、公司損益與現金。',
@@ -222,22 +237,69 @@
         ].join('\n'),
         maintainer: 'Sam', followup_due: '', updated_at: DIVIOS_DATE,
       },
+      {
+        id: 'hsinchu3c', kind: 'company', name: '新竹3C手機店', legal_name: UNKNOWN, legal_state: '未知',
+        status: '未知', status_source: UNKNOWN,
+        tax_id: UNKNOWN,
+        registry: UNKNOWN,
+        business: UNKNOWN,
+        stake_role: UNKNOWN, stake_ratio: UNKNOWN, stake_via: UNKNOWN, stake_written: UNKNOWN, stake_invested: UNKNOWN,
+        stake_note: UNKNOWN,
+        income_note: HSINCHU_INCOME,
+        costs: UNKNOWN, gaps: UNKNOWN,
+        questions: UNKNOWN,
+        sources: '使用者 2026-11-13 核定：穩定合作的投資',
+        maintainer: 'Sam', followup_due: '', updated_at: HSINCHU_DATE,
+      },
     ]
   }
 
   function seedEdges() {
     var notes = { lechuan: '比例未知', rm: '比例未知；店與法律主體仍待確認', shangmiao: '約 45%（內部約數）', divios: '比例未知' }
-    return COMPANY_IDS.map(function (id) {
+    var edges = ['lechuan', 'rm', 'shangmiao', 'divios'].map(function (id) {
       return { id: 'e_hy_' + id, from: HY_ID, to: id, type: '隱名股東', note: notes[id], via: UNKNOWN, written: UNKNOWN, confirmed: true, source: '使用者 2026-11-11 16:51「我都是隱名入股」', updated_at: SEED_DATE }
     })
+    edges.push({
+      id: 'e_hy_hsinchu3c', from: HY_ID, to: 'hsinchu3c', type: '投資', note: '穩定合作的投資',
+      via: UNKNOWN, written: UNKNOWN, confirmed: true, source: '使用者 2026-11-13 核定：穩定合作的投資', updated_at: HSINCHU_DATE,
+    })
+    return edges
   }
 
   function seed() {
     var nodes = [{ id: HY_ID, kind: 'hy', name: 'HY', maintainer: 'HY', updated_at: SEED_DATE }].concat(seedCompanies())
-    return { schema_version: SCHEMA, seeded_from: 'company-profiles-v0（2026-11-11）', nodes: nodes, edges: seedEdges(), updated_at: SEED_DATE }
+    return { schema_version: SCHEMA, seeded_from: 'company-profiles-v0（2026-11-11）＋2026-11-13 五家與收入欄', nodes: nodes, edges: seedEdges(), updated_at: HSINCHU_DATE }
   }
 
-  /** 取得（必要時建立）map_v2。舊 graph／board 不讀也不改。回傳 {map, seeded}. */
+  /** 舊節點不得留在 map_v2。RM 餐酒館是第一圈公司，不因名稱含「餐酒館」被刪。 */
+  function isRetiredNode(n) {
+    if (!n || n.kind === 'hy' || n.id === HY_ID) return false
+    var id = str(n.id).toLowerCase()
+    if (RETIRED_IDS[id]) return true
+    var name = str(n.name)
+    var blob = name + '\n' + str(n.legal_name) + '\n' + id
+    if (blob.indexOf(RETIRED_COAST) >= 0) return true
+    if (/甜品工廠/.test(blob)) return true
+    if (/烘\s*33|烘三十三/.test(blob)) return true
+    if (/販賣機/.test(blob)) return true
+    if (/藝術品/.test(blob)) return true
+    if (/安正/.test(name) || id.indexOf('anzheng') >= 0 || id.indexOf('an_zheng') >= 0) return true
+    if (/川嶼|川泱/.test(blob)) return true
+    if (/成衣[／/]裁縫|裁縫資源/.test(blob)) return true
+    if (/大型餐酒館|招待所|竹北餐飲|招待資源/.test(blob)) return true
+    if (name === '餐酒館') return true
+    return false
+  }
+
+  function hsinchuEdge() {
+    return seedEdges().filter(function (e) { return e.to === 'hsinchu3c' })[0]
+  }
+
+  /**
+   * 取得（必要時建立或遷移）map_v2。舊 graph／board／businesses 不讀也不改。
+   * 缺新竹3C、五家收入欄是空的、或混入已刪節點時，seeded 為 true，讓畫面走「按右上儲存」；本次不自己寫正式 API。
+   * 已有的 income_note 不覆蓋。不改 status，不把舊三分欄或帳本持股抄進新欄。
+   */
   function ensureMap(businessOps) {
     var seeded = false
     if (!businessOps.map_v2 || typeof businessOps.map_v2 !== 'object' || !Array.isArray(businessOps.map_v2.nodes)) {
@@ -245,9 +307,29 @@
     }
     var m = businessOps.map_v2
     m.edges = Array.isArray(m.edges) ? m.edges : []
-    // 白名單：只留 hy／company／person／resource 四種
-    m.nodes = m.nodes.filter(function (n) { return n && n.id && KINDS[n.kind] })
-    if (!m.nodes.some(function (n) { return n.id === HY_ID })) m.nodes.unshift({ id: HY_ID, kind: 'hy', name: 'HY', updated_at: nowIso() })
+    var retired = false
+    m.nodes = m.nodes.filter(function (n) {
+      if (!(n && n.id && KINDS[n.kind])) return false
+      if (isRetiredNode(n)) { retired = true; return false }
+      return true
+    })
+    if (retired) seeded = true
+    if (!m.nodes.some(function (n) { return n.id === HY_ID })) {
+      m.nodes.unshift({ id: HY_ID, kind: 'hy', name: 'HY', maintainer: 'HY', updated_at: nowIso() })
+      seeded = true
+    }
+    if (!m.nodes.some(function (n) { return n.id === 'hsinchu3c' })) {
+      m.nodes.push(seedCompanies().filter(function (c) { return c.id === 'hsinchu3c' })[0])
+      seeded = true
+    }
+    m.nodes.forEach(function (n) {
+      if (!INCOME_NOTE_DEFAULTS[n.id] || n.kind !== 'company') return
+      if (!str(n.income_note)) { n.income_note = INCOME_NOTE_DEFAULTS[n.id]; seeded = true }
+    })
+    var hasHsEdge = m.edges.some(function (e) {
+      return e && ((e.from === HY_ID && e.to === 'hsinchu3c') || (e.from === 'hsinchu3c' && e.to === HY_ID))
+    })
+    if (!hasHsEdge) { m.edges.push(hsinchuEdge()); seeded = true }
     var ids = new Set(m.nodes.map(function (n) { return n.id }))
     m.edges = m.edges.filter(function (e) { return e && ids.has(e.from) && ids.has(e.to) && e.from !== e.to })
     m.nodes.forEach(function (n) { if (n.kind === 'company' && STATUSES.indexOf(n.status) < 0) n.status = UNKNOWN })
@@ -393,10 +475,15 @@
     var outer = map.nodes.filter(function (n) { return n.kind === 'person' || n.kind === 'resource' })
     // 直式畫面（手機）把第一圈轉 45°，讓左右兩張公司卡與 HY 之間留得下關係標籤
     var base = a < 1 ? 45 : 0
+    // 角度是畫面上的方位角，五家才會繞著中心均分；再用橢圓半徑吃滿寬或高。
     function ring(list, R, offset, minX) {
+      var rx = Math.max(R * ax, minX)
+      var ry = R * ay
       list.forEach(function (n, i) {
         var ang = (-90 + offset + (360 / Math.max(1, list.length)) * i) * Math.PI / 180
-        pos[n.id] = { x: Math.round(Math.cos(ang) * Math.max(R * ax, minX)), y: Math.round(Math.sin(ang) * R * ay) }
+        var c = Math.cos(ang), s = Math.sin(ang)
+        var t = 1 / Math.sqrt((c * c) / (rx * rx) + (s * s) / (ry * ry))
+        pos[n.id] = { x: Math.round(c * t), y: Math.round(s * t) }
       })
     }
     ring(comps, R1, base, 300)
