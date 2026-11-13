@@ -84,6 +84,7 @@ header { background:var(--header-bg); padding:0 24px; display:flex; align-items:
 .kcard-title { font-size:13px; font-weight:600; color:var(--text); line-height:1.4; margin-bottom:8px; }
 .kcard-meta { display:flex; flex-wrap:wrap; gap:5px; margin-bottom:6px; align-items:center; }
 .due-chip { font-size:11px; padding:2px 7px; border-radius:10px; background:#f4f5f7; color:var(--text-muted); font-weight:500; }
+.due-chip.due-today { color: var(--blue); background: var(--blue-light); }
 .due-chip.overdue { color: var(--red); background: #fff0ee; }
 .kcard-desc { font-size:12px; color:var(--text-muted); line-height:1.45; margin-bottom:6px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
 
@@ -568,7 +569,7 @@ function dueDisplay(d){
   if (!d) return null;
   var cmp = d.replace(/\//g,'-');
   var p = d.split('/');
-  return { text: p[1]+'/'+p[2], over: cmp < today };
+  return { text: p[1]+'/'+p[2], over: cmp < today, today: cmp === today };
 }
 
 function isActiveCard(m){ return !m.completed || String(m.completed_at||'').slice(0,10) === today; }
@@ -624,11 +625,6 @@ function makeCard(m, projId){
   card.className = 'kanban-card'; card.dataset.id = m.id; card.dataset.col = projId;
 
   if (m.completed) { card.style.opacity='.62'; card.style.borderLeft='3px solid #16a34a'; }
-  var done = document.createElement('input'); done.type='checkbox'; done.checked=!!m.completed;
-  done.title='完成此任務'; done.style.cssText='width:18px;height:18px;accent-color:#16a34a;float:left;margin:0 8px 5px 0';
-  done.addEventListener('click', function(e){ e.stopPropagation(); });
-  done.addEventListener('change', function(e){ e.stopPropagation(); toggleCardComplete(m.id, e.target.checked); });
-  card.appendChild(done);
   var titleEl = document.createElement('div'); titleEl.className='kcard-title'; titleEl.textContent = m.title;
   if (m.completed) titleEl.style.textDecoration='line-through';
   card.appendChild(titleEl);
@@ -636,7 +632,7 @@ function makeCard(m, projId){
   var meta = document.createElement('div'); meta.className='kcard-meta';
   if (m.due){
     var dd = dueDisplay(m.due);
-    var chip = document.createElement('span'); chip.className='due-chip'+(dd.over?' overdue':'');
+    var chip = document.createElement('span'); chip.className='due-chip'+(dd.over?' overdue':(dd.today?' due-today':''));
     chip.textContent = (dd.over?'⚠ ':'')+dd.text; meta.appendChild(chip);
   }
   card.appendChild(meta);

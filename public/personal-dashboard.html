@@ -180,6 +180,7 @@ header { background:var(--header-bg); padding:0 24px; display:flex; align-items:
   font-weight: 500;
   font-size: 11px;
 }
+.due-chip.due-today { color: var(--blue); background: var(--blue-light); }
 .due-chip.overdue { color: var(--red); background: #fff0ee; }
 
 .execute-row { display: flex; align-items: center; gap: 6px; margin-top: 5px; }
@@ -457,7 +458,7 @@ function dueDisplay(d){
   if (!d) return null;
   var cmp=d.replace(/\//g,'-'), p=d.split('/');
   if (p.length<3) return null;
-  return { text: p[1]+'/'+p[2], over: cmp < today };
+  return { text: p[1]+'/'+p[2], over: cmp < today, today: cmp === today };
 }
 
 // ═══════════════ PROGRESS (Kanban) ═══════════════
@@ -480,7 +481,7 @@ function renderCardHTML(p, m, mi){
   if (m.due){
     var dd = dueDisplay(m.due);
     if (dd){
-      dueHtml = '<div class="due-chip'+(dd.over?' overdue':'')+'">📅 '+(dd.over?'⚠ ':'')+escHtml(dd.text)+'</div>';
+      dueHtml = '<div class="due-chip'+(dd.over?' overdue':(dd.today?' due-today':''))+'">📅 '+(dd.over?'⚠ ':'')+escHtml(dd.text)+'</div>';
     }
   }
   var descHtml = m.description
@@ -496,7 +497,6 @@ function renderCardHTML(p, m, mi){
     + '</div>';
   return '<div class="card'+(m.completed?' completed':'')+'" data-pid="'+p.id+'" data-card-id="'+m.id+'">'
     + '<div class="card-top">'
-    +   '<input type="checkbox" class="complete-check" title="完成此任務"'+(m.completed?' checked':'')+' data-action="complete-card" data-pid="'+p.id+'" data-card-id="'+m.id+'">'
     +   '<div class="card-title">'+escHtml(m.title)+'</div>'
     +   '<button class="card-del-btn" title="刪除此里程碑" data-action="del-card" data-pid="'+p.id+'" data-card-id="'+m.id+'">✗</button>'
     + '</div>'

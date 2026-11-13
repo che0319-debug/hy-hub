@@ -319,6 +319,7 @@ header {
   font-weight: 500;
   font-size: 11px;
 }
+.due-chip.due-today { color: var(--blue); background: var(--blue-light); }
 .due-chip.overdue { color: var(--red); background: #fff0ee; }
 
 .add-card-btn {
@@ -1478,6 +1479,10 @@ function isOverdue(due) {
   return due < today;
 }
 const todayTaipei = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Taipei' });
+function isDueToday(due) {
+  if (!due) return false;
+  return due.replace(/\//g, '-') === todayTaipei;
+}
 function isActiveCard(m) { return !m.completed || String(m.completed_at || '').slice(0, 10) === todayTaipei; }
 
 // ── BUSINESS MAP v2（滿版關聯圖；資料邏輯在 sam-business-map.js） ──
@@ -1919,8 +1924,9 @@ function getCardBorderClass(es) {
 
 function renderCardHTML(p, m, mi) {
   const overdue = isOverdue(m.due);
+  const dueToday = isDueToday(m.due);
   const dueHtml = m.due
-    ? `<div class="due-chip${overdue?' overdue':''}">📅 ${formatDisplayDate(m.due)}</div>`
+    ? `<div class="due-chip${overdue?' overdue':dueToday?' due-today':''}">📅 ${formatDisplayDate(m.due)}</div>`
     : '';
   const descHtml = m.description
     ? `<div class="card-desc">📋 ${escHtml(m.description)}</div>`
@@ -1930,7 +1936,6 @@ function renderCardHTML(p, m, mi) {
   const isFinished = ['done','cancelled','failed'].includes(es);
   return `<div class="card${getCardBorderClass(es)}${m.completed?' completed':''}" data-pid="${p.id}" data-card-id="${m.id}">
     <div class="card-top">
-      <input type="checkbox" title="完成此任務" ${m.completed?'checked':''} style="width:18px;height:18px;accent-color:#16a34a" onclick="event.stopPropagation()" onchange="toggleCardComplete('${p.id}','${m.id}',this.checked)">
       <div class="card-title">${escHtml(m.title)}</div>
       <button class="card-del-btn" title="移除此 milestone（完成或取消都用這個）" onclick="event.stopPropagation();deleteCardDirect('${p.id}','${m.id}')">✗</button>
     </div>
