@@ -1,6 +1,6 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { deriveOffice, deriveTodos, deriveRunners, deriveSummary, deriveAttention, todoMarker, RUNNER_FIG, LIVE_FIGS, OWNER_BOT_ORDER, ownerBotChoices, canonicalOwnerBot } from '../src/life-island/worldData.js'
+import { deriveOffice, deriveTodos, deriveRunners, deriveSummary, deriveAtlas, deriveAttention, todoMarker, RUNNER_FIG, LIVE_FIGS, OWNER_BOT_ORDER, ownerBotChoices, canonicalOwnerBot } from '../src/life-island/worldData.js'
 import { ROSTER, HELPERS } from '../src/botRoster.js'
 import { mapOffice } from '../src/botOfficeData.js'
 import { FIGURES, FAMILY_ISLAND, buildingWorld, figureHome, figureFront, islandBotCard } from '../src/life-island/data.js'
@@ -276,10 +276,41 @@ test('LIVE_FIGS：四位小幫手、Atlas（營運長）與三位執行者', () 
   assert.equal(RUNNER_FIG['chatgpt-work'], 'gpt')
 })
 
-test('deriveSummary：待你確認取 Bot Office；系統數讀取失敗的來源', () => {
-  assert.deepEqual(deriveSummary({ pending: 4, failedCount: 0, loaded: true }), { needsYou: 4, systemIssues: 0 })
-  assert.deepEqual(deriveSummary({ pending: null, failedCount: 0, loaded: false }), { needsYou: null, systemIssues: null })
-  assert.equal(deriveSummary({ pending: 0, failedCount: 2, loaded: true }).systemIssues, 2)
+test('deriveSummary：系統異常數等於 Atlas 未通過的檢查', () => {
+  const now = Date.parse('2026-10-25T04:00:00Z')
+  const hrs = n => new Date(now - n * 3600e3).toISOString()
+  const fresh = { office: { updatedAt: hrs(2), stale: false }, officeEmpty: false, failed: {}, todoFailed: false, unowned: 0, loaded: true }
+
+  const ok = deriveSummary({ pending: 4, ...fresh }, now)
+  assert.equal(ok.needsYou, 4)
+  assert.equal(ok.systemIssues, 0)
+  assert.deepEqual(ok.systemReasons, [])
+
+  assert.deepEqual(deriveSummary({ pending: null, loaded: false }, now), { needsYou: null, systemIssues: null, systemReasons: [] })
+
+  // Office 25 小時沒更新：只有「更新」這一項沒過，狀態列計 1。
+  const staleOffice = { updatedAt: hrs(25), stale: false }
+  const stale = deriveSummary({ pending: 0, ...fresh, office: staleOffice }, now)
+  const staleAtlas = deriveAtlas({ ...fresh, office: staleOffice }, now)
+  assert.equal(staleAtlas.attention.length, 1)
+  assert.equal(stale.systemIssues, 1)
+  assert.match(stale.systemReasons[0], /25 小時沒更新/)
+
+  // 讀取失敗已在 Atlas 檢查內。狀態列用 attention 的數量，不再把 failedCount 加一次。
+  const failed = { office: true, memory: true }
+  const read = deriveSummary({ pending: 0, ...fresh, failed, todoFailed: true }, now)
+  const readAtlas = deriveAtlas({ ...fresh, failed, todoFailed: true }, now)
+  const failedCount = Object.values(failed).filter(Boolean).length + 1
+  assert.equal(read.systemIssues, readAtlas.attention.length)
+  assert.deepEqual(read.systemReasons, readAtlas.attention.map(item => item.text))
+  assert.notEqual(read.systemIssues, readAtlas.attention.length + failedCount)
+  const readLines = read.systemReasons.filter(text => text.includes('讀取失敗'))
+  assert.equal(readLines.length, readAtlas.attention.filter(item => item.text.includes('讀取失敗')).length)
+  assert.ok(readLines.length >= 1)
+
+  // 呼叫端已帶入同一份 attention 時，旁邊的 failed 旗標不會再加進去。
+  const shared = deriveSummary({ pending: 0, loaded: true, attention: readAtlas.attention, failed, todoFailed: true }, now)
+  assert.equal(shared.systemIssues, readAtlas.attention.length)
 })
 
 test('deriveAttention：問題→紅、待你確認→琥珀、個人待辦→藍、無事→不顯示', () => {

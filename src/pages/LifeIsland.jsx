@@ -87,6 +87,8 @@ function StatusBar({ onGo, info, data, panel, setPanel, projects }) {
   const overdue = info.overdue, todayN = info.todayCount
   const real = overdue !== null
   const needs = data.needsYou, sysN = data.systemIssues
+  const sysReasons = Array.isArray(data.systemReasons) ? data.systemReasons.filter(Boolean) : []
+  const sysTitle = sysN > 0 && sysReasons.length ? sysReasons.join('\n') : undefined
   const toggle = k => setPanel(panel === k ? null : k)
   const nextText = info.schedFailed ? '行程讀取失敗' : info.sched === null ? '行程載入中' : info.next ? `${info.next.start} ${info.next.title}` : info.sched.length ? '今天的行程結束了' : '今天沒有行程'
   return (
@@ -102,8 +104,8 @@ function StatusBar({ onGo, info, data, panel, setPanel, projects }) {
         </button>
       )}
       {!narrow && (
-        <button type="button" className="li-chip li-chip-sys li-chip-side" data-s={sysN > 0 ? 'bad' : sysN === 0 ? 'done' : 'wait'} onClick={() => onGo('syscenter')}>
-          {sysN === null ? '系統載入中' : sysN > 0 ? <>資料讀取異常 <b>{sysN}</b></> : '系統正常'}
+        <button type="button" className="li-chip li-chip-sys li-chip-side" data-s={sysN > 0 ? 'bad' : sysN === 0 ? 'done' : 'wait'} onClick={() => onGo('syscenter')} title={sysTitle}>
+          {sysN === null ? '系統載入中' : sysN > 0 ? <>系統異常 <b>{sysN}</b></> : '系統正常'}
         </button>
       )}
       <button type="button" className="li-chip li-chip-you" data-s={needs > 0 ? 'you' : needs === 0 ? 'done' : 'wait'} onClick={() => onGo('dispatch')}>
