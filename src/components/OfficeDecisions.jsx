@@ -90,9 +90,9 @@ export function Decision({ item, readOnly, reload, project = null, now = Date.no
       {closed ? <Attribution item={item} /> : <>
       <Attribution item={item} />
       <label>修改意見（退回時必填）<textarea aria-label="退回意見" value={feedback} disabled={disabled} onChange={e => { setDraftRevision(old => old ?? item.revision); setFeedback(e.target.value) }} /></label>
-      <div className="ao-toolbar"><button className="ao-primary" disabled={disabled} onClick={() => submit('approve')}>核准</button>
+      <div className="ao-toolbar"><button className="ao-primary" disabled={disabled} onClick={() => submit('approve')}>{item.flow?.kind === 'closure' ? '結案' : '核准'}</button>
         {item.flow
-          ? <button disabled={disabled || !feedback.trim()} onClick={() => submit('return')}>退回（附意見）</button>
+          ? <button disabled={disabled || !feedback.trim()} onClick={() => submit('return')}>{item.flow?.kind === 'closure' ? '退回' : '退回（附意見）'}</button>
           : <><button disabled={disabled || !feedback.trim()} onClick={() => submit('return')}>退回修改</button>
             {item.answerSource === 'proxy' && item.answer && <button disabled={disabled} onClick={() => submit('confirm')}>確認代答</button>}
             <button disabled={disabled} onClick={() => submit('defer')}>先不決定</button></>}
