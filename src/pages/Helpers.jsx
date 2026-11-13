@@ -1,10 +1,10 @@
 import { useWorldInfo } from '../life-island/useWorldInfo'
 import { useBotRoster } from '../life-island/useBotRoster'
 import BotRosterCards from '../components/BotRosterCards'
-import AtlasCard from '../components/AtlasCard'
 import MemoryCenter from './MemoryCenter'
 
-// 我的小幫手：每位 Bot 的狀態、專案、待辦與記憶彙整在一處（資料與 HY Life 島共用，見 useBotRoster）。
+// 我的小幫手：四大核心與各自組員的狀態。資料與 HY Life 島共用，見 useBotRoster。
+// 記憶區留在卡片下面，內容與分隔都不在這裡改。
 export default function Helpers({ embedded = false } = {}) {
   const info = useWorldInfo()
   const roster = useBotRoster(info)
@@ -21,8 +21,6 @@ export default function Helpers({ embedded = false } = {}) {
           <div className="mb-4 ml-5 flex items-center gap-3"><p className="text-sm text-slate-400">Bot 狀態、專案、待辦與記憶</p></div>
         </>
       )}
-
-      <div className="mb-4 mt-3"><AtlasCard roster={roster} /></div>
 
       <BotRosterCards roster={roster} />
 

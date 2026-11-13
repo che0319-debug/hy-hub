@@ -4,8 +4,10 @@
 import { Group, Mesh, TorusGeometry, SphereGeometry, MeshBasicMaterial, Shape, ExtrudeGeometry } from 'three';
 import { B, sph, cyl, box } from './geo.js';
 
-export const BOT_COLORS = { atlas: 0x000000, xiaoyin: 0xf63898, sam: 0xf39825, p950157: 0x2d85f7, hy: 0x000000, nana: 0xf39825, claude: 0xff8a1f, gpt: 0x9bd62c, grokbuild: 0xeceff3 };
+export const BOT_COLORS = { atlas: 0x000000, emma: 0x000000, xiaoyin: 0xf63898, sam: 0xf39825, p950157: 0x2d85f7, hy: 0x000000, nana: 0xf39825, claude: 0xff8a1f, gpt: 0x9bd62c, grokbuild: 0xeceff3 };
 export const WADE_LOOK = { body: 0xf63898, eye: 0xffffff };
+// HY 隊長徽章上的小圓點。跟 950157 同一個藍，不再用 Sam 的橘。
+export const LEADER_BADGE_COLOR = 0x2d85f7;
 export const STATUS_COLORS = { wait: 0x8d99ab, ai: 0x2f6bff, you: 0xf2a93a, done: 0x2fb36f, bad: 0xe5484d };
 
 // 截圖的兩眼朝同一方向傾斜，右眼略高；不影響執行者的眼睛。
@@ -58,6 +60,13 @@ function silhouette(kind) {
     s.bezierCurveTo(0.32, 0.07, 0.29, -0.09, 0.16, -0.10);
     s.bezierCurveTo(0.12, -0.20, 0.01, -0.21, -0.06, -0.16);
     s.bezierCurveTo(-0.23, -0.23, -0.30, -0.08, -0.21, 0.02);
+  } else if (kind === 'emma') {
+    // 斜向水滴：尖端朝右上，圓肚在左下。
+    s.moveTo(0.18, 0.18);
+    s.bezierCurveTo(0.08, 0.27, -0.06, 0.20, -0.12, 0.08);
+    s.bezierCurveTo(-0.22, -0.04, -0.18, -0.20, -0.04, -0.22);
+    s.bezierCurveTo(0.12, -0.24, 0.24, -0.08, 0.20, 0.04);
+    s.bezierCurveTo(0.24, 0.12, 0.24, 0.16, 0.18, 0.18);
   }
   s.closePath();
   const g = new ExtrudeGeometry(s, { depth: 0.24, steps: 1, bevelEnabled: true, bevelThickness: 0.025, bevelSize: 0.018, bevelSegments: 3, curveSegments: 16 });
@@ -68,7 +77,7 @@ function silhouette(kind) {
 function leaderBadge(b) {
   const x = 0.18, y = 0.12, z = 0.175;
   b.add(cyl(0.077, 0.077, 0.018, 24), 0xffffff, { x, y, z, rx: Math.PI / 2 });
-  b.add(cyl(0.065, 0.065, 0.022, 24), BOT_COLORS.sam, { x, y, z: z + 0.012, rx: Math.PI / 2 });
+  b.add(cyl(0.065, 0.065, 0.022, 24), LEADER_BADGE_COLOR, { x, y, z: z + 0.012, rx: Math.PI / 2 });
   const star = new Shape();
   for (let i = 0; i < 10; i++) {
     const a = Math.PI / 2 + i * Math.PI / 5, r = i % 2 ? 0.019 : 0.039;
@@ -116,6 +125,10 @@ function bodyGeo(kind) {
     case 'wade': {
       b.add(silhouette(kind), WADE_LOOK.body, { y: 0.26, g: [0.90, 1.04] });
       portraitEyes(b, 0.151, 0.29, 0.06);
+      break; }
+    case 'emma': {
+      b.add(silhouette(kind), BOT_COLORS.emma, { y: 0.30, rz: -0.55, g: [0.90, 1.04] });
+      portraitEyes(b, 0.16, 0.31, 0.055);
       break; }
   }
   return b.build();

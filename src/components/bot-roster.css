@@ -1,13 +1,19 @@
 /* 小幫手卡片：只用 hy-ui 的 token 與元件，這裡只補版面。 */
 .bot-tools{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
 .bot-tools .hy-note{margin:0}
-.bot-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:var(--hy-gap);align-items:start}
+.bot-columns{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:var(--hy-gap);align-items:start}
+.bot-column{display:flex;flex-direction:column;gap:12px;min-width:0}
+@media (max-width: 960px){
+  .bot-columns{grid-template-columns:1fr}
+}
 .bot-card{display:flex;flex-direction:column;gap:12px}
-.bot-head{display:flex;align-items:center;gap:12px}
+.bot-head{display:flex;align-items:flex-start;gap:12px}
 .bot-avatar{width:56px;height:56px;flex:none;border-radius:var(--hy-r-card);background:var(--hy-sunken);object-fit:contain}
 .bot-id{min-width:0;flex:1}
-.bot-id .hy-card-title{margin:0}
-.bot-role{color:var(--hy-muted);font-size:var(--hy-fs-tiny)}
+.bot-name-row{display:flex;align-items:flex-start;justify-content:space-between;gap:8px}
+.bot-name-row .hy-card-title{margin:0}
+.bot-name-row .hy-pill{flex:none;white-space:nowrap}
+.bot-role{color:var(--hy-muted);font-size:var(--hy-fs-tiny);line-height:1.4}
 .bot-line{color:var(--hy-ink);font-size:14px;min-height:20px}
 .bot-toggle{align-self:flex-start}
 .bot-card .hy-kv{margin-top:0;grid-template-columns:92px 1fr}

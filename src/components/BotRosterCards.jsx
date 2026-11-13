@@ -1,11 +1,13 @@
-// 「我的小幫手」分頁的卡片：每位一張，可展開／收合。資料來自 useBotRoster（HY Life 島也讀同一份），這裡不打 API。
+// 「我的小幫手」分頁的卡片：四大核心各一欄，組員排在該核心正下方。可展開／收合。
+// 資料來自 useBotRoster（HY Life 島也讀同一份），這裡不打 API。
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import '../../public/hy-ui/hy-ui.css'
 import './bot-roster.css'
-import { HELPERS, avatarUrl } from '../botRoster'
+import { armyCardIds, armyCountText, armyGroups, avatarUrl } from '../botRoster'
 import { STATUS_INFO } from '../life-island/data'
 import { freshness } from '../lib/memoryFreshness'
+import AtlasCard from './AtlasCard'
 
 const OPEN_KEY = 'hy_roster_open'
 const FRESH_TONE = { fresh: 'done', aging: 'wait', stale: 'bad', none: 'wait' }
@@ -23,17 +25,19 @@ function Fresh({ iso }) {
 function Card({ h, d, loaded, open, onToggle }) {
   const o = d?.office, t = d?.todos
   const status = d?.status ?? 'wait'
-  const line = o ? `執行中 ${o.running}・待審 ${o.review}・完成 ${o.done}` : loaded ? '—' : '讀取中…'
+  const line = armyCountText(o, loaded)
   const id = 'bot-' + h.id
   return (
     <section className={'hy-card bot-card' + (status === 'you' ? ' needs-you' : '')} aria-labelledby={id + '-t'}>
       <div className="bot-head">
         <img className="bot-avatar" src={avatarUrl(h.id)} alt="" width="56" height="56" />
         <div className="bot-id">
-          <h3 className="hy-card-title" id={id + '-t'}>{h.name}</h3>
+          <div className="bot-name-row">
+            <h3 className="hy-card-title" id={id + '-t'}>{h.name}</h3>
+            <span className="hy-pill" data-s={status}>{STATUS_INFO[status]}</span>
+          </div>
           <div className="bot-role">{h.role}</div>
         </div>
-        <span className="hy-pill" data-s={status}>{STATUS_INFO[status]}</span>
       </div>
       <div className="bot-line">{line}</div>
       <button type="button" className="hy-btn bot-toggle" aria-expanded={open} aria-controls={id + '-d'} onClick={onToggle}>{open ? '收合' : '展開'}</button>
@@ -56,7 +60,7 @@ function Card({ h, d, loaded, open, onToggle }) {
             {status === 'you' && <Link to="/bot-office" className="hy-btn is-primary">去確認</Link>}
             <Link to="/bot-office" className="hy-btn">專案</Link>
             {h.board && <Link to={h.board} className="hy-btn">待辦</Link>}
-            <Link to={`/agent/${h.persona}`} className="hy-btn">人設與記憶</Link>
+            {h.persona && <Link to={`/agent/${h.persona}`} className="hy-btn">人設與記憶</Link>}
           </div>
         </div>
       )}
@@ -67,8 +71,10 @@ function Card({ h, d, loaded, open, onToggle }) {
 export default function BotRosterCards({ roster }) {
   const [open, setOpen] = useState(readOpen)
   const set = next => { setOpen(next); writeOpen(next) }
-  const allOpen = HELPERS.every(h => open[h.id])
-  const toggleAll = () => set(Object.fromEntries(HELPERS.map(h => [h.id, !allOpen])))
+  const ids = armyCardIds()
+  const allOpen = ids.every(id => open[id])
+  const toggleAll = () => set(Object.fromEntries(ids.map(id => [id, !allOpen])))
+  const toggle = id => set({ ...open, [id]: !open[id] })
   return (
     <div className="hy-stack">
       <div className="bot-tools">
@@ -78,9 +84,17 @@ export default function BotRosterCards({ roster }) {
         </p>
         <button type="button" className="hy-btn" onClick={toggleAll}>{allOpen ? '全部收合' : '全部展開'}</button>
       </div>
-      <div className="bot-grid">
-        {HELPERS.map(h => (
-          <Card key={h.id} h={h} d={roster.bots[h.id]} loaded={roster.loaded} open={!!open[h.id]} onToggle={() => set({ ...open, [h.id]: !open[h.id] })} />
+      <div className="bot-columns">
+        {armyGroups().map(column => (
+          <div className="bot-column" key={column.lead.id} data-army-lead={column.lead.id}>
+            <Card h={column.lead} d={roster.bots[column.lead.id]} loaded={roster.loaded} open={!!open[column.lead.id]} onToggle={() => toggle(column.lead.id)} />
+            {column.members.map(member => member.id === 'atlas' ? (
+              <AtlasCard key="atlas" roster={roster} open={!!open.atlas} onToggle={() => toggle('atlas')} />
+            ) : (
+              <Card key={member.id} h={member} d={roster.bots[member.id]} loaded={roster.loaded} open={!!open[member.id]} onToggle={() => toggle(member.id)} />
+            ))}
+            {column.members.length === 0 && <p className="hy-note">目前沒有小組成員</p>}
+          </div>
         ))}
       </div>
     </div>

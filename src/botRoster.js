@@ -6,6 +6,7 @@
 // persona：人設與記憶頁（/agent/:id）的 id。source：待辦資料裡的 _source 標記。
 // ownerId：身份代號。只有 group === 'helper' 的 agent 會進專案歸屬與記憶；coach 的 ownerId 不進那些對照。
 // staticInfo：Life 島卡片只顯示 intro，不讀 Bot Office、待辦、記憶或 roster 狀態。
+// parent：只決定 AI 軍團頁排在哪位核心底下，不進 owner_bot、也不代表後端歸屬。
 export const ROSTER = [
   { id: 'hy', group: 'helper', name: 'HY', role: '個人核心・總管', post: '隱地島隊長', island: 'life', zone: 'dojo', kind: 'hy',
     agent: 'hy', persona: 'hy', source: 'HY', board: '/line/hy' },
@@ -15,21 +16,69 @@ export const ROSTER = [
     agent: 'family', persona: 'xiaoyin', source: '家庭', board: '/line/family' },
   { id: 'sam', group: 'helper', name: 'Sam', role: '副業統籌', post: '金融島隊長', island: 'side', zone: 'sidehq', kind: 'sam',
     agent: 'sam', persona: 'sam', source: 'Sam', board: '/line/sam' },
-  { id: 'atlas', group: 'coo', name: 'Atlas', role: '營運長 COO・系統維運（Grok bot）', post: '中央島營運長（COO）', island: 'central', zone: 'dispatch', kind: 'atlas', agent: null, board: null },
+  { id: 'atlas', group: 'coo', name: 'Atlas', role: '營運長 COO・系統維運（Grok bot）', post: '中央島營運長（COO）', island: 'central', zone: 'dispatch', kind: 'atlas', agent: null, board: null, parent: 'hy' },
   { id: 'claude', group: 'executor', name: 'Claude', role: 'AI 執行者', post: 'AI 執行者（Claude）', island: 'central', zone: 'dispatch', kind: 'claude', agent: null, board: null },
   { id: 'gpt', group: 'executor', name: 'GPT', role: 'AI 執行者', post: 'AI 執行者（GPT Chat，含工作）', island: 'central', zone: 'meeting', kind: 'gpt', agent: null, board: null },
   { id: 'grokbuild', group: 'executor', name: 'Grok Build', role: 'AI 執行者', post: 'AI 執行者（Grok Build 工作通道）', island: 'central', zone: 'syscenter', kind: 'grokbuild', agent: null, board: null },
-  // 約聘健身教練。沒有 Bot Office 專案，也不寫 HY OS 記憶。只出現在 Life 島，駐點是棲園島的健身房。
+  // 約聘健身教練。沒有 Bot Office 專案，也不寫 HY OS 記憶。島上駐點是棲園島的健身房；軍團頁排在小因下面。
   { id: 'wade', group: 'coach', name: 'Wade', role: '健身教練', post: '健身教練', island: 'family', zone: 'gym', kind: 'wade',
-    agent: null, persona: null, source: null, board: null, ownerId: 'fitness', staticInfo: true,
+    agent: null, persona: null, source: null, board: null, ownerId: 'fitness', staticInfo: true, parent: 'xiaoyin',
     intro: '使用者的專職健身教練，負責訓練課表、器材教學與進度追蹤。' },
-  // 島上身分介紹；沿用散步與跨島，不加入專案 owner、待辦或記憶。
+  // 島上身分介紹；沿用散步與跨島，不加入專案 owner、待辦或記憶。軍團頁排在 Sam 下面。
   { id: 'nana', group: 'resident', name: 'Nana', role: '川泱購物 CEO', post: '川泱購物 CEO', island: 'side', zone: 'chuan', kind: 'nana',
-    agent: null, persona: null, source: null, board: null, staticInfo: true,
+    agent: null, persona: null, source: null, board: null, staticInfo: true, parent: 'sam',
     intro: 'Nana 是川泱購物的 CEO。' },
+  // 英文小老師。不進專案 owner、待辦或記憶。島上站在隱地島既有的人生修練館旁，不另蓋建築。
+  { id: 'emma', group: 'tutor', name: 'Emma', role: '英文小老師', post: '英文小老師', island: 'life', zone: 'dojo', kind: 'emma',
+    agent: null, persona: null, source: null, board: null, staticInfo: true, parent: 'hy',
+    intro: '英文小老師，在隱地島人生修練館附近。' },
 ]
 
 export const HELPERS = ROSTER.filter(r => r.group === 'helper')
+// 四大核心就是現有的小幫手。軍團頁一欄一位，成員用 parent 掛在該欄下面。
+export const CORE_BOTS = HELPERS
 export const rosterById = id => ROSTER.find(r => r.id === id) || null
+
+export function armyGroups() {
+  return CORE_BOTS.map(lead => ({
+    lead,
+    members: ROSTER.filter(r => r.parent === lead.id),
+  }))
+}
+
+export function armyCardIds() {
+  return armyGroups().flatMap(group => [group.lead.id, ...group.members.map(member => member.id)])
+}
+
+const zeroOffice = () => ({ asks: 0, total: 0, running: 0, review: 0, hyDecision: 0, waiting: 0, done: 0 })
+
+// 軍團卡片的數字。有 Bot Office 歸屬就顯示那一份；沒有資料且已載入完，計數是 0，不留「—」。
+export function armyMemberView(person, { byAgent = {}, todos = {}, memory = null, loaded = false } = {}) {
+  const agent = person?.agent || null
+  const row = agent ? byAgent[agent] : null
+  if (row?.counts) {
+    return {
+      status: row.status || 'wait',
+      doing: row.doing || null,
+      office: { asks: row.asks || 0, ...row.counts },
+      todos: todos?.[agent] || (loaded ? { overdue: 0, today: 0 } : null),
+      memory: (memory && agent && memory[agent]) || null,
+    }
+  }
+  if (!loaded) return { status: 'wait', doing: null, office: null, todos: null, memory: null }
+  return {
+    status: 'wait',
+    doing: '名下還沒有專案',
+    office: zeroOffice(),
+    todos: { overdue: 0, today: 0 },
+    memory: null,
+  }
+}
+
+export function armyCountText(office, loaded) {
+  if (office) return `執行中 ${office.running}・待審 ${office.review}・完成 ${office.done}`
+  return loaded ? '—' : '讀取中…'
+}
+
 // 小人圖像（由 3D 模型渲染，放在 public/avatars/）
 export const avatarUrl = id => `${import.meta.env.BASE_URL}avatars/${id}.png`

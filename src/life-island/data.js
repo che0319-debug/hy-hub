@@ -164,7 +164,7 @@ export function figureFront(home, index, az = 0.62) {
 }
 
 // 名稱、角色、位置來自 src/botRoster.js（全站唯一名冊）。
-// 即時狀態由 useBotRoster 疊到小幫手與執行者；staticInfo 的角色（Wade）不疊，卡片只顯示介紹。
+// 即時狀態由 useBotRoster 疊到小幫手與執行者；staticInfo 的角色（Wade、Nana、Emma）不疊，卡片只顯示介紹。
 // status：wait / ai / you / done / bad。zone：平常活動的建築區。status 是 you 或 bad 的會停在原地等你。
 export const FIGURES = ROSTER.map(r => ({
   id: r.id, island: r.island, name: r.name, kind: r.kind, status: 'wait', zone: r.zone, role: r.post, board: r.board,
