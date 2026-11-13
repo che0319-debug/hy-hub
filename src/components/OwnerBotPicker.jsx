@@ -3,7 +3,7 @@ import { useState } from 'react'
 import '../../public/hy-ui/hy-ui.css'
 import { assignProjectOwnerBot } from '../botOfficeData'
 import { authHeaders, expireSession } from '../auth'
-import { ownerBotChoices, unownedProjects } from '../life-island/worldData'
+import { ownerBotChoices, ownerBotGroups, unownedProjects } from '../life-island/worldData'
 import { feedbackAfterReread, feedbackAfterSave } from '../lib/ownerBotUi.js'
 
 const choices = ownerBotChoices()
@@ -71,7 +71,12 @@ export default function OwnerBotPicker({ projects, onSaved, heading = true }) {
                   <span className="hy-note">負責 Bot</span>
                   <select className="owner-bot-select" aria-label={`${row.title} 負責 Bot`} value={draft[row.id] || ''} disabled={busy} style={selectStyle} onChange={e => { setDraft(prev => ({ ...prev, [row.id]: e.target.value })); patch(row.id, { notice: '' }) }}>
                     <option value="">請選擇</option>
-                    {choices.map(c => <option key={c.value} value={c.value}>{c.label}</option>)}
+                    {ownerBotGroups().map(group => (
+                      <optgroup key={group.lead.value} label={group.lead.label}>
+                        <option value={group.lead.value}>{group.lead.label}</option>
+                        {group.members.map(member => <option key={member.value} value={member.value}>{member.label}</option>)}
+                      </optgroup>
+                    ))}
                   </select>
                 </label>
                 <button type="button" className="hy-btn is-primary ao-primary" style={{ ...tap, flex: '1 1 8rem' }} disabled={!!busyId || !draft[row.id]} onClick={() => save(row)}>儲存</button>

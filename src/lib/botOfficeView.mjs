@@ -297,7 +297,7 @@ export function officeEvents(project) {
 
 // 會議室三區（HY 2026-10-31 定案）：第一區「待你處理」＝所有 open 的決策卡與補資料卡（同一層）；
 // 第三區「已結案」＝已回覆的卡。第一區的件數就是頁首「N 項待你處理」的件數。
-const OWNER_NAMES = { sam: 'Sam', family: '小因', '950157': '950157', hy: 'HY Bot' }
+const OWNER_NAMES = { sam: 'Sam', family: '小因', '950157': '950157', hy: 'HY Bot', english: 'Emma', fitness: 'Wade', nana: 'Nana' }
 export function decisionOwner(decision = {}, project = {}) {
   const id = [decision.createdBy, project.ownerBot].find(v => typeof v === 'string' && v.trim() && v.trim() !== 'hy-gui') || ''
   return id ? OWNER_NAMES[id] || id : '負責 Bot 待補'

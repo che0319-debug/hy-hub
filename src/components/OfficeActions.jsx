@@ -4,7 +4,8 @@ import { authHeaders, expireSession, getAccessToken } from '../auth'
 import { isHyOwnerSession } from '../lib/botOfficeView.mjs'
 import { openProjectBody } from '../lib/officeFlow.mjs'
 import { OFFICE_AI_CHOICES, officeAiConflict, seedOfficeAi } from '../lib/officeAiDefaults.mjs'
-const NAMES = {hy: 'HY', sam: 'Sam', family: '小因', '950157': '950157'}
+import { ownerBotChoices } from '../life-island/worldData'
+const NAMES = Object.fromEntries(ownerBotChoices().map(bot => [bot.value, bot.label]))
 const LABELS = {spec_change: '規格變更', message: '會議室留言', new_project: '新增專案', reassign: '改派'}
 const AI_LABELS = { 'grok-build': 'Grok Build', gpt: 'GPT', claude: 'Claude' }
 

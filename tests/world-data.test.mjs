@@ -1,8 +1,9 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { deriveOffice, deriveTodos, deriveRunners, deriveSummary, deriveAtlas, deriveAttention, todoMarker, RUNNER_FIG, LIVE_FIGS, OWNER_BOT_ORDER, ownerBotChoices, canonicalOwnerBot } from '../src/life-island/worldData.js'
+import { deriveOffice, deriveTodos, deriveRunners, deriveSummary, deriveAtlas, deriveAttention, todoMarker, RUNNER_FIG, LIVE_FIGS, OWNER_BOT_ORDER, ownerBotChoices, ownerBotGroups, matchesOwnerFilter, canonicalOwnerBot } from '../src/life-island/worldData.js'
 import { ROSTER, HELPERS } from '../src/botRoster.js'
-import { mapOffice } from '../src/botOfficeData.js'
+import { mapOffice, officeTeam } from '../src/botOfficeData.js'
+import { readFileSync } from 'node:fs'
 import { FIGURES, FAMILY_ISLAND, buildingWorld, figureHome, figureFront, islandBotCard } from '../src/life-island/data.js'
 import { BOT_COLORS, WADE_LOOK, LEADER_BADGE_COLOR, makeBot } from '../src/life-island/bots.js'
 import { MeshBasicMaterial } from 'three'
@@ -30,21 +31,23 @@ test('名冊：四位小幫手＋執行者、Atlas 與 Emma，id 不重複', () 
   assert.deepEqual(HELPERS.map(h => h.agent), ['hy', '950157', 'family', 'sam'])
 })
 
-test('Wade 在 Life 島名單，駐在健身房，不進 owner-bot，卡片不讀即時資料', () => {
+test('Wade 在 Life 島名單，駐在健身房，Office 身分是 fitness，卡片不讀即時資料', () => {
   const wade = ROSTER.find(r => r.id === 'wade')
   assert.ok(wade)
   assert.equal(wade.name, 'Wade')
   assert.equal(wade.ownerId, 'fitness')
   assert.equal(wade.role, '健身教練')
   assert.equal(wade.group, 'coach')
-  assert.equal(wade.agent, null)
+  assert.equal(wade.agent, 'fitness')
   assert.equal(wade.staticInfo, true)
   assert.equal(wade.parent, 'xiaoyin')
   assert.equal(HELPERS.some(h => h.id === 'wade' || h.agent === 'fitness' || h.ownerId === 'fitness'), false)
-  assert.equal(OWNER_BOT_ORDER.includes('fitness'), false)
+  assert.equal(OWNER_BOT_ORDER.includes('fitness'), true)
   assert.equal(OWNER_BOT_ORDER.includes('wade'), false)
-  assert.equal(ownerBotChoices().some(c => c.value === 'fitness' || c.value === 'wade' || c.label === 'Wade'), false)
-  assert.equal(canonicalOwnerBot('fitness'), '')
+  assert.equal(ownerBotChoices().some(c => c.value === 'fitness' && c.label === 'Wade'), true)
+  assert.equal(ownerBotChoices().some(c => c.value === 'wade'), false)
+  assert.equal(canonicalOwnerBot('fitness'), 'fitness')
+  assert.equal(canonicalOwnerBot('wade'), '')
   assert.equal(LIVE_FIGS.has('wade'), false)
   assert.equal(LIVE_FIGS.has('fitness'), false)
 
@@ -93,22 +96,26 @@ test('Wade 在 Life 島名單，駐在健身房，不進 owner-bot，卡片不�
   assert.equal(JSON.stringify(card).includes('載入'), false)
   assert.equal(JSON.stringify(card).includes('讀不到'), false)
 
-  const off = deriveOffice({ projects: [{ id: 'g', title: '課表', ownerBot: 'fitness', stage: 'running' }], decisions: [], totals: { pending: 0 } })
-  assert.equal(off.byAgent.fitness, undefined)
+  const off = deriveOffice({ projects: [{ id: 'g', title: '課表', ownerBot: 'fitness', stage: 'running' }, { id: 'fam', title: '家庭', ownerBot: 'family', stage: 'assigned' }], decisions: [], totals: { pending: 0 } })
+  assert.equal(off.byAgent.fitness.counts.running, 1)
+  assert.equal(off.byAgent.fitness.counts.total, 1)
+  assert.equal(off.byAgent.family.counts.running, 0)
+  assert.equal(off.byAgent.family.counts.waiting, 1)
   assert.equal(off.byAgent.wade, undefined)
-  assert.equal(off.unowned, 1)
+  assert.equal(off.unowned, 0)
+  assert.equal(officeTeam({ id: 'g', owner_bot: 'fitness' }).find(m => m.role === '負責 Bot').name, 'Wade')
 })
 
-test('Nana 只在島上介紹身分，駐點川泱且不接入任何工作歸屬', () => {
+test('Nana 島上只介紹身分，Office 身分是 nana，不算 Sam 的專案', () => {
   const nana = ROSTER.find(r => r.id === 'nana')
   const fig = FIGURES.find(f => f.id === 'nana')
   assert.equal(nana.post, '川泱購物 CEO')
-  assert.equal(nana.agent, null)
+  assert.equal(nana.agent, 'nana')
   assert.equal(nana.board, null)
   assert.equal(nana.parent, 'sam')
   assert.equal(HELPERS.includes(nana), false)
   assert.equal(LIVE_FIGS.has('nana'), false)
-  assert.equal(canonicalOwnerBot('nana'), '')
+  assert.equal(canonicalOwnerBot('nana'), 'nana')
   assert.equal(fig.island, 'side')
   assert.equal(fig.zone, 'chuan')
   assert.equal(fig.status, 'wait')
@@ -117,18 +124,21 @@ test('Nana 只在島上介紹身分，駐點川泱且不接入任何工作歸屬
   assert.deepEqual(islandBotCard(fig, live, false), {
     staticInfo: true, name: 'Nana', role: '川泱購物 CEO', intro: 'Nana 是川泱購物的 CEO。',
   })
-  const office = deriveOffice({ projects: [{ id: 'p-002', ownerBot: 'sam', stage: 'running' }], decisions: [], totals: { pending: 0 } })
+  const office = deriveOffice({ projects: [{ id: 'p-002', ownerBot: 'sam', stage: 'running' }, { id: 'ny', title: '川泱', ownerBot: 'nana', stage: 'review' }], decisions: [], totals: { pending: 0 } })
   assert.equal(office.byAgent.sam.counts.running, 1)
-  assert.equal(office.byAgent.nana, undefined)
+  assert.equal(office.byAgent.nana.counts.review, 1)
+  assert.equal(office.byAgent.nana.counts.running, 0)
+  assert.equal(office.unowned, 0)
+  assert.equal(officeTeam({ id: 'ny', owner_bot: 'nana' }).find(m => m.role === '負責 Bot').name, 'Nana')
 })
 
-test('Emma 在名冊與隱地島人生修練館旁，不進 owner_bot', () => {
+test('Emma 在名冊與隱地島人生修練館旁，Office 身分是 english', () => {
   const emma = ROSTER.find(r => r.id === 'emma')
   const fig = FIGURES.find(f => f.id === 'emma')
   assert.equal(emma.name, 'Emma')
   assert.equal(emma.role, '英文小老師')
   assert.equal(emma.group, 'tutor')
-  assert.equal(emma.agent, null)
+  assert.equal(emma.agent, 'english')
   assert.equal(emma.persona, null)
   assert.equal(emma.source, null)
   assert.equal(emma.board, null)
@@ -139,8 +149,11 @@ test('Emma 在名冊與隱地島人生修練館旁，不進 owner_bot', () => {
   assert.equal(emma.zone, 'dojo')
   assert.equal(HELPERS.some(h => h.id === 'emma'), false)
   assert.equal(OWNER_BOT_ORDER.includes('emma'), false)
-  assert.equal(ownerBotChoices().some(c => c.value === 'emma' || c.label === 'Emma'), false)
+  assert.equal(OWNER_BOT_ORDER.includes('english'), true)
+  assert.equal(ownerBotChoices().some(c => c.value === 'english' && c.label === 'Emma'), true)
+  assert.equal(ownerBotChoices().some(c => c.value === 'emma'), false)
   assert.equal(canonicalOwnerBot('emma'), '')
+  assert.equal(canonicalOwnerBot('english'), 'english')
   assert.equal(LIVE_FIGS.has('emma'), false)
   assert.equal(fig.kind, 'emma')
   assert.equal(fig.island, 'life')
@@ -151,9 +164,12 @@ test('Emma 在名冊與隱地島人生修練館旁，不進 owner_bot', () => {
   assert.deepEqual(islandBotCard(fig, live, false), {
     staticInfo: true, name: 'Emma', role: '英文小老師', intro: '英文小老師，在隱地島人生修練館附近。',
   })
-  const off = deriveOffice({ projects: [{ id: 'en', title: '英文課', ownerBot: 'emma', stage: 'running' }], decisions: [], totals: { pending: 0 } })
+  const off = deriveOffice({ projects: [{ id: 'en', title: '英文課', ownerBot: 'english', stage: 'running' }, { id: 'raw', title: '名冊 id 不是身分', ownerBot: 'emma', stage: 'running' }], decisions: [], totals: { pending: 0 } })
+  assert.equal(off.byAgent.english.counts.running, 1)
+  assert.equal(off.byAgent.hy.counts.total, 0)
   assert.equal(off.byAgent.emma, undefined)
   assert.equal(off.unowned, 1)
+  assert.equal(officeTeam({ id: 'en', owner_bot: 'english' }).find(m => m.role === '負責 Bot').name, 'Emma')
   assert.equal(BOT_COLORS.emma, 0x000000)
   assert.equal(BOT_COLORS.emma, BOT_COLORS.hy)
   const mat = new MeshBasicMaterial()
@@ -231,6 +247,34 @@ test('deriveOffice：只剩等你的執行中專案改計入待你決定', () =>
   assert.equal(row.status, 'you')
   assert.match(row.doing, /^執行中 1/)
   assert.doesNotMatch(row.doing, /執行中 2/)
+})
+
+test('負責 Bot 篩選依核心分組，選核心不含組員', () => {
+  const groups = ownerBotGroups()
+  assert.deepEqual(groups.map(group => [group.lead.value, group.members.map(member => member.value)]), [
+    ['sam', ['nana']],
+    ['family', ['fitness']],
+    ['950157', []],
+    ['hy', ['english']],
+  ])
+  assert.deepEqual(groups.map(group => [group.lead.label, group.members.map(member => member.label)]), [
+    ['Sam', ['Nana']],
+    ['小因', ['Wade']],
+    ['950157', []],
+    ['HY', ['Emma']],
+  ])
+  assert.equal(groups.some(group => group.lead.value === 'atlas' || group.members.some(member => member.value === 'atlas')), false)
+  assert.equal(matchesOwnerFilter('english', 'hy'), false)
+  assert.equal(matchesOwnerFilter('hy', 'hy'), true)
+  assert.equal(matchesOwnerFilter('fitness', 'family'), false)
+  assert.equal(matchesOwnerFilter('nana', 'sam'), false)
+  assert.equal(matchesOwnerFilter('nana', 'nana'), true)
+  assert.equal(matchesOwnerFilter('english', 'all'), true)
+  const home = readFileSync(new URL('../src/pages/OfficeHome.jsx', import.meta.url), 'utf8')
+  assert.match(home, /ownerBotGroups\(\)/)
+  assert.match(home, /matchesOwnerFilter\(ownerOf\(p\), bot\)/)
+  assert.match(home, /ao-owner-group/)
+  assert.doesNotMatch(home, /atlas/i)
 })
 
 test('deriveOffice：沒有資料就是空，不編造', () => {

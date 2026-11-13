@@ -57,7 +57,7 @@ export function useBotRoster(info) {
   // 以小人 id 為 key。沒有資料的欄位是 null，由畫面顯示「—」。
   const bots = useMemo(() => {
     const out = { atlas }
-    // 只掛小幫手的即時專案。Wade、Nana、Emma 沒有 agent，不進 deriveOffice。
+    // 四大核心的即時專案、待辦與記憶。組員的 Office 計數由下面的 armyMemberView 讀自己的 agent。
     for (const h of HELPERS) {
       const o = off.byAgent[h.agent]
       out[h.id] = {

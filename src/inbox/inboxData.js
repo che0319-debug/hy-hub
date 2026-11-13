@@ -10,9 +10,9 @@ export { isOfficeHealthItem, kanbanTodosForOffice, kanbanTodosForProject, linked
 export const INBOX_KINDS = [['decide', '待我處理'], ['problem', '問題回報'], ['overdue', '過期'], ['today', '今日任務']]
 // Bot Office「待你處理」的屬性。前四種是 Office 卡片；問題與待辦來自巡檢和看板。
 export const INBOX_CATEGORIES = [['approval', '核示'], ['data', '確認資料'], ['suggestion', '建議'], ['report', '報告'], ['problem', '問題'], ['todo', '待辦']]
-export const INBOX_OWNERS = [['hy', 'HY'], ['sam', 'Sam'], ['family', '小因'], ['950157', '950157'], ['atlas', 'Atlas']]
-// 名冊 id → Office owner_bot id
-const OWNER_OF_ROSTER = { hy: 'hy', sam: 'sam', xiaoyin: 'family', p950157: '950157', atlas: 'atlas' }
+export const INBOX_OWNERS = [['hy', 'HY'], ['english', 'Emma'], ['sam', 'Sam'], ['nana', 'Nana'], ['family', '小因'], ['fitness', 'Wade'], ['950157', '950157'], ['atlas', 'Atlas']]
+// 名冊 id → 篩選用的 owner。Atlas 仍是問題來源，不是 Office owner_bot。
+const OWNER_OF_ROSTER = { hy: 'hy', sam: 'sam', xiaoyin: 'family', p950157: '950157', atlas: 'atlas', emma: 'english', wade: 'fitness', nana: 'nana' }
 const OFFICE_CATEGORIES = new Set(['approval', 'data', 'suggestion', 'report'])
 export function decisionCategory(d) {
   if (d && OFFICE_CATEGORIES.has(d.category)) return d.category

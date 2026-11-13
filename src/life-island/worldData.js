@@ -1,7 +1,7 @@
 // 小人資料的轉換層：純函式，不碰網路也不碰畫面。
 // 來源：Bot Office（專案與決策，由 Atlas 寫入）、首頁待辦、memory-health。
 // 「我的小幫手」分頁與 3D 世界都讀這裡整理好的格式；後端欄位改了只要改這裡。
-import { HELPERS } from '../botRoster.js'
+import { HELPERS, ROSTER } from '../botRoster.js'
 import { freshness } from '../lib/memoryFreshness.js'
 import { shownStage } from '../lib/officeFlow.mjs'
 
@@ -11,12 +11,34 @@ const normDue = due => (due ? String(due).replace(/\//g, '-') : '')
 
 // ---- 小幫手：Bot Office ----
 // 狀態與 Bot Office 一致：有待你決定的 → 待你確認（橘）；專案執行中／待審 → AI 執行中（藍）；其他 → 等待（灰）。
-// 專案歸屬看 owner_bot（hy／950157／family／sam）；沒有歸屬的專案不算在任何一位身上，另外回報 unowned。
-// 選單順序：Sam、小因、950157、HY。名稱跟 botRoster 的小幫手一致。
-export const OWNER_BOT_ORDER = ['sam', 'family', '950157', 'hy']
+// 專案歸屬看 owner_bot。核心四位各自一組，組員緊接在自己的核心後面。
+// 選核心只對到該核心的卡，不含組員；要看成員就選該成員。沒有歸屬的專案另外回報 unowned。
+// Atlas 沒有 Office 身分，不進這份名單。
+export const OWNER_BOT_GROUPS = [
+  { lead: 'sam', members: ['nana'] },
+  { lead: 'family', members: ['fitness'] },
+  { lead: '950157', members: [] },
+  { lead: 'hy', members: ['english'] },
+]
+export const OWNER_BOT_ORDER = OWNER_BOT_GROUPS.flatMap(group => [group.lead, ...group.members])
+
+function ownerLabel(agent) {
+  return ROSTER.find(person => person.agent === agent)?.name || agent
+}
 
 export function ownerBotChoices() {
-  return OWNER_BOT_ORDER.map(agent => ({ value: agent, label: HELPERS.find(h => h.agent === agent)?.name || agent }))
+  return OWNER_BOT_ORDER.map(agent => ({ value: agent, label: ownerLabel(agent) }))
+}
+
+export function ownerBotGroups() {
+  return OWNER_BOT_GROUPS.map(group => ({
+    lead: { value: group.lead, label: ownerLabel(group.lead) },
+    members: group.members.map(agent => ({ value: agent, label: ownerLabel(agent) })),
+  }))
+}
+
+export function matchesOwnerFilter(ownerBot, selected) {
+  return selected === 'all' || ownerBot === selected
 }
 
 export function canonicalOwnerBot(value) {
@@ -39,8 +61,8 @@ export function deriveOffice(office) {
   const byAgent = {}
   if (!office) return { byAgent, pending: null, unowned: 0 }
   const projects = office.projects || [], decisions = office.decisions || []
-  for (const h of HELPERS) {
-    const mine = projects.filter(p => p.ownerBot === h.agent)
+  for (const agent of OWNER_BOT_ORDER) {
+    const mine = projects.filter(p => p.ownerBot === agent)
     const ids = new Set(mine.map(p => p.id))
     const n = stage => mine.filter(p => shownStage(p) === stage).length
     // 只有 5 種階段；顯示狀態已在 mapOffice 換算過。waiting＝規劃中。
@@ -48,7 +70,7 @@ export function deriveOffice(office) {
     const asks = decisions.filter(d => ids.has(d.projectId)).length
     const active = counts.running + counts.review
     const first = mine.find(p => shownStage(p) === 'running') || mine.find(p => shownStage(p) === 'review')
-    byAgent[h.agent] = {
+    byAgent[agent] = {
       status: asks > 0 || counts.hyDecision > 0 ? 'you' : active > 0 ? 'ai' : 'wait',
       asks, counts,
       doing: active ? `${[counts.running && `執行中 ${counts.running}`, counts.review && `待審 ${counts.review}`].filter(Boolean).join('・')}${first ? `：${clip(first.title, 24)}` : ''}`
