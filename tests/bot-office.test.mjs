@@ -402,3 +402,19 @@ test('Bot Office home uses only the five stage names; no returned-count badge an
     assert.doesNotMatch(src, /被退回|退回次數|退回 \{|returnedCount/, file)
   }
 })
+
+test('closure approval cards say 結案 and 退回; other flow approvals keep 核准 and 退回（附意見）', () => {
+  const src = readFileSync(new URL('../src/components/OfficeDecisions.jsx', import.meta.url), 'utf8')
+  const start = src.indexOf("!item.questions.length && item.kind === 'approval'")
+  const end = src.indexOf('item.history', start)
+  assert.ok(start > 0 && end > start)
+  const toolbar = src.slice(start, end)
+  // 結案卡主按鈕是「結案」，action 仍是 approve；退回仍在沒有意見時停用。
+  assert.match(toolbar, /onClick=\{\(\) => submit\('approve'\)\}>\{item\.flow\?\.kind === 'closure' \? '結案' : '核准'\}/)
+  assert.match(toolbar, /disabled=\{disabled \|\| !feedback\.trim\(\)\} onClick=\{\(\) => submit\('return'\)\}>\{item\.flow\?\.kind === 'closure' \? '退回' : '退回（附意見）'\}/)
+  assert.match(toolbar, />退回修改</)
+  assert.doesNotMatch(toolbar, /submit\('approve'\)\}>核准</)
+  assert.doesNotMatch(toolbar, /submit\('approve'\)\}>結案</)
+  assert.doesNotMatch(toolbar, /submit\('return'\)\}>退回</)
+  assert.doesNotMatch(toolbar, /submit\('return'\)\}>退回（附意見）</)
+})
