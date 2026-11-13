@@ -24,7 +24,7 @@ const when = value => {
   return value && !Number.isNaN(date.getTime()) ? date.toLocaleString('zh-TW', { timeZone: 'Asia/Taipei', hour12: false }) : '尚未提供'
 }
 
-export const OFFICE_NAMES = {hy: 'HY Bot', sam: 'Sam', family: '小因', '950157': '950157', 'grok-build': 'Grok Build', claude: 'Claude', gpt: 'GPT'}
+export const OFFICE_NAMES = {hy: 'HY Bot', sam: 'Sam', family: '小因', '950157': '950157', english: 'Emma', fitness: 'Wade', nana: 'Nana', 'grok-build': 'Grok Build', claude: 'Claude', gpt: 'GPT'}
 
 export function officeTeam(building, figures = []) {
   const names = new Map(array(figures).filter(f => f && f.id && f.name).map(f => [f.id, text(f.name)]))

@@ -68,9 +68,12 @@ test('未指定 owner 的專案含 done，有效 owner 排除，怪值當成空'
   assert.equal(deriveOffice(office).unowned, rows.length)
   assert.deepEqual(ownerBotChoices(), [
     { value: 'sam', label: 'Sam' },
+    { value: 'nana', label: 'Nana' },
     { value: 'family', label: '小因' },
+    { value: 'fitness', label: 'Wade' },
     { value: '950157', label: '950157' },
     { value: 'hy', label: 'HY' },
+    { value: 'english', label: 'Emma' },
   ])
   assert.deepEqual(unownedProjects(null), [])
 })

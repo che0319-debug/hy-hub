@@ -3,12 +3,11 @@ import {activityLabel, progress} from '../lib/aiOffice.mjs'
 import {shownStage} from '../lib/officeFlow.mjs'
 import {listedPendingTotal, openApprovalCount, pendingLabel, sortByPending} from '../lib/officeHomeList.mjs'
 import {PROJECT_STAGES} from '../lib/projectStages.mjs'
-import {ownerBotChoices} from '../life-island/worldData'
+import {matchesOwnerFilter, ownerBotChoices, ownerBotGroups} from '../life-island/worldData'
 
 // 統計卡與篩選只用 5 種專案階段的名稱（規劃中／待你決定／執行中／待審／完成），不用同義詞。
 // 「待你決定」是整份專案列表上「待你核示 N 則」的總和，不跟搜尋或篩選一起變，也不含沒掛專案的舊核示。
 const FILTERS=[['all','全部'],...PROJECT_STAGES.map(s=>[s.key,s.label])]
-const BOTS=[['all','全部'],...ownerBotChoices().map(bot=>[bot.value,bot.label])]
 const OWNER=Object.fromEntries(ownerBotChoices().map(bot=>[bot.value,bot.label]))
 const date=value=>value?new Date(value*1000).toLocaleString('zh-TW',{hour12:false}):'尚未記錄'
 
@@ -19,7 +18,7 @@ export default function OfficeHome({projects,details,inbox=[],loaded,error,creat
   const inStage=key=>projects.filter(p=>shownStage(p)===key).length
   const stageCount=key=>key==='hy_decision'?listedPendingTotal(projects,inbox):inStage(key)
   const ownerOf=p=>p.owner_bot||p.ownerBot||''
-  const match=p=>(filter==='all'||shownStage(p)===filter)&&(bot==='all'||ownerOf(p)===bot)
+  const match=p=>(filter==='all'||shownStage(p)===filter)&&matchesOwnerFilter(ownerOf(p), bot)
   const countOf=p=>{const detail=details[p.id];return progressOf?progressOf(p,detail):(detail?progress(detail):null)}
   const visible=sortByPending(projects.filter(p=>(!query.trim() || `${p.title} ${p.goal || ''}`.toLowerCase().includes(query.trim().toLowerCase())) && match(p)), p=>pending(p.id))
   const ready=loaded&&!error
@@ -34,7 +33,7 @@ export default function OfficeHome({projects,details,inbox=[],loaded,error,creat
     {registry}
     <div className="ao-home-controls">
       <input type="search" aria-label="搜尋專案" placeholder="搜尋專案名稱或目標" value={query} onChange={e=>setQuery(e.target.value)}/>
-      <div className="ao-filter-row"><span>負責 Bot</span><div className="ao-chips" role="group" aria-label="負責 Bot">{BOTS.map(([key,label])=><button key={key} type="button" aria-pressed={key===bot} onClick={()=>setBot(key)}>{label}</button>)}</div></div>
+      <div className="ao-filter-row"><span>負責 Bot</span><div className="ao-chips ao-owner-filters" role="group" aria-label="負責 Bot"><button type="button" aria-pressed={bot==='all'} onClick={()=>setBot('all')}>全部</button>{ownerBotGroups().map(group=><span className="ao-owner-group" key={group.lead.value}><button type="button" aria-pressed={bot===group.lead.value} onClick={()=>setBot(group.lead.value)}>{group.lead.label}</button>{group.members.length>0&&<span className="ao-owner-members">{group.members.map(member=><button key={member.value} type="button" aria-pressed={bot===member.value} onClick={()=>setBot(member.value)}>{member.label}</button>)}</span>}</span>)}</div></div>
       <div className="ao-filter-row"><span>屬性</span><div className="ao-chips" role="group" aria-label="屬性">{FILTERS.map(([key,label])=><button key={key} type="button" aria-pressed={key===filter} onClick={()=>setFilter(key)}>{label}</button>)}</div></div>
     </div>
     {!loaded&&<p role="status">正在讀取正式專案…</p>}

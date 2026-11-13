@@ -1,6 +1,6 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { buildInbox, inboxCounts } from '../src/inbox/inboxData.js'
+import { buildInbox, inboxCounts, INBOX_OWNERS, filterInbox } from '../src/inbox/inboxData.js'
 
 const bots = {
   atlas: { status: 'bad', attention: [{ level: 'bad', text: '專案歸屬：1 個專案沒有指定 owner_bot', go: 'office' }] },
@@ -31,6 +31,21 @@ test('資料還沒載入（null）時不產生卡片，也不出錯', () => {
   const items = buildInbox({ ...base, todos: null, sched: null, decisions: [], bots: {} })
   assert.equal(items.length, 0)
   assert.equal(inboxCounts(items).total, 0)
+})
+
+test('Inbox 負責 Bot 含 Emma、Wade、Nana，Atlas 仍只是問題來源', () => {
+  assert.deepEqual(INBOX_OWNERS, [
+    ['hy', 'HY'], ['english', 'Emma'], ['sam', 'Sam'], ['nana', 'Nana'],
+    ['family', '小因'], ['fitness', 'Wade'], ['950157', '950157'], ['atlas', 'Atlas'],
+  ])
+  const items = buildInbox({
+    decisions: [{ id: 'd-en', title: '英文課時間？', projectId: 'p-en', ownerBot: 'english', category: 'approval' }],
+    projects: [{ id: 'p-en', title: '英文課', ownerBot: 'english' }],
+    bots: {},
+  })
+  assert.deepEqual(filterInbox(items, { owner: 'english' }).map(item => item.id), ['bo:d-en'])
+  assert.deepEqual(filterInbox(items, { owner: 'hy' }), [])
+  assert.equal(filterInbox(buildInbox(base), { owner: 'atlas' })[0].source, 'Atlas')
 })
 
 test('待你處理：每張卡都有負責 Bot 與屬性，可依兩者篩選', async () => {

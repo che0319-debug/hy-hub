@@ -7,6 +7,8 @@ const font=fs.readFileSync(path.join(fontDir,'400.css'),'utf8').replace(/url\(([
 // 含兩個已停用的舊值：unassigned（沒有負責 Bot → 狀態待確認）與 returned（讀成規劃中）。
 const stages=['unassigned','assigned','running','review','hy_decision','done','returned'];
 const state={updated:'2026-10-24T14:30:00+08:00',islands:[{id:'company',name:'公司'}],buildings:stages.map((stage,i)=>({id:'p'+i,title:['品牌落地','技術簡報','家庭安排','健康課表','年度方向','研究整理','包裝修訂'][i],island:'company',stage,executor:'grok-build'})),decisions:[{id:'d1',ref:'p4',status:'open',title:'確認年度方向',suggestion:'先完成驗收，再安排下一階段。'},{id:'d2',ref:'p0',status:'answered',title:'不應顯示'}]};
+state.buildings[1].owner_bot='sam';
+state.buildings[2].owner_bot='nana';
 const index={updated:state.updated,cards:state.buildings.flatMap(p=>['decision','meeting','execution','output','log'].map(type=>({id:p.id+type,project:p.id,type,title:p.title+'・'+type,summary:'先核對方向與範圍，再整理工作摘要。完整內容請查看 Drive 原件。',drive_url:'https://drive.google.com/file/d/example/view',date:'2026-10-24'})))};
 (async()=>{let reports=[];
 for(const spec of [{name:'desktop',width:1280,height:900},{name:'mobile',width:390,height:844},{name:'index-empty',width:390,height:844,indexMissing:true},{name:'empty',width:390,height:844,status:404},{name:'unauthorized',width:1280,height:900,status:401},{name:'stale',width:1280,height:900,stale:true},{name:'delete-rules',width:1280,height:900,hy:true,delete:{mode:'null'}}]){
@@ -24,7 +26,27 @@ for(const spec of [{name:'desktop',width:1280,height:900},{name:'mobile',width:3
   const chips=await page.locator('[aria-label="屬性"] button').allTextContents();
   assert.deepEqual(chips,['全部','規劃中','待你決定','執行中','待審','完成']);
   const bots=await page.locator('[aria-label="負責 Bot"] button').allTextContents();
-  assert.deepEqual(bots,['全部','Sam','小因','950157','HY']);
+  assert.deepEqual(bots,['全部','Sam','Nana','小因','Wade','950157','HY','Emma']);
+  const groups=await page.locator('.ao-owner-group').evaluateAll(els=>els.map(el=>({
+    lead:el.querySelector(':scope > button').textContent,
+    members:[...el.querySelectorAll('.ao-owner-members button')].map(b=>b.textContent),
+  })));
+  assert.deepEqual(groups,[
+    {lead:'Sam',members:['Nana']},
+    {lead:'小因',members:['Wade']},
+    {lead:'950157',members:[]},
+    {lead:'HY',members:['Emma']},
+  ]);
+  assert.equal(await page.locator('[aria-label="負責 Bot"]').getByRole('button',{name:'Atlas',exact:true}).count(),0);
+  const botGroup=page.getByRole('group',{name:'負責 Bot'});
+  await botGroup.getByRole('button',{name:'Sam',exact:true}).click();
+  await page.getByRole('button').filter({hasText:'技術簡報'}).waitFor();
+  assert.equal(await page.getByRole('button').filter({hasText:'家庭安排'}).count(),0);
+  await botGroup.getByRole('button',{name:'Nana',exact:true}).click();
+  await page.getByRole('button').filter({hasText:'家庭安排'}).waitFor();
+  assert.equal(await page.getByRole('button').filter({hasText:'技術簡報'}).count(),0);
+  await botGroup.getByRole('button',{name:'全部',exact:true}).click();
+  await page.getByRole('button').filter({hasText:'技術簡報'}).waitFor();
   assert.equal(await page.locator('#office-inbox').count(),0);
   const body=await page.locator('.ao-home').innerText();
   for(const word of ['待派','已派','退回','進行中','已完成','待 HY 決定','執行中專案'])assert(!body.includes(word),'old stage word '+word);

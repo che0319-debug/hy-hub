@@ -3,7 +3,7 @@ import { answerOfficeDecision } from '../botOfficeData'
 import { authHeaders, expireSession } from '../auth'
 import { closedLabel, decisionOwner, waitingLabel } from '../lib/botOfficeView.mjs'
 import { verdictLabel } from '../lib/officeFlow.mjs'
-const NAMES = { sam: 'Sam', family: '小因', '950157': '950157', hy: 'HY Bot' }
+const NAMES = { sam: 'Sam', family: '小因', '950157': '950157', hy: 'HY Bot', english: 'Emma', fitness: 'Wade', nana: 'Nana' }
 const CONFIDENCE = { high: '高', medium: '中', low: '低' }
 // 小案卡的標籤用屬性名稱（核示／確認資料／建議／報告）。
 const ITEM_TAG = { approval: '核示', data: '確認資料', suggestion: '建議', report: '報告' }
