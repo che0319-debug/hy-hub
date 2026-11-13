@@ -4,7 +4,7 @@ import { deriveOffice, deriveTodos, deriveRunners, deriveSummary, deriveAttentio
 import { ROSTER, HELPERS } from '../src/botRoster.js'
 import { mapOffice } from '../src/botOfficeData.js'
 import { FIGURES, FAMILY_ISLAND, buildingWorld, figureHome, figureFront, islandBotCard } from '../src/life-island/data.js'
-import { BOT_COLORS, WADE_LOOK, makeBot } from '../src/life-island/bots.js'
+import { BOT_COLORS, WADE_LOOK, LEADER_BADGE_COLOR, makeBot } from '../src/life-island/bots.js'
 import { MeshBasicMaterial } from 'three'
 
 const office = mapOffice({
@@ -20,12 +20,13 @@ const office = mapOffice({
   decisions: [{ id: 'd1', project: 'c', status: 'open', title: '要不要補件', kind: 'approval', questions: [] }],
 }, { cards: [] })
 
-test('名冊：四位小幫手＋執行者與 Atlas，id 不重複', () => {
+test('名冊：四位小幫手＋執行者、Atlas 與 Emma，id 不重複', () => {
   assert.equal(HELPERS.length, 4)
   assert.equal(ROSTER.filter(r => r.group === 'executor').length, 3)
   assert.equal(ROSTER.filter(r => r.group === 'coo').length, 1)
-  assert.equal(ROSTER.length, 10)
-  assert.equal(new Set(ROSTER.map(r => r.id)).size, 10)
+  assert.equal(ROSTER.filter(r => r.group === 'tutor').length, 1)
+  assert.equal(ROSTER.length, 11)
+  assert.equal(new Set(ROSTER.map(r => r.id)).size, 11)
   assert.deepEqual(HELPERS.map(h => h.agent), ['hy', '950157', 'family', 'sam'])
 })
 
@@ -38,6 +39,7 @@ test('Wade 在 Life 島名單，駐在健身房，不進 owner-bot，卡片不�
   assert.equal(wade.group, 'coach')
   assert.equal(wade.agent, null)
   assert.equal(wade.staticInfo, true)
+  assert.equal(wade.parent, 'xiaoyin')
   assert.equal(HELPERS.some(h => h.id === 'wade' || h.agent === 'fitness' || h.ownerId === 'fitness'), false)
   assert.equal(OWNER_BOT_ORDER.includes('fitness'), false)
   assert.equal(OWNER_BOT_ORDER.includes('wade'), false)
@@ -103,6 +105,7 @@ test('Nana 只在島上介紹身分，駐點川泱且不接入任何工作歸屬
   assert.equal(nana.post, '川泱購物 CEO')
   assert.equal(nana.agent, null)
   assert.equal(nana.board, null)
+  assert.equal(nana.parent, 'sam')
   assert.equal(HELPERS.includes(nana), false)
   assert.equal(LIVE_FIGS.has('nana'), false)
   assert.equal(canonicalOwnerBot('nana'), '')
@@ -117,6 +120,65 @@ test('Nana 只在島上介紹身分，駐點川泱且不接入任何工作歸屬
   const office = deriveOffice({ projects: [{ id: 'p-002', ownerBot: 'sam', stage: 'running' }], decisions: [], totals: { pending: 0 } })
   assert.equal(office.byAgent.sam.counts.running, 1)
   assert.equal(office.byAgent.nana, undefined)
+})
+
+test('Emma 在名冊與隱地島人生修練館旁，不進 owner_bot', () => {
+  const emma = ROSTER.find(r => r.id === 'emma')
+  const fig = FIGURES.find(f => f.id === 'emma')
+  assert.equal(emma.name, 'Emma')
+  assert.equal(emma.role, '英文小老師')
+  assert.equal(emma.group, 'tutor')
+  assert.equal(emma.agent, null)
+  assert.equal(emma.persona, null)
+  assert.equal(emma.source, null)
+  assert.equal(emma.board, null)
+  assert.equal(emma.ownerId, undefined)
+  assert.equal(emma.staticInfo, true)
+  assert.equal(emma.parent, 'hy')
+  assert.equal(emma.island, 'life')
+  assert.equal(emma.zone, 'dojo')
+  assert.equal(HELPERS.some(h => h.id === 'emma'), false)
+  assert.equal(OWNER_BOT_ORDER.includes('emma'), false)
+  assert.equal(ownerBotChoices().some(c => c.value === 'emma' || c.label === 'Emma'), false)
+  assert.equal(canonicalOwnerBot('emma'), '')
+  assert.equal(LIVE_FIGS.has('emma'), false)
+  assert.equal(fig.kind, 'emma')
+  assert.equal(fig.island, 'life')
+  assert.equal(fig.zone, 'dojo')
+  assert.equal(fig.staticInfo, true)
+  assert.deepEqual(figureHome(fig), buildingWorld('life', 'dojo'))
+  const live = new Proxy({}, { get() { throw new Error('Emma must not read live data') } })
+  assert.deepEqual(islandBotCard(fig, live, false), {
+    staticInfo: true, name: 'Emma', role: '英文小老師', intro: '英文小老師，在隱地島人生修練館附近。',
+  })
+  const off = deriveOffice({ projects: [{ id: 'en', title: '英文課', ownerBot: 'emma', stage: 'running' }], decisions: [], totals: { pending: 0 } })
+  assert.equal(off.byAgent.emma, undefined)
+  assert.equal(off.unowned, 1)
+  assert.equal(BOT_COLORS.emma, 0x000000)
+  assert.equal(BOT_COLORS.emma, BOT_COLORS.hy)
+  const mat = new MeshBasicMaterial()
+  const mesh = makeBot('emma', mat, null, 'wait')
+  assert.equal(mesh.kind, 'emma')
+  mesh.root.traverse(o => { if (o.geometry) o.geometry.dispose(); if (o.material && o.material !== mat) o.material.dispose() })
+  mat.dispose()
+})
+
+test('HY 隊長徽章是藍點，不是 Sam 的橘', () => {
+  assert.equal(LEADER_BADGE_COLOR, 0x2d85f7)
+  assert.notEqual(LEADER_BADGE_COLOR, BOT_COLORS.sam)
+  const mat = new MeshBasicMaterial()
+  const bot = makeBot('hy', mat, null, 'wait')
+  const col = bot.mesh.geometry.attributes.color.array
+  let blue = 0, orange = 0
+  for (let i = 0; i < col.length; i += 3) {
+    const r = col[i], g = col[i + 1], b = col[i + 2]
+    if (b > 0.45 && b > r * 1.4 && r < 0.45) blue += 1
+    if (r > 0.7 && g > 0.35 && g < 0.8 && b < 0.3) orange += 1
+  }
+  assert.ok(blue > 10, `blue vertices ${blue}`)
+  assert.equal(orange, 0)
+  bot.root.traverse(o => { if (o.geometry) o.geometry.dispose(); if (o.material && o.material !== mat) o.material.dispose() })
+  mat.dispose()
 })
 
 test('所有名冊角色都可產生有效、可點選的 3D 模型', () => {

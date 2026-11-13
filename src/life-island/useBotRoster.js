@@ -5,7 +5,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { fetchMemoryHealth } from '../api'
 import { authHeaders } from '../auth'
 import { loadBotOffice } from '../botOfficeData'
-import { HELPERS } from '../botRoster'
+import { HELPERS, armyGroups, armyMemberView } from '../botRoster'
 import { deriveAtlas, deriveOffice, deriveSummary, deriveTodos } from './worldData'
 import { createLatestRead, readOfficeLatest } from '../lib/latestRead.js'
 
@@ -54,7 +54,7 @@ export function useBotRoster(info) {
     const out = {}
     const loadedAll = done.office || done.memory
     out.atlas = deriveAtlas({ office, officeEmpty, failed, todoFailed: !!info?.todoFailed, unowned: off.unowned, loaded: loadedAll })
-    // 只掛小幫手。Wade 是 coach、staticInfo，不在 HELPERS，所以不會讀他的專案、待辦或記憶。
+    // 只掛小幫手的即時專案。Wade、Nana、Emma 沒有 agent，不進 deriveOffice。
     for (const h of HELPERS) {
       const o = off.byAgent[h.agent]
       out[h.id] = {
@@ -64,6 +64,11 @@ export function useBotRoster(info) {
         todos: todos[h.agent] || null,
         memory: memory?.[h.agent] || null,
       }
+    }
+    // 軍團頁的組員（Atlas 走 deriveAtlas）。沒有 Office 資料時，載入完計數是 0。
+    for (const member of armyGroups().flatMap(group => group.members)) {
+      if (member.id === 'atlas') continue
+      out[member.id] = armyMemberView(member, { byAgent: off.byAgent, todos, memory, loaded: loadedAll })
     }
     return out
   }, [off, todos, memory, office, officeEmpty, failed, done, info?.todoFailed])
