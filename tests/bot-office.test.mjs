@@ -65,6 +65,32 @@ test('unknown stages and extra fields are tolerated, unsafe links are not active
 })
 
 
+test('bare project without plan, milestones or owner maps as a normal card', () => {
+  const out = mapOffice({
+    updated: state.updated,
+    buildings: [{ id: 'p-bare', title: '週六記帳時段', stage: 'assigned', revision: 0, milestones: [] }],
+    decisions: [{ id: 'd-bare', project: 'p-bare', status: 'open', title: '這週六要不要一起整理？', questions: [{ no: 1, q: '這週六要不要一起整理？' }] }],
+  }, { cards: [] })
+  const project = out.projects[0]
+  assert.equal(project.id, 'p-bare')
+  assert.equal(project.title, '週六記帳時段')
+  assert.equal(project.ownerBot, '')
+  assert.equal(project.planCard, null)
+  assert.equal(project.planUrl, null)
+  assert.equal(project.decisions.length, 1)
+  assert.equal(project.decisions[0].id, 'd-bare')
+  assert.equal(out.totals.needsYou, 1)
+  assert.equal(out.totals.all, 1)
+  assert.equal(out.items.length, 0)
+  const panels = readFileSync(new URL('../src/components/BotOfficePanels.jsx', import.meta.url), 'utf8')
+  assert.match(panels, /milestones\.length\?`\$\{done\}／\$\{milestones\.length\} 個里程碑完成`:'尚未提供'/)
+  assert.match(panels, /<Empty>里程碑尚未提供<\/Empty>/)
+  const page = readFileSync(new URL('../src/pages/BotOffice.jsx', import.meta.url), 'utf8')
+  assert.match(page, /progressEmpty="里程碑尚未提供"/)
+  assert.match(page, /shownMilestones\.length \? `\$\{headerCount\.done\}／\$\{shownMilestones\.length\}` : '尚未提供'/)
+  assert.doesNotMatch(page, /小案標籤/)
+})
+
 test('mapOffice keeps optional kanban_source and reads old closed light cards without making projects', () => {
   const out = mapOffice({
     ...state,

@@ -10,10 +10,12 @@ const mkState=()=>({updated:now,islands:[{id:'side',name:'副業'}],
  buildings:[
   {id:'p-clean',title:'包裝修訂',island:'side',stage:'assigned',owner_bot:'hy',goal:'沒有待決的包裝調整',revision:1},
   {id:'p-002',title:'川泱購物（PI 流程重跑）',island:'side',stage:'running',owner_bot:'sam',goal:'用 d-003 已確認的條件準備一間小規模嚴選店，第一年驗證流程',executor:'grok-build',revision:3,milestones:[{id:'M4',name:'點閱',step:'running',due:'2026-11-12'}]},
+  {id:'p-bare',title:'週六記帳時段',stage:'assigned',revision:0,milestones:[]},
  ],
  decisions:[
   {id:'d-old',project:'p-002',status:'answered',kind:'intake',authority:'owner_only',title:'銀角合作商家申請通過了嗎？',questions:[{no:1,q:'銀角合作商家申請通過了嗎？',answer:'還沒開通',answer_source:'hy'}]},
   {id:'d-proj',project:'p-002',status:'open',kind:'intake',authority:'owner_only',revision:0,created_by:'sam',owner_bot:'sam',title:'M4 延後到銀角開通後，新日期定哪天？',questions:[{no:1,q:'M4 延後到銀角開通後，新日期定哪天？',options:['11/26','12/3']}]},
+  {id:'d-bare',project:'p-bare',status:'open',kind:'intake',authority:'owner_only',revision:0,created_by:'hy',title:'這週六 06:00 記帳時段，要不要一起整理每月收支？',questions:[{no:1,q:'這週六 06:00 記帳時段，要不要一起整理每月收支？',options:['核准','不核准']}]},
   {id:'d-item',project:null,status:'closed',kind:'intake',authority:'owner_only',revision:2,created_by:'hy',owner_bot:'hy',category:'suggestion',source:'晨會',light:true,title:'週六 06:00 記帳時段一起整理每月收支與負債清單？',questions:[{no:1,q:'週六 06:00 記帳時段一起整理每月收支與負債清單？',answer:'核准'}]},
   {id:'d-open-light',project:null,status:'open',kind:'intake',authority:'owner_only',light:true,title:'未掛專案的舊卡不該出現',owner_bot:'hy',questions:[{no:1,q:'這張不該在列表'}]},
  ],logs:[],requests:[],figures:[]});
@@ -26,6 +28,7 @@ for(const spec of [{name:'1440',width:1440,height:900},{name:'390',width:390,hei
  await context.route('**/api/**',async route=>{const req=route.request(),u=new URL(req.url());const headers={'Content-Type':'application/json','X-Brain-Updated':state.updated};let data={},status=200;
   if(req.method()!=='GET'){writes.push([u.pathname,req.method()]);status=404}
   else if(u.pathname==='/api/office/state')data=state;else if(u.pathname==='/api/office/index')data={updated:now,cards:[]};
+  else if(/\/api\/office\/projects\/[^/]+\/report$/.test(u.pathname))data={exists:false};
   else if(u.pathname==='/api/950157-progress')data={projects:[{id:'APB',name:'A+ BP',office_project_id:'p-002',milestones:[{id:'m1',title:'展開甘特圖',due:'2026/11/11'}]}]};
   else if(u.pathname==='/api/personal-progress')data={projects:[]};
   else if(u.pathname==='/api/family-progress'||u.pathname==='/api/sam-progress')data={_kanban:{projects:[]}};
@@ -39,18 +42,25 @@ for(const spec of [{name:'1440',width:1440,height:900},{name:'390',width:390,hei
  await page.getByRole('heading',{name:'Bot Office',exact:true}).waitFor();
  assert.equal(await page.locator('#office-inbox').count(),0);
  assert.equal(await page.getByRole('heading',{name:'待你處理',exact:true}).count(),0);
- assert.equal(await page.getByText('週六 06:00 記帳時段').count(),0);
+ assert.equal(await page.getByText('週六 06:00 記帳時段一起整理每月收支與負債清單？').count(),0);
  assert.equal(await page.getByText('未掛專案的舊卡不該出現').count(),0);
  assert.equal(await page.getByText('小案',{exact:true}).count(),0);
  assert.equal(await page.getByText('專案歸屬').count(),0);
+ await page.getByRole('heading',{name:'尚未指定負責 Bot',exact:true}).waitFor();
  const lines=page.locator('.ao-project-line');
  await lines.first().waitFor();
- assert.equal(await lines.count(),2);
+ assert.equal(await lines.count(),3);
  assert.match(await lines.nth(0).innerText(),/川泱購物/);
  assert.match(await lines.nth(0).innerText(),/待你核示 1 則/);
- assert.doesNotMatch(await lines.nth(1).innerText(),/待你核示/);
+ assert.match(await lines.nth(1).innerText(),/週六記帳時段/);
+ assert.match(await lines.nth(1).innerText(),/待你核示 1 則/);
+ assert.match(await lines.nth(1).innerText(),/尚未指定/);
+ assert.equal(await lines.nth(1).locator('.ao-home-progress').evaluate(el=>el.textContent.trim()),'里程碑尚未提供');
+ assert.match(await lines.nth(2).innerText(),/包裝修訂/);
+ assert.doesNotMatch(await lines.nth(2).innerText(),/待你核示/);
+ assert.equal(await lines.nth(2).locator('.ao-home-progress').evaluate(el=>el.textContent.trim()),'里程碑尚未提供');
  const tiles=await page.locator('.ao-tile').evaluateAll(els=>els.map(e=>[e.querySelector('small').textContent,e.querySelector('strong').textContent]));
- assert.deepEqual(tiles,[['規劃中','1'],['待你決定','1'],['執行中','1'],['待審','0'],['完成','0'],['專案總數','2']]);
+ assert.deepEqual(tiles,[['規劃中','2'],['待你決定','2'],['執行中','1'],['待審','0'],['完成','0'],['專案總數','3']]);
  const pillSum=await page.locator('.ao-pending-pill').evaluateAll(els=>els.reduce((sum,el)=>{const m=el.textContent.match(/待你核示 (\d+) 則/);return sum+(m?Number(m[1]):0)},0));
  assert.equal(Number(tiles.find(([name])=>name==='待你決定')[1]), pillSum);
  const filters=await page.evaluate(()=>{
@@ -77,8 +87,23 @@ for(const spec of [{name:'1440',width:1440,height:900},{name:'390',width:390,hei
  assert.equal(await lines.count(),1);
  assert.match(await lines.first().innerText(),/川泱購物/);
  await page.getByRole('group',{name:'屬性'}).getByRole('button',{name:'全部',exact:true}).click();
- assert.equal(await lines.count(),2);
- await page.getByRole('button',{name:'待你核示 1 則',exact:true}).click();
+ assert.equal(await lines.count(),3);
+ await lines.nth(1).locator('.ao-project-open').click();
+ await page.getByRole('heading',{name:'週六記帳時段',level:1}).waitFor();
+ assert.equal(await page.getByText('小案',{exact:true}).count(),0);
+ assert.match(await page.locator('.ao-header-meta').innerText(),/里程碑\s+尚未提供/);
+ assert.match(await page.locator('.ao-goal').innerText(),/目標尚未記錄/);
+ const bareNav=page.getByRole('navigation',{name:'Bot Office 專案分頁'});
+ await bareNav.getByRole('button',{name:'報告',exact:true}).click();
+ assert.match(await page.getByLabel('專案即時摘要').innerText(),/進度\s+尚未提供/);
+ await page.getByText('里程碑尚未提供',{exact:true}).waitFor();
+ await page.getByText('正式規劃書尚未提供。',{exact:true}).waitFor();
+ await page.screenshot({path:`${out}/${spec.name}-bare-project.png`,fullPage:true});
+ await bareNav.getByRole('button',{name:/會議室/}).click();
+ await page.getByRole('heading',{name:'這週六 06:00 記帳時段，要不要一起整理每月收支？',exact:true}).waitFor();
+ await page.getByRole('button',{name:'‹ Bot Office',exact:true}).click();
+ await page.getByRole('heading',{name:'Bot Office',exact:true}).waitFor();
+ await page.getByRole('button',{name:'待你核示 1 則'}).first().click();
  await page.getByRole('heading',{name:'川泱購物（PI 流程重跑）',level:1}).waitFor();
  await page.getByRole('navigation',{name:'Bot Office 專案分頁'}).getByRole('button',{name:/會議室/}).waitFor();
  assert.equal(await page.getByRole('navigation',{name:'Bot Office 專案分頁'}).getByRole('button',{name:/會議室/}).getAttribute('aria-current'),'page');
@@ -102,7 +127,7 @@ for(const spec of [{name:'1440',width:1440,height:900},{name:'390',width:390,hei
  await summary.waitFor();
  await page.waitForFunction(()=>[...document.querySelectorAll('.office-summary strong')].every(e=>e.textContent!=='—'));
  const homeCards=await summary.locator('.office-stat').evaluateAll(els=>els.map(e=>[e.querySelector('.office-stat-copy>span').textContent,e.querySelector('strong').textContent]));
- assert.deepEqual(homeCards,[['規劃中','1'],['待你決定','1'],['執行中','1'],['待審','0'],['完成','0'],['專案總數','2']]);
+ assert.deepEqual(homeCards,[['規劃中','2'],['待你決定','2'],['執行中','1'],['待審','0'],['完成','0'],['專案總數','3']]);
  assert.equal(await page.getByText('未掛專案的舊卡不該出現').count(),0);
  assert.deepEqual(writes,[]);
  assert.deepEqual(errors,[]);

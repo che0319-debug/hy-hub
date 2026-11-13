@@ -323,13 +323,13 @@ export function OfficeUnifiedReport({project, report, documents, milestones=[], 
   <section className="ao-card" aria-label="專案即時摘要"><h2>目標與現況</h2><dl className="hy-kv">
    <dt>目標</dt><dd>{project.goal||project.source?.goal||'尚未提供'}</dd>
    <dt>現況</dt><dd>{project.displayLabel||project.stageLabel} · GPT 執行 · {project.ownerBot||'待指定 Bot'} 推進</dd>
-   <dt>進度</dt><dd>{done}／{milestones.length} 個里程碑完成</dd>
+   <dt>進度</dt><dd>{milestones.length?`${done}／${milestones.length} 個里程碑完成`:'尚未提供'}</dd>
    <dt>卡點</dt><dd>{waiting.length?waiting.map(m=>`${m.id} 等待 ${(m.dependsOn||[]).join('、')||'前置條件'}`).join('；'):'沒有已登錄的相依阻擋；其他問題請見會議室'}</dd>
    <dt>待你決定</dt><dd>{decisions.length?decisions.map(d=>d.title).join('；'):'沒有未決事項'}</dd>
    <dt>下一步</dt><dd>{next?`${next.id} ${next.name}`:decisions.length?'到會議室處理未決事項':'請負責 Bot 更新下一步'}</dd>
   </dl></section>
   {!report?.html && <OfficeExecution documents={documents}/>}
-  <section className="ao-card"><h2>進度與成果</h2><ol className="ao-timeline">{milestones.map(m=><li key={m.id}><b>{m.id} {m.name}</b><p>{m.step==='review'?'待 Bot 檢查既有交件':STEP_LABEL[m.step]||m.step} · 前置：{(m.dependsOn||[]).join('、')||'無'}</p></li>)}</ol>
+  <section className="ao-card"><h2>進度與成果</h2>{milestones.length?<ol className="ao-timeline">{milestones.map(m=><li key={m.id}><b>{m.id} {m.name}</b><p>{m.step==='review'?'待 Bot 檢查既有交件':STEP_LABEL[m.step]||m.step} · 前置：{(m.dependsOn||[]).join('、')||'無'}</p></li>)}</ol>:<Empty>里程碑尚未提供</Empty>}
    <ul>{(project.cards?.outputs||[]).map(c=><li key={c.id}><Link href={c.driveUrl}>{c.title}</Link></li>)}</ul>
    {project.folderUrl&&<Link href={project.folderUrl}>所有文件、附件與歷史原件</Link>}
   </section>
