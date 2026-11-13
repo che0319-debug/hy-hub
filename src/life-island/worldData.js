@@ -101,7 +101,8 @@ export function deriveRunners(activity) {
 
 // ---- 狀態列：兩個數字 ----
 //   待你確認：Bot Office 待你決定的題數（與 Bot Office 頁「待你決定」同一個數字）
-//   系統：讀不到資料的來源數，0 代表正常；還沒載入完成時是 null
+//   系統：與 Atlas 同一份未通過檢查（deriveAtlas 的 attention）。0 代表正常；還沒載入完成時是 null。
+//   讀取失敗已經在那些檢查裡，這裡不再另加 failedCount。
 // 頭上提醒標：有問題（紅 !）或 Bot Office 待你確認（橘 !）。
 // 個人待辦（今日／逾期，來自 personal-progress）是藍色，不跟 Bot Office 的橘／紅混在一起。
 // 只有個人待辦時，小人顯示藍點；橘或紅同時存在時，驚嘆號旁再加一顆小藍點。
@@ -139,8 +140,15 @@ export function todoMarker(attention) {
   return { alert: null, todoDot: false }
 }
 
-export function deriveSummary({ pending, failedCount, loaded }) {
-  return { needsYou: Number.isFinite(pending) ? pending : null, systemIssues: loaded ? failedCount : null }
+// attention：已經算好的 Atlas 未通過檢查。沒傳時用同一組輸入呼叫 deriveAtlas，避免和畫面各算一次又不一樣。
+export function deriveSummary({ pending, loaded = false, attention, office, officeEmpty = false, failed = {}, todoFailed = false, unowned = 0 } = {}, now = Date.now()) {
+  const needsYou = Number.isFinite(pending) ? pending : null
+  if (!loaded) return { needsYou, systemIssues: null, systemReasons: [] }
+  const items = Array.isArray(attention)
+    ? attention
+    : deriveAtlas({ office, officeEmpty, failed, todoFailed, unowned, loaded: true }, now).attention
+  const systemReasons = items.map(item => item && item.text).filter(Boolean)
+  return { needsYou, systemIssues: items.length, systemReasons }
 }
 
 

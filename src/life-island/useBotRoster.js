@@ -48,12 +48,15 @@ export function useBotRoster(info) {
 
   const off = useMemo(() => deriveOffice(office), [office])
   const todos = useMemo(() => deriveTodos(info?.list, info?.today), [info?.list, info?.today])
+  const loaded = done.office || done.memory
+  // 狀態列與 Atlas 頭上的紅標共用這一份 attention，讀取失敗不會再加一次。
+  const atlas = useMemo(() => deriveAtlas({
+    office, officeEmpty, failed, todoFailed: !!info?.todoFailed, unowned: off.unowned, loaded,
+  }), [office, officeEmpty, failed, info?.todoFailed, off.unowned, loaded])
 
   // 以小人 id 為 key。沒有資料的欄位是 null，由畫面顯示「—」。
   const bots = useMemo(() => {
-    const out = {}
-    const loadedAll = done.office || done.memory
-    out.atlas = deriveAtlas({ office, officeEmpty, failed, todoFailed: !!info?.todoFailed, unowned: off.unowned, loaded: loadedAll })
+    const out = { atlas }
     // 只掛小幫手的即時專案。Wade、Nana、Emma 沒有 agent，不進 deriveOffice。
     for (const h of HELPERS) {
       const o = off.byAgent[h.agent]
@@ -68,15 +71,13 @@ export function useBotRoster(info) {
     // 軍團頁的組員（Atlas 走 deriveAtlas）。沒有 Office 資料時，載入完計數是 0。
     for (const member of armyGroups().flatMap(group => group.members)) {
       if (member.id === 'atlas') continue
-      out[member.id] = armyMemberView(member, { byAgent: off.byAgent, todos, memory, loaded: loadedAll })
+      out[member.id] = armyMemberView(member, { byAgent: off.byAgent, todos, memory, loaded })
     }
     return out
-  }, [off, todos, memory, office, officeEmpty, failed, done, info?.todoFailed])
+  }, [atlas, off, todos, memory, loaded])
 
-  const loaded = done.office || done.memory
-  const failedCount = Object.values(failed).filter(Boolean).length + (info?.todoFailed ? 1 : 0)
   // loaded：有清單（含空清單）。之後某次輪詢失敗不會清掉上一份，所以仍是 loaded。
   // failed：一次都沒拿到。pending：還沒回應。島上用這個分辨「專案確定不在」與「抓取失敗」。
   const officeStatus = (office || officeEmpty) ? 'loaded' : (done.office && failed.office) ? 'failed' : 'pending'
-  return { bots, loaded, office, officeEmpty, officeStatus, unowned: off.unowned, reloadOffice, ...deriveSummary({ pending: off.pending, failedCount, loaded }) }
+  return { bots, loaded, office, officeEmpty, officeStatus, unowned: off.unowned, reloadOffice, ...deriveSummary({ pending: off.pending, loaded, attention: atlas.attention }) }
 }
