@@ -16,6 +16,7 @@ import AgentConfig from './pages/AgentConfig'
 import Goals from './pages/Goals'
 import Strategy from './pages/Strategy'
 import More from './pages/More'
+import Obsidian from './pages/Obsidian'
 import AuthGate from './components/AuthGate'
 const LifeIsland = lazy(() => import('./pages/LifeIsland'))
 
@@ -63,6 +64,7 @@ function AppRoutes() {
         <Route path="expert-team" element={<ExpertTeamRedirect />} />
         <Route path="settings" element={<Settings />} />
         <Route path="life-island" element={<Suspense fallback={<p className="hy-lede">載入 HY Life 島…</p>}><LifeIsland /></Suspense>} />
+        <Route path="obsidian" element={<Obsidian />} />
       </Route>
     </Routes>
   )

@@ -1,0 +1,65 @@
+/* HY Obsidian P1。只使用 hy-ui token，不新增顏色。 */
+.ob-split {
+  display: grid;
+  grid-template-columns: minmax(240px, 320px) minmax(0, 1fr);
+  gap: var(--hy-gap);
+  align-items: start;
+}
+.hy .ob-md, .hy .ob-split .hy-kv dd { overflow-wrap: anywhere; }
+.ob-search {
+  width: 100%;
+  min-height: var(--hy-tap);
+  padding: 0 12px;
+  border: 1px solid var(--hy-line);
+  border-radius: var(--hy-r-sm);
+  background: var(--hy-surface);
+  color: var(--hy-ink);
+  font: inherit;
+}
+.ob-folders { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 4px; }
+.ob-folders button {
+  min-height: var(--hy-tap);
+  padding: 0 12px;
+  border: 1px solid var(--hy-line);
+  border-radius: var(--hy-r-pill);
+  background: var(--hy-surface);
+  color: var(--hy-ink);
+  font: inherit;
+  white-space: nowrap;
+  cursor: pointer;
+}
+.ob-folders button[aria-current="true"] { border-color: var(--hy-brand); color: var(--hy-brand); font-weight: 700; }
+.ob-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+.ob-list button {
+  width: 100%;
+  min-height: var(--hy-tap);
+  padding: 8px 12px;
+  border: 1px solid var(--hy-line);
+  border-radius: var(--hy-r-sm);
+  background: var(--hy-surface);
+  color: var(--hy-ink);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.ob-list button[aria-current="true"] { background: var(--hy-sunken); border-color: var(--hy-brand); }
+.ob-id { color: var(--hy-muted); font-size: var(--hy-fs-tiny); }
+.ob-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+.hy .ob-md p { margin: 0 0 8px; }
+.hy .ob-md h1, .hy .ob-md h2, .hy .ob-md h3 { font-size: var(--hy-fs-card); margin: 12px 0 6px; }
+.hy .ob-md ul, .hy .ob-md ol { margin: 0 0 8px; padding-left: 1.2em; }
+.hy .ob-md a { color: var(--hy-brand); }
+@media (max-width: 640px) {
+  .ob-split { grid-template-columns: 1fr; }
+}
+.ob-copy {
+  width: 100%;
+  min-height: 88px;
+  margin-top: 8px;
+  padding: 8px;
+  border: 1px solid var(--hy-line);
+  border-radius: var(--hy-r-sm);
+  font: inherit;
+  color: var(--hy-ink);
+  background: var(--hy-surface);
+}
