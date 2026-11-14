@@ -65,9 +65,10 @@ export const LIFE_ISLAND = {
       kind: '人生維度', agent: 'HY', status: '現有', blurb: '休閒：保留探索新體驗的空間。', links: [{ label: '開啟休閒目標', to: '/goals' }] },
     {
       id: 'brain', title: '大腦圖書館', type: 'system', form: 'brain', height: 3.0, q: 0, r: 0,
-      kind: '功能', agent: 'HY', status: '待補',
+      kind: '功能', agent: 'HY', status: '現有',
       blurb: '第二大腦：筆記、文獻與想法的收納處。',
-      links: [], note: '還沒有對應頁面，等第二大腦建好再連結。',
+      links: [{ label: '開啟 HY Obsidian', to: '/obsidian' }],
+      note: '看卡片與待上架。關係圖、時間軸、人物與健檢之後再做。',
     },
     {
       id: 'dojo', title: '人生修練館', type: 'personal', form: 'dojo', height: 2.0, q: 1, r: 0,

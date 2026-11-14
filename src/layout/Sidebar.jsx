@@ -1,7 +1,7 @@
 import { NavLink, useLocation } from 'react-router-dom'
 import {
   Home, Bot,
-  MessageSquare, Settings, Target, LayoutDashboard, Map
+  MessageSquare, Settings, Target, LayoutDashboard, Map, BookOpen
 } from 'lucide-react'
 
 const navItems = [
@@ -9,6 +9,7 @@ const navItems = [
   { to: '/home',       label: '首頁',     icon: Home },
   { to: '/ai-army',    label: 'AI 軍團', icon: Bot },
   { to: '/bot-office', label: 'Bot Office', icon: LayoutDashboard },
+  { to: '/obsidian', label: 'HY Obsidian', icon: BookOpen },
   { to: '/goals',      label: '人生目標',  icon: Target },
   { to: '/strategy',   label: '戰略盤',   icon: Target },
 ]

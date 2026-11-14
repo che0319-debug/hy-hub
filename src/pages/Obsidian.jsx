@@ -1,0 +1,282 @@
+// HY Obsidian P1：列出目錄、打開卡片、對待上架勾核准或退回。
+// 勾選只寫這台裝置的待處理清單，不呼叫寫入 API，也不改正式分類。
+import { useEffect, useMemo, useState } from 'react'
+import { useSearchParams } from 'react-router-dom'
+import ReactMarkdown from 'react-markdown'
+import remarkGfm from 'remark-gfm'
+import { authHeaders } from '../auth'
+import {
+  FOLDERS, applyDecision, cardTitle, decisionFor, fetchBrainCard, fetchBrainIndex,
+  filterCards, folderLabel, folderOf, isPending, linkifyWikilinks, loadQueue,
+  parseFrontmatter, queueMarkdown, saveQueue, sortedDecisions, wikiIdFromHref,
+} from '../lib/obsidian'
+import '../../public/hy-ui/hy-ui.css'
+import './obsidian.css'
+
+const API_BASE = import.meta.env.VITE_API_BASE || ''
+const FIELD_LABEL = {
+  id: '編號', type: '類型', aliases: '代稱', tags: '標籤', date: '日期', as_of: '資料日期',
+  confidence: '可信度', written_by: '作者', people: '相關人物', related: '相關卡片',
+  period: '年代', path: '位置', state: '狀態', sources: '來源', '個資檢查': '個資檢查',
+}
+const FIELD_ORDER = ['id', 'type', 'aliases', 'tags', 'date', 'as_of', 'confidence', 'written_by', 'people', 'related', 'period', 'path', 'state', 'sources', '個資檢查']
+const btn = { minHeight: 44 }
+
+function decisionLabel(decision) {
+  if (decision === 'approve') return '已勾核准'
+  if (decision === 'reject') return '已勾退回'
+  return ''
+}
+
+function FieldValue({ name, value, titles, onOpen }) {
+  const items = Array.isArray(value) ? value : [value]
+  return items.map((item, index) => {
+    const text = item == null ? '' : String(item)
+    const wiki = text.match(/^\[\[([A-Za-z0-9_-]+)\]\]$/)
+    const id = wiki ? wiki[1] : ''
+    const label = id ? (titles.get(id) || id) : text
+    return (
+      <span key={`${name}-${index}`}>
+        {index > 0 ? '、' : ''}
+        {id ? <a href={`#card-${id}`} onClick={event => { event.preventDefault(); onOpen(id) }}>{label}</a> : label}
+      </span>
+    )
+  })
+}
+
+function CardReader({ card, markdown, error, loading, titles, onOpen, queue, onDecide }) {
+  const pending = isPending(card)
+  const decision = decisionFor(queue, card?.id)
+  const parsed = parseFrontmatter(markdown || '')
+  const fields = { ...(parsed.data || {}) }
+  if (card?.path) fields.path = card.path
+  if (card?.state) fields.state = card.state === 'candidate' ? '候選' : card.state === 'current' ? '正式' : card.state === 'archived' ? '已歸檔' : card.state
+  const keys = [...FIELD_ORDER.filter(key => fields[key] != null && fields[key] !== ''), ...Object.keys(fields).filter(key => key !== 'title' && !FIELD_ORDER.includes(key))]
+  const body = linkifyWikilinks(parsed.data ? parsed.body : (markdown || ''), titles)
+  return (
+    <article className="hy-card is-focus">
+      <div className="hy-summary">
+        <span className="hy-pill" data-s={pending ? 'you' : 'wait'}>{pending ? '待上架' : folderLabel(folderOf(card))}</span>
+        {decision && <span className="hy-pill" data-s={decision.decision === 'approve' ? 'done' : 'wait'}>{decisionLabel(decision.decision)}</span>}
+        {card?.confidence && <span className="hy-pill" data-s="ai">{card.confidence}</span>}
+      </div>
+      <h2 className="hy-card-title" style={{ marginTop: 8 }}>{cardTitle(card)}</h2>
+      {loading && <p className="hy-lede">讀取正文…</p>}
+      {error && <p className="hy-alert is-bad" role="alert">{error}</p>}
+      {keys.length > 0 && (
+        <dl className="hy-kv">
+          {keys.map(key => (
+            <span key={key} style={{ display: 'contents' }}>
+              <dt>{FIELD_LABEL[key] || key}</dt>
+              <dd><FieldValue name={key} value={fields[key]} titles={titles} onOpen={onOpen} /></dd>
+            </span>
+          ))}
+        </dl>
+      )}
+      {body.trim() && (
+        <div className="ob-md" style={{ marginTop: 16 }}>
+          <ReactMarkdown
+            remarkPlugins={[remarkGfm]}
+            skipHtml
+            components={{
+              a: ({ href, children }) => {
+                const id = wikiIdFromHref(href)
+                if (id) return <a href={`#card-${id}`} onClick={event => { event.preventDefault(); onOpen(id) }}>{children}</a>
+                if (typeof href === 'string' && /^https?:\/\//i.test(href)) return <a href={href} rel="noreferrer">{children}</a>
+                return <span>{children}</span>
+              },
+            }}
+          >{body}</ReactMarkdown>
+        </div>
+      )}
+      {pending && (
+        <div className="ob-actions">
+          <button type="button" className="hy-btn is-primary" style={btn} onClick={() => onDecide(card, 'approve')}>核准</button>
+          <button type="button" className="hy-btn" style={btn} onClick={() => onDecide(card, 'reject')}>退回</button>
+          {decision && <button type="button" className="hy-btn" style={btn} onClick={() => onDecide(card, 'clear')}>取消勾選</button>}
+        </div>
+      )}
+      {pending && <p className="hy-note" style={{ marginTop: 8 }}>這只記下你的決定。正式分類還沒改，要等 Atlas 搬檔。</p>}
+    </article>
+  )
+}
+
+function QueuePanel({ queue, onCopy, copied, copyText }) {
+  const items = sortedDecisions(queue)
+  return (
+    <section className="hy-card needs-you is-focus">
+      <div className="hy-card-head">
+        <h2 className="hy-card-title">待處理清單</h2>
+        <span className="hy-pill" data-s={items.length ? 'you' : 'wait'}>{items.length ? `${items.length} 筆決定` : '尚未勾選'}</span>
+      </div>
+      <p className="hy-lede" style={{ marginTop: 8 }}>核准或退回只記在這台裝置，不會改正式分類，也不會寫進雲端硬碟。</p>
+      {!items.length && <p className="hy-empty" style={{ marginTop: 12 }}>還沒有決定。打開下面的卡，勾核准或退回。</p>}
+      {items.length > 0 && (
+        <ul className="hy-list">
+          {items.map(item => (
+            <li key={item.id}><span>{item.decision === 'approve' ? '核准' : '退回'} · {item.title}</span><span className="ob-id">{item.id}</span></li>
+          ))}
+        </ul>
+      )}
+      <div className="ob-actions">
+        <button type="button" className="hy-btn" style={btn} onClick={onCopy}>複製清單</button>
+        {copied && <span className="hy-pill" data-s="done">已複製</span>}
+      </div>
+      {copyText && <textarea className="ob-copy" readOnly value={copyText} aria-label="待處理清單原文" />}
+    </section>
+  )
+}
+
+export default function Obsidian() {
+  const [params, setParams] = useSearchParams()
+  const tab = params.get('tab') === 'pending' ? 'pending' : 'cards'
+  const selectedId = params.get('card') || ''
+  const [cards, setCards] = useState(null)
+  const [loadError, setLoadError] = useState('')
+  const [folder, setFolder] = useState('')
+  const [query, setQuery] = useState('')
+  const [markdown, setMarkdown] = useState('')
+  const [cardError, setCardError] = useState('')
+  const [cardLoading, setCardLoading] = useState(false)
+  const [queue, setQueue] = useState(() => loadQueue(window.localStorage))
+  const [copied, setCopied] = useState(false)
+  const [copyText, setCopyText] = useState('')
+
+  useEffect(() => {
+    const controller = new AbortController()
+    setLoadError('')
+    fetchBrainIndex({ base: API_BASE, headers: authHeaders(), signal: controller.signal })
+      .then(setCards)
+      .catch(error => {
+        if (error.name === 'AbortError') return
+        setCards([])
+        setLoadError(error.message || '讀取失敗，請稍後再試。')
+      })
+    return () => controller.abort()
+  }, [])
+
+  useEffect(() => {
+    if (!selectedId) { setMarkdown(''); setCardError(''); setCardLoading(false); return }
+    const controller = new AbortController()
+    setCardLoading(true)
+    setCardError('')
+    setMarkdown('')
+    fetchBrainCard(selectedId, { base: API_BASE, headers: authHeaders(), signal: controller.signal })
+      .then(result => { setMarkdown(result.markdown); setCardLoading(false) })
+      .catch(error => {
+        if (error.name === 'AbortError') return
+        setCardLoading(false)
+        setCardError(error.message || '讀取失敗，請稍後再試。')
+      })
+    return () => controller.abort()
+  }, [selectedId])
+
+  const titles = useMemo(() => new Map((cards || []).map(card => [card.id, cardTitle(card)])), [cards])
+  const pendingCards = useMemo(() => (cards || []).filter(isPending), [cards])
+  const shown = useMemo(() => filterCards(cards || [], {
+    folder: tab === 'pending' ? '00_待上架' : folder,
+    query,
+  }), [cards, tab, folder, query])
+  const selected = (cards || []).find(card => card.id === selectedId) || (selectedId ? { id: selectedId, title: titles.get(selectedId) || selectedId, path: '' } : null)
+
+  function openTab(next) {
+    const queryParams = next === 'pending' ? { tab: 'pending' } : {}
+    if (selectedId) queryParams.card = selectedId
+    setParams(queryParams, { replace: true })
+  }
+
+  function openCard(id) {
+    const queryParams = {}
+    if (tab === 'pending') queryParams.tab = 'pending'
+    queryParams.card = id
+    setParams(queryParams, { replace: true })
+  }
+
+  function decide(card, decision) {
+    const next = applyDecision(queue, { id: card.id, title: cardTitle(card), decision, now: new Date().toISOString() })
+    setQueue(next)
+    saveQueue(window.localStorage, next)
+    setCopied(false)
+  }
+
+  async function copyQueue() {
+    const text = queueMarkdown(queue)
+    try {
+      await navigator.clipboard.writeText(text)
+      setCopyText('')
+      setCopied(true)
+    } catch {
+      setCopyText(text)
+      setCopied(false)
+    }
+  }
+
+  const counts = new Map(FOLDERS.map(([id]) => [id, (cards || []).filter(card => folderOf(card) === id).length]))
+
+  return (
+    <div className="hy hy-stack" style={{ maxWidth: 1100, margin: '0 auto' }}>
+      <div className="hy-pagehead">
+        <div>
+          <h1 className="hy-title">HY Obsidian</h1>
+          <p className="hy-lede">看卡片。待上架可以勾核准或退回，正式分類仍由 Atlas 搬。</p>
+        </div>
+        {cards && <span className="hy-pill" data-s={pendingCards.length ? 'you' : 'done'}>{pendingCards.length ? `${pendingCards.length} 張待上架` : '沒有待上架'}</span>}
+      </div>
+      <nav className="hy-tabs" role="tablist" aria-label="HY Obsidian" style={{ padding: 0 }}>
+        <button type="button" role="tab" className="hy-tab" aria-current={tab === 'cards' ? 'page' : undefined} onClick={() => openTab('cards')}>卡片</button>
+        <button type="button" role="tab" className="hy-tab" aria-current={tab === 'pending' ? 'page' : undefined} onClick={() => openTab('pending')}>待上架{pendingCards.length ? ` ${pendingCards.length}` : ''}</button>
+      </nav>
+
+      {cards === null && <p className="hy-lede">讀取目錄…</p>}
+      {loadError && <div className="hy-alert is-bad" role="alert">{loadError}</div>}
+      {cards && !cards.length && !loadError && <div className="hy-empty">目錄裡還沒有卡片。鏡像完成後，這裡會列出待上架的卡。</div>}
+
+      {tab === 'pending' && cards && <QueuePanel queue={queue} onCopy={copyQueue} copied={copied} copyText={copyText} />}
+
+      {cards && cards.length > 0 && (
+        <div className="ob-split">
+          <div className="hy-stack">
+            <input className="ob-search" value={query} onChange={event => setQuery(event.target.value)} placeholder="搜尋標題或代稱" aria-label="搜尋標題或代稱" />
+            {tab === 'cards' && (
+              <div className="ob-folders" role="tablist" aria-label="分類">
+                <button type="button" aria-current={folder === '' ? 'true' : undefined} onClick={() => setFolder('')}>全部 {cards.length}</button>
+                {FOLDERS.map(([id, label]) => (
+                  <button key={id} type="button" aria-current={folder === id ? 'true' : undefined} onClick={() => setFolder(id)}>{label} {counts.get(id) || 0}</button>
+                ))}
+              </div>
+            )}
+            {!shown.length && <div className="hy-empty">{tab === 'pending' ? '目前沒有待上架的卡。' : '這個條件底下沒有卡。'}</div>}
+            <ul className="ob-list">
+              {shown.map(card => {
+                const decision = decisionFor(queue, card.id)
+                return (
+                  <li key={card.id}>
+                    <button type="button" aria-current={card.id === selectedId ? 'true' : undefined} onClick={() => openCard(card.id)}>
+                      <span style={{ display: 'block', fontWeight: 700 }}>{cardTitle(card)}</span>
+                      <span className="ob-id">{folderLabel(folderOf(card))} · {card.id}{decision ? ` · ${decisionLabel(decision.decision)}` : ''}</span>
+                    </button>
+                  </li>
+                )
+              })}
+            </ul>
+          </div>
+          <div className="hy-stack">
+            {!selected && <div className="hy-empty">從左邊選一張卡，就可以看標題、屬性與正文。</div>}
+            {selected && (
+              <CardReader
+                card={selected}
+                markdown={markdown}
+                error={cardError}
+                loading={cardLoading}
+                titles={titles}
+                onOpen={openCard}
+                queue={queue}
+                onDecide={decide}
+              />
+            )}
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
