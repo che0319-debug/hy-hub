@@ -29,6 +29,7 @@
   cursor: pointer;
 }
 .ob-folders button[aria-current="true"] { border-color: var(--hy-brand); color: var(--hy-brand); font-weight: 700; }
+.ob-folders button:disabled { opacity: 0.45; cursor: not-allowed; }
 .ob-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
 .ob-list button {
   width: 100%;
@@ -62,4 +63,86 @@
   font: inherit;
   color: var(--hy-ink);
   background: var(--hy-surface);
+}
+.ob-page { max-width: 1100px; margin: 0 auto; min-width: 0; }
+.ob-toolbar { display: flex; flex-wrap: wrap; gap: 12px 20px; align-items: flex-start; }
+.ob-filters { border: 0; margin: 0; padding: 0; min-width: 0; }
+.ob-filters legend { padding: 0; color: var(--hy-muted); font-size: var(--hy-fs-tiny); }
+.ob-filter-row { display: flex; flex-wrap: wrap; gap: 8px; }
+.ob-filters label, .ob-legend-note {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: var(--hy-tap);
+  padding: 0 10px;
+  border: 1px solid var(--hy-line);
+  border-radius: var(--hy-r-pill);
+  background: var(--hy-surface);
+  cursor: pointer;
+}
+.ob-legend-note { cursor: default; }
+.ob-dot, .ob-dash-sample { width: 12px; height: 12px; border-radius: 50%; flex: none; }
+.ob-dot { background: var(--hy-muted); }
+.ob-dot[data-type="person"] { background: var(--hy-done); }
+.ob-dot[data-type="event"] { background: var(--hy-you-line); }
+.ob-dot[data-type="know"] { background: var(--hy-ai); }
+.ob-dot[data-type="dec"] { background: var(--hy-you); }
+.ob-dot[data-type="map"] { background: var(--hy-header); }
+.ob-dash-sample { box-sizing: border-box; border: 1.5px dashed var(--hy-ink); }
+.ob-graph-layout { display: grid; grid-template-columns: minmax(0, 1.45fr) minmax(240px, 0.8fr); gap: var(--hy-gap); align-items: start; }
+.ob-graph-main { min-width: 0; }
+.ob-graph-stage.hy-card.is-focus { padding: 0; overflow: hidden; height: calc(100vh - 300px); min-height: 360px; max-height: 720px; }
+.ob-graph-svg { display: block; width: 100%; height: 100%; touch-action: none; cursor: grab; }
+.ob-graph-svg:active { cursor: grabbing; }
+.ob-edge { stroke: var(--hy-muted); stroke-opacity: 0.55; stroke-width: 1.25; }
+.ob-hit { fill: transparent; }
+.ob-node { fill: var(--hy-muted); stroke: var(--hy-surface); stroke-width: 1.5; }
+.ob-node[data-type="person"] { fill: var(--hy-done); }
+.ob-node[data-type="event"] { fill: var(--hy-you-line); }
+.ob-node[data-type="know"] { fill: var(--hy-ai); }
+.ob-node[data-type="dec"] { fill: var(--hy-you); }
+.ob-node[data-type="map"] { fill: var(--hy-header); }
+.ob-center-ring { fill: none; stroke: var(--hy-brand); stroke-width: 2.5; }
+.ob-candidate-ring { fill: none; stroke: var(--hy-ink); stroke-width: 1.5; stroke-dasharray: 3 2; }
+.ob-candidate-tag { fill: var(--hy-you); font-size: 11px; font-weight: 700; pointer-events: none; }
+.ob-label { fill: var(--hy-ink); font-size: 12px; font-family: inherit; pointer-events: none; }
+.ob-node-g:focus { outline: none; }
+.ob-node-g:focus-visible .ob-node { stroke: var(--hy-brand); stroke-width: 3; }
+.ob-tip {
+  position: absolute;
+  z-index: 2;
+  max-width: 220px;
+  padding: 4px 8px;
+  border: 1px solid var(--hy-line);
+  border-radius: var(--hy-r-sm);
+  background: var(--hy-surface);
+  color: var(--hy-ink);
+  font-size: var(--hy-fs-tiny);
+  font-weight: 700;
+  pointer-events: none;
+  transform: translate(-50%, -100%);
+}
+.ob-graph-empty {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  text-align: center;
+  color: var(--hy-muted);
+}
+.ob-peek {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: var(--hy-tap);
+  padding: 8px 8px 8px 12px;
+  border: 1px solid var(--hy-line);
+  border-radius: var(--hy-r-sm);
+  background: var(--hy-surface);
+}
+.ob-peek-title { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 700; }
+@media (max-width: 767px) {
+  .ob-graph-layout { grid-template-columns: minmax(0, 1fr); }
+  .ob-graph-stage.hy-card.is-focus { height: 420px; max-height: none; }
 }

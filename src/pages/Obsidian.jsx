@@ -1,5 +1,4 @@
-// HY Obsidian P1：列出目錄、打開卡片、對待上架勾核准或退回。
-// 勾選只寫這台裝置的待處理清單，不呼叫寫入 API，也不改正式分類。
+// HY Obsidian：列出目錄、打開卡片、看關係圖。待上架勾選只寫這台裝置。
 import { useEffect, useMemo, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import ReactMarkdown from 'react-markdown'
@@ -10,6 +9,7 @@ import {
   filterCards, folderLabel, folderOf, isPending, linkifyWikilinks, loadQueue,
   parseFrontmatter, queueMarkdown, saveQueue, sortedDecisions, wikiIdFromHref,
 } from '../lib/obsidian'
+import ObsidianGraph from './ObsidianGraph'
 import '../../public/hy-ui/hy-ui.css'
 import './obsidian.css'
 
@@ -44,7 +44,7 @@ function FieldValue({ name, value, titles, onOpen }) {
   })
 }
 
-function CardReader({ card, markdown, error, loading, titles, onOpen, queue, onDecide }) {
+function CardReader({ card, markdown, error, loading, titles, onOpen, queue, onDecide, featured = true, onShowLocal }) {
   const pending = isPending(card)
   const decision = decisionFor(queue, card?.id)
   const parsed = parseFrontmatter(markdown || '')
@@ -54,13 +54,18 @@ function CardReader({ card, markdown, error, loading, titles, onOpen, queue, onD
   const keys = [...FIELD_ORDER.filter(key => fields[key] != null && fields[key] !== ''), ...Object.keys(fields).filter(key => key !== 'title' && !FIELD_ORDER.includes(key))]
   const body = linkifyWikilinks(parsed.data ? parsed.body : (markdown || ''), titles)
   return (
-    <article className="hy-card is-focus">
+    <article className={featured ? 'hy-card is-focus' : 'hy-card'}>
       <div className="hy-summary">
         <span className="hy-pill" data-s={pending ? 'you' : 'wait'}>{pending ? '待上架' : folderLabel(folderOf(card))}</span>
         {decision && <span className="hy-pill" data-s={decision.decision === 'approve' ? 'done' : 'wait'}>{decisionLabel(decision.decision)}</span>}
         {card?.confidence && <span className="hy-pill" data-s="ai">{card.confidence}</span>}
       </div>
       <h2 className="hy-card-title" style={{ marginTop: 8 }}>{cardTitle(card)}</h2>
+      {onShowLocal && (
+        <div className="ob-actions">
+          <button type="button" className="hy-btn" style={btn} onClick={onShowLocal}>看局部圖</button>
+        </div>
+      )}
       {loading && <p className="hy-lede">讀取正文…</p>}
       {error && <p className="hy-alert is-bad" role="alert">{error}</p>}
       {keys.length > 0 && (
@@ -129,7 +134,8 @@ function QueuePanel({ queue, onCopy, copied, copyText }) {
 
 export default function Obsidian() {
   const [params, setParams] = useSearchParams()
-  const tab = params.get('tab') === 'pending' ? 'pending' : 'cards'
+  const view = params.get('view') === 'graph' ? 'graph' : (params.get('tab') === 'pending' ? 'pending' : 'cards')
+  const scope = params.get('scope') === 'local' ? 'local' : 'all'
   const selectedId = params.get('card') || ''
   const [cards, setCards] = useState(null)
   const [loadError, setLoadError] = useState('')
@@ -174,22 +180,30 @@ export default function Obsidian() {
   const titles = useMemo(() => new Map((cards || []).map(card => [card.id, cardTitle(card)])), [cards])
   const pendingCards = useMemo(() => (cards || []).filter(isPending), [cards])
   const shown = useMemo(() => filterCards(cards || [], {
-    folder: tab === 'pending' ? '00_待上架' : folder,
+    folder: view === 'pending' ? '00_待上架' : folder,
     query,
-  }), [cards, tab, folder, query])
+  }), [cards, view, folder, query])
   const selected = (cards || []).find(card => card.id === selectedId) || (selectedId ? { id: selectedId, title: titles.get(selectedId) || selectedId, path: '' } : null)
 
-  function openTab(next) {
-    const queryParams = next === 'pending' ? { tab: 'pending' } : {}
-    if (selectedId) queryParams.card = selectedId
+  function setRoute({ next = view, card = '', graphScope = 'all' }) {
+    const queryParams = {}
+    if (next === 'graph') queryParams.view = 'graph'
+    if (next === 'pending') queryParams.tab = 'pending'
+    if (card) queryParams.card = card
+    if (next === 'graph' && graphScope === 'local' && card) queryParams.scope = 'local'
     setParams(queryParams, { replace: true })
   }
 
+  function openView(next) {
+    setRoute({ next, card: selectedId, graphScope: next === 'graph' && scope === 'local' ? 'local' : 'all' })
+  }
+
   function openCard(id) {
-    const queryParams = {}
-    if (tab === 'pending') queryParams.tab = 'pending'
-    queryParams.card = id
-    setParams(queryParams, { replace: true })
+    setRoute({ card: id, graphScope: scope })
+  }
+
+  function showLocal(id) {
+    setRoute({ next: 'graph', card: id, graphScope: 'local' })
   }
 
   function decide(card, decision) {
@@ -213,31 +227,59 @@ export default function Obsidian() {
 
   const counts = new Map(FOLDERS.map(([id]) => [id, (cards || []).filter(card => folderOf(card) === id).length]))
 
+  const reader = selected ? (
+    <CardReader
+      card={selected}
+      markdown={markdown}
+      error={cardError}
+      loading={cardLoading}
+      titles={titles}
+      onOpen={openCard}
+      queue={queue}
+      onDecide={decide}
+      featured={view !== 'graph'}
+      onShowLocal={view === 'graph' && scope === 'local' ? undefined : () => showLocal(selected.id)}
+    />
+  ) : null
+
   return (
-    <div className="hy hy-stack" style={{ maxWidth: 1100, margin: '0 auto' }}>
+    <div className="hy hy-stack ob-page">
       <div className="hy-pagehead">
         <div>
           <h1 className="hy-title">HY Obsidian</h1>
-          <p className="hy-lede">看卡片。待上架可以勾核准或退回，正式分類仍由 Atlas 搬。</p>
+          <p className="hy-lede">看卡片與關係圖。待上架可以勾核准或退回，正式分類仍由 Atlas 搬。</p>
         </div>
         {cards && <span className="hy-pill" data-s={pendingCards.length ? 'you' : 'done'}>{pendingCards.length ? `${pendingCards.length} 張待上架` : '沒有待上架'}</span>}
       </div>
       <nav className="hy-tabs" role="tablist" aria-label="HY Obsidian" style={{ padding: 0 }}>
-        <button type="button" role="tab" className="hy-tab" aria-current={tab === 'cards' ? 'page' : undefined} onClick={() => openTab('cards')}>卡片</button>
-        <button type="button" role="tab" className="hy-tab" aria-current={tab === 'pending' ? 'page' : undefined} onClick={() => openTab('pending')}>待上架{pendingCards.length ? ` ${pendingCards.length}` : ''}</button>
+        <button type="button" role="tab" className="hy-tab" aria-current={view === 'cards' ? 'page' : undefined} onClick={() => openView('cards')}>卡片</button>
+        <button type="button" role="tab" className="hy-tab" aria-current={view === 'graph' ? 'page' : undefined} onClick={() => openView('graph')}>關係圖</button>
+        <button type="button" role="tab" className="hy-tab" aria-current={view === 'pending' ? 'page' : undefined} onClick={() => openView('pending')}>待上架{pendingCards.length ? ` ${pendingCards.length}` : ''}</button>
       </nav>
 
       {cards === null && <p className="hy-lede">讀取目錄…</p>}
       {loadError && <div className="hy-alert is-bad" role="alert">{loadError}</div>}
       {cards && !cards.length && !loadError && <div className="hy-empty">目錄裡還沒有卡片。鏡像完成後，這裡會列出待上架的卡。</div>}
 
-      {tab === 'pending' && cards && <QueuePanel queue={queue} onCopy={copyQueue} copied={copied} copyText={copyText} />}
+      {view === 'pending' && cards && <QueuePanel queue={queue} onCopy={copyQueue} copied={copied} copyText={copyText} />}
 
-      {cards && cards.length > 0 && (
+      {view === 'graph' && cards && cards.length > 0 && (
+        <ObsidianGraph
+          cards={cards}
+          selectedId={selectedId}
+          scope={scope === 'local' && selectedId ? 'local' : 'all'}
+          onOpen={openCard}
+          onScope={next => setRoute({ next: 'graph', card: selectedId, graphScope: next })}
+        >
+          {reader}
+        </ObsidianGraph>
+      )}
+
+      {view !== 'graph' && cards && cards.length > 0 && (
         <div className="ob-split">
           <div className="hy-stack">
             <input className="ob-search" value={query} onChange={event => setQuery(event.target.value)} placeholder="搜尋標題或代稱" aria-label="搜尋標題或代稱" />
-            {tab === 'cards' && (
+            {view === 'cards' && (
               <div className="ob-folders" role="tablist" aria-label="分類">
                 <button type="button" aria-current={folder === '' ? 'true' : undefined} onClick={() => setFolder('')}>全部 {cards.length}</button>
                 {FOLDERS.map(([id, label]) => (
@@ -245,7 +287,7 @@ export default function Obsidian() {
                 ))}
               </div>
             )}
-            {!shown.length && <div className="hy-empty">{tab === 'pending' ? '目前沒有待上架的卡。' : '這個條件底下沒有卡。'}</div>}
+            {!shown.length && <div className="hy-empty">{view === 'pending' ? '目前沒有待上架的卡。' : '這個條件底下沒有卡。'}</div>}
             <ul className="ob-list">
               {shown.map(card => {
                 const decision = decisionFor(queue, card.id)
@@ -262,18 +304,7 @@ export default function Obsidian() {
           </div>
           <div className="hy-stack">
             {!selected && <div className="hy-empty">從左邊選一張卡，就可以看標題、屬性與正文。</div>}
-            {selected && (
-              <CardReader
-                card={selected}
-                markdown={markdown}
-                error={cardError}
-                loading={cardLoading}
-                titles={titles}
-                onOpen={openCard}
-                queue={queue}
-                onDecide={decide}
-              />
-            )}
+            {reader}
           </div>
         </div>
       )}
