@@ -40,7 +40,7 @@ export default function OfficeHome({projects,details,inbox=[],loaded,error,creat
     {ready&&!visible.length&&<div className="ao-card ao-home-empty"><h3>{projects.length?'沒有符合條件的專案':'開始你的第一個專案'}</h3><p>{projects.length?'調整搜尋、負責 Bot 或屬性。':'寫下目標，PI 會先研究並提出 AI 執行規劃書。'}</p></div>}
     <div className="ao-home-projects" aria-label="專案列表">{visible.map(p=>{const detail=details[p.id],count=countOf(p),open=pending(p.id),owner=OWNER[ownerOf(p)]||ownerOf(p);return <div className={`ao-project-line${open?' needs-you':''}`} key={p.id} onClick={()=>onSelect(p.id)}>
       <button type="button" className="ao-project-open" onClick={()=>onSelect(p.id)}>
-        <span className="ao-project-title"><b>{p.title}</b><span className="ao-project-goal">{p.goal||'目標尚未記錄'}</span></span>
+        <span className="ao-project-title"><span className="ao-project-heading"><b>{p.title}</b>{p.id?<span className="ao-project-id">{p.id}</span>:null}</span><span className="ao-project-goal">{p.goal||'目標尚未記錄'}</span></span>
         <span className="ao-project-stage">{p.phase} {p.milestone_id||''}<small>負責 {owner||'尚未指定'}</small></span>
         <span className="ao-home-progress"><span>{count?(count.label||`工作包 ${count.done}／${count.total}`):progressEmpty}</span>{count?.total>0&&<span className="ao-progress-track" data-s={count.done===count.total?'done':'ai'} aria-label={count.label||`執行工作包完成 ${count.done}／${count.total}`}><span style={{width:`${count.done/count.total*100}%`}}/></span>}</span>
         {open?<span className="ao-line-status ao-line-slot"/>:<span className="hy-pill ao-line-status" data-s={p.stageTone||(p.status==='completed'?'done':'ai')}>{activityLabel(detail || p)}</span>}

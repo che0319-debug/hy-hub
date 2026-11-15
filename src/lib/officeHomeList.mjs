@@ -1,5 +1,6 @@
 // Bot Office 首頁只有一張專案列表。待決件數只算掛在該專案、尚未結案的核示。
 import { isPending } from './aiOffice.mjs'
+import { shownStage } from './officeFlow.mjs'
 
 export function openApprovalCount(projectId, inbox = []) {
   if (!projectId) return 0
@@ -17,6 +18,17 @@ export function pendingLabel(count) {
   return n > 0 ? `待你核示 ${n} 則` : ''
 }
 
+export function isListedDone(project) {
+  return shownStage(project) === 'done'
+}
+
+// 完成的專案固定在最下面。未完成的仍依待核示數量（多的在前）。
+// 同組之內件數相同時維持原相對次序（Array#sort 穩定）。
 export function sortByPending(projects, countOf) {
-  return (projects || []).slice().sort((a, b) => countOf(b) - countOf(a))
+  return (projects || []).slice().sort((a, b) => {
+    const aDone = isListedDone(a)
+    const bDone = isListedDone(b)
+    if (aDone !== bDone) return aDone ? 1 : -1
+    return countOf(b) - countOf(a)
+  })
 }

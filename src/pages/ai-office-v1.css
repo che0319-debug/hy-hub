@@ -57,6 +57,8 @@
 .ao .ao-project-line>.ao-pending-pill:hover{background:var(--hy-you-bg);color:var(--hy-you)}
 .ao .ao-project-line.needs-you{border-color:#f2d39b;box-shadow:inset 3px 0 0 var(--hy-you-line)}
 .ao-project-title{display:grid;gap:2px;min-width:0}.ao-project-title b{font-size:var(--hy-fs-body)}
+.ao-project-heading{display:flex;flex-wrap:wrap;align-items:baseline;gap:4px 10px;min-width:0}
+.ao-project-id{color:var(--hy-muted);font-size:var(--hy-fs-tiny);font-weight:500;font-variant-numeric:tabular-nums;white-space:nowrap}
 .ao-project-goal{color:var(--hy-muted);font-size:var(--hy-fs-meta);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .ao-project-stage,.ao-home-progress{display:grid;gap:4px;font-size:var(--hy-fs-meta);color:var(--hy-muted)}
 .ao-progress-track{display:block;height:6px;border-radius:var(--hy-r-pill);background:var(--hy-sunken);overflow:hidden}.ao-progress-track>span{display:block;height:100%;background:var(--hy-ai)}.ao-progress-track[data-s=done]>span{background:var(--hy-done)}
