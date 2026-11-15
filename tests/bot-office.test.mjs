@@ -387,6 +387,8 @@ test('Bot Office home uses only the five stage names; no returned-count badge an
   assert.match(home, /負責 Bot/)
   assert.match(home, /aria-label="屬性"/)
   assert.match(home, /pendingLabel\(open\)/)
+  assert.match(home, /ao-project-id/)
+  assert.match(home, /\{p\.id\}/)
   assert.doesNotMatch(home, /進行中|已完成|小案/)
   const page = readFileSync(new URL('../src/pages/BotOffice.jsx', import.meta.url), 'utf8')
   assert.match(page, /displayLabel/)
