@@ -1,7 +1,8 @@
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
-import {ownerColor,projectColor,visible,bounds,drag,moveParent,descendants} from '../public/gantt-model.mjs';
+import {ownerColor,projectColor,visible,bounds,drag,moveParent,descendants,initialCollapsed,nextCheckpoint,formatNextNode,nameIsDelayed,spanRange,viewWindow,inlineMarksByHost,layoutMarkLabels,day} from '../public/gantt-model.mjs';
+import {buildAplusItems,mergeGantt} from '../scripts/merge-aplus-gantt.mjs';
 const p={id:'p',kind:'project',parent_id:null,project_id:'p',order:0};
 const t={id:'t',kind:'task',parent_id:'p',project_id:'p',order:0,owner:'HY',start:'2026-10-10',end:'2026-10-20'};
 const c={id:'c',kind:'checkpoint',parent_id:'t',project_id:'p',order:0,date:'2026-10-25'};
@@ -35,4 +36,86 @@ test('existing tabs remain and gantt never calls progress storage',()=>{
 test('schedule has five metadata columns and no status editor',()=>{
  const js=readFileSync(new URL('../public/gantt-950157.mjs',import.meta.url),'utf8');
  assert.doesNotMatch(js,/data-key="status"|name="status"|g-cell">狀態/);
+});
+
+const aplus=JSON.parse(readFileSync(new URL('../docs/quality/gantt/aplus-items.json',import.meta.url),'utf8'));
+const milestoneDates={
+ '技資1':'2027-03-31','技資2':'2027-06-30','技資3':'2027-09-30','技資4':'2027-11-30',
+ 'C2.9':'2027-03-31','C2.10':'2027-09-30','C2.11':'2028-03-31',
+ 'C3.4':'2026-12-31','C3.6':'2027-06-30','C3.8':'2027-09-30','C3.9':'2028-06-30','C3.10':'2028-09-30',
+ 'BT1':'2026-12-14','BT2':'2027-01-25','BT3':'2027-01-25','BT4':'2028-03-27','BT5':'2028-09-25',
+ 'V0.5':'2027-02-08','V1':'2027-03-29','V1.3':'2027-06-28','V2':'2027-09-27','V3':'2028-03-27','V4':'2028-09-25',
+};
+test('A+ stays one row until opened, then five lines, and week tasks stay under a line',()=>{
+ const collapsed=initialCollapsed(aplus);
+ assert.deepEqual(visible(aplus,collapsed).map(v=>v.r.id),['aplus']);
+ assert.equal(initialCollapsed([p,t,c]).size,0);
+ const layer1=new Set(collapsed);layer1.delete('aplus');
+ const lines=visible(aplus,layer1);
+ assert.deepEqual(lines.map(v=>v.r.id),['aplus','aplus-line-1','aplus-line-2','aplus-line-3','aplus-line-4','aplus-line-5']);
+ assert.ok(lines.every(v=>v.r.kind!=='checkpoint'));
+ const layer2=new Set(layer1);layer2.delete('aplus-line-4');
+ const opened=visible(aplus,layer2);
+ assert.ok(opened.some(v=>v.r.name==='開發板取得'&&v.r.owner==='Tiffany'&&v.r.start==='2026-11-16'));
+ assert.ok(opened.some(v=>v.r.parent_id==='aplus-line-4'));
+ assert.equal(opened.filter(v=>v.r.kind==='checkpoint').length,0);
+ const leaves=aplus.filter(r=>r.kind==='task'&&r.id.startsWith('aplus-r')&&!aplus.some(c=>c.parent_id===r.id));
+ assert.equal(leaves.length,69);
+ assert.ok(!aplus.some(r=>r.name==='123'||r.name?.includes('123')));
+});
+test('next checkpoint, milestone dates, delay name and full-span window',()=>{
+ assert.equal(nextCheckpoint(aplus,'aplus','2026-11-17').name,'BT1');
+ assert.equal(formatNextNode(nextCheckpoint(aplus,'aplus','2026-11-17')),'下一個節點：BT1 12/14');
+ assert.equal(nextCheckpoint(aplus,'aplus','2026-12-14').id,'aplus-ms-bt1');
+ assert.equal(nextCheckpoint(aplus,'aplus','2026-12-15').id,'aplus-ms-c3-4');
+ assert.equal(nextCheckpoint(aplus,'aplus','2027-01-25').id,'aplus-ms-bt2');
+ assert.equal(nextCheckpoint(aplus,'aplus','2029-01-01'),null);
+ assert.equal(formatNextNode(null),'');
+ const byName=Object.fromEntries(aplus.filter(r=>r.kind==='checkpoint').map(r=>[r.name,r.date]));
+ assert.deepEqual(byName,milestoneDates);
+ assert.equal(aplus.filter(r=>r.kind==='checkpoint'&&r.inline===true).length,23);
+ assert.equal(nameIsDelayed({kind:'project',delayed:true}),true);
+ assert.equal(nameIsDelayed({kind:'task',delayed:true}),true);
+ assert.equal(nameIsDelayed({kind:'checkpoint',delayed:true}),false);
+ assert.equal(nameIsDelayed({kind:'project',delayed:false}),false);
+ assert.equal(aplus.find(r=>r.id==='aplus').delayed,false);
+ assert.equal(aplus.find(r=>r.id==='aplus-line-5').start,'2026-11-09');
+ assert.equal(aplus.find(r=>r.id==='aplus-line-5').end,'2028-09-25');
+ const closed=visible(aplus,initialCollapsed(aplus));
+ assert.deepEqual(spanRange(aplus,closed),['2026-10-01','2028-09-30']);
+ const month=viewWindow('month','2026-11-01',aplus,closed,400);
+ assert.equal(month.unit,9);assert.equal(month.days,93);
+ const week=viewWindow('week','2026-11-01',aplus,closed,400);
+ assert.equal(week.unit,30);assert.equal(week.days,28);
+ const stripped=aplus.map(({inline,...row})=>row);
+ const open=initialCollapsed(stripped);open.delete('aplus');
+ assert.equal(visible(stripped,open).length,6);
+ assert.equal(inlineMarksByHost(stripped).get('aplus-line-4').map(r=>r.name).join(','),'BT1,BT2,BT3,BT4,BT5');
+ const laid=layoutMarkLabels(inlineMarksByHost(stripped).get('aplus-line-4').filter(r=>r.date==='2027-01-25'),day('2026-10-01'),2,2000);
+ assert.equal(laid.length,1);assert.equal(laid[0].label,'BT2/BT3');assert.equal(laid[0].items.length,2);
+});
+test('merge appends A+ once and replaces only that tree',()=>{
+ const oldProject={id:'p',kind:'project',parent_id:null,project_id:'p',order:0,name:'舊專案',owner:'',start:null,end:null,status:'wait',checkpoint_type:null,date:null,started:true};
+ const oldTask={id:'t',kind:'task',parent_id:'p',project_id:'p',order:0,name:'舊工作',owner:'HY',start:'2026-11-01',end:'2026-11-05',status:'wait',checkpoint_type:null,date:null};
+ const merged=mergeGantt({revision:'rev1',items:[oldProject,oldTask]},aplus);
+ assert.equal(merged.revision,'rev1');
+ assert.equal(merged.items.find(r=>r.id==='p').name,'舊專案');
+ assert.equal(merged.items.find(r=>r.id==='t').owner,'HY');
+ assert.equal(merged.items.find(r=>r.id==='aplus').order,1);
+ assert.ok(merged.items.every(r=>!('inline' in r)&&!('tone' in r)));
+ assert.equal(merged.items.filter(r=>r.id==='aplus'||r.project_id==='aplus').length,aplus.length);
+ const renamed=aplus.map(r=>r.id==='aplus'?{...r,name:'A+ 改名'}:r);
+ const again=mergeGantt(merged,renamed);
+ assert.equal(again.items.find(r=>r.id==='aplus').name,'A+ 改名');
+ assert.equal(again.items.find(r=>r.id==='aplus').order,1);
+ assert.equal(again.items.filter(r=>r.project_id==='p').length,2);
+ assert.equal(again.items.filter(r=>r.id==='aplus'||String(r.id).startsWith('aplus-')).length,aplus.length);
+ const script=readFileSync(new URL('../scripts/merge-aplus-gantt.mjs',import.meta.url),'utf8');
+ assert.doesNotMatch(script,/onrender|fetch\(|XMLHttpRequest|process\.env/);
+});
+test('builder skips the noise row and marks line checkpoints inline',()=>{
+ const built=buildAplusItems({project:{id:'aplus',name:'A+'},lines:[{id:'aplus-line-1',name:'1 技資報告',start:'2026-12-07',end:'2027-11-30',milestones:[{id:'aplus-ms-tech-1',name:'技資1',date:'2027-03-31'}],tasks:[{excel_row:833,name:'123',owner:'',start:'2026-12-07',end:'2026-12-13'},{excel_row:6,name:'簡報規劃',owner:'Tiffany',start:'2026-12-07',end:'2027-01-03',children:[]}]}]});
+ assert.ok(built.find(r=>r.id==='aplus-ms-tech-1').inline);
+ assert.ok(!built.some(r=>r.name==='123'));
+ assert.equal(built.find(r=>r.id==='aplus-r6').owner,'Tiffany');
 });
