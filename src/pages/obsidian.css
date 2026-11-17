@@ -103,9 +103,14 @@
 .ob-node[data-type="dec"] { fill: var(--hy-you); }
 .ob-node[data-type="map"] { fill: var(--hy-header); }
 .ob-center-ring { fill: none; stroke: var(--hy-brand); stroke-width: 2.5; }
-.ob-candidate-ring { fill: none; stroke: var(--hy-ink); stroke-width: 1.5; stroke-dasharray: 3 2; }
-.ob-candidate-tag { fill: var(--hy-you); font-size: 11px; font-weight: 700; pointer-events: none; }
-.ob-label { fill: var(--hy-ink); font-size: 12px; font-family: inherit; pointer-events: none; }
+.ob-candidate-halo { fill: var(--hy-you-bg); }
+.ob-candidate-ring { fill: none; stroke: var(--hy-you); stroke-width: 3.5; stroke-dasharray: 6 3; }
+.ob-candidate-badge { pointer-events: none; }
+.ob-candidate-badge-bg { fill: var(--hy-you); }
+.ob-candidate-tag { fill: var(--hy-surface); font-size: 14px; font-weight: 800; pointer-events: none; }
+.ob-label { fill: var(--hy-ink); font-size: 11px; font-weight: 700; font-family: inherit; pointer-events: none; }
+.ob-folders button[aria-pressed="true"] { border-color: var(--hy-brand); color: var(--hy-brand); font-weight: 700; }
+.ob-note-break { overflow-wrap: anywhere; }
 .ob-node-g:focus { outline: none; }
 .ob-node-g:focus-visible .ob-node { stroke: var(--hy-brand); stroke-width: 3; }
 .ob-tip {
@@ -145,4 +150,5 @@
 @media (max-width: 767px) {
   .ob-graph-layout { grid-template-columns: minmax(0, 1fr); }
   .ob-graph-stage.hy-card.is-focus { height: 420px; max-height: none; }
+  .ob-filters label, .ob-legend-note { padding: 0 8px; }
 }

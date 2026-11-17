@@ -11,10 +11,109 @@ export const GRAPH_TYPES = [
   { id: 'map', label: '地圖' },
 ]
 
+export const INDEX_CARD_ID = 'map-second-brain-v1-index'
+
+export const LIFE_DIMENSIONS = [
+  { id: '事業', label: '事業' },
+  { id: '財務', label: '財務' },
+  { id: '健康', label: '健康' },
+  { id: '家庭', label: '家庭' },
+  { id: '本業', label: '本業' },
+  { id: '休閒', label: '休閒' },
+  { id: '成長', label: '成長' },
+]
+
+export const UNLABELED_DIMENSION = '未標七維'
+
+export const DIMENSION_FIELDS = ['七維', 'dimensions', 'dimension', 'category']
+
+export const DIMENSION_TAG_MAP = {
+  職涯: '事業',
+  職涯年表: '事業',
+  新創: '事業',
+  商業規劃: '事業',
+  績效: '事業',
+  升等: '事業',
+  主管: '事業',
+  履歷: '事業',
+  理財: '財務',
+  購屋: '財務',
+  不動產: '財務',
+  健康: '健康',
+  家庭: '家庭',
+  子女: '家庭',
+  工研院: '本業',
+  生活: '休閒',
+  旅行: '休閒',
+  求學: '成長',
+  台大: '成長',
+  寫作方法: '成長',
+  人生規劃: '成長',
+  人生地圖: '成長',
+  人生大事: '成長',
+}
+
+export const MAJOR_LABEL_LIMIT = 12
+export const LABEL_ALL_WHEN_AT_MOST = 18
+
 const TYPE_RANK = Object.fromEntries(GRAPH_TYPES.map((item, index) => [item.id, index]))
+const LIFE_DIMENSION_IDS = new Set(LIFE_DIMENSIONS.map(item => item.id))
+const DIMENSION_ORDER = [...LIFE_DIMENSIONS.map(item => item.id), UNLABELED_DIMENSION]
 
 export function typeLabel(type) {
   return GRAPH_TYPES.find(item => item.id === type)?.label || '其他'
+}
+
+export function normalizeDimensionName(value) {
+  if (typeof value !== 'string') return ''
+  const name = value.trim()
+  return LIFE_DIMENSION_IDS.has(name) ? name : ''
+}
+
+export function dimensionsOf(card) {
+  if (!card || typeof card !== 'object') return [UNLABELED_DIMENSION]
+  for (const key of DIMENSION_FIELDS) {
+    if (!Object.prototype.hasOwnProperty.call(card, key)) continue
+    const value = card[key]
+    if (value == null) continue
+    const names = sortDimensions(unique(flattenDimensionValues(value).map(normalizeDimensionName).filter(Boolean)))
+    return names.length ? names : [UNLABELED_DIMENSION]
+  }
+  const fromTags = sortDimensions(unique(
+    (Array.isArray(card.tags) ? card.tags : [])
+      .map(tag => (typeof tag === 'string' ? DIMENSION_TAG_MAP[tag.trim()] : ''))
+      .filter(Boolean),
+  ))
+  return fromTags.length ? fromTags : [UNLABELED_DIMENSION]
+}
+
+export function shortTitle(title, max = 8) {
+  const chars = [...String(title || '')]
+  const limit = Math.max(1, Number(max) || 8)
+  return chars.length > limit ? `${chars.slice(0, limit).join('')}…` : chars.join('')
+}
+
+export function majorLabelIds(nodes, options = {}) {
+  const list = Array.isArray(nodes) ? nodes : []
+  const limit = options.limit ?? MAJOR_LABEL_LIMIT
+  const alwaysWhenAtMost = options.alwaysWhenAtMost ?? LABEL_ALL_WHEN_AT_MOST
+  if (!list.length) return []
+  if (list.length <= alwaysWhenAtMost) return list.map(node => node.id).sort()
+  const ranked = [...list].sort((a, b) => (b.degree || 0) - (a.degree || 0) || a.id.localeCompare(b.id))
+  const ids = []
+  const seen = new Set()
+  const center = list.find(node => node.center)?.id
+  if (center) {
+    ids.push(center)
+    seen.add(center)
+  }
+  for (const node of ranked) {
+    if (ids.length >= limit) break
+    if (seen.has(node.id)) continue
+    ids.push(node.id)
+    seen.add(node.id)
+  }
+  return ids.sort()
 }
 
 export function parseWikiTarget(value) {
@@ -30,9 +129,11 @@ export function nodeRadius(degree, maxDegree) {
   return 8 + span * 12
 }
 
-export function displayRadius(degree, maxDegree, isCenter) {
+export function displayRadius(degree, maxDegree, isCenter, isCandidate = false) {
   const base = nodeRadius(degree, maxDegree)
-  return isCenter ? Math.max(base + 4, 16) : base
+  let radius = isCenter ? Math.max(base + 4, 16) : base
+  if (isCandidate) radius += 4
+  return radius
 }
 
 export function buildGraph(cards) {
@@ -45,9 +146,10 @@ export function buildGraph(cards) {
   }
   const raw = []
   let broken = 0
+  const brokenIds = new Set()
   const consider = (source, target) => {
     if (!target || target === source) return
-    if (!ids.has(target)) { broken += 1; return }
+    if (!ids.has(target)) { broken += 1; brokenIds.add(target); return }
     raw.push({ source, target })
   }
   for (const card of list) {
@@ -71,23 +173,43 @@ export function buildGraph(cards) {
     title: typeof card.title === 'string' && card.title.trim() ? card.title.trim() : card.id,
     state: typeof card.state === 'string' ? card.state : '',
     candidate: card.state === 'candidate',
+    dimensions: dimensionsOf(card),
     degree: 0,
     center: false,
   }))
-  return pack(nodes, raw, broken)
+  return pack(nodes, raw, broken, [...brokenIds])
 }
 
 export function filterGraph(graph, types) {
   const allow = new Set(Array.isArray(types) ? types : [])
   const nodes = (graph?.nodes || []).filter(node => allow.has(node.type)).map(node => ({ ...node, center: false }))
-  return pack(nodes, graph?.edges || [], graph?.broken || 0)
+  return pack(nodes, graph?.edges || [], graph?.broken || 0, graph?.brokenIds || [])
+}
+
+export function filterByDimensions(graph, selected) {
+  const allow = new Set(Array.isArray(selected) ? selected : [])
+  const nodes = (graph?.nodes || [])
+    .filter(node => (node.dimensions || []).some(dim => allow.has(dim)))
+    .map(node => ({ ...node, center: false }))
+  return pack(nodes, graph?.edges || [], graph?.broken || 0, graph?.brokenIds || [])
+}
+
+export function applyIndexVisibility(graph, options = {}) {
+  const showIndex = !!options.showIndex
+  const centerId = typeof options.centerId === 'string' ? options.centerId : ''
+  if (showIndex || centerId === INDEX_CARD_ID) {
+    return pack(graph?.nodes || [], graph?.edges || [], graph?.broken || 0, graph?.brokenIds || [])
+  }
+  const nodes = (graph?.nodes || []).filter(node => node.id !== INDEX_CARD_ID)
+  return pack(nodes, graph?.edges || [], graph?.broken || 0, graph?.brokenIds || [])
 }
 
 export function localGraph(graph, centerId) {
   const broken = graph?.broken || 0
+  const brokenIds = [...(graph?.brokenIds || [])]
   const id = typeof centerId === 'string' ? centerId : ''
   const known = new Set((graph?.nodes || []).map(node => node.id))
-  if (!id || !known.has(id)) return { nodes: [], edges: [], broken, centerId: id, missingCenter: true }
+  if (!id || !known.has(id)) return { nodes: [], edges: [], broken, brokenIds, centerId: id, missingCenter: true }
   const keep = new Set([id])
   for (const edge of graph?.edges || []) {
     if (edge.source === id) keep.add(edge.target)
@@ -95,7 +217,7 @@ export function localGraph(graph, centerId) {
   }
   const nodes = (graph.nodes || []).filter(node => keep.has(node.id))
   const edges = (graph.edges || []).filter(edge => keep.has(edge.source) && keep.has(edge.target))
-  const packed = pack(nodes, edges, broken)
+  const packed = pack(nodes, edges, broken, brokenIds)
   return {
     ...packed,
     nodes: packed.nodes.map(node => ({ ...node, center: node.id === id })),
@@ -225,7 +347,7 @@ export function fitTransform(points, radii, width, height, padding = 36) {
   }
 }
 
-function pack(nodes, edges, broken) {
+function pack(nodes, edges, broken, brokenIds) {
   const degree = new Map(nodes.map(node => [node.id, 0]))
   const seen = new Set()
   const clean = []
@@ -245,7 +367,30 @@ function pack(nodes, edges, broken) {
   clean.sort((a, b) => a.source.localeCompare(b.source) || a.target.localeCompare(b.target))
   const out = nodes.map(node => ({ ...node, degree: degree.get(node.id) || 0 }))
   out.sort((a, b) => a.id.localeCompare(b.id))
-  return { nodes: out, edges: clean, broken }
+  const ids = unique((Array.isArray(brokenIds) ? brokenIds : []).filter(id => typeof id === 'string' && id))
+  ids.sort((a, b) => a.localeCompare(b))
+  return { nodes: out, edges: clean, broken, brokenIds: ids }
+}
+
+function flattenDimensionValues(value) {
+  if (Array.isArray(value)) return value.flatMap(flattenDimensionValues)
+  if (typeof value === 'string') return value.split(/[,，、/;|]+/).map(item => item.trim()).filter(Boolean)
+  return []
+}
+
+function sortDimensions(list) {
+  return [...list].sort((a, b) => DIMENSION_ORDER.indexOf(a) - DIMENSION_ORDER.indexOf(b) || a.localeCompare(b))
+}
+
+function unique(list) {
+  const seen = new Set()
+  const out = []
+  for (const item of list) {
+    if (seen.has(item)) continue
+    seen.add(item)
+    out.push(item)
+  }
+  return out
 }
 
 function separate(points, pinned, cx, cy) {
