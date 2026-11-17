@@ -1,16 +1,49 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import {
-  GRAPH_TYPES, buildGraph, displayRadius, filterGraph, fitTransform, localGraph,
-  simulateLayout, typeLabel,
+  GRAPH_TYPES, INDEX_CARD_ID, LABEL_ALL_WHEN_AT_MOST, LIFE_DIMENSIONS, UNLABELED_DIMENSION,
+  applyCandidateVisibility, applyIndexVisibility, buildGraph, displayRadius, filterByDimensions, filterGraph, fitTransform,
+  localGraph, majorLabelIds, primaryClusterId, shortTitle, simulateLayout, typeLabel,
 } from '../lib/obsidianGraph'
+
+const GLOWS = [
+  ['ob-g-career', '#3ddcff'],
+  ['ob-g-money', '#ffe14a'],
+  ['ob-g-health', '#5dffb0'],
+  ['ob-g-family', '#ff5fa2'],
+  ['ob-g-work', '#7c9bff'],
+  ['ob-g-play', '#d07bff'],
+  ['ob-g-grow', '#ff9a3c'],
+  ['ob-g-none', '#e6ecfa'],
+]
+
+const CLUSTER_GRADIENT = {
+  事業: 'ob-g-career',
+  財務: 'ob-g-money',
+  健康: 'ob-g-health',
+  家庭: 'ob-g-family',
+  本業: 'ob-g-work',
+  休閒: 'ob-g-play',
+  成長: 'ob-g-grow',
+  未標七維: 'ob-g-none',
+}
+
+const TYPE_GRADIENT = {
+  person: 'ob-g-career',
+  event: 'ob-g-money',
+  know: 'ob-g-work',
+  dec: 'ob-g-family',
+  map: 'ob-g-play',
+  pref: 'ob-g-health',
+  asset: 'ob-g-grow',
+}
 
 function clamp(value, min, max) {
   return Math.max(min, Math.min(max, value))
 }
 
-function shortTitle(title) {
-  const chars = [...String(title || '')]
-  return chars.length > 12 ? `${chars.slice(0, 12).join('')}…` : chars.join('')
+function glowId(node, colorBy) {
+  if (colorBy === 'type') return TYPE_GRADIENT[node.type] || 'ob-g-none'
+  return CLUSTER_GRADIENT[primaryClusterId(node)] || 'ob-g-none'
 }
 
 function paddedRadii(radii, labeled) {
@@ -42,10 +75,36 @@ export default function ObsidianGraph({ cards, selectedId, scope, onOpen, onScop
     ]
   }, [full])
   const [hidden, setHidden] = useState(() => new Set())
+  const [hiddenDims, setHiddenDims] = useState(() => new Set())
+  const [showIndex, setShowIndex] = useState(false)
+  const [showCandidates, setShowCandidates] = useState(false)
+  const [colorBy, setColorBy] = useState('dimension')
   const typeKey = present.map(item => item.id).filter(id => !hidden.has(id)).join('|')
+  const dimensionOptions = useMemo(
+    () => [...LIFE_DIMENSIONS, { id: UNLABELED_DIMENSION, label: UNLABELED_DIMENSION }],
+    [],
+  )
+  const dimKey = dimensionOptions.map(item => item.id).filter(id => !hiddenDims.has(id)).join('|')
+  const candidates = useMemo(
+    () => applyCandidateVisibility(full, {
+      showCandidates,
+      centerId: scope === 'local' ? selectedId : '',
+    }),
+    [full, showCandidates, scope, selectedId],
+  )
+  const indexed = useMemo(
+    () => applyIndexVisibility(candidates, {
+      showIndex,
+      centerId: scope === 'local' && selectedId === INDEX_CARD_ID ? selectedId : '',
+    }),
+    [candidates, showIndex, scope, selectedId],
+  )
   const filtered = useMemo(
-    () => filterGraph(full, typeKey ? typeKey.split('|') : []),
-    [full, typeKey],
+    () => filterByDimensions(
+      filterGraph(indexed, typeKey ? typeKey.split('|') : []),
+      dimKey ? dimKey.split('|') : [],
+    ),
+    [indexed, typeKey, dimKey],
   )
   const viewGraph = useMemo(
     () => (scope === 'local' && selectedId ? localGraph(filtered, selectedId) : filtered),
@@ -56,8 +115,9 @@ export default function ObsidianGraph({ cards, selectedId, scope, onOpen, onScop
   }), [viewGraph])
   const radii = useMemo(() => {
     const max = Math.max(1, ...viewGraph.nodes.map(node => node.degree || 0))
-    return new Map(viewGraph.nodes.map(node => [node.id, displayRadius(node.degree, max, node.center)]))
+    return new Map(viewGraph.nodes.map(node => [node.id, displayRadius(node.degree, max, node.center, node.candidate)]))
   }, [viewGraph])
+  const labeledIds = useMemo(() => new Set(majorLabelIds(viewGraph.nodes)), [viewGraph])
   const stageRef = useRef(null)
   const svgRef = useRef(null)
   const modelRef = useRef(null)
@@ -82,11 +142,11 @@ export default function ObsidianGraph({ cards, selectedId, scope, onOpen, onScop
 
   useEffect(() => {
     if (!size.width || !size.height) return
-    const fitRadii = paddedRadii(radii, viewGraph.nodes.length <= 18)
-    setModel({ positions: layout, view: fitTransform(layout, fitRadii, size.width, size.height, 24) })
+    const fitRadii = paddedRadii(radii, labeledIds.size > 0)
+    setModel({ positions: layout, view: fitTransform(layout, fitRadii, size.width, size.height, 28) })
     setHoverId('')
     setPeekId('')
-  }, [layout, radii, size.width, size.height, viewGraph.nodes.length])
+  }, [layout, radii, size.width, size.height, labeledIds.size])
 
   useEffect(() => { modelRef.current = model }, [model])
 
@@ -113,16 +173,33 @@ export default function ObsidianGraph({ cards, selectedId, scope, onOpen, onScop
 
   const counts = useMemo(() => {
     const map = new Map()
-    for (const node of full.nodes) map.set(node.type, (map.get(node.type) || 0) + 1)
+    for (const node of indexed.nodes) map.set(node.type, (map.get(node.type) || 0) + 1)
     return map
-  }, [full])
+  }, [indexed])
+  const dimCounts = useMemo(() => {
+    const map = new Map()
+    for (const node of indexed.nodes) {
+      for (const dim of node.dimensions || []) map.set(dim, (map.get(dim) || 0) + 1)
+    }
+    return map
+  }, [indexed])
   const positions = useMemo(() => new Map((model?.positions || []).map(point => [point.id, point])), [model])
   const hover = viewGraph.nodes.find(node => node.id === (tapMode ? peekId : hoverId))
   const peek = viewGraph.nodes.find(node => node.id === peekId)
-  const showLabels = viewGraph.nodes.length > 0 && viewGraph.nodes.length <= 18
+  const labelMax = viewGraph.nodes.length <= LABEL_ALL_WHEN_AT_MOST ? 12 : 8
+  const candidateCount = viewGraph.nodes.filter(node => node.candidate).length
 
   function toggleType(id) {
     setHidden(prev => {
+      const next = new Set(prev)
+      if (next.has(id)) next.delete(id)
+      else next.add(id)
+      return next
+    })
+  }
+
+  function toggleDimension(id) {
+    setHiddenDims(prev => {
       const next = new Set(prev)
       if (next.has(id)) next.delete(id)
       else next.add(id)
@@ -144,8 +221,8 @@ export default function ObsidianGraph({ cards, selectedId, scope, onOpen, onScop
 
   function resetView() {
     if (!size.width || !size.height) return
-    const fitRadii = paddedRadii(radii, viewGraph.nodes.length <= 18)
-    const next = { positions: layout, view: fitTransform(layout, fitRadii, size.width, size.height, 24) }
+    const fitRadii = paddedRadii(radii, labeledIds.size > 0)
+    const next = { positions: layout, view: fitTransform(layout, fitRadii, size.width, size.height, 28) }
     modelRef.current = next
     setModel(next)
   }
@@ -242,12 +319,15 @@ export default function ObsidianGraph({ cards, selectedId, scope, onOpen, onScop
   const hoverPoint = hover ? positions.get(hover.id) : null
   const hoverRadius = hover ? (radii.get(hover.id) || 8) : 0
   const tip = !tapMode && hoverPoint ? screenOf(hoverPoint, hoverRadius) : null
+  const brokenNote = full.broken
+    ? ` · 斷鏈 ${full.broken} 條已略過${full.brokenIds?.length ? `（${full.brokenIds.join('、')}）` : ''}`
+    : ''
   const summary = scope === 'local'
     ? `局部圖 ${viewGraph.nodes.length} 張 · ${viewGraph.edges.length} 條連線`
     : `全圖 ${viewGraph.nodes.length} 張 · ${viewGraph.edges.length} 條連線`
   const empty = scope === 'local' && selectedId
-    ? '這張卡的類型被隱藏了，或是它不在目錄裡。勾選類型後會再畫出來。'
-    : '勾選至少一種類型，關係圖才會畫出來。'
+    ? '這張卡的類型或七維被隱藏了，或是它不在目錄裡。勾選條件後會再畫出來。'
+    : '勾選至少一種類型與一個七維，關係圖才會畫出來。'
 
   return (
     <div className="hy-stack">
@@ -263,23 +343,43 @@ export default function ObsidianGraph({ cards, selectedId, scope, onOpen, onScop
                 <span className="ob-id">{counts.get(item.id) || 0}</span>
               </label>
             ))}
-            <span className="ob-legend-note"><i className="ob-dash-sample" aria-hidden="true" />待上架</span>
           </div>
         </fieldset>
-        <div className="ob-folders" role="group" aria-label="圖的範圍">
+        <fieldset className="ob-filters">
+          <legend>七維</legend>
+          <div className="ob-filter-row">
+            {dimensionOptions.map(item => (
+              <label key={item.id}>
+                <input type="checkbox" checked={!hiddenDims.has(item.id)} onChange={() => toggleDimension(item.id)} />
+                <i className="ob-dim-dot" data-dim={item.id} aria-hidden="true" />
+                <span>{item.label}</span>
+                <span className="ob-id">{dimCounts.get(item.id) || 0}</span>
+              </label>
+            ))}
+          </div>
+        </fieldset>
+        <div className="ob-folders ob-wrap" role="group" aria-label="圖的範圍">
           <button type="button" aria-current={scope !== 'local' ? 'true' : undefined} onClick={() => onScope('all')}>全圖</button>
           <button type="button" aria-current={scope === 'local' ? 'true' : undefined} disabled={!selectedId} onClick={() => onScope('local')}>這張卡的鄰居</button>
+          <button type="button" aria-pressed={showIndex} onClick={() => setShowIndex(current => !current)}>顯示總索引</button>
+          <button type="button" aria-pressed={showCandidates} onClick={() => setShowCandidates(current => !current)}>顯示待上架</button>
         </div>
-        <div className="ob-folders" role="group" aria-label="縮放">
+        <div className="ob-folders ob-wrap" role="group" aria-label="著色方式">
+          <button type="button" aria-pressed={colorBy === 'dimension'} onClick={() => setColorBy('dimension')}>依七維著色</button>
+          <button type="button" aria-pressed={colorBy === 'type'} onClick={() => setColorBy('type')}>依類型著色</button>
+          <span className="ob-legend-note"><i className="ob-dash-sample" aria-hidden="true" />待上架標記</span>
+        </div>
+        <div className="ob-folders ob-wrap" role="group" aria-label="縮放">
           <button type="button" onClick={() => zoomBy(1.2)}>放大</button>
           <button type="button" onClick={() => zoomBy(1 / 1.2)}>縮小</button>
           <button type="button" onClick={resetView}>重設</button>
         </div>
       </div>
-      <p className="hy-note">
+      <p className="hy-note ob-note-break">
         {summary}
-        {full.broken ? ` · 斷鏈 ${full.broken} 條已略過` : ''}
-        {tapMode ? '。點一下看標題，再點或按打開。拖節點可移動。' : '。點節點打開卡片。拖節點可移動，拖空白處可平移，滾輪可縮放。'}
+        {showCandidates ? ' · 已顯示待上架' : ' · 待上架已隱藏'}
+        {brokenNote}
+        {tapMode ? '。主要節點看得到標題；次要節點點一下看出全名，再點或按打開。拖節點可移動。' : '。主要節點看得到標題；滑過次要節點看出全名，點節點打開卡片。拖節點可移動，拖空白處可平移，滾輪可縮放。'}
       </p>
       <div className={children ? 'ob-graph-layout' : 'hy-stack'}>
         <div className="hy-stack ob-graph-main">
@@ -290,10 +390,16 @@ export default function ObsidianGraph({ cards, selectedId, scope, onOpen, onScop
             data-nodes={viewGraph.nodes.length}
             data-edges={viewGraph.edges.length}
             data-scope={scope === 'local' ? 'local' : 'all'}
+            data-index={showIndex || (scope === 'local' && selectedId === INDEX_CARD_ID) ? 'on' : 'off'}
+            data-candidates={showCandidates ? 'on' : 'off'}
+            data-color={colorBy}
+            data-labels={labeledIds.size}
+            data-candidate={candidateCount}
           >
             <svg
               ref={svgRef}
               className="ob-graph-svg"
+              data-color={colorBy}
               width={size.width || undefined}
               height={size.height || undefined}
               role="group"
@@ -305,16 +411,30 @@ export default function ObsidianGraph({ cards, selectedId, scope, onOpen, onScop
             >
               {model && (
                 <g transform={`translate(${model.view.x} ${model.view.y}) scale(${model.view.k})`}>
+                  <defs>
+                    {GLOWS.map(([id, color]) => (
+                      <radialGradient key={id} id={id} cx="50%" cy="50%" r="50%">
+                        <stop offset="0%" stopColor={color} stopOpacity="0.95" />
+                        <stop offset="10%" stopColor={color} stopOpacity="0.72" />
+                        <stop offset="28%" stopColor={color} stopOpacity="0.22" />
+                        <stop offset="58%" stopColor={color} stopOpacity="0.06" />
+                        <stop offset="100%" stopColor={color} stopOpacity="0" />
+                      </radialGradient>
+                    ))}
+                  </defs>
                   {viewGraph.edges.map(edge => {
                     const a = positions.get(edge.source)
                     const b = positions.get(edge.target)
                     if (!a || !b) return null
                     return <line key={`${edge.source}-${edge.target}`} className="ob-edge" x1={a.x} y1={a.y} x2={b.x} y2={b.y} />
                   })}
-                  {viewGraph.nodes.map(node => {
+                  {[...viewGraph.nodes].sort((a, b) => Number(a.candidate) - Number(b.candidate) || a.id.localeCompare(b.id)).map(node => {
                     const point = positions.get(node.id)
                     if (!point) return null
                     const radius = radii.get(node.id) || 8
+                    const glow = Math.max(18, radius * 1.65)
+                    const spark = Math.max(2.2, radius * 0.2)
+                    const core = Math.max(1.15, radius * 0.09)
                     return (
                       <g
                         key={node.id}
@@ -322,8 +442,10 @@ export default function ObsidianGraph({ cards, selectedId, scope, onOpen, onScop
                         transform={`translate(${point.x} ${point.y})`}
                         data-node={node.id}
                         data-type={node.type || 'other'}
+                        data-cluster={primaryClusterId(node)}
                         data-candidate={node.candidate ? 'true' : 'false'}
                         data-center={node.center ? 'true' : 'false'}
+                        data-labeled={labeledIds.has(node.id) ? 'true' : 'false'}
                         tabIndex={0}
                         role="button"
                         aria-label={`${node.title}，${typeLabel(node.type)}${node.candidate ? '，待上架' : ''}`}
@@ -335,14 +457,21 @@ export default function ObsidianGraph({ cards, selectedId, scope, onOpen, onScop
                           if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); onOpen(node.id) }
                         }}
                       >
-                        <circle className="ob-hit" r={Math.max(radius + 6, 22)} />
-                        {node.center && <circle className="ob-center-ring" r={radius + 8} />}
-                        {node.candidate && <circle className="ob-candidate-ring" r={radius + 5} />}
-                        <circle className="ob-node" data-type={node.type || 'other'} r={radius} />
-                        {node.candidate && <text className="ob-candidate-tag" x={radius + 2} y={-radius + 2}>待</text>}
-                        {(showLabels || node.center) && (
-                          <text className="ob-label" y={radius + 14} textAnchor="middle" stroke="var(--hy-surface)" strokeWidth="4" paintOrder="stroke">
-                            {shortTitle(node.title)}
+                        <circle className="ob-hit" r={Math.max(radius + 8, 24)} />
+                        <circle className="ob-aura" r={glow} fill={`url(#${glowId(node, colorBy)})`} />
+                        <circle className="ob-spark" r={spark} />
+                        <circle className="ob-core" r={core} />
+                        {node.center && <circle className="ob-center-ring" r={spark + 7} />}
+                        {node.candidate && <circle className="ob-candidate-ring" r={glow * 0.46} />}
+                        {node.candidate && (
+                          <g className="ob-candidate-badge" transform={`translate(${glow * 0.34} ${-glow * 0.3})`}>
+                            <circle className="ob-candidate-badge-bg" r="9" />
+                            <text className="ob-candidate-tag" textAnchor="middle" dominantBaseline="central">待</text>
+                          </g>
+                        )}
+                        {labeledIds.has(node.id) && (
+                          <text className="ob-label" y={spark + 13} textAnchor="middle" stroke="#080c16" strokeWidth="3" paintOrder="stroke">
+                            {shortTitle(node.title, labelMax)}
                           </text>
                         )}
                       </g>
