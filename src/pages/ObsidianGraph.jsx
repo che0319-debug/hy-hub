@@ -1,12 +1,49 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import {
   GRAPH_TYPES, INDEX_CARD_ID, LABEL_ALL_WHEN_AT_MOST, LIFE_DIMENSIONS, UNLABELED_DIMENSION,
-  applyIndexVisibility, buildGraph, displayRadius, filterByDimensions, filterGraph, fitTransform,
-  localGraph, majorLabelIds, shortTitle, simulateLayout, typeLabel,
+  applyCandidateVisibility, applyIndexVisibility, buildGraph, displayRadius, filterByDimensions, filterGraph, fitTransform,
+  localGraph, majorLabelIds, primaryClusterId, shortTitle, simulateLayout, typeLabel,
 } from '../lib/obsidianGraph'
+
+const GLOWS = [
+  ['ob-g-career', '#3ddcff'],
+  ['ob-g-money', '#ffe14a'],
+  ['ob-g-health', '#5dffb0'],
+  ['ob-g-family', '#ff5fa2'],
+  ['ob-g-work', '#7c9bff'],
+  ['ob-g-play', '#d07bff'],
+  ['ob-g-grow', '#ff9a3c'],
+  ['ob-g-none', '#e6ecfa'],
+]
+
+const CLUSTER_GRADIENT = {
+  事業: 'ob-g-career',
+  財務: 'ob-g-money',
+  健康: 'ob-g-health',
+  家庭: 'ob-g-family',
+  本業: 'ob-g-work',
+  休閒: 'ob-g-play',
+  成長: 'ob-g-grow',
+  未標七維: 'ob-g-none',
+}
+
+const TYPE_GRADIENT = {
+  person: 'ob-g-career',
+  event: 'ob-g-money',
+  know: 'ob-g-work',
+  dec: 'ob-g-family',
+  map: 'ob-g-play',
+  pref: 'ob-g-health',
+  asset: 'ob-g-grow',
+}
 
 function clamp(value, min, max) {
   return Math.max(min, Math.min(max, value))
+}
+
+function glowId(node, colorBy) {
+  if (colorBy === 'type') return TYPE_GRADIENT[node.type] || 'ob-g-none'
+  return CLUSTER_GRADIENT[primaryClusterId(node)] || 'ob-g-none'
 }
 
 function paddedRadii(radii, labeled) {
@@ -40,18 +77,27 @@ export default function ObsidianGraph({ cards, selectedId, scope, onOpen, onScop
   const [hidden, setHidden] = useState(() => new Set())
   const [hiddenDims, setHiddenDims] = useState(() => new Set())
   const [showIndex, setShowIndex] = useState(false)
+  const [showCandidates, setShowCandidates] = useState(false)
+  const [colorBy, setColorBy] = useState('dimension')
   const typeKey = present.map(item => item.id).filter(id => !hidden.has(id)).join('|')
   const dimensionOptions = useMemo(
     () => [...LIFE_DIMENSIONS, { id: UNLABELED_DIMENSION, label: UNLABELED_DIMENSION }],
     [],
   )
   const dimKey = dimensionOptions.map(item => item.id).filter(id => !hiddenDims.has(id)).join('|')
+  const candidates = useMemo(
+    () => applyCandidateVisibility(full, {
+      showCandidates,
+      centerId: scope === 'local' ? selectedId : '',
+    }),
+    [full, showCandidates, scope, selectedId],
+  )
   const indexed = useMemo(
-    () => applyIndexVisibility(full, {
+    () => applyIndexVisibility(candidates, {
       showIndex,
       centerId: scope === 'local' && selectedId === INDEX_CARD_ID ? selectedId : '',
     }),
-    [full, showIndex, scope, selectedId],
+    [candidates, showIndex, scope, selectedId],
   )
   const filtered = useMemo(
     () => filterByDimensions(
@@ -297,7 +343,6 @@ export default function ObsidianGraph({ cards, selectedId, scope, onOpen, onScop
                 <span className="ob-id">{counts.get(item.id) || 0}</span>
               </label>
             ))}
-            <span className="ob-legend-note"><i className="ob-dash-sample" aria-hidden="true" />待上架</span>
           </div>
         </fieldset>
         <fieldset className="ob-filters">
@@ -306,18 +351,25 @@ export default function ObsidianGraph({ cards, selectedId, scope, onOpen, onScop
             {dimensionOptions.map(item => (
               <label key={item.id}>
                 <input type="checkbox" checked={!hiddenDims.has(item.id)} onChange={() => toggleDimension(item.id)} />
+                <i className="ob-dim-dot" data-dim={item.id} aria-hidden="true" />
                 <span>{item.label}</span>
                 <span className="ob-id">{dimCounts.get(item.id) || 0}</span>
               </label>
             ))}
           </div>
         </fieldset>
-        <div className="ob-folders" role="group" aria-label="圖的範圍">
+        <div className="ob-folders ob-wrap" role="group" aria-label="圖的範圍">
           <button type="button" aria-current={scope !== 'local' ? 'true' : undefined} onClick={() => onScope('all')}>全圖</button>
           <button type="button" aria-current={scope === 'local' ? 'true' : undefined} disabled={!selectedId} onClick={() => onScope('local')}>這張卡的鄰居</button>
           <button type="button" aria-pressed={showIndex} onClick={() => setShowIndex(current => !current)}>顯示總索引</button>
+          <button type="button" aria-pressed={showCandidates} onClick={() => setShowCandidates(current => !current)}>顯示待上架</button>
         </div>
-        <div className="ob-folders" role="group" aria-label="縮放">
+        <div className="ob-folders ob-wrap" role="group" aria-label="著色方式">
+          <button type="button" aria-pressed={colorBy === 'dimension'} onClick={() => setColorBy('dimension')}>依七維著色</button>
+          <button type="button" aria-pressed={colorBy === 'type'} onClick={() => setColorBy('type')}>依類型著色</button>
+          <span className="ob-legend-note"><i className="ob-dash-sample" aria-hidden="true" />待上架標記</span>
+        </div>
+        <div className="ob-folders ob-wrap" role="group" aria-label="縮放">
           <button type="button" onClick={() => zoomBy(1.2)}>放大</button>
           <button type="button" onClick={() => zoomBy(1 / 1.2)}>縮小</button>
           <button type="button" onClick={resetView}>重設</button>
@@ -325,6 +377,7 @@ export default function ObsidianGraph({ cards, selectedId, scope, onOpen, onScop
       </div>
       <p className="hy-note ob-note-break">
         {summary}
+        {showCandidates ? ' · 已顯示待上架' : ' · 待上架已隱藏'}
         {brokenNote}
         {tapMode ? '。主要節點看得到標題；次要節點點一下看出全名，再點或按打開。拖節點可移動。' : '。主要節點看得到標題；滑過次要節點看出全名，點節點打開卡片。拖節點可移動，拖空白處可平移，滾輪可縮放。'}
       </p>
@@ -338,12 +391,15 @@ export default function ObsidianGraph({ cards, selectedId, scope, onOpen, onScop
             data-edges={viewGraph.edges.length}
             data-scope={scope === 'local' ? 'local' : 'all'}
             data-index={showIndex || (scope === 'local' && selectedId === INDEX_CARD_ID) ? 'on' : 'off'}
+            data-candidates={showCandidates ? 'on' : 'off'}
+            data-color={colorBy}
             data-labels={labeledIds.size}
             data-candidate={candidateCount}
           >
             <svg
               ref={svgRef}
               className="ob-graph-svg"
+              data-color={colorBy}
               width={size.width || undefined}
               height={size.height || undefined}
               role="group"
@@ -355,16 +411,30 @@ export default function ObsidianGraph({ cards, selectedId, scope, onOpen, onScop
             >
               {model && (
                 <g transform={`translate(${model.view.x} ${model.view.y}) scale(${model.view.k})`}>
+                  <defs>
+                    {GLOWS.map(([id, color]) => (
+                      <radialGradient key={id} id={id} cx="50%" cy="50%" r="50%">
+                        <stop offset="0%" stopColor={color} stopOpacity="0.95" />
+                        <stop offset="10%" stopColor={color} stopOpacity="0.72" />
+                        <stop offset="28%" stopColor={color} stopOpacity="0.22" />
+                        <stop offset="58%" stopColor={color} stopOpacity="0.06" />
+                        <stop offset="100%" stopColor={color} stopOpacity="0" />
+                      </radialGradient>
+                    ))}
+                  </defs>
                   {viewGraph.edges.map(edge => {
                     const a = positions.get(edge.source)
                     const b = positions.get(edge.target)
                     if (!a || !b) return null
                     return <line key={`${edge.source}-${edge.target}`} className="ob-edge" x1={a.x} y1={a.y} x2={b.x} y2={b.y} />
                   })}
-                  {viewGraph.nodes.map(node => {
+                  {[...viewGraph.nodes].sort((a, b) => Number(a.candidate) - Number(b.candidate) || a.id.localeCompare(b.id)).map(node => {
                     const point = positions.get(node.id)
                     if (!point) return null
                     const radius = radii.get(node.id) || 8
+                    const glow = Math.max(18, radius * 1.65)
+                    const spark = Math.max(2.2, radius * 0.2)
+                    const core = Math.max(1.15, radius * 0.09)
                     return (
                       <g
                         key={node.id}
@@ -372,6 +442,7 @@ export default function ObsidianGraph({ cards, selectedId, scope, onOpen, onScop
                         transform={`translate(${point.x} ${point.y})`}
                         data-node={node.id}
                         data-type={node.type || 'other'}
+                        data-cluster={primaryClusterId(node)}
                         data-candidate={node.candidate ? 'true' : 'false'}
                         data-center={node.center ? 'true' : 'false'}
                         data-labeled={labeledIds.has(node.id) ? 'true' : 'false'}
@@ -387,18 +458,19 @@ export default function ObsidianGraph({ cards, selectedId, scope, onOpen, onScop
                         }}
                       >
                         <circle className="ob-hit" r={Math.max(radius + 8, 24)} />
-                        {node.candidate && <circle className="ob-candidate-halo" r={radius + 12} />}
-                        {node.center && <circle className="ob-center-ring" r={radius + 8} />}
-                        {node.candidate && <circle className="ob-candidate-ring" r={radius + 8} />}
-                        <circle className="ob-node" data-type={node.type || 'other'} r={radius} />
+                        <circle className="ob-aura" r={glow} fill={`url(#${glowId(node, colorBy)})`} />
+                        <circle className="ob-spark" r={spark} />
+                        <circle className="ob-core" r={core} />
+                        {node.center && <circle className="ob-center-ring" r={spark + 7} />}
+                        {node.candidate && <circle className="ob-candidate-ring" r={glow * 0.46} />}
                         {node.candidate && (
-                          <g className="ob-candidate-badge" transform={`translate(${radius + 8} ${-radius - 6})`}>
-                            <circle className="ob-candidate-badge-bg" r="12" />
+                          <g className="ob-candidate-badge" transform={`translate(${glow * 0.34} ${-glow * 0.3})`}>
+                            <circle className="ob-candidate-badge-bg" r="9" />
                             <text className="ob-candidate-tag" textAnchor="middle" dominantBaseline="central">待</text>
                           </g>
                         )}
                         {labeledIds.has(node.id) && (
-                          <text className="ob-label" y={radius + 16} textAnchor="middle" stroke="var(--hy-surface)" strokeWidth="5" paintOrder="stroke">
+                          <text className="ob-label" y={spark + 13} textAnchor="middle" stroke="#080c16" strokeWidth="3" paintOrder="stroke">
                             {shortTitle(node.title, labelMax)}
                           </text>
                         )}

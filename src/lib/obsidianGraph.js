@@ -9,6 +9,8 @@ export const GRAPH_TYPES = [
   { id: 'know', label: '知識' },
   { id: 'dec', label: '決策' },
   { id: 'map', label: '地圖' },
+  { id: 'pref', label: '偏好' },
+  { id: 'asset', label: '資產' },
 ]
 
 export const INDEX_CARD_ID = 'map-second-brain-v1-index'
@@ -85,6 +87,16 @@ export function dimensionsOf(card) {
       .filter(Boolean),
   ))
   return fromTags.length ? fromTags : [UNLABELED_DIMENSION]
+}
+
+// 多維時取官方順序的第一個；沒有七維就是未標這一簇。
+export function primaryClusterId(node) {
+  const dims = Array.isArray(node?.dimensions) ? node.dimensions.filter(item => typeof item === 'string' && item) : []
+  if (!dims.length) return UNLABELED_DIMENSION
+  for (const id of DIMENSION_ORDER) {
+    if (dims.includes(id)) return id
+  }
+  return dims[0]
 }
 
 export function shortTitle(title, max = 8) {
@@ -194,6 +206,16 @@ export function filterByDimensions(graph, selected) {
   return pack(nodes, graph?.edges || [], graph?.broken || 0, graph?.brokenIds || [])
 }
 
+export function applyCandidateVisibility(graph, options = {}) {
+  const showCandidates = !!options.showCandidates
+  const centerId = typeof options.centerId === 'string' ? options.centerId : ''
+  if (showCandidates) {
+    return pack(graph?.nodes || [], graph?.edges || [], graph?.broken || 0, graph?.brokenIds || [])
+  }
+  const nodes = (graph?.nodes || []).filter(node => !node.candidate || node.id === centerId)
+  return pack(nodes, graph?.edges || [], graph?.broken || 0, graph?.brokenIds || [])
+}
+
 export function applyIndexVisibility(graph, options = {}) {
   const showIndex = !!options.showIndex
   const centerId = typeof options.centerId === 'string' ? options.centerId : ''
@@ -236,38 +258,63 @@ export function simulateLayout(nodes, edges, options = {}) {
   const cy = height / 2
   const maxDegree = Math.max(1, ...list.map(node => node.degree || 0))
   const preferred = options.centerId || list.find(node => node.center)?.id || ''
-  const hub = list.find(node => node.id === preferred)
-    || [...list].sort((a, b) => (b.degree || 0) - (a.degree || 0) || a.id.localeCompare(b.id))[0]
+  const hub = preferred
+    ? (list.find(node => node.id === preferred)
+      || [...list].sort((a, b) => (b.degree || 0) - (a.degree || 0) || a.id.localeCompare(b.id))[0])
+    : null
   const others = list
-    .filter(node => node.id !== hub.id)
+    .filter(node => !hub || node.id !== hub.id)
     .sort((a, b) => (TYPE_RANK[a.type] ?? 9) - (TYPE_RANK[b.type] ?? 9) || a.id.localeCompare(b.id))
   const ring = Math.min(width, height) * 0.34
+  const anchors = clusterAnchors(list, cx, cy, Math.min(width, height) * 0.28)
   const points = new Map()
   const place = (node, x, y) => {
     points.set(node.id, {
       id: node.id,
       x, y, vx: 0, vy: 0,
       r: nodeRadius(node.degree || 0, maxDegree),
+      cluster: primaryClusterId(node),
     })
   }
-  place(hub, cx, cy)
-  others.forEach((node, index) => {
-    const angle = -Math.PI / 2 + (others.length ? (index / others.length) * Math.PI * 2 : 0)
-    const spin = hash(node.id)
-    const radial = ring * (0.9 + (spin % 13) / 80)
-    place(
-      node,
-      cx + Math.cos(angle) * radial + ((spin % 9) - 4),
-      cy + Math.sin(angle) * radial + (((spin >> 4) % 9) - 4),
-    )
-  })
+  if (hub) place(hub, cx, cy)
+  if (anchors.size <= 1) {
+    others.forEach((node, index) => {
+      const angle = -Math.PI / 2 + (others.length ? (index / others.length) * Math.PI * 2 : 0)
+      const spin = hash(node.id)
+      const radial = ring * (0.9 + (spin % 13) / 80)
+      place(
+        node,
+        cx + Math.cos(angle) * radial + ((spin % 9) - 4),
+        cy + Math.sin(angle) * radial + (((spin >> 4) % 9) - 4),
+      )
+    })
+  } else {
+    const groups = new Map()
+    for (const node of others) {
+      const key = primaryClusterId(node)
+      if (!groups.has(key)) groups.set(key, [])
+      groups.get(key).push(node)
+    }
+    for (const [key, members] of groups) {
+      const anchor = anchors.get(key) || { x: cx, y: cy }
+      const sorted = [...members].sort((a, b) => a.id.localeCompare(b.id))
+      const local = Math.min(ring * 0.42, 24 + Math.sqrt(sorted.length) * 11)
+      sorted.forEach((node, index) => {
+        const spin = hash(node.id)
+        const angle = (index / Math.max(1, sorted.length)) * Math.PI * 2 + ((hash(key) % 360) * Math.PI) / 180
+        const radial = sorted.length === 1 ? local * 0.2 : local * (0.42 + (spin % 17) / 28)
+        place(node, anchor.x + Math.cos(angle) * radial, anchor.y + Math.sin(angle) * radial)
+      })
+    }
+  }
   const links = []
   for (const edge of edges || []) {
     const a = points.get(edge.source)
     const b = points.get(edge.target)
     if (a && b && a !== b) links.push([a, b])
   }
-  const pinned = points.get(hub.id)
+  const pinned = hub ? points.get(hub.id) : null
+  const multi = anchors.size > 1
   const maxR = Math.min(width, height) * 0.46
   for (let iter = 0; iter < iterations; iter += 1) {
     const cool = 1 - iter / Math.max(1, iterations)
@@ -291,7 +338,10 @@ export function simulateLayout(nodes, edges, options = {}) {
       const dx = b.x - a.x
       const dy = b.y - a.y
       const dist = Math.hypot(dx, dy) || 0.01
-      const rest = a === pinned || b === pinned ? ring * 0.95 : ring * 0.62
+      let rest = ring * 0.62
+      if (a === pinned || b === pinned) rest = ring * 0.95
+      else if (multi && a.cluster === b.cluster) rest = ring * 0.28
+      else if (multi) rest = ring * 0.9
       const mag = (dist - rest) * (0.015 + cool * 0.03)
       const ux = dx / dist
       const uy = dy / dist
@@ -300,8 +350,17 @@ export function simulateLayout(nodes, edges, options = {}) {
     }
     for (const point of listPoints) {
       if (point === pinned) { point.x = cx; point.y = cy; point.vx = 0; point.vy = 0; continue }
-      point.vx += (cx - point.x) * 0.01
-      point.vy += (cy - point.y) * 0.01
+      if (multi) {
+        const anchor = anchors.get(point.cluster) || { x: cx, y: cy }
+        const pull = 0.034 + cool * 0.02
+        point.vx += (anchor.x - point.x) * pull
+        point.vy += (anchor.y - point.y) * pull
+        point.vx += (cx - point.x) * 0.0015
+        point.vy += (cy - point.y) * 0.0015
+      } else {
+        point.vx += (cx - point.x) * 0.01
+        point.vy += (cy - point.y) * 0.01
+      }
       point.vx *= 0.55
       point.vy *= 0.55
       const speed = Math.hypot(point.vx, point.vy)
@@ -315,7 +374,7 @@ export function simulateLayout(nodes, edges, options = {}) {
       if (dist > maxR) { point.x = cx + dx / dist * maxR; point.y = cy + dy / dist * maxR }
     }
   }
-  separate(points, pinned, cx, cy)
+  separate(points, pinned, cx, cy, multi ? anchors : null)
   return [...points.values()]
     .map(point => ({ id: point.id, x: round(point.x), y: round(point.y) }))
     .sort((a, b) => a.id.localeCompare(b.id))
@@ -337,7 +396,8 @@ export function fitTransform(points, radii, width, height, padding = 36) {
   }
   const boxW = Math.max(1, maxX - minX)
   const boxH = Math.max(1, maxY - minY)
-  const k = Math.min(Math.max(1, width - padding * 2) / boxW, Math.max(1, height - padding * 2) / boxH)
+  const fitted = Math.min(Math.max(1, width - padding * 2) / boxW, Math.max(1, height - padding * 2) / boxH)
+  const k = Math.min(1.4, fitted)
   const midX = (minX + maxX) / 2
   const midY = (minY + maxY) / 2
   return {
@@ -393,7 +453,31 @@ function unique(list) {
   return out
 }
 
-function separate(points, pinned, cx, cy) {
+function clusterAnchors(list, cx, cy, radius) {
+  const counts = new Map()
+  for (const node of list) {
+    const id = primaryClusterId(node)
+    counts.set(id, (counts.get(id) || 0) + 1)
+  }
+  const ids = [...counts.keys()].sort((a, b) => {
+    const diff = (counts.get(b) || 0) - (counts.get(a) || 0)
+    if (diff) return diff
+    return DIMENSION_ORDER.indexOf(a) - DIMENSION_ORDER.indexOf(b) || a.localeCompare(b)
+  })
+  const map = new Map()
+  if (!ids.length) return map
+  map.set(ids[0], { x: cx, y: cy })
+  const rest = ids.slice(1)
+  rest.forEach((id, index) => {
+    const angle = -Math.PI / 2 + (index / rest.length) * Math.PI * 2
+    const wobble = ((hash(id) % 11) - 5) * 0.02
+    const dist = radius * (0.94 + (hash(id) % 5) * 0.015)
+    map.set(id, { x: cx + Math.cos(angle + wobble) * dist, y: cy + Math.sin(angle + wobble) * dist })
+  })
+  return map
+}
+
+function separate(points, pinned, cx, cy, anchors = null) {
   const list = [...points.values()]
   for (let pass = 0; pass < 48; pass += 1) {
     for (let i = 0; i < list.length; i += 1) {
@@ -423,6 +507,15 @@ function separate(points, pinned, cx, cy) {
       }
     }
     if (pinned) { pinned.x = cx; pinned.y = cy }
+    if (anchors && anchors.size > 1) {
+      for (const point of list) {
+        if (point === pinned) continue
+        const anchor = anchors.get(point.cluster)
+        if (!anchor) continue
+        point.x += (anchor.x - point.x) * 0.05
+        point.y += (anchor.y - point.y) * 0.05
+      }
+    }
   }
 }
 

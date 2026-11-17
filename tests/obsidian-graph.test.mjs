@@ -2,9 +2,9 @@ import test from 'node:test'
 import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
 import {
-  DIMENSION_TAG_MAP, INDEX_CARD_ID, MAJOR_LABEL_LIMIT, UNLABELED_DIMENSION,
-  applyIndexVisibility, buildGraph, dimensionsOf, filterByDimensions, filterGraph, localGraph,
-  majorLabelIds, parseWikiTarget, shortTitle, simulateLayout,
+  DIMENSION_TAG_MAP, GRAPH_TYPES, INDEX_CARD_ID, MAJOR_LABEL_LIMIT, UNLABELED_DIMENSION,
+  applyCandidateVisibility, applyIndexVisibility, buildGraph, dimensionsOf, filterByDimensions, filterGraph, localGraph,
+  majorLabelIds, parseWikiTarget, primaryClusterId, shortTitle, simulateLayout, typeLabel,
 } from '../src/lib/obsidianGraph.js'
 
 const cards = [
@@ -106,9 +106,15 @@ test('關係圖畫面不送寫入', () => {
   assert.match(page, /關係圖/)
   assert.match(page, /看局部圖/)
   assert.match(view, /顯示總索引/)
+  assert.match(view, /顯示待上架/)
+  assert.match(view, /依七維著色/)
+  assert.match(view, /依類型著色/)
   assert.match(view, /七維/)
   assert.match(view, /ob-candidate-badge/)
+  assert.match(view, /ob-aura/)
+  assert.match(view, /radialGradient/)
   assert.match(css, /ob-candidate-badge-bg/)
+  assert.match(css, /ob-spark/)
   assert.equal([...lib.matchAll(/map-second-brain-v1-index/g)].length, 1)
   assert.doesNotMatch(view, /map-second-brain-v1-index/)
 })
@@ -228,6 +234,106 @@ test('主要節點標題：少於等於 18 張全標，多時只標前幾名與�
     if (node.id === 'card-24') continue
     assert.equal(labeled.includes(node.id), true)
   }
+})
+
+test('主簇取官方順序第一個，未標自成一簇', () => {
+  assert.equal(primaryClusterId({ dimensions: ['家庭', '財務'] }), '財務')
+  assert.equal(primaryClusterId({ dimensions: ['本業', '事業', '成長'] }), '事業')
+  assert.equal(primaryClusterId({ dimensions: ['成長', UNLABELED_DIMENSION] }), '成長')
+  assert.equal(primaryClusterId({ dimensions: [UNLABELED_DIMENSION] }), UNLABELED_DIMENSION)
+  assert.equal(primaryClusterId({ dimensions: [] }), UNLABELED_DIMENSION)
+  assert.equal(primaryClusterId(null), UNLABELED_DIMENSION)
+  const graph = buildGraph([
+    { id: 'mix', type: 'know', title: '多維', tags: ['工研院', '職涯'], related: [] },
+    { id: 'plain', type: 'map', title: '未標', tags: ['規則'], related: [] },
+  ])
+  assert.equal(primaryClusterId(graph.nodes.find(node => node.id === 'mix')), '事業')
+  assert.equal(primaryClusterId(graph.nodes.find(node => node.id === 'plain')), UNLABELED_DIMENSION)
+})
+
+test('簇引力後同簇更靠近，抽樣座標仍有限', () => {
+  const sample = []
+  for (let index = 0; index < 8; index += 1) {
+    sample.push({
+      id: `biz-${index}`,
+      type: 'know',
+      title: `事業${index}`,
+      tags: ['職涯'],
+      related: index ? [`[[biz-${index - 1}]]`] : [],
+    })
+    sample.push({
+      id: `home-${index}`,
+      type: 'dec',
+      title: `家庭${index}`,
+      tags: ['家庭'],
+      related: index ? [`[[home-${index - 1}]]`] : [],
+    })
+  }
+  const graph = buildGraph(sample)
+  const layout = simulateLayout(graph.nodes, graph.edges, { width: 1000, height: 800, iterations: 120 })
+  assert.equal(layout.length, 16)
+  for (const id of ['biz-0', 'biz-3', 'home-1', 'home-7']) {
+    const point = layout.find(item => item.id === id)
+    assert.equal(Number.isFinite(point.x), true)
+    assert.equal(Number.isFinite(point.y), true)
+  }
+  const group = prefix => layout.filter(point => point.id.startsWith(prefix))
+  const centroid = points => ({
+    x: points.reduce((sum, point) => sum + point.x, 0) / points.length,
+    y: points.reduce((sum, point) => sum + point.y, 0) / points.length,
+    points,
+  })
+  const meanDist = groupPoint => groupPoint.points.reduce((sum, point) => sum + Math.hypot(point.x - groupPoint.x, point.y - groupPoint.y), 0) / groupPoint.points.length
+  const biz = centroid(group('biz-'))
+  const home = centroid(group('home-'))
+  const between = Math.hypot(biz.x - home.x, home.y - biz.y)
+  assert.equal(meanDist(biz) < between, true)
+  assert.equal(meanDist(home) < between, true)
+})
+
+test('待上架開關預設隱藏 candidate，打開後出現；局部中心是 candidate 仍顯示', () => {
+  const graph = buildGraph(cards)
+  const hidden = applyCandidateVisibility(graph, { showCandidates: false })
+  assert.equal(hidden.nodes.some(node => node.id === 'dec-d'), false)
+  assert.equal(hidden.nodes.some(node => node.candidate), false)
+  assert.equal(hidden.edges.some(edge => edge.source === 'dec-d' || edge.target === 'dec-d'), false)
+  assert.equal(hidden.nodes.some(node => node.id === 'person-a'), true)
+  const shown = applyCandidateVisibility(graph, { showCandidates: true })
+  assert.equal(shown.nodes.some(node => node.id === 'dec-d' && node.candidate), true)
+  assert.equal(shown.nodes.length, graph.nodes.length)
+  const asCenter = applyCandidateVisibility(graph, { showCandidates: false, centerId: 'dec-d' })
+  assert.equal(asCenter.nodes.filter(node => node.candidate).map(node => node.id).join(','), 'dec-d')
+  const local = localGraph(asCenter, 'dec-d')
+  assert.equal(local.missingCenter, false)
+  assert.equal(local.nodes.find(node => node.center).id, 'dec-d')
+  assert.equal(local.nodes.find(node => node.id === 'dec-d').candidate, true)
+  assert.deepEqual(asCenter.brokenIds, graph.brokenIds)
+})
+
+test('pref 與 asset 進圖且可篩選，未知類型留在圖裡並標成其他', () => {
+  assert.deepEqual(GRAPH_TYPES.filter(item => item.id === 'pref' || item.id === 'asset'), [
+    { id: 'pref', label: '偏好' },
+    { id: 'asset', label: '資產' },
+  ])
+  assert.equal(typeLabel('pref'), '偏好')
+  assert.equal(typeLabel('asset'), '資產')
+  assert.equal(typeLabel('mystery'), '其他')
+  const extra = [
+    { id: 'pref-tea', type: 'pref', title: '偏好茶', state: 'candidate', related: ['[[asset-desk]]'] },
+    { id: 'asset-desk', type: 'asset', title: '資產桌', state: 'candidate', related: [] },
+    { id: 'mystery-x', type: 'mystery', title: '其他卡', state: 'current', related: ['[[pref-tea]]'] },
+  ]
+  const graph = buildGraph(extra)
+  assert.deepEqual(graph.nodes.map(node => node.id), ['asset-desk', 'mystery-x', 'pref-tea'])
+  assert.equal(graph.nodes.find(node => node.id === 'mystery-x').type, 'mystery')
+  const filtered = filterGraph(graph, ['pref', 'asset'])
+  assert.deepEqual(filtered.nodes.map(node => node.id), ['asset-desk', 'pref-tea'])
+  assert.deepEqual(filtered.edges, [{ source: 'asset-desk', target: 'pref-tea' }])
+  const onlyOther = filterGraph(graph, ['mystery'])
+  assert.deepEqual(onlyOther.nodes.map(node => node.id), ['mystery-x'])
+  const hidden = applyCandidateVisibility(graph, { showCandidates: false })
+  assert.deepEqual(hidden.nodes.map(node => node.id), ['mystery-x'])
+  assert.equal(applyCandidateVisibility(graph, { showCandidates: true }).nodes.length, 3)
 })
 
 test('斷鏈列出不存在的目標 id 並去重', () => {

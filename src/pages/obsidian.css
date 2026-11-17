@@ -16,7 +16,8 @@
   color: var(--hy-ink);
   font: inherit;
 }
-.ob-folders { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 4px; }
+.ob-folders { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 4px; min-width: 0; max-width: 100%; }
+.ob-folders.ob-wrap { flex-wrap: wrap; overflow-x: visible; }
 .ob-folders button {
   min-height: var(--hy-tap);
   padding: 0 12px;
@@ -64,8 +65,31 @@
   color: var(--hy-ink);
   background: var(--hy-surface);
 }
-.ob-page { max-width: 1100px; margin: 0 auto; min-width: 0; }
-.ob-toolbar { display: flex; flex-wrap: wrap; gap: 12px 20px; align-items: flex-start; }
+.ob-page {
+  max-width: 1100px;
+  margin: 0 auto;
+  min-width: 0;
+  --ob-c-career: #3ddcff;
+  --ob-c-money: #ffe14a;
+  --ob-c-health: #5dffb0;
+  --ob-c-family: #ff5fa2;
+  --ob-c-work: #7c9bff;
+  --ob-c-play: #d07bff;
+  --ob-c-grow: #ff9a3c;
+  --ob-c-none: #e6ecfa;
+  --ob-c-person: #3ddcff;
+  --ob-c-event: #ffe14a;
+  --ob-c-know: #7c9bff;
+  --ob-c-dec: #ff5fa2;
+  --ob-c-map: #d07bff;
+  --ob-c-pref: #5dffb0;
+  --ob-c-asset: #ff9a3c;
+  --ob-c-other: #e6ecfa;
+  --ob-canvas: #080c16;
+  --ob-label: #e7eefc;
+  --ob-candidate: #ffd24a;
+}
+.ob-toolbar { display: flex; flex-wrap: wrap; gap: 12px 20px; align-items: flex-start; min-width: 0; }
 .ob-filters { border: 0; margin: 0; padding: 0; min-width: 0; }
 .ob-filters legend { padding: 0; color: var(--hy-muted); font-size: var(--hy-fs-tiny); }
 .ob-filter-row { display: flex; flex-wrap: wrap; gap: 8px; }
@@ -81,38 +105,68 @@
   cursor: pointer;
 }
 .ob-legend-note { cursor: default; }
-.ob-dot, .ob-dash-sample { width: 12px; height: 12px; border-radius: 50%; flex: none; }
-.ob-dot { background: var(--hy-muted); }
-.ob-dot[data-type="person"] { background: var(--hy-done); }
-.ob-dot[data-type="event"] { background: var(--hy-you-line); }
-.ob-dot[data-type="know"] { background: var(--hy-ai); }
-.ob-dot[data-type="dec"] { background: var(--hy-you); }
-.ob-dot[data-type="map"] { background: var(--hy-header); }
-.ob-dash-sample { box-sizing: border-box; border: 1.5px dashed var(--hy-ink); }
+.ob-dot, .ob-dim-dot, .ob-dash-sample { width: 12px; height: 12px; border-radius: 50%; flex: none; }
+.ob-dot, .ob-dim-dot { background: var(--ob-c-other); }
+.ob-dot[data-type="person"] { background: var(--ob-c-person); }
+.ob-dot[data-type="event"] { background: var(--ob-c-event); }
+.ob-dot[data-type="know"] { background: var(--ob-c-know); }
+.ob-dot[data-type="dec"] { background: var(--ob-c-dec); }
+.ob-dot[data-type="map"] { background: var(--ob-c-map); }
+.ob-dot[data-type="pref"] { background: var(--ob-c-pref); }
+.ob-dot[data-type="asset"] { background: var(--ob-c-asset); }
+.ob-dim-dot[data-dim="事業"] { background: var(--ob-c-career); }
+.ob-dim-dot[data-dim="財務"] { background: var(--ob-c-money); }
+.ob-dim-dot[data-dim="健康"] { background: var(--ob-c-health); }
+.ob-dim-dot[data-dim="家庭"] { background: var(--ob-c-family); }
+.ob-dim-dot[data-dim="本業"] { background: var(--ob-c-work); }
+.ob-dim-dot[data-dim="休閒"] { background: var(--ob-c-play); }
+.ob-dim-dot[data-dim="成長"] { background: var(--ob-c-grow); }
+.ob-dim-dot[data-dim="未標七維"] { background: var(--ob-c-none); box-shadow: inset 0 0 0 1px var(--hy-line); }
+.ob-dash-sample { box-sizing: border-box; border: 2px dashed #9a6b00; background: #fff4cc; }
 .ob-graph-layout { display: grid; grid-template-columns: minmax(0, 1.45fr) minmax(240px, 0.8fr); gap: var(--hy-gap); align-items: start; }
 .ob-graph-main { min-width: 0; }
-.ob-graph-stage.hy-card.is-focus { padding: 0; overflow: hidden; height: calc(100vh - 300px); min-height: 360px; max-height: 720px; }
-.ob-graph-svg { display: block; width: 100%; height: 100%; touch-action: none; cursor: grab; }
+.ob-graph-stage.hy-card.is-focus {
+  padding: 0;
+  overflow: hidden;
+  height: calc(100vh - 300px);
+  min-height: 360px;
+  max-height: 720px;
+  background: radial-gradient(ellipse at 50% 46%, #121a30 0%, var(--ob-canvas) 68%, #05070e 100%);
+  border-color: #d5dce8;
+}
+.ob-graph-svg { display: block; width: 100%; height: 100%; touch-action: none; cursor: grab; background: transparent; }
 .ob-graph-svg:active { cursor: grabbing; }
-.ob-edge { stroke: var(--hy-muted); stroke-opacity: 0.55; stroke-width: 1.25; }
+.ob-edge { stroke: #d5e0f4; stroke-opacity: 0.22; stroke-width: 0.6; vector-effect: non-scaling-stroke; }
 .ob-hit { fill: transparent; }
-.ob-node { fill: var(--hy-muted); stroke: var(--hy-surface); stroke-width: 1.5; }
-.ob-node[data-type="person"] { fill: var(--hy-done); }
-.ob-node[data-type="event"] { fill: var(--hy-you-line); }
-.ob-node[data-type="know"] { fill: var(--hy-ai); }
-.ob-node[data-type="dec"] { fill: var(--hy-you); }
-.ob-node[data-type="map"] { fill: var(--hy-header); }
-.ob-center-ring { fill: none; stroke: var(--hy-brand); stroke-width: 2.5; }
-.ob-candidate-halo { fill: var(--hy-you-bg); }
-.ob-candidate-ring { fill: none; stroke: var(--hy-you); stroke-width: 3.5; stroke-dasharray: 6 3; }
+.ob-aura, .ob-spark, .ob-core { pointer-events: none; }
+.ob-spark { fill: var(--ob-c-other); }
+.ob-core { fill: #f7f9ff; }
+.ob-node-g[data-cluster="事業"] .ob-spark { fill: var(--ob-c-career); }
+.ob-node-g[data-cluster="財務"] .ob-spark { fill: var(--ob-c-money); }
+.ob-node-g[data-cluster="健康"] .ob-spark { fill: var(--ob-c-health); }
+.ob-node-g[data-cluster="家庭"] .ob-spark { fill: var(--ob-c-family); }
+.ob-node-g[data-cluster="本業"] .ob-spark { fill: var(--ob-c-work); }
+.ob-node-g[data-cluster="休閒"] .ob-spark { fill: var(--ob-c-play); }
+.ob-node-g[data-cluster="成長"] .ob-spark { fill: var(--ob-c-grow); }
+.ob-node-g[data-cluster="未標七維"] .ob-spark { fill: var(--ob-c-none); }
+.ob-graph-svg[data-color="type"] .ob-node-g .ob-spark { fill: var(--ob-c-other); }
+.ob-graph-svg[data-color="type"] .ob-node-g[data-type="person"] .ob-spark { fill: var(--ob-c-person); }
+.ob-graph-svg[data-color="type"] .ob-node-g[data-type="event"] .ob-spark { fill: var(--ob-c-event); }
+.ob-graph-svg[data-color="type"] .ob-node-g[data-type="know"] .ob-spark { fill: var(--ob-c-know); }
+.ob-graph-svg[data-color="type"] .ob-node-g[data-type="dec"] .ob-spark { fill: var(--ob-c-dec); }
+.ob-graph-svg[data-color="type"] .ob-node-g[data-type="map"] .ob-spark { fill: var(--ob-c-map); }
+.ob-graph-svg[data-color="type"] .ob-node-g[data-type="pref"] .ob-spark { fill: var(--ob-c-pref); }
+.ob-graph-svg[data-color="type"] .ob-node-g[data-type="asset"] .ob-spark { fill: var(--ob-c-asset); }
+.ob-center-ring { fill: none; stroke: #f4f7ff; stroke-width: 1.25; stroke-opacity: 0.85; vector-effect: non-scaling-stroke; }
+.ob-candidate-ring { fill: none; stroke: var(--ob-candidate); stroke-width: 2.2; stroke-dasharray: 4 3; vector-effect: non-scaling-stroke; }
 .ob-candidate-badge { pointer-events: none; }
-.ob-candidate-badge-bg { fill: var(--hy-you); }
-.ob-candidate-tag { fill: var(--hy-surface); font-size: 14px; font-weight: 800; pointer-events: none; }
-.ob-label { fill: var(--hy-ink); font-size: 11px; font-weight: 700; font-family: inherit; pointer-events: none; }
-.ob-folders button[aria-pressed="true"] { border-color: var(--hy-brand); color: var(--hy-brand); font-weight: 700; }
+.ob-candidate-badge-bg { fill: var(--ob-candidate); stroke: #1a1203; stroke-width: 1.6; }
+.ob-candidate-tag { fill: #1a1203; font-size: 13px; font-weight: 800; pointer-events: none; }
+.ob-label { fill: var(--ob-label); font-size: 11px; font-weight: 600; font-family: inherit; pointer-events: none; }
+.ob-folders button[aria-pressed="true"] { border-color: var(--hy-brand); background: var(--hy-ai-bg); color: var(--hy-brand); font-weight: 700; }
 .ob-note-break { overflow-wrap: anywhere; }
 .ob-node-g:focus { outline: none; }
-.ob-node-g:focus-visible .ob-node { stroke: var(--hy-brand); stroke-width: 3; }
+.ob-node-g:focus-visible .ob-core { stroke: #ffffff; stroke-width: 1.5; }
 .ob-tip {
   position: absolute;
   z-index: 2;
@@ -134,7 +188,7 @@
   place-items: center;
   padding: 24px;
   text-align: center;
-  color: var(--hy-muted);
+  color: var(--ob-label);
 }
 .ob-peek {
   display: flex;
