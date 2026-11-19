@@ -4,7 +4,7 @@ import { readFileSync } from 'node:fs'
 import {
   applyDecision, brainErrorMessage, fetchBrainCard, fetchBrainIndex, filterCards,
   isPending, linkifyWikilinks, loadQueue, normalizeQueue, parseFrontmatter,
-  queueMarkdown, wikiIdFromHref,
+  queueMarkdown, splitPendingReview, wikiIdFromHref,
 } from '../src/lib/obsidian.js'
 
 const sample = `---
@@ -44,6 +44,39 @@ test('清單正規化會丟掉正文與不合法編號', () => {
     { id: '../secret', title: '壞', decision: 'approve' },
   ] })
   assert.deepEqual(queue.items, [{ id: 'know-sample', title: '範例', decision: 'approve', decided_at: 't' }])
+})
+
+test('待上架分成未審與已審，數量不含清單外的決定', () => {
+  const cards = [
+    { id: 'know-a', title: '甲', path: '00_待上架/know-a.md' },
+    { id: 'know-b', title: '乙', path: '00_待上架/know-b.md' },
+    { id: 'know-c', title: '丙', path: '00_待上架/know-c.md' },
+    { id: 'dec-d', title: '丁', path: '50_決策/dec-d.md' },
+  ]
+  const queue = { items: [
+    { id: 'know-a', title: '甲', decision: 'approve', decided_at: 't1' },
+    { id: 'know-c', title: '丙', decision: 'reject', decided_at: 't2' },
+    { id: 'know-missing', title: '不在列表', decision: 'approve', decided_at: 't3' },
+  ] }
+  const split = splitPendingReview(cards, queue)
+  assert.deepEqual(split.open.map(card => card.id), ['know-b'])
+  assert.deepEqual(split.reviewed.map(card => card.id), ['know-a', 'know-c'])
+  assert.equal(split.reviewedCount, 2)
+  assert.equal(splitPendingReview(null, queue).reviewedCount, 0)
+  const cleared = applyDecision(queue, { id: 'know-a', decision: 'clear' })
+  const again = splitPendingReview(cards, cleared)
+  assert.deepEqual(again.open.map(card => card.id), ['know-a', 'know-b'])
+  assert.deepEqual(again.reviewed.map(card => card.id), ['know-c'])
+  const allDone = splitPendingReview(
+    [{ id: 'know-a', title: '甲', path: '00_待上架/know-a.md' }],
+    { items: [{ id: 'know-a', title: '甲', decision: 'approve', decided_at: 't' }] },
+  )
+  assert.equal(allDone.open.length, 0)
+  assert.equal(allDone.reviewedCount, 1)
+  const text = queueMarkdown(queue)
+  assert.match(text, /核准｜know-a｜甲/)
+  assert.match(text, /退回｜know-c｜丙/)
+  assert.match(text, /know-missing/)
 })
 
 test('待處理清單是純文字，不含寫入指令', () => {
@@ -103,6 +136,16 @@ test('畫面不送寫入金鑰，也不讀對照表', () => {
   }
   assert.match(page, /核准/)
   assert.match(page, /退回/)
+  assert.match(page, /顯示已審（\$\{reviewSplit\.reviewedCount\}）/)
+  assert.match(page, /收起已審（\$\{reviewSplit\.reviewedCount\}）/)
+  assert.match(page, /aria-pressed=\{showReviewed\}/)
+  assert.match(page, /待上架的卡都審完了。/)
+  assert.match(page, /審完請按『複製清單』，把內容貼給 Atlas，Atlas 才會搬卡。/)
+  assert.match(page, /openListedCard/)
+  assert.match(page, /prefers-reduced-motion: reduce/)
+  const css = readFileSync(new URL('../src/pages/obsidian.css', import.meta.url), 'utf8')
+  assert.match(css, /@media \(min-width: 641px\)[\s\S]*position:\s*sticky/)
+  assert.match(css, /max-height:\s*calc\(100vh - 16px\)/)
   const storage = { value: '', getItem() { return this.value }, setItem(_key, value) { this.value = value } }
   storage.setItem('k', '{"items":[{"id":"know-sample","title":"範例","decision":"approve","decided_at":"t","body":"x"}]}')
   // loadQueue reads the fixed key; this only checks the helper drops body when the payload is stored there.
