@@ -175,6 +175,18 @@ export function decisionFor(queue, id) {
   return normalizeQueue(queue).items.find(item => item.id === id) || null
 }
 
+// 待上架列表分成還沒審、已有決定。只算這份列表裡的待上架卡；清單外的決定不計入。
+export function splitPendingReview(cards, queue) {
+  const open = []
+  const reviewed = []
+  for (const card of Array.isArray(cards) ? cards : []) {
+    if (!isPending(card)) continue
+    if (decisionFor(queue, card.id)) reviewed.push(card)
+    else open.push(card)
+  }
+  return { open, reviewed, reviewedCount: reviewed.length }
+}
+
 export function sortedDecisions(queue) {
   return [...normalizeQueue(queue).items].sort((a, b) => String(b.decided_at).localeCompare(String(a.decided_at)) || a.id.localeCompare(b.id))
 }

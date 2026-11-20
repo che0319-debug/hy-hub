@@ -1,5 +1,5 @@
 // HY Obsidian：列出目錄、打開卡片、看關係圖。待上架勾選只寫這台裝置。
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
@@ -7,7 +7,7 @@ import { authHeaders } from '../auth'
 import {
   FOLDERS, applyDecision, cardTitle, decisionFor, fetchBrainCard, fetchBrainIndex,
   filterCards, folderLabel, folderOf, isPending, linkifyWikilinks, loadQueue,
-  parseFrontmatter, queueMarkdown, saveQueue, sortedDecisions, wikiIdFromHref,
+  parseFrontmatter, queueMarkdown, saveQueue, sortedDecisions, splitPendingReview, wikiIdFromHref,
 } from '../lib/obsidian'
 import ObsidianGraph from './ObsidianGraph'
 import '../../public/hy-ui/hy-ui.css'
@@ -21,6 +21,16 @@ const FIELD_LABEL = {
 }
 const FIELD_ORDER = ['id', 'type', 'aliases', 'tags', 'date', 'as_of', 'confidence', 'written_by', 'people', 'related', 'period', 'path', 'state', 'sources', '個資檢查']
 const btn = { minHeight: 44 }
+
+function nearestScroller(node) {
+  let cur = node.parentElement
+  while (cur) {
+    const style = window.getComputedStyle(cur)
+    if (/(auto|scroll)/.test(style.overflowY) && cur.scrollHeight > cur.clientHeight + 1) return cur
+    cur = cur.parentElement
+  }
+  return null
+}
 
 function decisionLabel(decision) {
   if (decision === 'approve') return '已勾核准'
@@ -126,6 +136,7 @@ function QueuePanel({ queue, onCopy, copied, copyText }) {
       <div className="ob-actions">
         <button type="button" className="hy-btn" style={btn} onClick={onCopy}>複製清單</button>
         {copied && <span className="hy-pill" data-s="done">已複製</span>}
+        <p className="hy-lede ob-queue-hint">審完請按『複製清單』，把內容貼給 Atlas，Atlas 才會搬卡。</p>
       </div>
       {copyText && <textarea className="ob-copy" readOnly value={copyText} aria-label="待處理清單原文" />}
     </section>
@@ -147,6 +158,11 @@ export default function Obsidian() {
   const [queue, setQueue] = useState(() => loadQueue(window.localStorage))
   const [copied, setCopied] = useState(false)
   const [copyText, setCopyText] = useState('')
+  const [showReviewed, setShowReviewed] = useState(false)
+  const [listPick, setListPick] = useState(0)
+  const scrollPending = useRef(false)
+  const [loadedId, setLoadedId] = useState('')
+  const readerRef = useRef(null)
 
   useEffect(() => {
     const controller = new AbortController()
@@ -168,10 +184,11 @@ export default function Obsidian() {
     setCardError('')
     setMarkdown('')
     fetchBrainCard(selectedId, { base: API_BASE, headers: authHeaders(), signal: controller.signal })
-      .then(result => { setMarkdown(result.markdown); setCardLoading(false) })
+      .then(result => { setMarkdown(result.markdown); setLoadedId(selectedId); setCardLoading(false) })
       .catch(error => {
         if (error.name === 'AbortError') return
         setCardLoading(false)
+        setLoadedId(selectedId)
         setCardError(error.message || '讀取失敗，請稍後再試。')
       })
     return () => controller.abort()
@@ -183,7 +200,34 @@ export default function Obsidian() {
     folder: view === 'pending' ? '00_待上架' : folder,
     query,
   }), [cards, view, folder, query])
+  const reviewSplit = useMemo(
+    () => (view === 'pending' ? splitPendingReview(shown, queue) : null),
+    [view, shown, queue],
+  )
+  const visibleCards = reviewSplit && !showReviewed ? reviewSplit.open : shown
   const selected = (cards || []).find(card => card.id === selectedId) || (selectedId ? { id: selectedId, title: titles.get(selectedId) || selectedId, path: '' } : null)
+
+  // 手機單欄：點列表的卡後把內容捲進視窗。卡片內容是非同步載入的，
+  // 載入前面板很矮、捲動會被夾住，所以點擊時捲一次，載入完成後再補捲一次。
+  useEffect(() => {
+    if (!listPick) return
+    scrollPending.current = true
+  }, [listPick])
+
+  useEffect(() => {
+    if (!scrollPending.current || !readerRef.current) return
+    if (!window.matchMedia('(max-width: 640px)').matches) { scrollPending.current = false; return }
+    const node = readerRef.current
+    const behavior = window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth'
+    node.scrollIntoView({ behavior, block: 'start' })
+    // 手機殼把捲動放在 app-main，scrollIntoView 會捲到外層、畫面不動。
+    const scroller = nearestScroller(node)
+    if (scroller) {
+      const top = scroller.scrollTop + node.getBoundingClientRect().top - scroller.getBoundingClientRect().top - 8
+      scroller.scrollTo({ top: Math.max(0, top), behavior })
+    }
+    if (!cardLoading && loadedId === selectedId) scrollPending.current = false
+  }, [listPick, selectedId, cardLoading, loadedId, markdown, cardError])
 
   function setRoute({ next = view, card = '', graphScope = 'all' }) {
     const queryParams = {}
@@ -200,6 +244,11 @@ export default function Obsidian() {
 
   function openCard(id) {
     setRoute({ card: id, graphScope: scope })
+  }
+
+  function openListedCard(id) {
+    setListPick(count => count + 1)
+    openCard(id)
   }
 
   function showLocal(id) {
@@ -287,13 +336,30 @@ export default function Obsidian() {
                 ))}
               </div>
             )}
-            {!shown.length && <div className="hy-empty">{view === 'pending' ? '目前沒有待上架的卡。' : '這個條件底下沒有卡。'}</div>}
+            {view === 'pending' && reviewSplit.reviewedCount > 0 && (
+              <button
+                type="button"
+                className="hy-btn"
+                style={{ ...btn, alignSelf: 'flex-start' }}
+                aria-pressed={showReviewed}
+                onClick={() => setShowReviewed(value => !value)}
+              >
+                {showReviewed ? `收起已審（${reviewSplit.reviewedCount}）` : `顯示已審（${reviewSplit.reviewedCount}）`}
+              </button>
+            )}
+            {!visibleCards.length && (
+              <div className="hy-empty">
+                {view === 'pending'
+                  ? (shown.length > 0 && reviewSplit.open.length === 0 ? '待上架的卡都審完了。' : '目前沒有待上架的卡。')
+                  : '這個條件底下沒有卡。'}
+              </div>
+            )}
             <ul className="ob-list">
-              {shown.map(card => {
+              {visibleCards.map(card => {
                 const decision = decisionFor(queue, card.id)
                 return (
                   <li key={card.id}>
-                    <button type="button" aria-current={card.id === selectedId ? 'true' : undefined} onClick={() => openCard(card.id)}>
+                    <button type="button" aria-current={card.id === selectedId ? 'true' : undefined} onClick={() => openListedCard(card.id)}>
                       <span style={{ display: 'block', fontWeight: 700 }}>{cardTitle(card)}</span>
                       <span className="ob-id">{folderLabel(folderOf(card))} · {card.id}{decision ? ` · ${decisionLabel(decision.decision)}` : ''}</span>
                     </button>
@@ -302,9 +368,11 @@ export default function Obsidian() {
               })}
             </ul>
           </div>
-          <div className="hy-stack">
-            {!selected && <div className="hy-empty">從左邊選一張卡，就可以看標題、屬性與正文。</div>}
-            {reader}
+          <div className="ob-reader" ref={readerRef}>
+            <div className="hy-stack ob-reader-body">
+              {!selected && <div className="hy-empty">從左邊選一張卡，就可以看標題、屬性與正文。</div>}
+              {reader}
+            </div>
           </div>
         </div>
       )}
