@@ -4,16 +4,25 @@ import {
   buildSrcdoc,
   compactLatestLine,
   ensureWeeklyFields,
+  localApiBase,
   officeStatusLine,
+  resolveOwner,
   taipeiISOWeek,
 } from './weekly-embed-bridge.js';
 
 const state = {
+  owner: 'hy',
   currentWeek: '',
   selectedWeek: '',
   request: 0,
   loaded: false,
 };
+
+function apiBase() {
+  let stored = '';
+  try { stored = window.localStorage.getItem('hy_weekly_api') || ''; } catch (error) { stored = ''; }
+  return localApiBase(window.API || '', window.location.search, stored);
+}
 
 const REASONS = {
   unauthorized: '請重新登入後再送出',
@@ -24,6 +33,7 @@ const REASONS = {
 };
 
 function boot() {
+  state.owner = resolveOwner(window.WEEKLY_EMBED_OWNER);
   state.currentWeek = taipeiISOWeek(new Date());
   const params = new URLSearchParams(window.location.search);
   const weeklyTab = document.querySelector('[data-tab="weekly"]');
@@ -51,7 +61,7 @@ function boot() {
 
 async function loadList() {
   try {
-    const response = await fetch(window.API + '/api/weekly-embed/list?owner=hy', {
+    const response = await fetch(apiBase() + '/api/weekly-embed/list?owner=' + encodeURIComponent(state.owner), {
       cache: 'no-store',
       headers: window.GET_HEADERS,
     });
@@ -77,7 +87,7 @@ async function loadWeek(week) {
   showStatus('載入中…');
   let response;
   try {
-    response = await fetch(window.API + '/api/weekly-embed?owner=hy&week=' + encodeURIComponent(week), {
+    response = await fetch(apiBase() + '/api/weekly-embed?owner=' + encodeURIComponent(state.owner) + '&week=' + encodeURIComponent(week), {
       cache: 'no-store',
       headers: window.GET_HEADERS,
     });
@@ -130,6 +140,7 @@ function showReport(data) {
   document.getElementById('weeklyEmpty').hidden = true;
   showStatus('');
   renderLatest(data.latest);
+  renderOffice(data.office);
   const frame = document.getElementById('weeklyFrame');
   frame.onload = () => {
     if (state.selectedWeek !== data.week || !data.latest || !data.latest.fields) return;
@@ -176,22 +187,26 @@ function onFrameMessage(event) {
   }
   const accepted = acceptResponseMessage(event, frame.contentWindow, {
     week: state.selectedWeek,
-    owner: 'hy',
+    owner: state.owner,
   });
   if (!accepted) return;
+  if (accepted.rejected === 'owner_mismatch') {
+    window.showToast('這份週報的 owner 和這個頁面不符，沒有送出', 'error');
+    return;
+  }
   sendResponse(accepted);
 }
 
 async function sendResponse(accepted) {
   const fields = ensureWeeklyFields(accepted.fields);
   try {
-    const response = await fetch(window.API + '/api/weekly-embed/responses', {
+    const response = await fetch(apiBase() + '/api/weekly-embed/responses', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
         Authorization: window.GET_HEADERS.Authorization,
       },
-      body: JSON.stringify({ week: accepted.week, owner: 'hy', fields }),
+      body: JSON.stringify({ week: accepted.week, owner: state.owner, fields }),
     });
     const data = await response.json().catch(() => ({}));
     if (!response.ok || data.ok === false) {

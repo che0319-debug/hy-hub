@@ -283,6 +283,14 @@ header { background:var(--header-bg); padding:0 24px; display:flex; align-items:
 
 /* ══════════════ WEEKLY REVIEW ══════════════ */
 #tab-weekly.active { overflow-y:auto; }
+#tab-weekly .weekly-wrap { padding:8px 8px 16px; width:100%; max-width:none; }
+#tab-weekly .weekly-empty { padding:12px 4px 8px; }
+#tab-weekly .weekly-empty-title { font-size:16px; font-weight:700; color:var(--text); margin-bottom:8px; }
+#tab-weekly .weekly-empty p { font-size:13px; color:var(--text-muted); line-height:1.6; }
+#tab-weekly .weekly-embed-frame { width:100%; overflow:hidden; }
+#tab-weekly .weekly-embed-frame iframe { display:block; width:100%; height:0; min-height:0; border:0; background:var(--card-bg); overflow:hidden; }
+#tab-weekly .weekly-latest { margin:0 0 6px; padding:0 2px; font-size:12px; color:var(--text-muted); line-height:1.4; }
+#tab-weekly .weekly-loading { text-align:left; padding:12px 4px; }
 .weekly-wrap { padding:20px 24px 48px; max-width:900px; }
 .weekly-toolbar { display:flex; align-items:center; gap:10px; margin-bottom:16px; flex-wrap:wrap; }
 .weekly-toolbar label { font-size:13px; font-weight:600; color:var(--text-muted); }
@@ -392,14 +400,18 @@ header { background:var(--header-bg); padding:0 24px; display:flex; align-items:
 <!-- 週覆盤 -->
 <div class="tab-content" id="tab-weekly">
   <div class="weekly-wrap">
-    <div class="weekly-toolbar">
-      <label>週次：</label>
-      <select class="weekly-select" id="weeklySelect"></select>
-      <div class="weekly-actions">
-        <button class="btn btn-ghost" id="weeklyDownloadBtn" style="display:none">⬇ 下載 Markdown</button>
+    <div id="weeklyContent">
+      <div id="weeklyStatus" class="weekly-loading">載入中…</div>
+      <div id="weeklyEmpty" class="weekly-empty" hidden>
+        <div id="weeklyEmptyTitle" class="weekly-empty-title"></div>
+        <p id="weeklyEmptyBody"></p>
+      </div>
+      <div id="weeklyLatest" class="weekly-latest" hidden></div>
+      <div id="weeklyOffice" class="weekly-latest" hidden></div>
+      <div class="weekly-embed-frame">
+        <iframe id="weeklyFrame" title="本週週報" sandbox="allow-scripts allow-forms" referrerpolicy="no-referrer" scrolling="no" hidden></iframe>
       </div>
     </div>
-    <div id="weeklyContent"><div class="weekly-loading">選擇週次以載入資料…</div></div>
   </div>
 </div>
 
@@ -877,125 +889,7 @@ document.getElementById('saveBtn').addEventListener('click', function(){
 });
 loadData();
 
-// ═══════════════ WEEKLY REVIEW ═══════════════
-
-var WEEKLY_API = 'https://hy-agent-v2.onrender.com';
-var weeklyData = null;
-var weeklyListLoaded = false;
-
-function renderWeekly(data) {
-  weeklyData = data;
-  var dlBtn = document.getElementById('weeklyDownloadBtn');
-  dlBtn.style.display = data.raw_markdown ? '' : 'none';
-
-  var packages = (data.packages !== undefined) ? data.packages : null;
-  if (packages !== null && !packages.length) {
-    document.getElementById('weeklyContent').innerHTML = '<div class="weekly-loading">尚無週包</div>';
-    return;
-  }
-
-  var s = data.summary || {};
-  var html = '';
-
-  if (!s || Object.keys(s).length === 0) {
-    document.getElementById('weeklyContent').innerHTML = '<div class="weekly-loading">尚無週包</div>';
-    return;
-  }
-
-  html += '<div class="section-card"><div class="section-title">📊 本週概況</div>';
-  html += '<div style="font-size:13px;color:var(--text-muted);">週覆盤資料由後端產出後顯示。</div>';
-  html += '</div>';
-  document.getElementById('weeklyContent').innerHTML = html;
-}
-
-function loadWeeklyData(weekId) {
-  document.getElementById('weeklyContent').innerHTML = '<div class="weekly-loading">載入中…</div>';
-  document.getElementById('weeklyDownloadBtn').style.display = 'none';
-  var url = WEEKLY_API + '/api/weekly-package?type=950157&week=' + encodeURIComponent(weekId);
-  fetch(url, { cache:'no-store', headers:GET_HEADERS })
-    .then(function(r) { if (!r.ok) throw new Error('HTTP '+r.status); return r.json(); })
-    .then(function(data) { renderWeekly(data); })
-    .catch(function(e) {
-      document.getElementById('weeklyContent').innerHTML = '<div class="weekly-loading">尚無週包</div>';
-      console.error('[weekly]', e);
-    });
-}
-
-function loadWeeklyList(targetWeek) {
-  fetch(WEEKLY_API + '/api/weekly-package/list?type=950157', { cache:'no-store', headers:GET_HEADERS })
-    .then(function(r) { if (!r.ok) throw new Error('HTTP '+r.status); return r.json(); })
-    .then(function(data) {
-      var packages = data.packages || data.weeks || [];
-      var sel = document.getElementById('weeklySelect');
-      sel.innerHTML = '';
-      if (!packages.length) {
-        var opt = document.createElement('option');
-        opt.value = 'latest'; opt.textContent = '尚無週包';
-        sel.appendChild(opt);
-        weeklyListLoaded = true;
-        document.getElementById('weeklyContent').innerHTML = '<div class="weekly-loading">尚無週包</div>';
-        return;
-      }
-      packages.forEach(function(w) {
-        var opt = document.createElement('option');
-        var wid = typeof w === 'string' ? w : (w.week_id || w.week || w);
-        opt.value = wid; opt.textContent = wid;
-        sel.appendChild(opt);
-      });
-      var found = false;
-      if (targetWeek) {
-        for (var i = 0; i < sel.options.length; i++) {
-          if (sel.options[i].value === targetWeek) { sel.selectedIndex = i; found = true; break; }
-        }
-      }
-      if (!found) sel.selectedIndex = 0;
-      weeklyListLoaded = true;
-      loadWeeklyData(sel.value);
-    })
-    .catch(function(e) {
-      var sel = document.getElementById('weeklySelect');
-      sel.innerHTML = '<option value="latest">尚無週包</option>';
-      weeklyListLoaded = true;
-      document.getElementById('weeklyContent').innerHTML = '<div class="weekly-loading">尚無週包</div>';
-      console.error('[weekly list]', e);
-    });
-}
-
-document.getElementById('weeklySelect').addEventListener('change', function() {
-  loadWeeklyData(this.value);
-});
-
-document.getElementById('weeklyDownloadBtn').addEventListener('click', function() {
-  if (!weeklyData || !weeklyData.raw_markdown) return;
-  var blob = new Blob([weeklyData.raw_markdown], { type:'text/markdown;charset=utf-8' });
-  var url = URL.createObjectURL(blob);
-  var a = document.createElement('a');
-  a.href = url;
-  a.download = (weeklyData.week_id || 'weekly-review') + '.md';
-  document.body.appendChild(a); a.click();
-  document.body.removeChild(a); URL.revokeObjectURL(url);
-});
-
-// ── URL query string: ?tab=weekly ──
-(function() {
-  var params = new URLSearchParams(window.location.search);
-  var tabParam  = params.get('tab');
-  var weekParam = params.get('week');
-
-  if (tabParam === 'weekly') {
-    document.querySelectorAll('.tab').forEach(function(t) { t.classList.remove('active'); });
-    document.querySelectorAll('.tab-content').forEach(function(c) { c.classList.remove('active'); });
-    document.querySelector('[data-tab="weekly"]').classList.add('active');
-    document.getElementById('tab-weekly').classList.add('active');
-    loadWeeklyList(weekParam || null);
-  }
-})();
-
-document.querySelector('[data-tab="weekly"]').addEventListener('click', function() {
-  if (!weeklyListLoaded) {
-    loadWeeklyList(null);
-  }
-});
+// 週覆盤改由 hy-ui/weekly-embed-page.js，不再打舊的週包 API。
 
 // ── 研究分頁 v0（唯讀，資料：research/950157-research.json）──
 var researchLoaded = false;
@@ -1072,5 +966,7 @@ document.querySelector('[data-tab="research"]').addEventListener('click', loadRe
 
 </script>
 <script type="module" src="gantt-950157.mjs"></script>
+<script>window.WEEKLY_EMBED_OWNER = '950157';</script>
+<script type="module" src="./hy-ui/weekly-embed-page.js"></script>
 </body>
 </html>
