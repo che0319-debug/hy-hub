@@ -5,10 +5,20 @@ import { mapOffice, officeDeleteHold } from '../src/botOfficeData.js'
 import { officeView } from '../src/lib/botOfficeView.mjs'
 import {
   annotateMilestones, canReturnToPlanning, closureReason, compareId, decisionReviewView, diagramModel, isMilestoneOrGateFlow,
-  needsYouCount, openProjectBody, projectFlow, shownStage, verdictLabel,
+  needsYouCount, openProjectBody, planAwaitingUser, projectFlow, shownStage, verdictLabel,
 } from '../src/lib/officeFlow.mjs'
 
 const ms = (id, extra = {}) => ({ id, name: `【示意資料】${id}`, ...extra })
+
+test('planAwaitingUser is an open plan approval and does not need a review', () => {
+  const card = { status: 'open', kind: 'approval', flow: { kind: 'plan', target: 'plan-v1' } }
+  assert.equal(planAwaitingUser([card]), true)
+  assert.equal(planAwaitingUser([{ status: 'open', kind: 'approval', flow: { target: 'plan-v2' } }]), true)
+  assert.equal(planAwaitingUser([{ ...card, status: 'answered' }]), false)
+  assert.equal(planAwaitingUser([{ status: 'open', kind: 'approval', flow: { kind: 'gate', target: 'G1' } }]), false)
+  assert.equal(planAwaitingUser([{ status: 'open', kind: 'intake' }]), false)
+  assert.equal(planAwaitingUser(null), false)
+})
 
 test('compareId sorts by number, then M before G', () => {
   assert.deepEqual(['M5', 'G1', 'M1', 'G2', 'M2'].sort(compareId), ['M1', 'G1', 'M2', 'G2', 'M5'])

@@ -341,6 +341,16 @@ export function leadTone(lead, stage = '') {
   return STAGE_TONE[stage] || 'wait'
 }
 
+export function planAwaitingUser(decisions) {
+  return (Array.isArray(decisions) ? decisions : []).some(item => {
+    if (!item || item.status !== 'open' || item.kind !== 'approval') return false
+    const flow = item.flow
+    if (!flow || typeof flow !== 'object') return false
+    if (flow.kind === 'plan') return true
+    return /^plan-v/i.test(String(flow.target || ''))
+  })
+}
+
 export function isMilestoneOrGateFlow(decision) {
   const flow = decision?.flow
   if (!flow || typeof flow !== 'object') return false
