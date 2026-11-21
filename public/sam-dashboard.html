@@ -1,10 +1,12 @@
 <!DOCTYPE html>
-<html lang="zh-TW" data-bot="sam">
+<html lang="zh-Hant" data-bot="sam">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Sam 事業助理</title>
-<link href="https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=Noto+Sans+TC:wght@400;500;700&display=swap" rel="stylesheet">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Newsreader:ital,opsz,wght@0,6..72,500;0,6..72,600;1,6..72,600&family=Noto+Sans+TC:wght@400;500;600;700&family=Noto+Serif+TC:wght@500;600;700&family=Syne:wght@700;800&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="hy-ui/hy-ui.css">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Sortable/1.15.2/Sortable.min.js"></script>
 <script src="sam-business-map.js"></script>
@@ -35,50 +37,59 @@
   --shadow-md: 0 4px 12px rgba(0,0,0,0.12);
   --shadow-lg: 0 8px 32px rgba(0,0,0,0.18);
   --radius: 8px;
+  --bm-sans: 'Inter', 'Noto Sans TC', 'PingFang TC', 'Microsoft JhengHei', 'Noto Sans CJK TC', sans-serif;
+  --bm-serif: 'Newsreader', 'Noto Serif TC', 'Source Han Serif TC', 'Songti TC', 'PMingLiU', 'Noto Serif CJK TC', serif;
 }
 * { margin:0; padding:0; box-sizing:border-box; }
 body {
-  background: var(--bg);
+  background: #f8f4ed;
   color: var(--text);
-  font-family: 'Noto Sans TC', sans-serif;
+  font-family: var(--bm-sans);
   min-height: 100vh;
   display: flex;
   flex-direction: column;
 }
 
-/* ── HEADER ── */
+/* ── HEADER（B1 暖白頁首，整頁共用） ── */
 header {
-  background: var(--header-bg);
-  padding: 0 24px;
+  background: rgba(252,249,244,.70);
+  padding: 0 32px;
   display: flex;
   align-items: center;
-  gap: 20px;
+  gap: 28px;
   height: 56px;
   position: sticky;
   top: 0;
   z-index: 100;
-  border-bottom: 1px solid rgba(255,255,255,0.06);
+  border-bottom: 1px solid rgba(74,58,36,.12);
+  color: #26211b;
+  font-family: var(--bm-sans);
+  font-variant-numeric: tabular-nums;
 }
-.logo-wrap { display: flex; align-items: center; gap: 10px; }
+.logo-wrap { display: flex; align-items: baseline; gap: 10px; flex: none; }
 .logo-badge {
-  background: var(--brand-color);
-  color: #fff;
-  font-family: 'Syne', sans-serif;
-  font-weight: 800;
-  font-size: 14px;
-  padding: 3px 10px;
-  border-radius: 4px;
-  letter-spacing: 0.5px;
+  background: none;
+  color: #26211b;
+  font-family: var(--bm-serif);
+  font-weight: 600;
+  font-style: italic;
+  font-size: 22px;
+  padding: 0;
+  border-radius: 0;
+  letter-spacing: .01em;
+  line-height: 1;
 }
-.logo-sub { font-size: 13px; color: rgba(255,255,255,0.45); font-weight: 500; }
-.header-right { margin-left: auto; display: flex; align-items: center; gap: 10px; }
+.logo-sub { font-size: 13px; color: #6f6455; font-weight: 400; letter-spacing: .08em; }
+.header-right { margin-left: auto; display: flex; align-items: center; gap: 10px; flex: none; }
 .last-updated {
   font-size: 12px;
-  color: rgba(255,255,255,0.4);
-  background: rgba(255,255,255,0.06);
-  padding: 4px 10px;
-  border-radius: 20px;
-  border: 1px solid rgba(255,255,255,0.08);
+  color: #6f6455;
+  background: none;
+  padding: 0;
+  border-radius: 0;
+  border: 0;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
 }
 
 /* ── BTNS ── */
@@ -90,7 +101,7 @@ header {
   cursor: pointer;
   border: none;
   transition: all 0.15s;
-  font-family: 'Noto Sans TC', sans-serif;
+  font-family: 'Noto Sans TC', 'PingFang TC', 'Microsoft JhengHei', 'Noto Sans CJK TC', sans-serif;
   display: inline-flex;
   align-items: center;
   gap: 5px;
@@ -100,6 +111,24 @@ header {
 .btn-blue.saved { background: #006644; }
 .btn-ghost { background: rgba(255,255,255,0.08); color: rgba(255,255,255,0.75); border: 1px solid rgba(255,255,255,0.12); }
 .btn-ghost:hover { background: rgba(255,255,255,0.14); color: #fff; }
+header .btn {
+  border-radius: 999px;
+  border: 1px solid rgba(74,58,36,.18);
+  background: transparent;
+  color: #26211b;
+  font-family: var(--bm-sans);
+  font-weight: 400;
+  padding: 7px 14px;
+  min-height: 34px;
+}
+header .btn-ghost { background: transparent; color: #26211b; border: 1px solid rgba(74,58,36,.18); }
+header .btn-ghost:hover { background: rgba(255,253,249,.8); color: #26211b; }
+header .btn-blue, header .btn-blue.saved {
+  background: #26211b;
+  color: #f6efe2;
+  border-color: #26211b;
+}
+header .btn-blue:hover { background: #3a332b; }
 .btn-outline { background: #fff; color: var(--text); border: 1px solid var(--border); }
 .btn-outline:hover { background: var(--bg); }
 .btn-danger { background: #fff0ee; color: var(--red); border: 1px solid #ffcdc7; }
@@ -109,35 +138,46 @@ header {
 .btn-sm { padding: 4px 10px; font-size: 12px; }
 .btn-icon { padding: 6px 8px; font-size: 15px; }
 
-/* ── TABS ── */
+/* ── TABS（放在頁首同一列；手機改到第二列） ── */
 .tabs {
-  background: #fff;
-  border-bottom: 1px solid var(--border);
-  padding: 0 24px;
+  background: transparent;
+  border-bottom: 0;
+  padding: 0;
   display: flex;
-  gap: 0;
-  box-shadow: var(--shadow-sm);
+  gap: 26px;
+  box-shadow: none;
+  font-size: 14px;
 }
 .tab {
-  padding: 14px 18px;
-  font-size: 13px;
-  font-weight: 500;
-  color: var(--text-muted);
+  padding: 18px 0;
+  font-size: 14px;
+  font-weight: 400;
+  font-family: var(--bm-sans);
+  color: #6f6455;
   cursor: pointer;
-  border-bottom: 2px solid transparent;
-  margin-bottom: -1px;
-  transition: all 0.15s;
+  border: 0;
+  border-bottom: 0;
+  background: none;
+  margin-bottom: 0;
+  box-shadow: none;
+  transition: color 0.15s;
   display: flex;
   align-items: center;
   gap: 6px;
   user-select: none;
+  white-space: nowrap;
 }
-.tab:hover { color: var(--text); }
-.tab.active { color: var(--brand-color); border-bottom-color: var(--brand-color); font-weight: 700; }
+.tab:hover { color: #26211b; }
+.tab.active { color: #26211b; font-weight: 400; box-shadow: inset 0 -1px 0 #26211b; }
 
 /* ── TAB CONTENT ── */
 .tab-content { display: none; flex: 1; }
 .tab-content.active { display: block; }
+/* 頁首是半透明暖白，底要是暖色才不會透出舊灰。進度與週覆盤內容維持原本的灰底。 */
+#tab-progress.active, #tab-weekly.active, #tab-futures.active, #tab-strategy.active {
+  background: var(--bg);
+  min-height: calc(100vh - 56px);
+}
 
 /* ── BOARD ── */
 .board-wrap { overflow-x: auto; padding: 20px 24px; min-height: calc(100vh - 112px); }
@@ -333,7 +373,7 @@ header {
   cursor: pointer;
   width: calc(100% - 16px);
   text-align: left;
-  font-family: 'Noto Sans TC', sans-serif;
+  font-family: 'Noto Sans TC', 'PingFang TC', 'Microsoft JhengHei', 'Noto Sans CJK TC', sans-serif;
   transition: all 0.15s;
   font-weight: 500;
 }
@@ -349,7 +389,7 @@ header {
   font-size: 13px;
   padding: 14px 16px;
   cursor: pointer;
-  font-family: 'Noto Sans TC', sans-serif;
+  font-family: 'Noto Sans TC', 'PingFang TC', 'Microsoft JhengHei', 'Noto Sans CJK TC', sans-serif;
   text-align: left;
   font-weight: 500;
   transition: all 0.15s;
@@ -377,7 +417,7 @@ header {
   color: var(--text);
   font-size: 13px;
   padding: 7px 10px;
-  font-family: 'Noto Sans TC', sans-serif;
+  font-family: 'Noto Sans TC', 'PingFang TC', 'Microsoft JhengHei', 'Noto Sans CJK TC', sans-serif;
   transition: border-color 0.15s;
 }
 .form-input:focus { outline: none; border-color: var(--blue); box-shadow: 0 0 0 3px rgba(0,82,204,0.1); }
@@ -498,135 +538,218 @@ input[type="date"] { color-scheme: light; }
 .contrib-table tr:hover td { background:var(--bg); }
 .contrib-table tfoot td { font-weight:700; border-top:2px solid var(--border); }
 
-/* 事業版圖 v2：滿版關聯圖（只用 hy-ui.css token；規格 /workspace/sam-companies/business-map-page-plan-v0.md）
- * 中心 HY、第一圈公司、外圈人物與資源；點卡片自右側滑出詳細面板。 */
-#tab-map.active{display:flex;flex-direction:column;background:var(--hy-bg);overflow:hidden;font-family:'Noto Sans TC',system-ui,sans-serif;color:var(--hy-ink);font-size:var(--hy-fs-body);line-height:1.6}
-.bm-bar{height:56px;flex:none;display:flex;align-items:center;gap:12px;padding:0 16px 0 24px;background:var(--hy-header);position:relative;z-index:8}
-.bm-title{font-size:15px;font-weight:700;color:#fff;white-space:nowrap;margin:0}
-.bm-stats{display:flex;gap:8px;flex:1;min-width:0;overflow-x:auto;scrollbar-width:none;padding:2px 0}
-.bm-stats::-webkit-scrollbar{display:none}
-.bm-stat{display:inline-flex;align-items:center;gap:8px;flex:none;background:var(--hy-surface);border:0;border-radius:var(--hy-r-pill);padding:3px 6px 3px 10px;min-height:32px;font:inherit;color:var(--hy-ink);cursor:pointer}
-.bm-stat i{width:8px;height:8px;border-radius:50%;background:var(--hy-wait);flex:none}
-.bm-stat[data-s="done"] i{background:var(--hy-done)}.bm-stat[data-s="bad"] i{background:var(--hy-bad)}
-.bm-stat b{font-size:var(--hy-fs-meta);font-weight:700;white-space:nowrap}
-.bm-stat .hy-pill{min-height:22px;padding:0 8px}
-.bm-add{position:relative;flex:none;margin-left:auto}
-.bm-add .hy-hbtn{min-height:36px;font-weight:500;font-size:14px;white-space:nowrap}
-.bm-add-menu{position:absolute;right:0;top:44px;min-width:200px;background:var(--hy-surface);border:1px solid var(--hy-line);border-radius:var(--hy-r-card);box-shadow:0 8px 28px rgba(11,26,51,.16);padding:6px;display:none;z-index:9}
+/* 事業版圖 B1：暖調精品年報。色票與字級見規格；識別色綁公司 id。 */
+#tab-map.active{
+  display:flex;flex-direction:column;position:relative;overflow:hidden;min-height:0;
+  background:radial-gradient(1200px 700px at 30% 35%,#fdfbf7 0%,rgba(253,251,247,0) 70%),linear-gradient(180deg,#f8f4ed 0%,#f1ebe1 100%);
+  color:#26211b;font-family:var(--bm-sans);font-size:14px;line-height:1.6;
+  font-variant-numeric:tabular-nums;-webkit-font-smoothing:antialiased;
+}
+#tab-map .serif{font-family:var(--bm-serif)}
+.bm-titlerow{height:84px;flex:none;display:flex;align-items:center;gap:22px;padding:0 48px;position:relative;z-index:4}
+#tab-map.is-panel .bm-titlerow{padding-right:440px}
+@media (max-width:1100px){
+  #tab-map.is-panel .bm-titlerow{height:auto;flex-wrap:wrap;align-items:flex-start;padding:14px 420px 10px 24px;row-gap:8px}
+  #tab-map.is-panel .bm-sub{padding-top:0;white-space:normal}
+}
+.bm-titleblock{flex:0 1 auto;min-width:min-content;max-width:100%}
+.bm-eyebrow{font-size:10.5px;letter-spacing:.28em;color:#9a8b76;margin-bottom:4px;font-weight:400;white-space:nowrap}
+.bm-titlerow h1{font-family:var(--bm-serif);font-size:30px;font-weight:600;letter-spacing:.06em;margin:0;color:#26211b;line-height:1.15;white-space:nowrap}
+.bm-sub{font-size:13px;color:#6f6455;padding-top:22px;white-space:nowrap}
+.bm-sub i{font-style:normal;margin:0 8px;opacity:.5}
+.bm-save{font-size:12px;color:#6f6455;white-space:nowrap;max-width:280px;overflow:hidden;text-overflow:ellipsis}
+.bm-spacer{flex:1}
+.bm-save.is-dirty{color:#8a5300;font-weight:600}
+.bm-seg{display:flex;border:1px solid rgba(74,58,36,.16);border-radius:999px;padding:3px;font-size:13px;flex:none}
+.bm-seg button{border:0;background:transparent;color:#6f6455;font:inherit;padding:5px 16px;border-radius:999px;cursor:pointer;min-height:32px}
+.bm-seg button.is-on{background:#fffdf9;color:#26211b;box-shadow:0 1px 2px rgba(60,45,25,.12)}
+.bm-add{position:relative;flex:none}
+.bm-add-btn{font-size:13px;padding:7px 14px;border-radius:999px;border:1px solid rgba(74,58,36,.18);background:transparent;color:#26211b;cursor:pointer;font-family:inherit;min-height:34px}
+.bm-add-menu{position:absolute;right:0;top:44px;min-width:200px;background:#fffdf9;border:1px solid rgba(74,58,36,.12);border-radius:14px;box-shadow:0 12px 28px -8px rgba(60,45,25,.18);padding:6px;display:none;z-index:9}
 .bm-add-menu.is-open{display:block}
-.bm-menu-item{display:flex;align-items:center;gap:10px;width:100%;min-height:44px;padding:0 12px;border:0;background:none;border-radius:var(--hy-r-sm);font:inherit;font-size:14px;color:var(--hy-ink);text-align:left;cursor:pointer}
-.bm-menu-item:hover,.bm-menu-item:focus-visible{background:var(--hy-sunken)}
-.bm-menu-item.is-danger{color:var(--hy-bad)}
-.bm-swatch{width:14px;height:14px;flex:none;border:1px solid;display:inline-block}
-.bm-swatch.company{border-color:var(--hy-line);border-top:3px solid var(--hy-brand);border-radius:3px;background:#fff}
-.bm-swatch.person{border-color:var(--hy-you-line);background:var(--hy-you-bg);border-radius:50%}
-.bm-swatch.resource{border-color:var(--hy-ai);background:var(--hy-ai-bg);transform:rotate(45deg) scale(.85);border-radius:3px}
+.bm-menu-item{display:flex;align-items:center;gap:10px;width:100%;min-height:44px;padding:0 12px;border:0;background:none;border-radius:10px;font:inherit;font-size:14px;color:#26211b;text-align:left;cursor:pointer}
+.bm-menu-item:hover,.bm-menu-item:focus-visible{background:#f6f0e6}
+.bm-menu-item.is-danger{color:#a03d2a}
 .bm-body{position:relative;flex:1;min-height:0;overflow:hidden}
-.bm-stage{position:absolute;inset:0;overflow:hidden;background-color:var(--hy-bg);background-image:radial-gradient(#d8dee8 .9px,transparent .9px);background-size:22px 22px;touch-action:none;cursor:grab}
+.bm-stage{position:absolute;inset:0;overflow:hidden;background:transparent;touch-action:none;cursor:grab}
 .bm-stage.is-panning{cursor:grabbing}
 .bm-world{position:absolute;left:0;top:0;transform-origin:0 0}
 .bm-world.is-animating{transition:transform .25s ease}
 .bm-edges{position:absolute;left:0;top:0;width:1px;height:1px;overflow:visible;pointer-events:none}
-.bm-edge{stroke:var(--hy-muted);stroke-width:1.5;fill:none}
-.bm-edge.is-pending{stroke-dasharray:6 5}
-.bm-edge.is-stale,.bm-elabel.is-stale{opacity:.55}
-.bm-elabel{position:absolute;left:0;top:0;transform:translate(-50%,-50%);font-size:var(--hy-fs-tiny);line-height:1.5;color:var(--hy-ink);background:var(--hy-bg);border:1px solid var(--hy-line);border-radius:var(--hy-r-pill);padding:0 8px;white-space:nowrap;pointer-events:none;z-index:1}
-.bm-node{position:absolute;left:0;top:0;transform:translate(-50%,-50%);z-index:2;text-align:center;user-select:none;cursor:pointer;touch-action:none;outline:none}
+.bm-edge{fill:none;stroke-linecap:round}
+.bm-edge.is-pending{stroke-dasharray:4 4}
+.bm-edge.is-aux{stroke-dasharray:1 3}
+.bm-edge.is-stale{opacity:.55}
+.bm-elabel{position:absolute;left:0;top:0;transform:translate(-50%,-50%);font-size:11px;letter-spacing:.18em;line-height:1.4;color:#6f6455;background:rgba(248,244,237,.92);border-radius:999px;padding:2px 8px;white-space:nowrap;pointer-events:none;z-index:2}
+.bm-elabel.is-stale{opacity:.55}
+.bm-node{position:absolute;left:0;top:0;transform:translate(-50%,-50%);z-index:3;user-select:none;cursor:pointer;touch-action:none;outline:none;background:none;border:0;padding:0;color:inherit;font:inherit;text-align:left}
 .bm-node.is-dragging{z-index:4;cursor:grabbing}
-.bm-shape{display:flex;flex-direction:column;align-items:center;justify-content:center;border:1px solid var(--hy-line);background:var(--hy-surface);box-shadow:0 1px 3px rgba(0,0,0,.08),0 1px 2px rgba(0,0,0,.06);transition:box-shadow .15s}
-.bm-node:hover .bm-shape{box-shadow:0 4px 12px rgba(0,0,0,.12)}
-.bm-node:focus-visible .bm-shape{outline:3px solid var(--hy-brand);outline-offset:3px}
-.bm-kicker{font-size:var(--hy-fs-tiny);font-weight:700;color:var(--hy-muted);letter-spacing:.08em;line-height:1.3}
-.bm-name{font-size:var(--hy-fs-body);font-weight:700;line-height:1.3;color:var(--hy-ink);overflow-wrap:anywhere;margin-top:2px}
-.bm-sub{font-size:var(--hy-fs-meta);color:var(--hy-muted);margin-top:2px;line-height:1.35;overflow-wrap:anywhere}
-.bm-tag{display:inline-block;margin-top:4px;font-size:var(--hy-fs-tiny);font-weight:500;color:var(--hy-wait);background:var(--hy-wait-bg);border:1px solid var(--hy-line);border-radius:var(--hy-r-pill);padding:0 8px;line-height:1.5}
-.bm-node.is-hy .bm-shape{width:108px;height:108px;border-radius:50%;background:var(--hy-brand);border-color:var(--hy-brand);box-shadow:0 4px 12px rgba(0,0,0,.12)}
-.bm-node.is-hy .bm-kicker{color:#fff}
-.bm-node.is-hy .bm-name{color:#fff;font-size:22px;letter-spacing:.12em;font-family:'Syne','Noto Sans TC',sans-serif}
-.bm-node.is-company .bm-shape{width:184px;min-height:96px;padding:10px 14px 12px;border-radius:var(--hy-r-card);border-top:4px solid var(--hy-brand)}
-.bm-node.is-person .bm-shape{width:112px;height:112px;border-radius:50%;background:var(--hy-you-bg);border-color:var(--hy-you-line);padding:10px}
-.bm-node.is-person .bm-kicker{color:var(--hy-you)}
-.bm-node.is-person .bm-name,.bm-node.is-resource .bm-name{font-size:14px}
-.bm-node.is-person .bm-sub,.bm-node.is-resource .bm-sub{font-size:var(--hy-fs-tiny);color:var(--hy-ink)}
-.bm-node.is-resource .bm-shape{width:116px;height:116px;border-radius:20px;background:var(--hy-ai-bg);border-color:var(--hy-ai);transform:rotate(45deg)}
-.bm-node.is-resource .bm-inner{transform:rotate(-45deg);width:128px;display:flex;flex-direction:column;align-items:center}
-.bm-node.is-resource .bm-kicker{color:var(--hy-ai)}
-.bm-node.is-selected.is-company .bm-shape,.bm-node.is-selected.is-hy .bm-shape{box-shadow:0 0 0 2px var(--hy-brand),0 4px 12px rgba(0,0,0,.12)}
-.bm-node.is-selected.is-person .bm-shape{box-shadow:0 0 0 2px var(--hy-you-line),0 4px 12px rgba(0,0,0,.12)}
-.bm-node.is-selected.is-resource .bm-shape{box-shadow:0 0 0 2px var(--hy-ai),0 4px 12px rgba(0,0,0,.12)}
-.bm-node.is-link-source .bm-shape{outline:2px dashed var(--hy-brand);outline-offset:4px}
-.bm-node.is-stale .bm-shape{filter:saturate(.25);opacity:.72}
-.bm-more{position:absolute;top:-10px;right:-10px;width:30px;height:30px;border-radius:50%;border:1px solid var(--hy-line);background:var(--hy-surface);color:var(--hy-ink);font:700 15px/1 'Noto Sans TC',sans-serif;cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:0 1px 3px rgba(0,0,0,.08);z-index:3;padding:0}
-.bm-more:hover{background:var(--hy-sunken)}
-.bm-node.is-resource .bm-more{top:-28px;right:-28px}
-.bm-cardmenu{position:absolute;z-index:9;min-width:180px;background:var(--hy-surface);border:1px solid var(--hy-line);border-radius:var(--hy-r-card);box-shadow:0 8px 28px rgba(11,26,51,.16);padding:6px}
-.bm-save{position:absolute;top:12px;left:16px;z-index:3;font-size:var(--hy-fs-tiny);color:var(--hy-muted);background:var(--hy-surface);border:1px solid var(--hy-line);border-radius:var(--hy-r-pill);padding:2px 10px;max-width:calc(100% - 32px)}
-.bm-save.is-dirty{color:var(--hy-you);background:var(--hy-you-bg);border-color:var(--hy-you-line);font-weight:500}
-.bm-banner{position:absolute;top:48px;left:50%;transform:translateX(-50%);z-index:6;display:none;align-items:center;gap:12px;background:var(--hy-surface);border:1px solid var(--hy-brand);border-radius:var(--hy-r-card);padding:6px 6px 6px 14px;font-size:14px;box-shadow:0 4px 12px rgba(0,0,0,.12);max-width:calc(100% - 24px)}
+.bm-shape{position:relative;overflow:hidden;background:linear-gradient(180deg,#fffefb 0%,#fdfaf4 100%);border:1px solid rgba(74,58,36,.12);box-shadow:0 1px 1px rgba(60,45,25,.04),0 4px 10px -2px rgba(60,45,25,.06),0 22px 44px -18px rgba(60,45,25,.22);transition:transform .15s ease-out,box-shadow .15s ease-out,border-color .15s ease-out}
+.bm-node.is-company .bm-shape,.bm-node.is-person .bm-shape{border-radius:14px}
+.bm-node.is-company .bm-shape{width:280px;padding:20px 22px}
+.bm-mark{position:absolute;left:22px;top:0;width:30px;height:2px;background:var(--a)}
+.bm-node:hover .bm-shape{transform:translateY(-2px);box-shadow:0 4px 10px -2px rgba(60,45,25,.08),0 26px 50px -18px rgba(60,45,25,.3)}
+.bm-node.is-selected .bm-shape{border-color:color-mix(in srgb,var(--a) 45%,transparent);box-shadow:0 0 0 4px color-mix(in srgb,var(--a) 12%,transparent),0 4px 10px -2px rgba(60,45,25,.08),0 26px 50px -18px rgba(60,45,25,.3)}
+.bm-node.is-dragging .bm-shape{box-shadow:0 0 0 4px color-mix(in srgb,var(--a) 12%,transparent),0 4px 10px -2px rgba(60,45,25,.08),0 26px 50px -18px rgba(60,45,25,.3)}
+.bm-node:focus-visible .bm-shape{outline:2px solid var(--a,#26211b);outline-offset:3px}
+.bm-node.is-link-source .bm-shape{outline:2px dashed var(--a,#26211b);outline-offset:4px}
+.bm-node.is-stale .bm-shape{filter:saturate(.3);opacity:.75}
+.bm-top{display:flex;justify-content:space-between;align-items:flex-start;gap:8px}
+.bm-id{min-width:0;flex:1}
+.bm-topend{display:flex;align-items:flex-start;gap:var(--bm-gap,8px);flex:none}
+.bm-eb{font-size:10.5px;letter-spacing:.24em;color:var(--at,var(--a));font-weight:600}
+.bm-nm{font-family:var(--bm-serif);font-size:23px;font-weight:600;letter-spacing:.03em;margin-top:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:#26211b;line-height:1.2}
+.bm-st{font-size:12px;letter-spacing:.1em;color:#4c4337;border:1px solid rgba(74,58,36,.2);border-radius:999px;padding:1px 10px;margin-top:2px;background:transparent;flex:none;box-shadow:none}
+.bm-lab{font-size:10.5px;letter-spacing:.2em;color:#6f6455;margin-top:14px;padding-top:12px;border-top:1px solid rgba(74,58,36,.12);font-weight:600}
+.bm-lab em{font-style:normal;margin-left:8px;opacity:.6;font-weight:500;letter-spacing:.16em;color:#9a8b76}
+.bm-inc{height:44px;margin-top:5px;overflow:hidden}
+.bm-inc p{font-size:14px;line-height:22px;color:#26211b;font-weight:500;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.bm-inc p.is-unknown,.bm-biz .is-unknown{color:#6f6455;font-weight:400}
+.bm-biz{display:flex;gap:10px;margin-top:8px;font-size:12.5px;color:#5d5346;white-space:nowrap}
+.bm-biz .k{color:#9a8b76;letter-spacing:.12em;flex:none}
+.bm-biz .t{overflow:hidden;text-overflow:ellipsis}
+.bm-ft{display:flex;justify-content:space-between;gap:8px;margin-top:8px;font-size:11.5px;color:#6f6455;letter-spacing:.04em}
+.bm-ft span{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.bm-due{margin-right:6px;letter-spacing:.12em}
+.bm-node.is-hy .bm-shape{width:128px;height:128px;border-radius:50%;border:0;padding:0;display:flex;flex-direction:column;align-items:center;justify-content:center;background:radial-gradient(circle at 35% 28%,#3d362d 0%,#221d17 70%);box-shadow:inset 0 0 0 1px rgba(214,186,132,.45),0 0 0 10px rgba(166,128,62,.06),0 0 0 22px rgba(166,128,62,.035),0 18px 40px -10px rgba(40,30,15,.45);--a:#cdb68a}
+.bm-node.is-hy .bm-nm{font-size:34px;font-weight:500;color:#f4ead8;letter-spacing:.14em;margin:0 0 0 .14em;overflow:visible}
+.bm-node.is-hy .bm-hubsub{font-size:11px;letter-spacing:.2em;color:#cdb68a;margin-top:2px}
+.bm-node.is-hy:hover .bm-shape{transform:translateY(-2px)}
+.bm-node.is-hy.is-selected .bm-shape{box-shadow:inset 0 0 0 1px rgba(214,186,132,.45),0 0 0 4px rgba(166,128,62,.18),0 0 0 10px rgba(166,128,62,.06),0 0 0 22px rgba(166,128,62,.035),0 18px 40px -10px rgba(40,30,15,.45)}
+.bm-node.is-person .bm-shape{width:232px;padding:16px 18px 14px 18px;text-align:left}
+.bm-node.is-person .bm-mark{left:0;top:18px;width:2px;height:36px}
+.bm-node.is-person .bm-nm,.bm-node.is-resource .bm-nm{font-size:19px;letter-spacing:.02em}
+.bm-node.is-person .bm-mid,.bm-node.is-resource .bm-mid{margin-top:6px;font-size:13px;color:#5d5346;line-height:1.45}
+.bm-node.is-resource .bm-shape{width:232px;border-radius:10px;border:1px dashed rgba(74,58,36,.24);box-shadow:0 1px 1px rgba(60,45,25,.04);padding:16px 18px 14px}
+.bm-node.is-resource:hover .bm-shape,.bm-node.is-resource.is-selected .bm-shape{box-shadow:0 1px 1px rgba(60,45,25,.04)}
+.bm-node.is-resource.is-selected .bm-shape{border-color:color-mix(in srgb,var(--a) 45%,transparent);box-shadow:0 0 0 4px color-mix(in srgb,var(--a) 12%,transparent),0 1px 1px rgba(60,45,25,.04)}
+#tab-map.is-panel .bm-list{padding-right:440px}
+.bm-more{position:static;width:28px;height:28px;min-width:28px;min-height:28px;border-radius:50%;border:1px solid rgba(74,58,36,.16);background:rgba(255,253,249,.92);color:#26211b;font:600 16px/1 var(--bm-sans);cursor:pointer;display:flex;align-items:center;justify-content:center;opacity:0;z-index:3;padding:0;flex:none}
+.bm-node:hover .bm-more,.bm-node:focus-within .bm-more,.bm-more:focus-visible{opacity:1}
+.bm-cardmenu{position:absolute;z-index:9;min-width:180px;background:#fffdf9;border:1px solid rgba(74,58,36,.12);border-radius:14px;box-shadow:0 12px 28px -8px rgba(60,45,25,.18);padding:6px}
+.bm-banner{position:absolute;top:12px;left:50%;transform:translateX(-50%);z-index:6;display:none;align-items:center;gap:12px;background:#fffdf9;border:1px solid rgba(74,58,36,.16);border-radius:999px;padding:6px 6px 6px 16px;font-size:14px;box-shadow:0 8px 24px -12px rgba(60,45,25,.3);max-width:calc(100% - 24px)}
 .bm-banner.is-on{display:flex}
-.bm-banner .hy-btn{min-height:36px}
-.bm-legend{position:absolute;left:16px;bottom:16px;z-index:3;display:flex;gap:6px 14px;flex-wrap:wrap;align-items:center;font-size:var(--hy-fs-tiny);color:var(--hy-muted);background:rgba(242,244,248,.94);border:1px solid var(--hy-line);border-radius:var(--hy-r-sm);padding:6px 10px;max-width:calc(100% - 200px)}
-.bm-legend span{display:inline-flex;align-items:center;gap:6px}
-.bm-legend .bm-swatch{width:11px;height:11px}
-.bm-legend .bm-dash{width:18px;border-top:2px dashed var(--hy-muted)}
-.bm-tools{position:absolute;right:16px;bottom:16px;z-index:3;display:flex;gap:6px}
-.bm-tools .hy-btn{min-height:40px;min-width:40px;padding:0 12px;font-size:14px}
-.bm-panel{position:absolute;top:0;right:0;bottom:0;width:420px;max-width:100%;background:var(--hy-surface);border-left:1px solid var(--hy-line);box-shadow:-8px 0 32px rgba(0,0,0,.1);z-index:7;display:flex;flex-direction:column;transform:translateX(105%);transition:transform .25s ease,visibility .25s;visibility:hidden}
+.bm-banner .bm-textbtn{min-height:36px}
+.bm-bottom{position:absolute;left:48px;right:48px;bottom:16px;z-index:5;display:grid;grid-template-columns:minmax(0,1fr) auto minmax(0,1fr);align-items:end;gap:12px 16px;pointer-events:none}
+#tab-map.is-panel .bm-bottom{right:440px}
+@media (max-width:1100px){
+  #tab-map.is-panel .bm-bottom{grid-template-columns:minmax(0,1fr)}
+  #tab-map.is-panel .bm-tools{justify-self:center}
+}
+.bm-legend{position:static;grid-column:1;display:flex;gap:8px 16px;flex-wrap:wrap;align-items:center;font-size:12px;color:#6f6455;max-width:none}
+.bm-legend span{display:inline-flex;align-items:center;gap:7px}
+.bm-legend i{width:7px;height:7px;border-radius:2px;display:inline-block;flex:none}
+.bm-tools{position:static;grid-column:2;display:flex;gap:6px;justify-content:center;pointer-events:none}
+.bm-tools button{pointer-events:auto;font-size:13px;color:#26211b;border:1px solid rgba(74,58,36,.16);background:rgba(255,253,249,.7);border-radius:999px;padding:5px 13px;min-height:34px;min-width:40px;cursor:pointer;font-family:inherit}
+.bm-list{position:absolute;inset:0;overflow:auto;overflow-x:hidden;padding:8px 48px 32px;display:none}
+.bm-body.is-list .bm-list{display:block}
+.bm-body.is-list .bm-stage,.bm-body.is-list .bm-bottom{display:none}
+.bm-hubstrip{display:flex;align-items:center;gap:12px;margin:4px 0 14px}
+.bm-hubdot{width:40px;height:40px;border-radius:50%;flex:none;display:flex;align-items:center;justify-content:center;background:radial-gradient(circle at 35% 28%,#3d362d 0%,#221d17 70%);box-shadow:inset 0 0 0 1px rgba(214,186,132,.45),0 0 0 5px rgba(166,128,62,.06);font-family:var(--bm-serif);color:#f4ead8;font-size:15px;letter-spacing:.08em}
+.bm-list .bm-legend-inline{display:flex;flex-wrap:wrap;gap:4px 12px;font-size:12px;color:#6f6455}
+.bm-list .bm-legend-inline span{display:inline-flex;align-items:center;gap:6px}
+.bm-list .bm-legend-inline i{width:7px;height:7px;border-radius:2px;display:inline-block}
+.bm-list-cards{display:flex;flex-direction:column;gap:12px;max-width:720px}
+.bm-list .bm-node{position:relative;left:auto;top:auto;transform:none;width:100%;display:block}
+.bm-list .bm-node.is-company .bm-shape,.bm-list .bm-node.is-person .bm-shape,.bm-list .bm-node.is-resource .bm-shape{width:100%}
+.bm-panel{position:absolute;top:20px;right:20px;bottom:16px;width:384px;max-width:calc(100% - 24px);background:#fffdf9;border:1px solid rgba(74,58,36,.12);border-radius:18px;z-index:6;display:flex;flex-direction:column;transform:translateX(110%);transition:transform .25s ease,visibility .25s;visibility:hidden;box-shadow:0 2px 4px rgba(60,45,25,.04),0 12px 28px -8px rgba(60,45,25,.12),0 40px 80px -30px rgba(60,45,25,.3);color:#26211b;overflow:hidden}
 .bm-panel.is-open{transform:none;visibility:visible}
-.bm-panel-head{position:relative;padding:16px 16px 12px 24px;border-bottom:1px solid var(--hy-line);display:flex;gap:12px;align-items:flex-start}
-.bm-panel-head::before{content:"";position:absolute;left:0;top:0;bottom:0;width:4px;background:var(--bm-mark,var(--hy-brand))}
-.bm-panel-head h2{font-size:18px;font-weight:700;line-height:1.35;margin:0;overflow-wrap:anywhere}
-.bm-panel-meta{font-size:var(--hy-fs-meta);color:var(--hy-muted);margin-top:4px;display:flex;flex-wrap:wrap;gap:4px 8px;align-items:center}
-.bm-panel-head .hy-btn{margin-left:auto;flex:none}
-.bm-panel-actions{display:flex;gap:8px;flex-wrap:wrap;padding:12px 24px;border-bottom:1px solid var(--hy-line)}
-.bm-panel-actions .hy-btn{min-height:40px;padding:0 14px}
-.bm-panel-body{flex:1;overflow:auto;padding:4px 24px 24px}
-.bm-sec{margin-top:16px}
-.bm-sec h3{font-size:var(--hy-fs-tiny);font-weight:700;color:var(--hy-muted);letter-spacing:.12em;margin:0 0 6px}
-.bm-kv{display:grid;grid-template-columns:108px 1fr;gap:6px 12px;margin:0;font-size:14px}
-.bm-kv dt{color:var(--hy-muted)}
-.bm-kv dd{margin:0;color:var(--hy-ink);white-space:pre-wrap;overflow-wrap:anywhere}
-.bm-kv dd.is-unknown{color:var(--hy-muted)}
-.bm-lines{margin:0;padding-left:18px;white-space:normal}
-.bm-lines li+li{margin-top:2px}
-.bm-callout{margin-top:12px;font-size:var(--hy-fs-meta);color:var(--hy-you);background:var(--hy-you-bg);border:1px solid #f2d39b;border-radius:var(--hy-r-sm);padding:8px 12px}
-.bm-rel{display:flex;align-items:center;gap:8px;padding:8px 0;border-top:1px solid var(--hy-line);font-size:14px}
+.bm-sheet-handle{display:none;border:0;padding:0}
+.bm-panel-scroll{flex:1;min-height:0;overflow:auto;padding:30px 28px 16px;position:relative}
+.bm-pmark{position:absolute;left:28px;top:0;width:40px;height:2px;background:var(--a)}
+.bm-peb{font-size:10.5px;letter-spacing:.24em;color:var(--at,var(--a));font-weight:600}
+.bm-ph{display:flex;align-items:center;gap:12px}
+.bm-ph h2{font-family:var(--bm-serif);font-size:34px;font-weight:600;letter-spacing:.06em;margin:2px 0 0;line-height:1.15}
+.bm-st.big{font-size:13px}
+.bm-plegal{font-size:13px;color:#5d5346;margin-top:4px}
+.bm-pmeta{font-size:12px;color:#6f6455;margin-top:4px}
+.bm-pmeta i{font-style:normal;margin:0 6px}
+.bm-psec{margin-top:18px}
+.bm-psec .bm-lab{border-top:0;padding-top:0;margin-top:0}
+.bm-psec p{font-size:13.5px;color:#3b342b;margin-top:6px;line-height:1.65;white-space:pre-wrap}
+.bm-incbox{background:linear-gradient(180deg,#f6f0e6,#f3ece1);border-radius:12px;padding:14px 16px;margin-top:20px}
+.bm-pinc{font-family:var(--bm-serif);font-size:17px;line-height:1.5;color:#26211b;font-weight:500;margin-top:6px;white-space:pre-wrap}
+.bm-pinc.is-unknown{color:#6f6455;font-family:var(--bm-sans);font-size:13.5px}
+.bm-own{display:grid;grid-template-columns:44px 1fr;gap:8px 12px;margin:8px 0 0}
+.bm-own dt{font-size:12px;color:#6f6455;padding-top:2px}
+.bm-own dd{margin:0;font-size:13.5px;line-height:1.55;color:#26211b}
+.bm-own dd b.big{font-family:var(--bm-serif);font-size:22px;font-weight:600}
+.bm-own dd small{display:block;font-size:11.5px;color:#6f6455;line-height:1.5;font-weight:400}
+.bm-fold{display:flex;justify-content:space-between;gap:12px;width:100%;text-align:left;font:inherit;font-size:13px;color:#5d5346;border:0;border-top:1px solid rgba(74,58,36,.12);background:transparent;padding:12px 0 0;cursor:pointer;min-height:44px}
+.bm-fold + .bm-fold,.bm-fold-body + .bm-fold{margin-top:12px}
+.bm-fold-body{font-size:13px;color:#3b342b;line-height:1.65;white-space:pre-wrap;padding-top:8px}
+.bm-unk{font-size:13px;color:#6f6455;margin-top:6px}
+.bm-rel{display:flex;align-items:center;gap:8px;padding:8px 0;border-top:1px solid rgba(74,58,36,.12);font-size:14px}
 .bm-rel:first-of-type{border-top:0}
 .bm-rel span{flex:1;min-width:0;overflow-wrap:anywhere}
-.bm-rel small{display:block;color:var(--hy-muted);font-size:var(--hy-fs-tiny)}
-.bm-rel .hy-btn{min-height:36px;padding:0 10px;font-size:var(--hy-fs-meta)}
-.bm-empty{font-size:var(--hy-fs-meta);color:var(--hy-muted)}
-/* 表單（新增／編輯卡片與關係） */
-.bb-dialog{width:720px;max-width:calc(100vw - 24px);max-height:92dvh;padding:0;border:1px solid var(--hy-line);border-radius:var(--hy-r-card);color:var(--hy-ink);font-family:'Noto Sans TC',system-ui,sans-serif;font-size:var(--hy-fs-body)}
-.bb-dialog::backdrop{background:color-mix(in srgb,var(--hy-header) 45%,transparent)}
-.bb-dialog-head{position:sticky;top:0;z-index:2;background:var(--hy-surface);display:flex;justify-content:space-between;align-items:center;gap:8px;padding:16px 20px;border-bottom:1px solid var(--hy-line)}
+.bm-rel small{display:block;color:#6f6455;font-size:12px}
+.bm-pact{flex:none;display:flex;gap:8px;flex-wrap:wrap;align-items:center;padding:12px 28px 22px;background:#fffdf9}
+.bm-pact button{font-size:13px;font-family:inherit;border:1px solid rgba(74,58,36,.16);border-radius:999px;padding:6px 14px;background:#fffdf9;color:#26211b;cursor:pointer;min-height:36px}
+.bm-pact .is-danger{color:#a03d2a}
+.bm-pact .sp{flex:1;border:0;padding:0;min-height:0}
+.bm-textbtn{font:inherit;font-size:13px;border:1px solid rgba(74,58,36,.16);border-radius:999px;background:#fffdf9;color:#26211b;padding:6px 12px;cursor:pointer}
+.bm-textbtn.is-danger{color:#a03d2a}
+.bm-callout{margin-top:12px;font-size:13px;color:#5d5346;background:#f6f0e6;border:1px solid rgba(74,58,36,.12);border-radius:12px;padding:10px 12px}
+.bm-empty{font-size:13px;color:#6f6455;line-height:1.65}
+.bb-dialog{width:720px;max-width:calc(100vw - 24px);max-height:92dvh;padding:0;border:1px solid rgba(74,58,36,.12);border-radius:18px;color:#26211b;font-family:var(--bm-sans);font-size:15px;background:#fffdf9}
+.bb-dialog::backdrop{background:rgba(38,33,27,.35)}
+.bb-dialog-head{position:sticky;top:0;z-index:2;background:#fffdf9;display:flex;justify-content:space-between;align-items:center;gap:8px;padding:16px 20px;border-bottom:1px solid rgba(74,58,36,.12)}
+.bb-dialog-head h2{font-family:var(--bm-serif);font-size:22px;font-weight:600}
 .bb-dialog-body{padding:16px 20px;display:grid;grid-template-columns:1fr 1fr;gap:12px 16px}
-.bb-dialog-foot{position:sticky;bottom:0;background:var(--hy-surface);display:flex;justify-content:flex-end;gap:8px;flex-wrap:wrap;padding:12px 20px;border-top:1px solid var(--hy-line)}
-.bb-field{display:flex;flex-direction:column;gap:4px;font-size:var(--hy-fs-meta);color:var(--hy-muted)}
+.bb-dialog-foot{position:sticky;bottom:0;background:#fffdf9;display:flex;justify-content:flex-end;gap:8px;flex-wrap:wrap;padding:12px 20px;border-top:1px solid rgba(74,58,36,.12)}
+.bb-dialog .hy-btn{min-height:36px;padding:0 14px;border-radius:999px;border:1px solid rgba(74,58,36,.16);background:#fffdf9;color:#26211b;font:inherit;font-size:13px;cursor:pointer}
+.bb-dialog .hy-btn.is-primary{background:#26211b;color:#f6efe2;border-color:#26211b}
+.bb-dialog .hy-btn.is-danger,.bm-rel .hy-btn.is-danger{color:#a03d2a}
+.bb-field{display:flex;flex-direction:column;gap:4px;font-size:13px;color:#6f6455}
 .bb-field.wide,.bm-form-sec,.bb-dialog-body .hy-note,.bb-dialog-body .bb-error,.bb-dialog-body .bb-check{grid-column:1/-1}
-.bb-field input,.bb-field select,.bb-field textarea{font:inherit;font-size:var(--hy-fs-body);color:var(--hy-ink);min-height:var(--hy-tap);padding:8px 10px;border:1px solid var(--hy-line);border-radius:var(--hy-r-sm);background:var(--hy-surface);width:100%}
+.bb-field input,.bb-field select,.bb-field textarea{font:inherit;font-size:15px;color:#26211b;min-height:44px;padding:8px 10px;border:1px solid rgba(74,58,36,.2);border-radius:8px;background:#fff;width:100%}
 .bb-field textarea{min-height:72px;resize:vertical}
-.bb-field small{color:var(--hy-muted);font-size:var(--hy-fs-tiny)}
-.bm-form-sec{font-size:var(--hy-fs-meta);font-weight:700;color:var(--hy-ink);border-top:1px solid var(--hy-line);padding-top:12px;margin-top:4px}
+.bb-field small{color:#6f6455;font-size:12px}
+.bm-form-sec{font-size:13px;font-weight:700;color:#26211b;border-top:1px solid rgba(74,58,36,.12);padding-top:12px;margin-top:4px}
 .bm-form-sec:first-child{border-top:0;padding-top:0;margin-top:0}
-.bb-check{display:flex;align-items:center;gap:8px;min-height:var(--hy-tap);font-size:14px}
-.bb-check input{width:20px;height:20px;accent-color:var(--hy-brand)}
+.bb-check{display:flex;align-items:center;gap:8px;min-height:44px;font-size:14px;color:#26211b}
+.bb-check input{width:20px;height:20px;accent-color:#26211b}
 .bb-error{white-space:pre-wrap}
-@media (max-width:640px){
-  header .logo-sub,header .last-updated{display:none}
-  header .btn{white-space:nowrap}
-  .bm-bar{padding:0 10px;gap:8px}
-  .bm-title{display:none}
-  .bm-stat{min-height:36px}
-  .bm-panel{width:100%;border-left:0}
-  .bm-legend{max-width:calc(100% - 150px);left:10px;bottom:10px}
-  .bm-legend .bm-legend-help{display:none}
-  .bm-tools{right:10px;bottom:10px}
-  .bm-tools .hy-btn{min-height:44px;min-width:44px}
-  .bm-panel-head,.bm-panel-actions,.bm-panel-body{padding-left:18px;padding-right:14px}
+.bb-dialog .hy-note{font-size:13px;color:#6f6455;line-height:1.6}
+/* ≤1024 詳情改底部滑出，關聯圖不讓位。>1024 維持右側 384px 浮動面板。 */
+@media (max-width:1024px){
+  .bm-panel{top:auto;left:0;right:0;bottom:0;width:100%;height:88%;max-width:none;border-radius:18px 18px 0 0;border-bottom:0;transform:translateY(105%)}
+  .bm-panel.is-open{transform:none}
+  .bm-sheet-handle{display:flex;align-items:flex-start;justify-content:center;width:100%;height:44px;margin:0;background:transparent;flex:none;touch-action:none;cursor:grab}
+  .bm-sheet-handle::before{content:'';width:36px;height:4px;border-radius:99px;background:rgba(74,58,36,.28);margin-top:10px}
+  .bm-panel-scroll{padding:8px 20px 12px}
+  .bm-pmark{left:20px}
+  .bm-pact{padding:12px 16px 18px}
+}
+@media (max-width:860px){
+  #tab-map .bm-titlerow{padding:0 24px;gap:12px}
+  #tab-map .bm-eyebrow{letter-spacing:.16em}
+}
+@media (max-width:767px){
+  #tab-map .bm-titlerow{height:auto;flex-wrap:wrap;padding:12px 16px 8px;gap:8px 12px}
+  #tab-map.is-panel .bm-titlerow{padding-right:16px}
+  #tab-map .bm-titlerow h1{font-size:26px}
+  #tab-map .bm-sub{flex:1 0 100%;padding-top:2px;font-size:12.5px;white-space:normal}
+  #tab-map .bm-spacer{display:none}
+  #tab-map .bm-eyebrow{letter-spacing:.16em}
+  #tab-map .bm-seg{flex:1}
+  #tab-map .bm-seg button{flex:1;text-align:center;min-height:44px;padding:8px 10px;white-space:nowrap}
+  #tab-map .bm-add-btn{min-height:44px;min-width:44px}
+  #tab-map .bm-tools button{min-height:44px;min-width:44px}
+  #tab-map .bm-zoom-step{display:none}
+  .bm-bottom{left:16px;right:16px;bottom:12px;grid-template-columns:minmax(0,1fr);justify-items:start}
+  #tab-map.is-panel .bm-bottom{right:16px}
+  .bm-tools{justify-self:center}
+  .bm-list{padding:4px 16px 24px}
+  .bm-list .bm-more{width:44px;height:44px;min-width:44px;min-height:44px}
+  .bm-list .bm-node.is-company .bm-shape{padding:18px 20px}
+  .bm-list .bm-mark{left:20px}
+  .bm-pact button{min-height:44px}
+  .bm-bottom{left:16px;right:16px;bottom:12px}
   .bb-dialog{max-width:calc(100vw - 12px)}
   .bb-dialog-body{grid-template-columns:1fr}
 }
+
 .strategy-suggestion-text { font-size:13px; color:var(--text-muted); line-height:1.7; }
 #tab-weekly.active { overflow-y:auto; }
 #tab-weekly .weekly-wrap { padding:8px 8px 16px; width:100%; max-width:none; }
@@ -641,13 +764,15 @@ input[type="date"] { color-scheme: light; }
   .board-wrap { scroll-snap-type:x mandatory; -webkit-overflow-scrolling:touch; padding:12px; }
   .column { scroll-snap-align:start; min-width:85vw; width:85vw; }
 }
-/* 手機共用：頁首只留標章與動作鈕、可點區域 ≥44px、分頁列可橫向捲動（2026-10 手機版 PR3） */
-@media (max-width:640px) {
-  header { padding:0 12px; gap:8px; }
-  .logo-sub, .last-updated { display:none; }
+/* 手機頁首：52px 品牌列＋40px 分頁列。點擊範圍至少 44px，不出現橫向捲動。 */
+@media (max-width:767px) {
+  header { height:auto; flex-wrap:wrap; align-content:flex-start; padding:0 16px; gap:0 10px; }
+  header .logo-wrap { height:52px; align-items:center; }
+  header .header-right { height:52px; }
+  header .last-updated { display:none; }
   header .btn { min-height:44px; white-space:nowrap; }
-  .tabs { padding:0 8px; overflow-x:auto; }
-  .tab { padding:14px 12px; white-space:nowrap; }
+  header .tabs { order:3; flex:1 0 100%; height:40px; gap:22px; padding:0 4px; border-top:1px solid rgba(74,58,36,.12); overflow-x:auto; }
+  header .tab { padding:0; font-size:13.5px; min-height:40px; }
 }
 </style>
 </head>
@@ -655,21 +780,20 @@ input[type="date"] { color-scheme: light; }
 
 <header>
   <div class="logo-wrap">
-    <div class="logo-badge">Sam</div>
-    <div class="logo-sub">事業助理</div>
+    <b class="logo-badge">Sam</b>
+    <span class="logo-sub">事業助理</span>
   </div>
+  <nav class="tabs" aria-label="分頁">
+    <button type="button" class="tab active" onclick="switchTab('progress')">進度追蹤</button>
+    <button type="button" class="tab" onclick="switchTab('map')">事業版圖</button>
+    <button type="button" class="tab" data-tab="weekly" onclick="switchTab('weekly')">週覆盤</button>
+  </nav>
   <div class="header-right">
     <span class="last-updated" id="lastUpdated">載入中...</span>
-    <button class="btn btn-ghost" onclick="loadData()">↺ 重新整理</button>
-    <button class="btn btn-blue" id="saveBtn" onclick="saveData()">✓ 儲存</button>
+    <button class="btn btn-ghost" onclick="loadData()">重新整理</button>
+    <button class="btn btn-blue" id="saveBtn" onclick="saveData()">儲存</button>
   </div>
 </header>
-
-<div class="tabs">
-  <div class="tab active" onclick="switchTab('progress')">📊 進度追蹤</div>
-  <div class="tab" onclick="switchTab('map')">🕸️ 事業版圖</div>
-  <div class="tab" data-tab="weekly" onclick="switchTab('weekly')">📅 週覆盤</div>
-</div>
 
 <!-- TAB 1: PROGRESS -->
 <div class="tab-content active" id="tab-progress">
@@ -680,36 +804,44 @@ input[type="date"] { color-scheme: light; }
   </div>
 </div>
 
-<!-- TAB 2: BUSINESS MAP（事業版圖 v2：滿版關聯圖。中心 HY、第一圈五家公司、外圈人物／資源；點卡片右側滑出詳情） -->
+<!-- TAB 2: BUSINESS MAP（B1 暖調年報。中心 HY、第一圈公司、外圈人物／資源；詳細面板浮動） -->
 <div class="tab-content" id="tab-map">
-  <div class="bm-bar hy">
-    <h1 class="bm-title">事業版圖</h1>
-    <div class="bm-stats" id="bmStats" aria-label="各公司近三月狀態"></div>
+  <div class="bm-titlerow">
+    <div class="bm-titleblock">
+      <div class="bm-eyebrow" id="bmEyebrow">BUSINESS MAP</div>
+      <h1>事業版圖</h1>
+    </div>
+    <div class="bm-sub" id="bmSub">載入中…</div>
+    <span class="bm-save" id="mapSaveState" role="status">載入中…</span>
+    <span class="bm-spacer"></span>
+    <div class="bm-seg" role="tablist" aria-label="版圖呈現">
+      <button type="button" id="bmViewGraph" data-view="graph">關聯圖</button>
+      <button type="button" id="bmViewList" data-view="list">卡片清單</button>
+    </div>
     <div class="bm-add">
-      <button type="button" class="hy-hbtn is-primary" id="bmAddBtn" aria-haspopup="menu" aria-expanded="false" aria-controls="bmAddMenu">＋ 新增</button>
+      <button type="button" class="bm-add-btn" id="bmAddBtn" aria-haspopup="menu" aria-expanded="false" aria-controls="bmAddMenu">＋ 新增</button>
       <div class="bm-add-menu" id="bmAddMenu" role="menu" aria-label="新增卡片">
-        <button type="button" class="bm-menu-item" role="menuitem" data-add="company"><i class="bm-swatch company"></i>公司</button>
-        <button type="button" class="bm-menu-item" role="menuitem" data-add="person"><i class="bm-swatch person"></i>人物</button>
-        <button type="button" class="bm-menu-item" role="menuitem" data-add="resource"><i class="bm-swatch resource"></i>資源</button>
+        <button type="button" class="bm-menu-item" role="menuitem" data-add="company">公司</button>
+        <button type="button" class="bm-menu-item" role="menuitem" data-add="person">人物</button>
+        <button type="button" class="bm-menu-item" role="menuitem" data-add="resource">資源</button>
       </div>
     </div>
   </div>
-  <div class="bm-body hy">
+  <div class="bm-body" id="bmBody">
     <div class="bm-stage" id="bmStage" aria-label="事業關係圖：點卡片看詳情，拖曳卡片可移動，拖曳空白處可平移"><div class="bm-world" id="bmWorld"></div></div>
-    <span class="bm-save" id="mapSaveState" role="status">載入中…</span>
-    <div class="bm-banner" id="bmBanner" role="status"><span id="bmBannerText"></span><button type="button" class="hy-btn" id="bmBannerCancel">取消連線</button></div>
-    <div class="bm-legend" aria-label="圖例">
-      <span><i class="bm-swatch company"></i>公司</span><span><i class="bm-swatch person"></i>人物</span><span><i class="bm-swatch resource"></i>資源</span>
-      <span><i class="bm-dash"></i>未確認關係</span><span class="bm-legend-help">灰卡＝資料待更新，不是虧損</span>
+    <div class="bm-list" id="bmList"></div>
+    <div class="bm-banner" id="bmBanner" role="status"><span id="bmBannerText"></span><button type="button" class="bm-textbtn" id="bmBannerCancel">取消連線</button></div>
+    <div class="bm-bottom" id="bmBottom">
+      <div class="bm-legend" id="bmLegend" aria-label="圖例"></div>
+      <div class="bm-tools" aria-label="縮放">
+        <button type="button" class="bm-zoom-step" id="bmZoomOut" aria-label="縮小">−</button>
+        <button type="button" id="bmFitBtn">全圖</button>
+        <button type="button" class="bm-zoom-step" id="bmZoomIn" aria-label="放大">＋</button>
+      </div>
     </div>
-    <div class="bm-tools" aria-label="縮放">
-      <button type="button" class="hy-btn" id="bmZoomOut" aria-label="縮小">−</button>
-      <button type="button" class="hy-btn" id="bmFitBtn">全圖</button>
-      <button type="button" class="hy-btn" id="bmZoomIn" aria-label="放大">＋</button>
-    </div>
-    <aside class="bm-panel" id="bmPanel" aria-label="卡片詳細資訊" aria-hidden="true"></aside>
-    <div class="bm-cardmenu" id="bmCardMenu" role="menu" hidden></div>
   </div>
+  <aside class="bm-panel" id="bmPanel" aria-label="卡片詳細資訊" aria-hidden="true"></aside>
+  <div class="bm-cardmenu" id="bmCardMenu" role="menu" hidden></div>
 </div>
 <dialog class="bb-dialog hy" id="bmNodeDialog" aria-labelledby="bmNodeDialogTitle"></dialog>
 <dialog class="bb-dialog hy" id="bmEdgeDialog" aria-labelledby="bmEdgeDialogTitle"></dialog>
@@ -1030,97 +1162,239 @@ function isDueToday(due) {
 }
 function isActiveCard(m) { return !m.completed || String(m.completed_at || '').slice(0, 10) === todayTaipei; }
 
-// ── BUSINESS MAP v2（滿版關聯圖；資料邏輯在 sam-business-map.js） ──
+// ── BUSINESS MAP B1（滿版關聯圖；資料邏輯在 sam-business-map.js，這裡只畫） ──
 // 正本：business_ops.map_v2。舊 business_ops.graph／board 保留在正本，本頁不讀不畫不刪。
 const BM=window.SamBusinessMap;
-const BM_PANEL_W=420, BM_STAT_PILL={'賺':'done','平':'wait','虧':'bad','未知':'wait'};
+const BM_PANEL_RESERVE=420;
 let mapDirty=false, mapRevision=0, bmSeeded=false, bmOkText='已載入正式資料';
 let bmView={scale:1,tx:0,ty:0}, bmPos={}, bmSelected=null, bmLinkFrom=null, bmEditing=null, bmFitTimer=null;
+let bmViewChoice=null, bmHot=null, bmFontsHooked=false;
+function bmRefitWhenFontsReady(){
+  if(bmFontsHooked||!document.fonts)return;
+  if(document.fonts.status==='loaded'){bmFontsHooked=true;return}
+  bmFontsHooked=true;
+  document.fonts.ready.then(()=>{
+    const tab=document.getElementById('tab-map');
+    if(data&&tab&&tab.classList.contains('active'))renderBusinessMap({fit:true});
+  });
+}
 function escapeHtml(v){return String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
 function bmMap(){const r=BM.ensureMap(data.business_ops);if(r.seeded)bmSeeded=true;return r.map}
-function bmNarrow(){return window.matchMedia('(max-width:640px)').matches}
+function bmNarrow(){return window.matchMedia('(max-width:767px)').matches}
+/* ≤1024 用跟手機一樣的底部詳情；768–1024 預設仍是關聯圖。 */
+function bmSheet(){return window.matchMedia('(max-width:1024px)').matches}
+function bmSideOpen(){return !!bmSelected&&!bmSheet()&&bmMode()==='graph'}
+function bmMode(){return bmViewChoice||(bmNarrow()?'list':'graph')}
+function bmParts(iso){
+  const d=iso instanceof Date?iso:new Date(iso);
+  if(!iso||isNaN(d))return null;
+  const parts=new Intl.DateTimeFormat('en-US',{timeZone:'Asia/Taipei',year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',hourCycle:'h23'}).formatToParts(d);
+  const g=t=>{const x=parts.find(p=>p.type===t);return x?x.value:''};
+  let h=g('hour'); if(h==='24')h='00';
+  return {y:g('year'),m:g('month'),d:g('day'),h:h,min:g('minute')};
+}
+function bmMD(iso){const p=bmParts(iso);return p?p.m+'/'+p.d:'—'}
+function bmYMD(iso){const p=bmParts(iso);return p?p.y+'/'+p.m+'/'+p.d:BM.UNKNOWN}
+function formatHeaderStamp(iso){
+  if(!iso)return '—';
+  const raw=String(iso);
+  const src=/^\d{4}-\d{2}-\d{2}$/.test(raw)?raw+'T00:00:00+08:00':raw;
+  const p=bmParts(src); if(!p)return '—';
+  return p.m+'/'+p.d+' '+p.h+':'+p.min+' 更新';
+}
+function bmMonthLabel(){const p=bmParts(new Date());return p?p.y+' 年 '+Number(p.m)+' 月':''}
+function bmCountWord(n){const c=['','一','二','三','四','五','六','七','八','九','十'];return n>=1&&n<=10?c[n]:String(n)}
 function bmDate(iso){if(!iso)return BM.UNKNOWN;const d=new Date(iso);if(isNaN(d))return String(iso);return d.toLocaleString('zh-TW',{timeZone:'Asia/Taipei',year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',hour12:false})+'（台北）'}
 function bmSetSaveState(){
   const s=document.getElementById('mapSaveState');if(!s)return;
-  s.classList.toggle('is-dirty',mapDirty||bmSeeded);
+  const dirty=mapDirty||bmSeeded;
+  s.hidden=!dirty;
+  s.classList.toggle('is-dirty',dirty);
   s.textContent=mapDirty?'有未儲存變更，按右上「儲存」同步到系統':(bmSeeded?'五家公司與收入欄的更新尚未存入系統，按右上「儲存」寫入':bmOkText);
 }
 function markMapDirty(){mapDirty=true;mapRevision++;bmMap().updated_at=new Date().toISOString();bmSetSaveState()}
 function bmSizeTab(){
   const el=document.getElementById('tab-map');if(!el||!el.classList.contains('active'))return;
-  el.style.height=Math.max(360,window.innerHeight-(el.getBoundingClientRect().top+window.scrollY))+'px';
+  el.style.height=Math.max(360,window.innerHeight-el.getBoundingClientRect().top)+'px';
 }
-function bmNodeHtml(n,st){
-  const k=n.kind, sub=BM.nodeSubtitle(n), stale=st&&st.stale;
-  const cls=`bm-node is-${k} ${n.id===bmSelected?'is-selected':''} ${n.id===bmLinkFrom?'is-link-source':''} ${stale?'is-stale':''}`;
-  const kicker=k==='hy'?'CENTER':BM.KINDS[k];
-  const inner=`<div class="bm-kicker">${kicker}</div><div class="bm-name">${escapeHtml(n.name||'未命名')}</div>${sub?`<div class="bm-sub">${escapeHtml(sub)}</div>`:''}${stale?'<span class="bm-tag">待更新</span>':''}`;
-  const more=k==='hy'?'':`<button type="button" class="bm-more" data-more="${escapeHtml(n.id)}" aria-label="${escapeHtml(n.name)} 選單" title="編輯／連線／刪除">⋯</button>`;
-  return `<div class="${cls}" data-id="${escapeHtml(n.id)}" tabindex="0" role="button" aria-label="${escapeHtml(kicker+'：'+(n.name||''))}${stale?'（待更新）':''}" aria-pressed="${n.id===bmSelected}"><div class="bm-shape">${k==='resource'?`<div class="bm-inner">${inner}</div>`:inner}</div>${more}</div>`;
+function bmCssId(id){return String(id).replace(/[^A-Za-z0-9_-]/g,'')}
+function bmHexA(hex,a){const n=parseInt(String(hex).replace('#',''),16);return 'rgba('+((n>>16)&255)+','+((n>>8)&255)+','+(n&255)+','+a+')'}
+function bmEdgeOf(map,id){const edges=BM.edgesOf(map,id);return edges.find(e=>e.from===BM.HY_ID||e.to===BM.HY_ID)||edges[0]||null}
+function bmAux(n){return !!(n&&(n.kind==='person'||n.kind==='resource'))}
+function bmNodeHtml(n,map,st){
+  const k=n.kind, stale=st&&st.stale, accent=BM.accentFor(n,map);
+  const cls='bm-node is-'+k+(n.id===bmSelected?' is-selected':'')+(n.id===bmLinkFrom?' is-link-source':'')+(stale?' is-stale':'');
+  const style='--a:'+accent.main+';--at:'+accent.text+';--as:'+accent.soft;
+  const more=k==='hy'?'':'<button type="button" class="bm-more" data-more="'+escapeHtml(n.id)+'" aria-label="'+escapeHtml((n.name||'')+' 選單')+'">⋯</button>';
+  let inner='';
+  if(k==='hy'){
+    inner='<div class="bm-nm">HY</div><div class="bm-hubsub">'+BM.companies(map).length+' 家公司</div>';
+  }else if(k==='company'){
+    const edge=bmEdgeOf(map,n.id);
+    const face=BM.cardFace(n,edge?edge.type:'');
+    const status=face.status?'<span class="bm-st">'+escapeHtml(face.status)+'</span>':'';
+    const due=stale?'<span class="bm-due">待更新</span>':'';
+    inner='<div class="bm-mark"></div><div class="bm-top"><div class="bm-id"><div class="bm-eb">'+escapeHtml(face.kicker)+'</div><div class="bm-nm">'+escapeHtml(face.name)+'</div></div><div class="bm-topend">'+more+status+'</div></div>'
+      +'<div class="bm-lab">收入<em>INCOME</em></div><div class="bm-inc"><p class="'+(face.incomeUnknown?'is-unknown':'')+'">'+escapeHtml(face.income)+'</p></div>'
+      +'<div class="bm-biz"><span class="k">業務</span><span class="t '+(face.businessUnknown?'is-unknown':'')+'">'+escapeHtml(face.business)+'</span></div>'
+      +'<div class="bm-ft"><span>'+due+escapeHtml(face.footer)+'</span><span>'+escapeHtml(face.maintainer)+(n.updated_at?' · '+bmMD(n.updated_at):'')+'</span></div>';
+  }else if(k==='person'){
+    const rel=String(n.relation||'').trim(), mid=String(n.role||'').trim();
+    inner='<div class="bm-mark"></div><div class="bm-top"><div class="bm-id"><div class="bm-eb">'+escapeHtml(rel||'人物')+'</div></div><div class="bm-topend">'+more+'</div></div><div class="bm-nm">'+escapeHtml(n.name||'未命名')+'</div>'+(mid?'<div class="bm-mid">'+escapeHtml(mid)+'</div>':'')+'<div class="bm-ft"><span>'+(stale?'<span class="bm-due">待更新</span>':'')+'</span><span>'+escapeHtml(n.maintainer||'')+'</span></div>';
+  }else{
+    const where=[n.location,n.state].map(v=>String(v||'').trim()).filter(Boolean).join('・');
+    inner='<div class="bm-mark"></div><div class="bm-top"><div class="bm-id"><div class="bm-eb">'+escapeHtml(n.rtype||'資源')+'</div></div><div class="bm-topend">'+more+'</div></div><div class="bm-nm">'+escapeHtml(n.name||'未命名')+'</div>'+(where?'<div class="bm-mid">'+escapeHtml(where)+'</div>':'')+'<div class="bm-ft"><span></span><span>'+escapeHtml(n.maintainer||'')+'</span></div>';
+  }
+  const label=(k==='hy'?'中心：HY':(BM.KINDS[k]||'')+'：'+(n.name||''));
+  return '<div class="'+cls+'" style="'+style+'" data-id="'+escapeHtml(n.id)+'" tabindex="0" role="button" aria-label="'+escapeHtml(label)+(stale?'（待更新）':'')+'" aria-pressed="'+(n.id===bmSelected)+'"><div class="bm-shape">'+inner+'</div></div>';
 }
-function renderBmStats(map){
-  document.getElementById('bmStats').innerHTML=BM.statusSummary(map).map(s=>`<button type="button" class="bm-stat" data-s="${BM_STAT_PILL[s.status]}" data-open="${escapeHtml(s.id)}" aria-label="${escapeHtml(s.name)}：近三月${s.status}"><i></i><b>${escapeHtml(s.name)}</b><span class="hy-pill" data-s="${BM_STAT_PILL[s.status]}">${s.status}</span></button>`).join('');
-  document.querySelectorAll('#bmStats [data-open]').forEach(b=>b.onclick=()=>bmSelect(b.dataset.open,true));
+function bmLegendHtml(map){
+  return map.nodes.filter(n=>n.kind!=='hy').map(n=>{const a=BM.accentFor(n,map);return '<span><i style="background:'+a.main+'"></i>'+escapeHtml(n.name||'')+'</span>'}).join('');
+}
+function renderBmChrome(map){
+  const n=BM.companies(map).length;
+  const eye=document.getElementById('bmEyebrow'); if(eye)eye.textContent='BUSINESS MAP · '+bmMonthLabel();
+  let latest=0, iso='';
+  map.nodes.forEach(node=>{if(node.kind==='hy')return;const t=Date.parse(node.updated_at||'');if(isFinite(t)&&t>=latest){latest=t;iso=node.updated_at}});
+  const sub=document.getElementById('bmSub');
+  if(sub)sub.innerHTML='HY 的'+bmCountWord(n)+'家公司<i>·</i>資料更新 <span>'+(iso?bmMD(iso):'—')+'</span>'+(bmMode()==='list'&&bmNarrow()?'<i>·</i>點卡片看詳情':'');
+  const mode=bmMode();
+  const g=document.getElementById('bmViewGraph'), l=document.getElementById('bmViewList');
+  if(g)g.classList.toggle('is-on',mode==='graph');
+  if(l)l.classList.toggle('is-on',mode==='list');
+  document.getElementById('bmBody').classList.toggle('is-list',mode==='list');
+  document.getElementById('tab-map').classList.toggle('is-panel',bmSideOpen());
+  const legend=document.getElementById('bmLegend'); if(legend)legend.innerHTML=bmLegendHtml(map);
+}
+function bmEdgeSvg(map,st){
+  const defs=[], lines=[];
+  map.edges.forEach(e=>{
+    const a=BM.getNode(map,e.from), b=BM.getNode(map,e.to);
+    const aux=bmAux(a)||bmAux(b);
+    const stale=(st.get(e.from)||{}).stale||(st.get(e.to)||{}).stale;
+    const pending=e.confirmed!==true;
+    if(!aux){
+      const company=(a&&a.kind==='company')?a:((b&&b.kind==='company')?b:{kind:'company',id:''});
+      const col=BM.accentFor(company,map).main;
+      defs.push('<linearGradient id="g-'+bmCssId(e.id)+'" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#6b5d4a" stop-opacity=".35"/><stop offset="1" data-stop="'+escapeHtml(e.id)+'" stop-color="'+col+'" stop-opacity=".7"/></linearGradient>');
+    }
+    lines.push('<line class="bm-edge'+(pending?' is-pending':'')+(aux?' is-aux':'')+(stale?' is-stale':'')+'" data-edge="'+escapeHtml(e.id)+'" stroke="'+(aux?'#6b5d4a':'url(#g-'+bmCssId(e.id)+')')+'" stroke-width="'+(aux?'1':'1.1')+'"></line>');
+  });
+  return '<svg class="bm-edges" aria-hidden="true"><defs>'+defs.join('')+'</defs>'+lines.join('')+'</svg>';
 }
 function renderBusinessMap(opts){
   if(!data)return;
   const o=Object.assign({fit:true},opts||{});
+  bmRefitWhenFontsReady();
   bmSizeTab();
   const map=bmMap(), stage=document.getElementById('bmStage'), world=document.getElementById('bmWorld');
   if(bmSelected&&!BM.getNode(map,bmSelected))bmSelected=null;
   if(bmLinkFrom&&!BM.getNode(map,bmLinkFrom))bmLinkFrom=null;
-  renderBmStats(map);bmSetSaveState();
-  const availW=stage.clientWidth-(bmSelected&&!bmNarrow()?BM_PANEL_W:0);
+  renderBmChrome(map);bmSetSaveState();
+  const availW=stage.clientWidth-(bmSideOpen()?BM_PANEL_RESERVE:0);
   bmPos=BM.layout(map,availW/Math.max(1,stage.clientHeight));
+  if(bmMode()==='graph'&&o.fit)bmPrimeScale(map);
   const now=new Date(), st=new Map(map.nodes.map(n=>[n.id,BM.staleness(n,now)]));
-  const edgeStale=e=>(st.get(e.from)||{}).stale||(st.get(e.to)||{}).stale;
-  world.innerHTML=`<svg class="bm-edges" aria-hidden="true">${map.edges.map(e=>`<line class="bm-edge ${e.confirmed!==true?'is-pending':''} ${edgeStale(e)?'is-stale':''}" data-edge="${escapeHtml(e.id)}"></line>`).join('')}</svg>`
-    +map.edges.map(e=>`<div class="bm-elabel ${edgeStale(e)?'is-stale':''}" data-elabel="${escapeHtml(e.id)}">${escapeHtml(BM.edgeLabel(e))}</div>`).join('')
-    +map.nodes.map(n=>bmNodeHtml(n,st.get(n.id))).join('');
+  world.innerHTML=bmEdgeSvg(map,st)+map.edges.map(e=>{
+    const stale=(st.get(e.from)||{}).stale||(st.get(e.to)||{}).stale;
+    return '<div class="bm-elabel'+(stale?' is-stale':'')+'" data-elabel="'+escapeHtml(e.id)+'">'+escapeHtml(BM.edgeTypeLabel(e))+'</div>';
+  }).join('')+map.nodes.map(n=>bmNodeHtml(n,map,st.get(n.id))).join('');
   bmPlace();
   world.querySelectorAll('.bm-node').forEach(bmBindNode);
   world.querySelectorAll('[data-more]').forEach(b=>{b.onpointerdown=e=>e.stopPropagation();b.onclick=e=>{e.stopPropagation();bmOpenCardMenu(b.dataset.more,b)}});
+  const list=document.getElementById('bmList');
+  list.innerHTML='<div class="bm-hubstrip"><div class="bm-hubdot">HY</div><div class="bm-legend-inline">'+bmLegendHtml(map)+'</div></div><div class="bm-list-cards">'+map.nodes.filter(n=>n.kind!=='hy').map(n=>bmNodeHtml(n,map,st.get(n.id))).join('')+'</div>';
+  list.querySelectorAll('.bm-node').forEach(bmBindNode);
+  list.querySelectorAll('[data-more]').forEach(b=>{b.onpointerdown=e=>e.stopPropagation();b.onclick=e=>{e.stopPropagation();bmOpenCardMenu(b.dataset.more,b)}});
   bmUpdateBanner();
   renderBmPanel();
-  if(o.fit)bmFit(o.animate);else bmApplyView(false);
+  if(bmMode()==='graph'&&o.fit){
+    bmFit(false);
+    bmPlace();
+    bmFit(o.animate);
+  }else if(bmMode()==='graph')bmApplyView(false);
+}
+function bmPrimeScale(map){
+  const stage=document.getElementById('bmStage');
+  if(!stage)return;
+  const reserve=bmSideOpen()?BM_PANEL_RESERVE:0;
+  const bottom=document.getElementById('bmBottom');
+  const bottomInset=Math.max(32,(bottom&&bottom.offsetHeight?bottom.offsetHeight+8:32));
+  const W=Math.max(160,stage.clientWidth-reserve), H=Math.max(160,stage.clientHeight);
+  const rects=map.nodes.filter(n=>bmPos[n.id]).map(n=>BM.nodeBox(n,bmPos[n.id]));
+  const f=BM.fit(rects,Math.max(80,W-64),Math.max(80,H-32-bottomInset),0,1.8);
+  bmView.scale=f.scale;
 }
 function bmPlace(only){
   const world=document.getElementById('bmWorld'), map=bmMap();
-  world.querySelectorAll('.bm-node').forEach(el=>{const id=el.dataset.id;if(only&&id!==only)return;const p=bmPos[id]||{x:0,y:0};el.style.left=p.x+'px';el.style.top=p.y+'px'});
+  const labelAt={};
+  BM.edgeLabelLayout(map,bmPos,BM.labelGapForScale(bmView.scale)).forEach(box=>{labelAt[box.id]=box});
+  world.querySelectorAll('.bm-node').forEach(el=>{const id=el.dataset.id;if(only&&id!==only)return;const p=bmPos[id]||{x:0,y:0};el.style.left=p.x+'px';el.style.top=p.y+'px';el.classList.toggle('is-hot',id===bmHot)});
   map.edges.forEach(e=>{
-    if(only&&e.from!==only&&e.to!==only)return;
     const a=bmPos[e.from],b=bmPos[e.to];if(!a||!b)return;
-    const line=world.querySelector(`[data-edge="${CSS.escape(e.id)}"]`),lab=world.querySelector(`[data-elabel="${CSS.escape(e.id)}"]`);
-    if(line){line.setAttribute('x1',a.x);line.setAttribute('y1',a.y);line.setAttribute('x2',b.x);line.setAttribute('y2',b.y)}
-    if(lab){lab.style.left=((a.x+b.x)/2)+'px';lab.style.top=((a.y+b.y)/2)+'px'}
+    const touched=!only||e.from===only||e.to===only;
+    const line=touched?world.querySelector('[data-edge="'+CSS.escape(e.id)+'"]'):null, lab=world.querySelector('[data-elabel="'+CSS.escape(e.id)+'"]');
+    const na=BM.getNode(map,e.from), nb=BM.getNode(map,e.to), aux=bmAux(na)||bmAux(nb);
+    const hot=bmHot===e.from||bmHot===e.to||bmSelected===e.from||bmSelected===e.to;
+    if(line){
+      line.setAttribute('x1',a.x);line.setAttribute('y1',a.y);line.setAttribute('x2',b.x);line.setAttribute('y2',b.y);
+      if(aux){
+        const src=(na&&na.kind==='company')?na:((nb&&nb.kind==='company')?nb:na);
+        line.setAttribute('stroke',bmHexA(BM.accentFor(src,map).main,.5));
+        line.setAttribute('stroke-width','1');
+      }else{
+        line.setAttribute('stroke-width',hot?'1.6':'1.1');
+        const stop=world.querySelector('[data-stop="'+CSS.escape(e.id)+'"]');
+        if(stop)stop.setAttribute('stop-opacity',hot?'.95':'.7');
+        const g=world.querySelector('#g-'+bmCssId(e.id));
+        if(g){g.setAttribute('x1',a.x);g.setAttribute('y1',a.y);g.setAttribute('x2',b.x);g.setAttribute('y2',b.y)}
+      }
+    }
+    if(lab){
+      const box=labelAt[e.id];
+      if(box){lab.style.left=box.x+'px';lab.style.top=box.y+'px'}
+    }
   });
 }
 function bmApplyView(animate){
   const w=document.getElementById('bmWorld');
   w.classList.toggle('is-animating',!!animate);
-  w.style.transform=`translate(${bmView.tx}px,${bmView.ty}px) scale(${bmView.scale})`;
+  const s=bmView.scale>0?bmView.scale:1;
+  // 間距在縮放前的座標。畫面距離 = max(8px×scale, 6px)，門檻 4px。
+  w.style.setProperty('--bm-gap',Math.max(8,6/s)+'px');
+  w.style.transform='translate('+bmView.tx+'px,'+bmView.ty+'px) scale('+bmView.scale+')';
   if(animate)setTimeout(()=>w.classList.remove('is-animating'),300);
 }
-/** 一次把全部卡片與連線標籤縮放到可見；面板開著時只用面板以外的畫布。 */
+/** 卡片與連線標籤縮進可視區，四周 32px，上限 1.8。面板打開時只算面板以外。 */
 function bmFit(animate){
+  if(bmMode()!=='graph')return;
   const stage=document.getElementById('bmStage'),world=document.getElementById('bmWorld');
   const rects=[];
-  world.querySelectorAll('.bm-node').forEach(el=>{const p=bmPos[el.dataset.id];if(!p)return;const sh=el.querySelector('.bm-shape');let w=sh.offsetWidth,h=sh.offsetHeight;if(el.classList.contains('is-resource')){w=h=Math.ceil(w*1.42)}rects.push({x:p.x-w/2-10,y:p.y-h/2-10,w:w+20,h:h+20})});
+  world.querySelectorAll('.bm-node').forEach(el=>{const p=bmPos[el.dataset.id];if(!p)return;const sh=el.querySelector('.bm-shape');const w=sh.offsetWidth,h=sh.offsetHeight;rects.push({x:p.x-w/2,y:p.y-h/2,w:w,h:h})});
   world.querySelectorAll('.bm-elabel').forEach(el=>{const x=parseFloat(el.style.left),y=parseFloat(el.style.top);rects.push({x:x-el.offsetWidth/2,y:y-el.offsetHeight/2,w:el.offsetWidth,h:el.offsetHeight})});
-  const W=stage.clientWidth-(bmSelected&&!bmNarrow()?BM_PANEL_W:0), TOP=40, BOTTOM=bmNarrow()?60:56;
-  const f=BM.fit(rects,W,Math.max(120,stage.clientHeight-TOP-BOTTOM),24,1.15);
-  bmView={scale:f.scale,tx:f.tx,ty:f.ty+TOP};bmApplyView(animate);
+  const reserve=bmSideOpen()?BM_PANEL_RESERVE:0;
+  const bottom=document.getElementById('bmBottom');
+  const bottomInset=Math.max(32,(bottom&&bottom.offsetHeight?bottom.offsetHeight+8:32));
+  const padX=32, padT=32;
+  const W=Math.max(160,stage.clientWidth-reserve), H=Math.max(160,stage.clientHeight);
+  const innerW=Math.max(80,W-padX*2), innerH=Math.max(80,H-padT-bottomInset);
+  const f=BM.fit(rects,innerW,innerH,0,1.8);
+  bmView={scale:f.scale,tx:f.tx+padX,ty:f.ty+padT};bmApplyView(animate);
 }
 function bmZoom(factor,cx,cy){
   const stage=document.getElementById('bmStage');
-  if(cx==null){cx=(stage.clientWidth-(bmSelected&&!bmNarrow()?BM_PANEL_W:0))/2;cy=stage.clientHeight/2}
-  const s=Math.max(.2,Math.min(2.5,bmView.scale*factor)),k=s/bmView.scale;
+  if(cx==null){cx=(stage.clientWidth-(bmSideOpen()?BM_PANEL_RESERVE:0))/2;cy=stage.clientHeight/2}
+  const s=Math.max(.2,Math.min(1.8,bmView.scale*factor)),k=s/bmView.scale;
   bmView={scale:s,tx:cx-(cx-bmView.tx)*k,ty:cy-(cy-bmView.ty)*k};bmApplyView(false);
 }
 function bmBindNode(el){
   const id=el.dataset.id;
+  el.onpointerenter=()=>{if(bmMode()!=='graph')return;bmHot=id;bmPlace()};
+  el.onpointerleave=()=>{if(bmHot===id){bmHot=null;bmPlace()}};
   el.onpointerdown=e=>{
-    if(e.button!==0)return;e.stopPropagation();bmCloseMenus();
+    if(e.button!==0||e.target.closest('.bm-more'))return;
+    e.stopPropagation();bmCloseMenus();
+    if(bmMode()!=='graph'){const up=ev=>{el.removeEventListener('pointerup',up);if(ev.type==='pointerup')bmNodeClick(id)};el.addEventListener('pointerup',up);return}
     const start={x:e.clientX,y:e.clientY},p0=Object.assign({},bmPos[id]||{x:0,y:0});let moved=false;
     el.setPointerCapture(e.pointerId);
     el.onpointermove=ev=>{
@@ -1135,69 +1409,118 @@ function bmBindNode(el){
       else if(ev.type==='pointerup')bmNodeClick(id);
     };
   };
-  el.onkeydown=e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();bmNodeClick(id)}};
+  el.onkeydown=e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();bmSelect(id,true)}};
 }
 function bmNodeClick(id){
   if(bmLinkFrom){if(id===bmLinkFrom)return showToast('請點另一張卡','error');const from=bmLinkFrom;bmLinkFrom=null;bmUpdateBanner();bmOpenEdgeDialog(null,from,id);return}
-  bmSelect(bmSelected===id?null:id,false);
+  bmSelect(bmSelected===id?null:id);
 }
-function bmSelect(id,force){
-  const wasOpen=!!bmSelected;bmSelected=force?id:id;
-  const map=bmMap();if(id&&!BM.getNode(map,id))bmSelected=null;
-  document.querySelectorAll('#bmWorld .bm-node').forEach(el=>{const on=el.dataset.id===bmSelected;el.classList.toggle('is-selected',on);el.setAttribute('aria-pressed',on)});
+function bmSelect(id){
+  const wasOpen=!!bmSelected;bmSelected=id||null;
+  const map=data?bmMap():null;if(bmSelected&&map&&!BM.getNode(map,bmSelected))bmSelected=null;
+  document.querySelectorAll('.bm-node').forEach(el=>{const on=el.dataset.id===bmSelected;el.classList.toggle('is-selected',on);el.setAttribute('aria-pressed',String(on))});
   renderBmPanel();
-  if(wasOpen!==!!bmSelected&&!bmNarrow())bmFit(true);
+  if(bmMode()==='graph'&&!bmSheet()&&wasOpen!==!!bmSelected)bmFit(true);
 }
-function bmFieldValue(n,f){
-  const raw=String(n[f.key]??'').trim();
-  if(!raw)return `<dd class="is-unknown">${BM.UNKNOWN}</dd>`;
-  if(f.multi&&raw.includes('\n'))return `<dd><ul class="bm-lines">${raw.split('\n').filter(s=>s.trim()).map(s=>`<li>${escapeHtml(s)}</li>`).join('')}</ul></dd>`;
-  return `<dd class="${raw===BM.UNKNOWN?'is-unknown':''}">${escapeHtml(raw)}</dd>`;
+function bmRatioParts(n){
+  const raw=String(n.stake_ratio||'').trim(), i=raw.indexOf('（');
+  if(i<0)return {main:raw,note:''};
+  return {main:raw.slice(0,i),note:raw.slice(i+1).replace(/）\s*$/,'')};
+}
+function bmActions(k){
+  return '<div class="bm-pact">'+(k!=='hy'?'<button type="button" data-act="edit">編輯</button>':'')+'<button type="button" data-act="link">連線到…</button>'+(k!=='hy'?'<button type="button" class="is-danger" data-act="delete">刪除</button>':'')+'<span class="sp"></span><button type="button" id="bmPanelClose">關閉</button></div>';
+}
+function bmRelHtml(map,n){
+  const rels=BM.edgesOf(map,n.id);
+  const rows=rels.length?rels.map(e=>{const other=BM.getNode(map,e.from===n.id?e.to:e.from);const extra=[e.via&&e.via!==BM.UNKNOWN?'透過 '+e.via:'',e.source?'來源：'+e.source:''].filter(Boolean).join('；');return '<div class="bm-rel"><span>'+(e.from===n.id?'→':'←')+' '+escapeHtml(other?other.name:'?')+'｜'+escapeHtml(BM.edgeLabel(e))+(extra?'<small>'+escapeHtml(extra)+'</small>':'')+'</span><button type="button" class="bm-textbtn" data-edit-edge="'+escapeHtml(e.id)+'">編輯</button><button type="button" class="bm-textbtn is-danger" data-del-edge="'+escapeHtml(e.id)+'">刪除</button></div>'}).join(''):'<p class="bm-empty">還沒有關係。按「連線到…」建立。</p>';
+  return '<section class="bm-psec"><div class="bm-lab">關係<em>LINKS</em></div>'+rows+'</section>';
+}
+function bmPanelShell(o){
+  return '<div class="bm-sheet-handle" id="bmSheetHandle"></div><div class="bm-panel-scroll"><div class="bm-pmark"></div><div class="bm-peb">'+escapeHtml(o.kicker)+'</div><div class="bm-ph"><h2 id="bmPanelTitle">'+escapeHtml(o.title||'未命名')+'</h2>'+(o.status?'<span class="bm-st big">'+escapeHtml(o.status)+'</span>':'')+'</div>'+(o.legal?'<div class="bm-plegal">'+escapeHtml(o.legal)+'</div>':'')+'<div class="bm-pmeta">'+o.meta+'</div>'+o.body+'</div>'+bmActions(o.kind);
 }
 function renderBmPanel(){
-  const panel=document.getElementById('bmPanel'),map=bmMap(),n=bmSelected&&BM.getNode(map,bmSelected);
-  panel.classList.toggle('is-open',!!n);panel.setAttribute('aria-hidden',n?'false':'true');
+  const panel=document.getElementById('bmPanel'), map=bmMap(), n=bmSelected&&BM.getNode(map,bmSelected);
+  const open=!!n;
+  panel.style.transform='';
+  panel.classList.toggle('is-open',open);panel.setAttribute('aria-hidden',open?'false':'true');
+  document.getElementById('tab-map').classList.toggle('is-panel',bmSideOpen());
   if(!n){panel.innerHTML='';return}
-  const st=BM.staleness(n,new Date()),k=n.kind;
-  panel.style.setProperty('--bm-mark',k==='person'?'var(--hy-you-line)':k==='resource'?'var(--hy-ai)':'var(--hy-brand)');
-  const title=k==='company'?(n.legal_state==='已確認'&&n.legal_name?n.legal_name:n.name):n.name;
-  const meta=[BM.KINDS[k]+'卡',n.maintainer?`由 ${escapeHtml(n.maintainer)} 維護`:'',k==='company'?`近三月：${escapeHtml(n.status||BM.UNKNOWN)}`:''].filter(Boolean).join('<span aria-hidden="true">·</span>');
-  let body='';
+  const accent=BM.accentFor(n,map);
+  panel.style.setProperty('--a',accent.main);panel.style.setProperty('--at',accent.text);
+  const st=BM.staleness(n,new Date()), k=n.kind;
+  let body='', kicker='', title=n.name||'HY', status='', legal='', meta='';
   if(k==='hy'){
-    body=`<div class="bm-sec"><p class="bm-empty">版圖中心。樂川、RM 餐酒館、上淼、迪繆斯是隱名入股（登記上不會出現 HY 名字）。新竹3C手機店是穩定合作的投資，持股與是否隱名仍是未知。公開登記的負責人／董監不代表 HY 的權益。</p></div>`;
+    kicker='中心'; title='HY';
+    meta=BM.companies(map).length+' 家公司';
+    body='<div class="bm-psec"><p class="bm-empty">版圖中心。樂川、RM 餐酒館、上淼、迪繆斯是隱名入股（登記上不會出現 HY 名字）。新竹3C手機店是穩定合作的投資，持股與是否隱名仍是未知。公開登記的負責人／董監不代表 HY 的權益。</p></div>';
+  }else if(k==='company'){
+    const edge=bmEdgeOf(map,n.id), type=edge?edge.type:'', face=BM.cardFace(n,type);
+    kicker='公司'+(type?' · '+type:''); title=n.name; status=face.status;
+    legal=BM.isBlankish(n.legal_name)?'':n.legal_name;
+    meta=escapeHtml(n.maintainer||'')+' 維護<i>·</i><span>'+escapeHtml(bmYMD(n.updated_at))+'</span> 更新';
+    const incCls=face.incomeUnknown?' is-unknown':'';
+    body+='<div class="bm-psec bm-incbox"><div class="bm-lab">收入<em>INCOME</em></div><p class="bm-pinc'+incCls+'">'+escapeHtml(String(n.income_note||'').trim()||BM.UNKNOWN)+'</p></div>';
+    const biz=BM.isBlankish(n.business)?BM.UNKNOWN:String(n.business);
+    body+='<div class="bm-psec"><div class="bm-lab">業務<em>BUSINESS</em></div><p>'+escapeHtml(biz)+'</p></div>';
+    const rows=[];
+    if(!BM.isBlankish(n.stake_role))rows.push('<dt>角色</dt><dd>'+escapeHtml(n.stake_role)+'</dd>');
+    if(!BM.isBlankish(n.stake_ratio)){const rp=bmRatioParts(n);rows.push('<dt>比例</dt><dd><b class="big">'+escapeHtml(rp.main)+'</b>'+(rp.note?'<small>'+escapeHtml(rp.note)+'</small>':'')+'</dd>')}
+    if(!BM.isBlankish(n.stake_invested))rows.push('<dt>投入</dt><dd>'+escapeHtml(n.stake_invested)+'</dd>');
+    if(rows.length)body+='<div class="bm-psec"><div class="bm-lab">持股與角色<em>OWNERSHIP</em></div><dl class="bm-own">'+rows.join('')+'</dl></div>';
+    const tax=BM.isBlankish(n.tax_id)?'未知':'統編 '+n.tax_id;
+    const reg=String(n.registry||'').trim();
+    body+='<button type="button" class="bm-fold" data-fold="reg" aria-expanded="false"><span data-lab="公開登記">▸ 公開登記</span><span>'+escapeHtml(tax)+'</span></button><div class="bm-fold-body" data-fold-body="reg" hidden>'+escapeHtml(reg||BM.UNKNOWN)+'</div>';
+    const srcLines=String(n.sources||'').split('\n').map(s=>s.trim()).filter(Boolean);
+    const srcBody=srcLines.join('\n')+(n.maintainer_note?('\n'+n.maintainer_note):'');
+    body+='<button type="button" class="bm-fold" data-fold="src" aria-expanded="false"><span data-lab="來源與維護">▸ 來源與維護</span><span>'+srcLines.length+' 項</span></button><div class="bm-fold-body" data-fold-body="src" hidden>'+escapeHtml(srcBody||BM.UNKNOWN)+'</div>';
+    const unk=BM.unknownLabels(n);
+    if(unk.length)body+='<div class="bm-psec"><div class="bm-lab">尚未掌握<em>UNKNOWN</em></div><p class="bm-unk">'+escapeHtml(unk.join('、'))+'</p></div>';
   }else{
-    let sec=null,rows='';
-    const flush=()=>{if(sec!==null&&rows)body+=`<section class="bm-sec"><h3>${escapeHtml(sec)}</h3><dl class="bm-kv">${rows}</dl></section>`;rows=''};
-    BM.FIELDS[k].forEach(f=>{if(f.sec!==undefined){flush();sec=f.sec;return}if(f.key==='name'&&k!=='company')return;rows+=`<dt>${escapeHtml(f.label)}</dt>${bmFieldValue(n,f)}`});
-    rows+=`<dt>最後更新於</dt><dd>${escapeHtml(bmDate(n.updated_at))}</dd>`;flush();
+    kicker=k==='person'?(String(n.relation||'').trim()||'人物'):(String(n.rtype||'').trim()||'資源');
+    meta=escapeHtml(n.maintainer||'')+' 維護<i>·</i><span>'+escapeHtml(bmYMD(n.updated_at))+'</span> 更新';
+    const rows=[];
+    (BM.FIELDS[k]||[]).forEach(f=>{if(!f.key||f.key==='name')return;if(BM.isBlankish(n[f.key]))return;rows.push('<dt>'+escapeHtml(f.label)+'</dt><dd>'+escapeHtml(n[f.key])+'</dd>')});
+    if(rows.length)body+='<div class="bm-psec"><dl class="bm-own">'+rows.join('')+'</dl></div>';
+    const unk=(BM.FIELDS[k]||[]).filter(f=>f.key&&f.key!=='name'&&BM.isBlankish(n[f.key])).map(f=>f.label);
+    if(unk.length)body+='<div class="bm-psec"><div class="bm-lab">尚未掌握<em>UNKNOWN</em></div><p class="bm-unk">'+escapeHtml(unk.join('、'))+'</p></div>';
   }
-  if(n.maintainer_note)body=`<p class="bm-callout">${escapeHtml(n.maintainer_note)}</p>`+body;
-  if(st.stale)body=`<p class="bm-callout">待更新：${escapeHtml(st.reasons.join('；'))}。變灰只表示資料舊或不全，不是虧損。</p>`+body;
-  const rels=BM.edgesOf(map,n.id);
-  body+=`<section class="bm-sec"><h3>關係（${rels.length}）</h3>${rels.length?rels.map(e=>{const other=BM.getNode(map,e.from===n.id?e.to:e.from);return `<div class="bm-rel"><span>${e.from===n.id?'→':'←'} ${escapeHtml(other?other.name:'?')}｜${escapeHtml(BM.edgeLabel(e))}<small>${escapeHtml([e.via&&e.via!==BM.UNKNOWN?'透過 '+e.via:'',e.source?'來源：'+e.source:''].filter(Boolean).join('；'))}</small></span><button type="button" class="hy-btn" data-edit-edge="${escapeHtml(e.id)}">編輯</button><button type="button" class="hy-btn is-danger" data-del-edge="${escapeHtml(e.id)}">刪除</button></div>`}).join(''):'<p class="bm-empty">還沒有關係。按「連線到…」建立。</p>'}</section>`;
-  panel.innerHTML=`<div class="bm-panel-head"><div><h2 id="bmPanelTitle">${escapeHtml(title||'未命名')}</h2><div class="bm-panel-meta">${meta}${st.stale?'<span class="hy-pill" data-s="wait">待更新</span>':''}</div></div><button type="button" class="hy-btn" id="bmPanelClose" aria-label="關閉詳細面板">關閉</button></div>
-    <div class="bm-panel-actions">${k!=='hy'?'<button type="button" class="hy-btn" data-act="edit">編輯</button>':''}<button type="button" class="hy-btn" data-act="link">連線到…</button>${k!=='hy'?'<button type="button" class="hy-btn is-danger" data-act="delete">刪除</button>':''}</div>
-    <div class="bm-panel-body">${body}</div>`;
+  if(n.maintainer_note&&k!=='company')body='<p class="bm-callout">'+escapeHtml(n.maintainer_note)+'</p>'+body;
+  if(st.stale)body='<p class="bm-callout">待更新：'+escapeHtml(st.reasons.join('；'))+'。變灰只表示資料舊或不全，不是虧損。</p>'+body;
+  body+=bmRelHtml(map,n);
+  panel.innerHTML=bmPanelShell({kicker,title,status,legal,meta,body,kind:k});
   panel.querySelector('#bmPanelClose').onclick=()=>bmSelect(null);
   panel.querySelectorAll('[data-act]').forEach(b=>b.onclick=()=>bmCardAction(b.dataset.act,n.id));
   panel.querySelectorAll('[data-edit-edge]').forEach(b=>b.onclick=()=>bmOpenEdgeDialog(b.dataset.editEdge));
   panel.querySelectorAll('[data-del-edge]').forEach(b=>b.onclick=()=>bmDeleteEdge(b.dataset.delEdge));
+  panel.querySelectorAll('[data-fold]').forEach(b=>b.onclick=()=>{
+    const id=b.dataset.fold, box=panel.querySelector('[data-fold-body="'+id+'"]'), lab=b.querySelector('[data-lab]');
+    const opening=box.hidden; box.hidden=!opening; b.setAttribute('aria-expanded',String(opening));
+    if(lab)lab.textContent=(opening?'▾ ':'▸ ')+lab.dataset.lab;
+  });
+  const handle=panel.querySelector('#bmSheetHandle');
+  if(handle)handle.onpointerdown=e=>{
+    if(!bmSheet())return;
+    const y0=e.clientY; let dy=0;
+    handle.setPointerCapture(e.pointerId);
+    handle.onpointermove=ev=>{dy=ev.clientY-y0;if(dy>0)panel.style.transform='translateY('+dy+'px)'};
+    handle.onpointerup=handle.onpointercancel=()=>{handle.onpointermove=handle.onpointerup=handle.onpointercancel=null;panel.style.transform='';if(dy>72)bmSelect(null)};
+  };
 }
 function bmCardAction(act,id){
   bmCloseMenus();
-  if(act==='open')return bmSelect(id,true);
+  if(act==='open')return bmSelect(id);
   if(act==='edit')return bmOpenNodeDialog(BM.getNode(bmMap(),id).kind,id);
-  if(act==='link'){bmLinkFrom=id;document.querySelectorAll('#bmWorld .bm-node').forEach(el=>el.classList.toggle('is-link-source',el.dataset.id===id));bmUpdateBanner();if(bmNarrow())bmSelect(null);return}
+  if(act==='link'){bmLinkFrom=id;document.querySelectorAll('.bm-node').forEach(el=>el.classList.toggle('is-link-source',el.dataset.id===id));bmUpdateBanner();if(bmSheet())bmSelect(null);return}
   if(act==='delete')return bmDeleteNode(id);
 }
 function bmUpdateBanner(){
   const b=document.getElementById('bmBanner'),n=bmLinkFrom&&BM.getNode(bmMap(),bmLinkFrom);
-  b.classList.toggle('is-on',!!n);document.getElementById('bmBannerText').textContent=n?`從「${n.name}」連線：點另一張卡`:'';
+  b.classList.toggle('is-on',!!n);document.getElementById('bmBannerText').textContent=n?'從「'+n.name+'」連線：點另一張卡':'';
 }
-function bmCancelLink(){bmLinkFrom=null;document.querySelectorAll('#bmWorld .is-link-source').forEach(el=>el.classList.remove('is-link-source'));bmUpdateBanner()}
+function bmCancelLink(){bmLinkFrom=null;document.querySelectorAll('.is-link-source').forEach(el=>el.classList.remove('is-link-source'));bmUpdateBanner()}
 function bmOpenCardMenu(id,btn){
   const menu=document.getElementById('bmCardMenu'),body=menu.parentElement.getBoundingClientRect(),r=btn.getBoundingClientRect();
-  menu.innerHTML=['open:開啟詳情','edit:編輯','link:連線到…','delete:刪除'].map(s=>{const [a,t]=s.split(':');return `<button type="button" class="bm-menu-item ${a==='delete'?'is-danger':''}" role="menuitem" data-act="${a}">${t}</button>`}).join('');
+  menu.innerHTML=['open:開啟詳情','edit:編輯','link:連線到…','delete:刪除'].map(s=>{const [a,t]=s.split(':');return '<button type="button" class="bm-menu-item '+(a==='delete'?'is-danger':'')+'" role="menuitem" data-act="'+a+'">'+t+'</button>'}).join('');
   menu.hidden=false;
   const left=Math.min(r.left-body.left,body.width-menu.offsetWidth-8),top=Math.min(r.bottom-body.top+4,body.height-menu.offsetHeight-8);
   menu.style.left=Math.max(8,left)+'px';menu.style.top=Math.max(8,top)+'px';
@@ -1206,31 +1529,31 @@ function bmOpenCardMenu(id,btn){
 }
 function bmCloseMenus(){
   const m=document.getElementById('bmCardMenu');if(m)m.hidden=true;
-  const a=document.getElementById('bmAddMenu');if(a){a.classList.remove('is-open');document.getElementById('bmAddBtn').setAttribute('aria-expanded','false')}
+  const a=document.getElementById('bmAddMenu');if(a){a.classList.remove('is-open');const btn=document.getElementById('bmAddBtn');if(btn)btn.setAttribute('aria-expanded','false')}
 }
 function bmFieldInput(f,v){
   const val=escapeHtml(v??''),req=f.required?' required':'';
-  if(f.options)return `<select name="${f.key}">${f.options.map(o=>`<option ${String(v||'')===o||(!v&&o===BM.UNKNOWN)?'selected':''}>${o}</option>`).join('')}</select>`;
-  if(f.multi)return `<textarea name="${f.key}" rows="3" placeholder="未知">${val}</textarea>`;
-  return `<input name="${f.key}" type="${f.type||'text'}" value="${val}" placeholder="${f.required?'':'未知'}" maxlength="300"${req}>`;
+  if(f.options)return '<select name="'+f.key+'">'+f.options.map(o=>'<option '+(String(v||'')===o||(!v&&o===BM.UNKNOWN)?'selected':'')+'>'+o+'</option>').join('')+'</select>';
+  if(f.multi)return '<textarea name="'+f.key+'" rows="3" placeholder="未知">'+val+'</textarea>';
+  return '<input name="'+f.key+'" type="'+(f.type||'text')+'" value="'+val+'" placeholder="'+(f.required?'':'未知')+'" maxlength="300"'+req+'>';
 }
 function bmOpenNodeDialog(kind,id){
   if(!dataLoaded)return showToast('請先載入資料','error');
   bmCloseMenus();
   const map=bmMap(),n=id?BM.getNode(map,id):null,dialog=document.getElementById('bmNodeDialog');bmEditing=id||null;
   const preset=n||(kind==='company'?{stake_role:BM.HIDDEN_ROLE,status:BM.UNKNOWN,maintainer:'Sam'}:{maintainer:'HY'});
-  dialog.innerHTML=`<form novalidate><div class="bb-dialog-head"><h2 class="hy-card-title" id="bmNodeDialogTitle">${n?'編輯'+BM.KINDS[kind]+'：'+escapeHtml(n.name):'新增'+BM.KINDS[kind]}</h2><button type="button" class="hy-btn" data-close>關閉</button></div>
-    <div class="bb-dialog-body">${n&&n.maintainer_note?`<p class="bm-callout">${escapeHtml(n.maintainer_note)}。</p>`:''}<p class="hy-note">不知道就留空，畫面會顯示「未知」。不要填推估數字；資本額不是現金。公開登記的負責人／董監不代表 HY 的權益。</p>
-    ${BM.FIELDS[kind].map(f=>f.sec!==undefined?`<div class="bm-form-sec">${escapeHtml(f.sec)}</div>`:`<label class="bb-field ${f.multi?'wide':''}">${escapeHtml(f.label)}${f.required?'（必填）':''}${bmFieldInput(f,preset[f.key])}${f.hint?`<small>${escapeHtml(f.hint)}</small>`:''}</label>`).join('')}
-    <div class="hy-alert is-bad bb-error" id="bmNodeError" hidden></div></div>
-    <div class="bb-dialog-foot"><button type="button" class="hy-btn" data-close>取消</button><button type="submit" class="hy-btn is-primary">${n?'套用變更':'新增到版圖'}</button></div></form>`;
+  dialog.innerHTML='<form novalidate><div class="bb-dialog-head"><h2 id="bmNodeDialogTitle">'+(n?'編輯'+BM.KINDS[kind]+'：'+escapeHtml(n.name):'新增'+BM.KINDS[kind])+'</h2><button type="button" class="hy-btn" data-close>關閉</button></div>'
+    +'<div class="bb-dialog-body">'+(n&&n.maintainer_note?'<p class="bm-callout">'+escapeHtml(n.maintainer_note)+'。</p>':'')+'<p class="hy-note">不知道就留空，畫面會顯示「未知」。不要填推估數字；資本額不是現金。公開登記的負責人／董監不代表 HY 的權益。</p>'
+    +BM.FIELDS[kind].map(f=>f.sec!==undefined?'<div class="bm-form-sec">'+escapeHtml(f.sec)+'</div>':'<label class="bb-field '+(f.multi?'wide':'')+'">'+escapeHtml(f.label)+(f.required?'（必填）':'')+bmFieldInput(f,preset[f.key])+(f.hint?'<small>'+escapeHtml(f.hint)+'</small>':'')+'</label>').join('')
+    +'<div class="hy-alert is-bad bb-error" id="bmNodeError" hidden></div></div>'
+    +'<div class="bb-dialog-foot"><button type="button" class="hy-btn" data-close>取消</button><button type="submit" class="hy-btn is-primary">'+(n?'套用變更':'新增到版圖')+'</button></div></form>';
   dialog.querySelectorAll('[data-close]').forEach(b=>b.onclick=()=>dialog.close());
   dialog.querySelector('form').onsubmit=e=>{
     e.preventDefault();const fd=new FormData(e.currentTarget),patch={};BM.FIELDS[kind].forEach(f=>{if(f.key)patch[f.key]=String(fd.get(f.key)??'')});
     const err=dialog.querySelector('#bmNodeError');
     try{
       if(n){BM.updateNode(map,n.id,patch);markMapDirty();dialog.close();renderBusinessMap({fit:false});showToast('已套用，按「儲存」同步到系統','success')}
-      else{const c=BM.addNode(map,kind,patch);markMapDirty();dialog.close();bmSelected=c.id;renderBusinessMap({fit:true,animate:true});showToast(`已新增${BM.KINDS[kind]}「${c.name}」，按「儲存」同步`,'success')}
+      else{const c=BM.addNode(map,kind,patch);markMapDirty();dialog.close();bmSelected=c.id;renderBusinessMap({fit:true,animate:true});showToast('已新增'+BM.KINDS[kind]+'「'+c.name+'」，按「儲存」同步','success')}
     }catch(ex){err.textContent=ex.message;err.hidden=false}
   };
   dialog.showModal();
@@ -1238,7 +1561,7 @@ function bmOpenNodeDialog(kind,id){
 function bmDeleteNode(id){
   const map=bmMap(),n=BM.getNode(map,id);if(!n)return;
   const cnt=BM.edgesOf(map,id).length;
-  if(!confirm(`刪除${BM.KINDS[n.kind]}卡「${n.name}」？${cnt?`\n相連的 ${cnt} 條關係會一併刪除。`:''}\n按「儲存」前都還能用「重新整理」放棄。`))return;
+  if(!confirm('刪除'+BM.KINDS[n.kind]+'卡「'+n.name+'」？'+(cnt?'\n相連的 '+cnt+' 條關係會一併刪除。':'')+'\n按「儲存」前都還能用「重新整理」放棄。'))return;
   BM.removeNode(map,id);if(bmSelected===id)bmSelected=null;markMapDirty();renderBusinessMap({fit:false});showToast('已刪除，按「儲存」同步','success');
 }
 function bmOpenEdgeDialog(edgeId,from,to){
@@ -1246,15 +1569,15 @@ function bmOpenEdgeDialog(edgeId,from,to){
   const map=bmMap(),e=edgeId?map.edges.find(x=>x.id===edgeId):null,dialog=document.getElementById('bmEdgeDialog');
   const a=BM.getNode(map,e?e.from:from),b=BM.getNode(map,e?e.to:to);if(!a||!b)return;
   const v=e||{type:'',note:'',via:'',written:'',confirmed:false,source:''};
-  dialog.innerHTML=`<form><div class="bb-dialog-head"><h2 class="hy-card-title" id="bmEdgeDialogTitle">${e?'編輯關係':'建立關係'}：${escapeHtml(a.name)} → ${escapeHtml(b.name)}</h2><button type="button" class="hy-btn" data-close>關閉</button></div>
-    <div class="bb-dialog-body"><label class="bb-field">關係類型（必選）<select name="type" required><option value="" ${v.type?'':'selected'} disabled>請選擇</option>${BM.EDGE_TYPES.map(t=>`<option ${v.type===t?'selected':''}>${t}</option>`).join('')}</select></label>
-    <label class="bb-field">說明（例如「約 45%」「比例未知」）<input name="note" value="${escapeHtml(v.note)}" placeholder="未知"></label>
-    <label class="bb-field">透過誰持有<input name="via" value="${escapeHtml(v.via)}" placeholder="未知"></label>
-    <label class="bb-field">有無書面約定<input name="written" value="${escapeHtml(v.written)}" placeholder="未知"></label>
-    <label class="bb-field wide">來源<input name="source" value="${escapeHtml(v.source)}" placeholder="例如：使用者 11/11 口述"></label>
-    <label class="bb-check"><input type="checkbox" name="confirmed" ${v.confirmed===true?'checked':''}>已由使用者確認（未確認的關係畫虛線）</label>
-    <div class="hy-alert is-bad bb-error" id="bmEdgeError" hidden></div></div>
-    <div class="bb-dialog-foot"><button type="button" class="hy-btn" data-close>取消</button><button type="submit" class="hy-btn is-primary">${e?'套用變更':'建立關係'}</button></div></form>`;
+  dialog.innerHTML='<form><div class="bb-dialog-head"><h2 id="bmEdgeDialogTitle">'+(e?'編輯關係':'建立關係')+'：'+escapeHtml(a.name)+' → '+escapeHtml(b.name)+'</h2><button type="button" class="hy-btn" data-close>關閉</button></div>'
+    +'<div class="bb-dialog-body"><label class="bb-field">關係類型（必選）<select name="type" required><option value="" '+(v.type?'':'selected')+' disabled>請選擇</option>'+BM.EDGE_TYPES.map(t=>'<option '+(v.type===t?'selected':'')+'>'+t+'</option>').join('')+'</select></label>'
+    +'<label class="bb-field">說明（例如「約 45%」「比例未知」）<input name="note" value="'+escapeHtml(v.note)+'" placeholder="未知"></label>'
+    +'<label class="bb-field">透過誰持有<input name="via" value="'+escapeHtml(v.via)+'" placeholder="未知"></label>'
+    +'<label class="bb-field">有無書面約定<input name="written" value="'+escapeHtml(v.written)+'" placeholder="未知"></label>'
+    +'<label class="bb-field wide">來源<input name="source" value="'+escapeHtml(v.source)+'" placeholder="例如：使用者 11/11 口述"></label>'
+    +'<label class="bb-check"><input type="checkbox" name="confirmed" '+(v.confirmed===true?'checked':'')+'>已由使用者確認（未確認的關係畫虛線）</label>'
+    +'<div class="hy-alert is-bad bb-error" id="bmEdgeError" hidden></div></div>'
+    +'<div class="bb-dialog-foot"><button type="button" class="hy-btn" data-close>取消</button><button type="submit" class="hy-btn is-primary">'+(e?'套用變更':'建立關係')+'</button></div></form>';
   dialog.querySelectorAll('[data-close]').forEach(x=>x.onclick=()=>dialog.close());
   dialog.querySelector('form').onsubmit=ev=>{
     ev.preventDefault();const fd=new FormData(ev.currentTarget),err=dialog.querySelector('#bmEdgeError');
@@ -1268,13 +1591,16 @@ function bmOpenEdgeDialog(edgeId,from,to){
 }
 function bmDeleteEdge(id){
   const map=bmMap(),e=map.edges.find(x=>x.id===id);if(!e)return;
-  if(!confirm(`刪除關係「${BM.edgeLabel(e)}」？`))return;
+  if(!confirm('刪除關係「'+BM.edgeLabel(e)+'」？'))return;
   BM.removeEdge(map,id);markMapDirty();renderBusinessMap({fit:false});showToast('已刪除關係，按「儲存」同步','success');
 }
+function bmPinchDist(t){return Math.hypot(t[0].clientX-t[1].clientX,t[0].clientY-t[1].clientY)}
 function bmInitControls(){
   const stage=document.getElementById('bmStage'),addBtn=document.getElementById('bmAddBtn'),addMenu=document.getElementById('bmAddMenu');
   addBtn.onclick=e=>{e.stopPropagation();const open=!addMenu.classList.contains('is-open');bmCloseMenus();addMenu.classList.toggle('is-open',open);addBtn.setAttribute('aria-expanded',String(open));if(open)addMenu.querySelector('button').focus()};
   addMenu.querySelectorAll('[data-add]').forEach(b=>b.onclick=()=>{bmCloseMenus();bmOpenNodeDialog(b.dataset.add,null)});
+  document.getElementById('bmViewGraph').onclick=()=>{bmViewChoice='graph';renderBusinessMap({fit:true,animate:true})};
+  document.getElementById('bmViewList').onclick=()=>{bmViewChoice='list';if(bmSelected&&bmNarrow()){}renderBusinessMap({fit:false})};
   document.getElementById('bmZoomIn').onclick=()=>bmZoom(1.2);
   document.getElementById('bmZoomOut').onclick=()=>bmZoom(1/1.2);
   document.getElementById('bmFitBtn').onclick=()=>bmFit(true);
@@ -1282,12 +1608,24 @@ function bmInitControls(){
   document.addEventListener('click',e=>{if(!e.target.closest('#bmCardMenu,.bm-more,.bm-add'))bmCloseMenus()});
   document.addEventListener('keydown',e=>{if(e.key!=='Escape'||document.querySelector('dialog[open]'))return;if(bmLinkFrom)bmCancelLink();else if(bmSelected)bmSelect(null);bmCloseMenus()});
   stage.onpointerdown=e=>{
+    if(bmMode()!=='graph')return;
     if(e.button!==0||e.target.closest('.bm-node'))return;bmCloseMenus();
     const sx=e.clientX,sy=e.clientY,v0=Object.assign({},bmView);let moved=false;stage.setPointerCapture(e.pointerId);
     stage.onpointermove=ev=>{if(!moved&&Math.hypot(ev.clientX-sx,ev.clientY-sy)<4)return;moved=true;stage.classList.add('is-panning');bmView={scale:v0.scale,tx:v0.tx+ev.clientX-sx,ty:v0.ty+ev.clientY-sy};bmApplyView(false)};
     stage.onpointerup=stage.onpointercancel=ev=>{stage.onpointermove=stage.onpointerup=stage.onpointercancel=null;stage.classList.remove('is-panning');if(stage.hasPointerCapture(ev.pointerId))stage.releasePointerCapture(ev.pointerId)};
   };
-  stage.addEventListener('wheel',e=>{e.preventDefault();const r=stage.getBoundingClientRect();bmZoom(e.deltaY<0?1.1:1/1.1,e.clientX-r.left,e.clientY-r.top)},{passive:false});
+  stage.addEventListener('wheel',e=>{if(bmMode()!=='graph')return;e.preventDefault();const r=stage.getBoundingClientRect();bmZoom(e.deltaY<0?1.1:1/1.1,e.clientX-r.left,e.clientY-r.top)},{passive:false});
+  let pinch=null;
+  stage.addEventListener('touchstart',e=>{if(e.touches.length===2){const r=stage.getBoundingClientRect();pinch={d:bmPinchDist(e.touches),scale:bmView.scale,cx:(e.touches[0].clientX+e.touches[1].clientX)/2-r.left,cy:(e.touches[0].clientY+e.touches[1].clientY)/2-r.top,view:Object.assign({},bmView)}}},{passive:true});
+  stage.addEventListener('touchmove',e=>{
+    if(e.touches.length!==2||!pinch||bmMode()!=='graph')return;
+    e.preventDefault();
+    const factor=bmPinchDist(e.touches)/pinch.d;
+    const s=Math.max(.2,Math.min(1.8,pinch.scale*factor)),k=s/pinch.view.scale;
+    bmView={scale:s,tx:pinch.cx-(pinch.cx-pinch.view.tx)*k,ty:pinch.cy-(pinch.cy-pinch.view.ty)*k};
+    bmApplyView(false);
+  },{passive:false});
+  stage.addEventListener('touchend',()=>{pinch=null});
   window.addEventListener('resize',()=>{clearTimeout(bmFitTimer);bmFitTimer=setTimeout(()=>{if(data&&document.getElementById('tab-map').classList.contains('active'))renderBusinessMap({fit:true})},120)});
 }
 document.addEventListener('DOMContentLoaded',bmInitControls);
@@ -1309,7 +1647,7 @@ async function loadData() {
     document.getElementById('saveBtn').disabled = false;
     renderBoard();
     if(document.getElementById('tab-map').classList.contains('active'))renderBusinessMap();
-    document.getElementById('lastUpdated').textContent = '更新：' + ((data.summary && data.summary.last_updated) || data._kanban.last_updated || '—');
+    document.getElementById('lastUpdated').textContent = formatHeaderStamp((data.summary && data.summary.last_updated) || (data._kanban && data._kanban.last_updated) || '');
   } catch(e) {
     dataLoaded = false;
     document.getElementById('saveBtn').disabled = true;
@@ -1323,7 +1661,7 @@ async function saveData() {
   if (!dataLoaded) { showToast('離線模式，禁止儲存', 'error'); return; }
   const savingMapRevision=mapRevision;
   const btn = document.getElementById('saveBtn');
-  btn.textContent = '儲存中...';
+  btn.textContent = '儲存中…';
   btn.disabled = true;
 
   try {
@@ -1336,17 +1674,17 @@ async function saveData() {
     if (!progressRes.ok || !result.ok) throw new Error(result.error || 'write failed');
     if(mapRevision===savingMapRevision){mapDirty=false;bmSeeded=false;bmOkText='已儲存到系統';bmSetSaveState()}
     showToast('✅ 設定已儲存', 'success');
-    btn.textContent = '✓ 已儲存';
+    btn.textContent = '已儲存';
     btn.classList.add('saved');
-    document.getElementById('lastUpdated').textContent = '更新：' + (result.last_updated || '').slice(0, 10);
+    document.getElementById('lastUpdated').textContent = formatHeaderStamp(result.last_updated || new Date().toISOString());
     setTimeout(() => {
-      btn.textContent = '✓ 儲存';
+      btn.textContent = '儲存';
       btn.classList.remove('saved');
       btn.disabled = false;
     }, 2500);
   } catch(e) {
     showToast('⚠️ 儲存失敗：' + e.message, 'error');
-    btn.textContent = '✓ 儲存';
+    btn.textContent = '儲存';
     btn.disabled = false;
   }
 }

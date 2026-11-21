@@ -259,6 +259,222 @@ test('dashboard page no longer has a portfolio tab or the retired coast name', (
   assert.match(html, /五家公司與收入欄的更新尚未存入系統/)
 })
 
+test('card face, edge chip and company accent follow the B1 display rules', () => {
+  const M = load()
+  const { map } = M.ensureMap({})
+  const edgeOf = id => map.edges.find(e => e.from === 'hy' && e.to === id)
+  const le = M.cardFace(M.getNode(map, 'lechuan'), edgeOf('lechuan').type)
+  assert.equal(le.kicker, '隱名股東')
+  assert.equal(le.name, '樂川')
+  assert.equal(le.status, '')
+  assert.equal(le.income, '未知')
+  assert.equal(le.incomeUnknown, true)
+  assert.equal(le.footer, '隱名股東・比例未知')
+  const hs = M.cardFace(M.getNode(map, 'hsinchu3c'), edgeOf('hsinchu3c').type)
+  assert.equal(hs.kicker, '投資')
+  assert.equal(hs.footer, '投資・比例未知')
+  assert.equal(hs.income, '每月穩定2萬')
+  assert.equal(hs.incomeUnknown, false)
+  assert.equal(hs.business, '未知')
+  const sh = M.getNode(map, 'shangmiao')
+  sh.status = '平'
+  sh.stake_ratio = '50%（使用者 2026-11-19 口述；先前內部約數「約 45%」以此為準）'
+  sh.income_note = '持續打平，無固定分紅（使用者口述）'
+  sh.business = '上淼頂下（接手）一家成衣廠\n第二行不進卡面'
+  const face = M.cardFace(sh, '隱名股東')
+  assert.equal(face.status, '平')
+  assert.equal(face.footer, '隱名股東・50%')
+  assert.equal(face.income, '持續打平，無固定分紅（使用者口述）')
+  assert.equal(face.business, '上淼頂下（接手）一家成衣廠')
+  assert.deepEqual(M.unknownLabels(sh).filter(x => x === '透過誰持有' || x === '書面約定' || x === '支出').sort(), ['支出', '書面約定', '透過誰持有'])
+  assert.equal(M.unknownLabels(sh).includes('待問'), false)
+  assert.equal(M.edgeTypeLabel(edgeOf('shangmiao')), '隱名股東')
+  assert.equal(M.edgeTypeLabel(edgeOf('hsinchu3c')), '投資')
+  assert.equal(M.edgeLabel(edgeOf('shangmiao')), '隱名股東（約 45%）')
+  const open = M.addEdge(map, 'hy', 'rm', { type: '合作', confirmed: false })
+  assert.equal(M.edgeTypeLabel(open), '合作')
+  assert.match(M.edgeLabel(open), /未確認/)
+  assert.equal(M.accentFor(M.getNode(map, 'lechuan'), map).main, '#a5782f')
+  assert.equal(M.accentFor(M.getNode(map, 'lechuan'), map).text, '#8a6326')
+  assert.equal(M.accentFor(M.getNode(map, 'rm'), map).main, '#a65a3c')
+  assert.equal(M.accentFor(M.getNode(map, 'shangmiao'), map).main, '#3f5e4a')
+  assert.equal(M.accentFor(M.getNode(map, 'divios'), map).main, '#6e5f7a')
+  assert.equal(M.accentFor(M.getNode(map, 'hsinchu3c'), map).main, '#4f6b82')
+  const extra = M.addNode(map, 'company', { name: '新公司甲' })
+  const extra2 = M.addNode(map, 'company', { name: '新公司乙' })
+  assert.equal(M.accentFor(extra, map).main, '#7d6b4f')
+  assert.equal(M.accentFor(extra2, map).main, '#5e6f63')
+  const person = M.addNode(map, 'person', { name: '測試人', relation: '合夥人' })
+  const resource = M.addNode(map, 'resource', { name: '測試資源', rtype: '產能' })
+  assert.equal(M.accentFor(person, map).main, '#7a5c45')
+  assert.equal(M.accentFor(resource, map).main, '#5f7a73')
+  const capped = M.fit([{ x: 0, y: 0, w: 10, h: 10 }], 800, 800, 32)
+  assert.equal(capped.scale, 1.8)
+})
+
+test('dashboard loads B1 fonts and does not keep the old status chips or dot grid', () => {
+  const html = readFileSync(new URL('../public/sam-dashboard.html', import.meta.url), 'utf8')
+  assert.match(html, /Newsreader/)
+  assert.match(html, /Noto\+Serif\+TC:wght@500;600;700/)
+  assert.match(html, /Noto\+Sans\+TC:wght@400;500;600;700/)
+  assert.match(html, /family=Inter:wght@400;500;600;700/)
+  assert.match(html, /display=swap/)
+  assert.match(html, /preconnect" href="https:\/\/fonts\.googleapis\.com"/)
+  assert.match(html, /preconnect" href="https:\/\/fonts\.gstatic\.com" crossorigin/)
+  assert.match(html, /'Songti TC'/)
+  assert.match(html, /'PMingLiU'/)
+  assert.match(html, /'Noto Serif CJK TC'/)
+  assert.match(html, /'Source Han Serif TC'/)
+  assert.match(html, /'PingFang TC'/)
+  assert.match(html, /'Microsoft JhengHei'/)
+  assert.match(html, /'Noto Sans CJK TC'/)
+  assert.match(html, /lang="zh-Hant"/)
+  assert.match(html, /\.bm-eyebrow\{[^}]*white-space:nowrap/)
+  assert.match(html, /BUSINESS MAP · /)
+  assert.equal(html.includes('id="bmStats"'), false)
+  assert.equal(html.includes('radial-gradient(#d8dee8'), false)
+  assert.match(html, /max-width:1024px/)
+  assert.match(html, /function bmSheet\(\)/)
+  assert.match(html, /function bmSideOpen\(\)/)
+  assert.match(html, /bmSheet\(\)/)
+  for (const hex of ['#a5782f', '#a65a3c', '#3f5e4a', '#6e5f7a', '#4f6b82', '#6f6455']) {
+    assert.equal(html.includes(hex) || readFileSync(new URL('../public/sam-business-map.js', import.meta.url), 'utf8').includes(hex), true, hex)
+  }
+})
+
+test('edge labels stay outside the HY halo and off the cards at every aspect', () => {
+  const M = load()
+  assert.deepEqual(M.labelSize('隱名股東'), { w: 68, h: 19 })
+  assert.deepEqual(M.labelSize('投資'), { w: 42, h: 19 })
+  const halo = M.HY_RADIUS + M.HY_GLOW
+  function hitsCircle(rect, r) {
+    const x = Math.max(rect.x, Math.min(0, rect.x + rect.w))
+    const y = Math.max(rect.y, Math.min(0, rect.y + rect.h))
+    return x * x + y * y < r * r
+  }
+  function overlap(a, b) {
+    return a.x < b.x + b.w && a.x + a.w > b.x && a.y < b.y + b.h && a.y + a.h > b.y
+  }
+  function clearance(rect) {
+    const x = Math.max(rect.x, Math.min(0, rect.x + rect.w))
+    const y = Math.max(rect.y, Math.min(0, rect.y + rect.h))
+    return Math.hypot(x, y)
+  }
+  function check(map, aspect) {
+    const pos = M.layout(map, aspect)
+    const labels = M.edgeLabelLayout(map, pos)
+    const cards = map.nodes.filter(n => n.kind !== 'hy').map(n => M.nodeBox(n, pos[n.id]))
+    let minHalo = Infinity
+    let minCard = Infinity
+    for (const lab of labels) {
+      const rect = { x: lab.x - lab.w / 2, y: lab.y - lab.h / 2, w: lab.w, h: lab.h }
+      const gap = clearance(rect) - halo
+      minHalo = Math.min(minHalo, gap)
+      assert.equal(hitsCircle(rect, halo), false, aspect + ' ' + lab.text + ' overlaps HY halo')
+      assert.ok(gap >= M.LABEL_GAP - 0.05, aspect + ' ' + lab.text + ' halo gap ' + gap)
+      for (const c of cards) {
+        assert.equal(overlap(rect, c), false, aspect + ' ' + lab.text + ' overlaps a card')
+        const dx = Math.max(c.x - (rect.x + rect.w), rect.x - (c.x + c.w))
+        const dy = Math.max(c.y - (rect.y + rect.h), rect.y - (c.y + c.h))
+        const sep = dx > 0 && dy > 0 ? Math.hypot(dx, dy) : Math.max(dx, dy)
+        minCard = Math.min(minCard, sep)
+      }
+      for (const other of labels) {
+        if (other.id === lab.id) continue
+        const o = { x: other.x - other.w / 2, y: other.y - other.h / 2, w: other.w, h: other.h }
+        assert.equal(overlap(rect, o), false, aspect + ' labels overlap ' + lab.text)
+      }
+    }
+    return { minHalo, minCard }
+  }
+  const aspects = [820 / 1040, 1024 / 1100, 1280 / 580, (1280 - 420) / 580, 1440 / 760, (1440 - 420) / 760, 390 / 620, 0.55, 1, 1.6, 2.2]
+  const { map } = M.ensureMap({})
+  for (const aspect of aspects) check(map, aspect)
+  const person = M.addNode(map, 'person', { name: '測試人物', relation: '顧問' })
+  const resource = M.addNode(map, 'resource', { name: '測試資源', rtype: '產能' })
+  M.addEdge(map, 'hy', person.id, { type: '人脈', confirmed: true })
+  M.addEdge(map, 'hy', resource.id, { type: '使用', confirmed: true })
+  for (const aspect of [820 / 1040, 1440 / 760, 390 / 620]) check(map, aspect)
+})
+
+test('edge labels keep at least 6px of screen clearance after fit', () => {
+  const M = load()
+  assert.equal(M.labelGapForScale(1), M.LABEL_GAP)
+  assert.ok(M.labelGapForScale(0.4) >= 6 / 0.4)
+  const haloR = M.HY_RADIUS + M.HY_GLOW
+  function clearance(rect) {
+    const x = Math.max(rect.x, Math.min(0, rect.x + rect.w))
+    const y = Math.max(rect.y, Math.min(0, rect.y + rect.h))
+    return Math.hypot(x, y) - haloR
+  }
+  function sep(a, b) {
+    const dx = Math.max(b.x - (a.x + a.w), a.x - (b.x + b.w))
+    const dy = Math.max(b.y - (a.y + a.h), a.y - (b.y + b.h))
+    return dx > 0 && dy > 0 ? Math.hypot(dx, dy) : Math.max(dx, dy)
+  }
+  function screenGaps(vw, vh, detail) {
+    const { map } = M.ensureMap({})
+    const header = vw <= 767 ? 92 : 56
+    const title = vw <= 767 ? 156 : 84
+    const reserve = detail && vw > 1024 ? 420 : 0
+    const stageH = Math.max(160, vh - header - title)
+    const bottomInset = vw <= 900 ? 96 : 56
+    const innerW = Math.max(80, vw - reserve - 64)
+    const innerH = Math.max(80, stageH - 32 - bottomInset)
+    const aspect = (vw - reserve) / stageH
+    const pos = M.layout(map, aspect)
+    const nodes = map.nodes.map(n => M.nodeBox(n, pos[n.id]))
+    let scale = M.fit(nodes, innerW, innerH, 0, 1.8).scale
+    let labels = M.edgeLabelLayout(map, pos, M.labelGapForScale(scale))
+    const withLabels = nodes.concat(labels.map(l => ({ x: l.x - l.w / 2, y: l.y - l.h / 2, w: l.w, h: l.h })))
+    scale = M.fit(withLabels, innerW, innerH, 0, 1.8).scale
+    labels = M.edgeLabelLayout(map, pos, M.labelGapForScale(scale))
+    const cards = map.nodes.filter(n => n.kind !== 'hy').map(n => M.nodeBox(n, pos[n.id]))
+    let minHalo = Infinity
+    let minCard = Infinity
+    for (const lab of labels) {
+      const rect = { x: lab.x - lab.w / 2, y: lab.y - lab.h / 2, w: lab.w, h: lab.h }
+      const halo = clearance(rect) * scale
+      minHalo = Math.min(minHalo, halo)
+      assert.ok(halo >= 6 - 0.05, vw + (detail ? ' detail' : '') + ' ' + lab.text + ' halo ' + halo)
+      for (const c of cards) {
+        const d = sep(rect, c) * scale
+        minCard = Math.min(minCard, d)
+        assert.ok(d >= 6 - 0.05, vw + (detail ? ' detail' : '') + ' ' + lab.text + ' card ' + d)
+      }
+    }
+    return { minHalo, minCard, scale }
+  }
+  for (const [vw, vh] of [[390, 844], [820, 1180], [1024, 1180], [1280, 720], [1440, 900]]) {
+    screenGaps(vw, vh, false)
+    if (vw > 1024) screenGaps(vw, vh, true)
+  }
+})
+
+test('menu button and status pill stay apart by at least 4px on screen', () => {
+  const html = readFileSync(new URL('../public/sam-dashboard.html', import.meta.url), 'utf8')
+  assert.match(html, /\.bm-topend\{display:flex;align-items:flex-start;gap:var\(--bm-gap,8px\);flex:none\}/)
+  assert.match(html, /\.bm-id\{min-width:0;flex:1\}/)
+  assert.match(html, /\.bm-more\{position:static;width:28px;height:28px;min-width:28px;min-height:28px;/)
+  assert.equal(html.includes('position:absolute;top:8px;right:8px'), false)
+  assert.match(html, /\.bm-list \.bm-more\{width:44px;height:44px;min-width:44px;min-height:44px\}/)
+  assert.match(html, /<div class="bm-topend">'\+more\+status\+'<\/div>/)
+  assert.match(html, /<div class="bm-topend">'\+more\+'<\/div>/)
+  assert.match(html, /<div class="bm-shape">'\+inner\+'<\/div><\/div>'/)
+  assert.equal(html.includes("'</div>'+more+'</div>'"), false)
+  assert.match(html, /w\.style\.setProperty\('--bm-gap',Math\.max\(8,6\/s\)\+'px'\)/)
+  // 畫面間距 = max(8×scale, 6)。任何正縮放都 ≥6px，高於 4px 門檻。
+  function screenGap(scale) {
+    const s = scale > 0 ? scale : 1
+    return Math.max(8, 6 / s) * s
+  }
+  for (const scale of [0.2, 0.381, 0.622, 0.637, 0.852, 0.867, 0.887, 1, 1.093, 1.8]) {
+    const gap = screenGap(scale)
+    assert.ok(gap >= 6 - 1e-9, scale + ' screen gap ' + gap)
+    assert.equal(Math.max(8 * (scale > 0 ? scale : 1), 6), gap)
+  }
+})
+
 test('DIVIOS card uses the user-confirmed legal entity 帝爾 90895872, with unknowns kept unknown', () => {
   const M = load()
   const { map } = M.ensureMap({})
