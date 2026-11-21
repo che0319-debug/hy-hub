@@ -102,8 +102,11 @@ test('live snapshot save body matches the pre-B1 page logic', () => {
   mkdirSync(shots, { recursive: true })
   writeFileSync(join(shots, 'payload-before.json'), bodyBefore)
   writeFileSync(join(shots, 'payload-after.json'), bodyAfter)
+  let head = ''
+  try { head = execFileSync('git', ['rev-parse', 'HEAD'], { cwd: root, encoding: 'utf8' }).trim() } catch { head = '' }
   const diff = [
     '做法：用 git show d4fe330:public/sam-business-map.js（改版前）與目前 sam-business-map.js（改版後）各跑一次 ensureMap，再 JSON.stringify 整包 data。這就是 sam-dashboard.html saveData 送出的 POST body（loadData 只多呼叫 ensureMap，不改其他欄）。沒有連線、沒有送出。',
+    'HEAD ' + head,
     '快照：ref/live-readonly-20261121.json',
     '情境一 載入後不動直接儲存：' + (bodyBefore === bodyAfter ? '逐字相同' : '不相同'),
     'sha256 before ' + hashBefore,

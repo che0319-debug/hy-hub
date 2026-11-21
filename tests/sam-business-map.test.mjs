@@ -321,9 +321,68 @@ test('dashboard loads B1 fonts and does not keep the old status chips or dot gri
   assert.match(html, /lang="zh-Hant"/)
   assert.equal(html.includes('id="bmStats"'), false)
   assert.equal(html.includes('radial-gradient(#d8dee8'), false)
+  assert.match(html, /max-width:1024px/)
+  assert.match(html, /function bmSheet\(\)/)
+  assert.match(html, /function bmSideOpen\(\)/)
+  assert.match(html, /bmSheet\(\)/)
   for (const hex of ['#a5782f', '#a65a3c', '#3f5e4a', '#6e5f7a', '#4f6b82', '#6f6455']) {
     assert.equal(html.includes(hex) || readFileSync(new URL('../public/sam-business-map.js', import.meta.url), 'utf8').includes(hex), true, hex)
   }
+})
+
+test('edge labels stay outside the HY halo and off the cards at every aspect', () => {
+  const M = load()
+  assert.deepEqual(M.labelSize('隱名股東'), { w: 68, h: 19 })
+  assert.deepEqual(M.labelSize('投資'), { w: 42, h: 19 })
+  const halo = M.HY_RADIUS + M.HY_GLOW
+  function hitsCircle(rect, r) {
+    const x = Math.max(rect.x, Math.min(0, rect.x + rect.w))
+    const y = Math.max(rect.y, Math.min(0, rect.y + rect.h))
+    return x * x + y * y < r * r
+  }
+  function overlap(a, b) {
+    return a.x < b.x + b.w && a.x + a.w > b.x && a.y < b.y + b.h && a.y + a.h > b.y
+  }
+  function clearance(rect) {
+    const x = Math.max(rect.x, Math.min(0, rect.x + rect.w))
+    const y = Math.max(rect.y, Math.min(0, rect.y + rect.h))
+    return Math.hypot(x, y)
+  }
+  function check(map, aspect) {
+    const pos = M.layout(map, aspect)
+    const labels = M.edgeLabelLayout(map, pos)
+    const cards = map.nodes.filter(n => n.kind !== 'hy').map(n => M.nodeBox(n, pos[n.id]))
+    let minHalo = Infinity
+    let minCard = Infinity
+    for (const lab of labels) {
+      const rect = { x: lab.x - lab.w / 2, y: lab.y - lab.h / 2, w: lab.w, h: lab.h }
+      const gap = clearance(rect) - halo
+      minHalo = Math.min(minHalo, gap)
+      assert.equal(hitsCircle(rect, halo), false, aspect + ' ' + lab.text + ' overlaps HY halo')
+      assert.ok(gap >= M.LABEL_GAP - 0.05, aspect + ' ' + lab.text + ' halo gap ' + gap)
+      for (const c of cards) {
+        assert.equal(overlap(rect, c), false, aspect + ' ' + lab.text + ' overlaps a card')
+        const dx = Math.max(c.x - (rect.x + rect.w), rect.x - (c.x + c.w))
+        const dy = Math.max(c.y - (rect.y + rect.h), rect.y - (c.y + c.h))
+        const sep = dx > 0 && dy > 0 ? Math.hypot(dx, dy) : Math.max(dx, dy)
+        minCard = Math.min(minCard, sep)
+      }
+      for (const other of labels) {
+        if (other.id === lab.id) continue
+        const o = { x: other.x - other.w / 2, y: other.y - other.h / 2, w: other.w, h: other.h }
+        assert.equal(overlap(rect, o), false, aspect + ' labels overlap ' + lab.text)
+      }
+    }
+    return { minHalo, minCard }
+  }
+  const aspects = [820 / 1040, 1024 / 1100, 1280 / 580, (1280 - 420) / 580, 1440 / 760, (1440 - 420) / 760, 390 / 620, 0.55, 1, 1.6, 2.2]
+  const { map } = M.ensureMap({})
+  for (const aspect of aspects) check(map, aspect)
+  const person = M.addNode(map, 'person', { name: '測試人物', relation: '顧問' })
+  const resource = M.addNode(map, 'resource', { name: '測試資源', rtype: '產能' })
+  M.addEdge(map, 'hy', person.id, { type: '人脈', confirmed: true })
+  M.addEdge(map, 'hy', resource.id, { type: '使用', confirmed: true })
+  for (const aspect of [820 / 1040, 1440 / 760, 390 / 620]) check(map, aspect)
 })
 
 test('DIVIOS card uses the user-confirmed legal entity 帝爾 90895872, with unknowns kept unknown', () => {

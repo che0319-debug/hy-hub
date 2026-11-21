@@ -544,6 +544,134 @@
     return { stale: reasons.length > 0, reasons: reasons }
   }
 
+  /* 連線標籤幾何。尺寸對齊畫面：公司卡 280×237、HY 圓直徑 128、外圍光暈 22px（box-shadow spread）、
+   * 標籤 11px、字距 0.18em、左右內距 8、上下 2（「隱名股東」實測 68×19、「投資」42×19）。 */
+  var HY_RADIUS = 64
+  var HY_GLOW = 22
+  var LABEL_GAP = 8
+  var CARD_GAP = 4
+  var NODE_BOX = {
+    hy: { w: 128, h: 128 },
+    company: { w: 280, h: 237 },
+    person: { w: 232, h: 128 },
+    resource: { w: 232, h: 120 },
+  }
+
+  function labelSize(text) {
+    var s = str(text)
+    var fs = 11
+    var width = 0
+    for (var i = 0; i < s.length; i++) {
+      var code = s.charCodeAt(i)
+      width += (code >= 32 && code < 127) ? fs * 0.56 : fs
+      width += fs * 0.18
+    }
+    return { w: Math.ceil(width + 16), h: 19 }
+  }
+
+  function nodeBox(node, p) {
+    var s = NODE_BOX[(node && node.kind) || 'company'] || NODE_BOX.company
+    var x = p && isFinite(p.x) ? p.x : 0
+    var y = p && isFinite(p.y) ? p.y : 0
+    return { x: x - s.w / 2, y: y - s.h / 2, w: s.w, h: s.h }
+  }
+
+  function rectHitsCircle(rect, cx, cy, r) {
+    var x = Math.max(rect.x, Math.min(cx, rect.x + rect.w))
+    var y = Math.max(rect.y, Math.min(cy, rect.y + rect.h))
+    var dx = x - cx
+    var dy = y - cy
+    return dx * dx + dy * dy < r * r
+  }
+
+  function rectsOverlap(a, b, gap) {
+    var g = gap || 0
+    return a.x < b.x + b.w + g && a.x + a.w + g > b.x && a.y < b.y + b.h + g && a.y + a.h + g > b.y
+  }
+
+  function labelBlocked(rect, hyPos, cards, placed, cardGap, labelGap) {
+    if (hyPos && rectHitsCircle(rect, hyPos.x, hyPos.y, HY_RADIUS + HY_GLOW + LABEL_GAP)) return true
+    for (var i = 0; i < cards.length; i++) if (rectsOverlap(rect, cards[i], cardGap)) return true
+    for (var j = 0; j < placed.length; j++) {
+      var p = placed[j]
+      if (rectsOverlap(rect, { x: p.x - p.w / 2, y: p.y - p.h / 2, w: p.w, h: p.h }, labelGap)) return true
+    }
+    return false
+  }
+
+  /**
+   * 連線標籤中心。優先沿連線，放在 HY 光暈外、卡片之間的空檔；
+   * 空檔不夠時再往連線兩側推，避免壓到 HY 圓（含 22px 光暈）或被卡片蓋住。
+   * 回傳 {id, text, x, y, w, h}，x/y 是標籤中心（對齊畫面的 translate -50%,-50%）。
+   */
+  function edgeLabelLayout(map, pos) {
+    var hyPos = pos[HY_ID] || null
+    var cards = []
+    map.nodes.forEach(function (n) {
+      if (!n || n.kind === 'hy' || !pos[n.id]) return
+      cards.push(nodeBox(n, pos[n.id]))
+    })
+    var placed = []
+    var out = []
+    map.edges.forEach(function (e) {
+      var a = pos[e.from]
+      var b = pos[e.to]
+      var text = edgeTypeLabel(e)
+      var size = labelSize(text)
+      if (!a || !b) {
+        var missing = { id: e.id, text: text, x: 0, y: 0, w: size.w, h: size.h }
+        placed.push(missing)
+        out.push(missing)
+        return
+      }
+      var from = a
+      var to = b
+      var anchored = e.from === HY_ID || e.to === HY_ID
+      if (e.to === HY_ID) { from = b; to = a }
+      var dx = to.x - from.x
+      var dy = to.y - from.y
+      var len = Math.hypot(dx, dy) || 1
+      var ux = dx / len
+      var uy = dy / len
+      var px = -uy
+      var py = ux
+      function at(dist, off) {
+        var cx = from.x + ux * dist + px * off
+        var cy = from.y + uy * dist + py * off
+        return { id: e.id, text: text, x: cx, y: cy, w: size.w, h: size.h, rect: { x: cx - size.w / 2, y: cy - size.h / 2, w: size.w, h: size.h } }
+      }
+      var best = null
+      var bestScore = Infinity
+      function consider(dist, off, cardGap, labelGap) {
+        if (dist < 0 || dist > len) return
+        var box = at(dist, off)
+        if (labelBlocked(box.rect, hyPos, cards, placed, cardGap, labelGap)) return
+        var score = Math.abs(off) * 10000 + (anchored ? dist : Math.abs(dist - len / 2))
+        if (score < bestScore) { bestScore = score; best = box }
+      }
+      var d
+      for (d = 4; d <= len - 4; d += 2) consider(d, 0, CARD_GAP, 2)
+      if (!best) {
+        var off
+        for (off = 4; off <= 120; off += 4) {
+          for (d = 4; d <= len - 4; d += 4) {
+            consider(d, off, CARD_GAP, 2)
+            consider(d, -off, CARD_GAP, 2)
+          }
+          if (best) break
+        }
+      }
+      if (!best) {
+        for (d = 4; d <= len - 4; d += 4) consider(d, 0, 0, 0)
+      }
+      if (!best) best = at(anchored ? Math.min(len - 4, HY_RADIUS + HY_GLOW + LABEL_GAP + size.w / 2) : len / 2, 0)
+      delete best.rect
+      placed.push(best)
+      out.push(best)
+    })
+    return out
+  }
+
   /**
    * 預設佈局（世界座標，HY 在 0,0）：公司均分第一圈，人物與資源均分外圈。
    * aspect = 畫布寬/高。橢圓拉得比畫布緩和，讓 280px 公司卡之間留得下空隙。
@@ -598,6 +726,8 @@
     addNode: addNode, updateNode: updateNode, removeNode: removeNode, edgesOf: edgesOf,
     addEdge: addEdge, updateEdge: updateEdge, removeEdge: removeEdge,
     edgeLabel: edgeLabel, edgeTypeLabel: edgeTypeLabel, nodeSubtitle: nodeSubtitle, cardFace: cardFace,
+    labelSize: labelSize, nodeBox: nodeBox, edgeLabelLayout: edgeLabelLayout,
+    HY_RADIUS: HY_RADIUS, HY_GLOW: HY_GLOW, LABEL_GAP: LABEL_GAP,
     isBlankish: isBlankish, unknownLabels: unknownLabels, accentFor: accentFor,
     COMPANY_ACCENTS: COMPANY_ACCENTS, ACCENT_FALLBACK: ACCENT_FALLBACK,
     PERSON_ACCENT: PERSON_ACCENT, RESOURCE_ACCENT: RESOURCE_ACCENT,
