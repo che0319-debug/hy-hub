@@ -7,7 +7,7 @@ import { authHeaders } from '../auth'
 import {
   FOLDERS, applyDecision, cardTitle, decisionFor, fetchBrainCard, fetchBrainIndex,
   filterCards, folderLabel, folderOf, isPending, linkifyWikilinks, loadQueue,
-  parseFrontmatter, queueMarkdown, saveQueue, sortedDecisions, splitPendingReview, wikiIdFromHref,
+  parseFrontmatter, pruneQueueToPending, queueMarkdown, saveQueue, sortedDecisions, splitPendingReview, wikiIdFromHref,
 } from '../lib/obsidian'
 import ObsidianGraph from './ObsidianGraph'
 import '../../public/hy-ui/hy-ui.css'
@@ -176,6 +176,17 @@ export default function Obsidian() {
       })
     return () => controller.abort()
   }, [])
+
+  // 目錄成功而且不是空的，才拿掉已不在待上架的舊決定。沒有移除就不寫回。
+  useEffect(() => {
+    if (cards === null || loadError || cards.length === 0) return
+    const next = pruneQueueToPending(queue, cards)
+    const same = next.items.length === queue.items.length
+      && next.items.every((item, index) => item.id === queue.items[index].id)
+    if (same) return
+    setQueue(next)
+    saveQueue(window.localStorage, next)
+  }, [cards, loadError, queue])
 
   useEffect(() => {
     if (!selectedId) { setMarkdown(''); setCardError(''); setCardLoading(false); return }

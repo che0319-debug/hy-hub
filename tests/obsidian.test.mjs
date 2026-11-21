@@ -4,7 +4,7 @@ import { readFileSync } from 'node:fs'
 import {
   applyDecision, brainErrorMessage, fetchBrainCard, fetchBrainIndex, filterCards,
   isPending, linkifyWikilinks, loadQueue, normalizeQueue, parseFrontmatter,
-  queueMarkdown, splitPendingReview, wikiIdFromHref,
+  pruneQueueToPending, queueMarkdown, splitPendingReview, wikiIdFromHref,
 } from '../src/lib/obsidian.js'
 
 const sample = `---
@@ -77,6 +77,74 @@ test('待上架分成未審與已審，數量不含清單外的決定', () => {
   assert.match(text, /核准｜know-a｜甲/)
   assert.match(text, /退回｜know-c｜丙/)
   assert.match(text, /know-missing/)
+})
+
+test('已上架、已歸檔、目錄沒有的決定會被拿掉，留下的欄位不變', () => {
+  const kept = { id: 'know-a', title: '甲', decision: 'reject', decided_at: 't1' }
+  const queue = { items: [
+    kept,
+    { id: 'know-b', title: '乙', decision: 'approve', decided_at: 't2' },
+    { id: 'know-c', title: '丙', decision: 'approve', decided_at: 't3' },
+    { id: 'know-missing', title: '不見了', decision: 'approve', decided_at: 't4' },
+  ] }
+  const cards = [
+    { id: 'know-a', title: '甲', path: '00_待上架/know-a.md', state: 'archived' },
+    { id: 'know-b', title: '乙', path: '40_知識/know-b.md', state: 'candidate' },
+    { id: 'know-c', title: '丙', path: '90_歸檔/know-c.md', state: 'archived' },
+    { id: 'dec-d', title: '丁', path: '50_決策/dec-d.md' },
+  ]
+  const next = pruneQueueToPending(queue, cards)
+  assert.equal(next.items.length, 1)
+  assert.equal(next.items[0], kept)
+  const text = queueMarkdown(next)
+  assert.match(text, /退回｜know-a｜甲｜t1/)
+  assert.doesNotMatch(text, /know-b|know-c|know-missing/)
+})
+
+test('目錄還沒來、不是陣列、或是空的，決定原樣留下', () => {
+  const queue = { items: [
+    { id: 'know-a', title: '甲', decision: 'approve', decided_at: 't', body: '不要留' },
+  ] }
+  const expected = [{ id: 'know-a', title: '甲', decision: 'approve', decided_at: 't' }]
+  for (const cards of [null, undefined, { length: 3 }, '00_待上架', []]) {
+    assert.deepEqual(pruneQueueToPending(queue, cards).items, expected)
+  }
+})
+
+test('目錄有卡但沒有待上架時，舊決定全部清掉', () => {
+  const queue = { items: [
+    { id: 'know-b', title: '乙', decision: 'approve', decided_at: 't2' },
+    { id: 'know-missing', title: '不見了', decision: 'reject', decided_at: 't4' },
+  ] }
+  const cards = [
+    { id: 'know-b', title: '乙', path: '40_知識/know-b.md', state: 'candidate' },
+    { id: 'dec-d', title: '丁', path: '50_決策/dec-d.md' },
+  ]
+  const next = pruneQueueToPending(queue, cards)
+  assert.deepEqual(next.items, [])
+  assert.match(queueMarkdown(next), /目前沒有決定/)
+})
+
+test('沒有需要移除時，items 與原來相同', () => {
+  const queue = { version: 1, items: [
+    { id: 'know-a', title: '甲', decision: 'approve', decided_at: 't1' },
+    { id: 'know-b', title: '乙', decision: 'reject', decided_at: 't2' },
+  ] }
+  const cards = [
+    { id: 'know-a', path: '00_待上架/know-a.md' },
+    { id: 'know-b', path: '00_待上架/sub/know-b.md' },
+    { id: 'know-z', path: '10_人生/know-z.md' },
+  ]
+  const next = pruneQueueToPending(queue, cards)
+  assert.equal(next.items, queue.items)
+})
+
+test('待上架頁在目錄載入後會修剪清單', () => {
+  const page = readFileSync(new URL('../src/pages/Obsidian.jsx', import.meta.url), 'utf8')
+  assert.match(page, /pruneQueueToPending, queueMarkdown/)
+  assert.match(page, /pruneQueueToPending\(queue, cards\)/)
+  assert.match(page, /cards === null \|\| loadError \|\| cards\.length === 0/)
+  assert.match(page, /saveQueue\(window\.localStorage, next\)/)
 })
 
 test('待處理清單是純文字，不含寫入指令', () => {
