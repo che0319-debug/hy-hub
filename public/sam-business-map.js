@@ -418,7 +418,7 @@
 
   function removeEdge(map, id) { map.edges = map.edges.filter(function (e) { return e.id !== id }); map.updated_at = nowIso() }
 
-  /** 線上標籤：類型＋說明，例如「隱名股東（約 45%）」。比例未知寫「未知」，不填假數字。 */
+  /** 線上標籤（詳情關係列沿用）：類型＋說明，例如「隱名股東（約 45%）」。比例未知寫「未知」，不填假數字。 */
   function edgeLabel(e) {
     var note = str(e.note)
     var short = note.split(/[；;]/)[0]
@@ -430,16 +430,99 @@
     return e.confirmed === true ? s : s + '・未確認'
   }
 
-  /** 卡片副標：公司顯示持股角色與比例。 */
-  function nodeSubtitle(n) {
+  /** 圖上連線標籤只寫關係類型，不寫比例。未確認改由虛線表示，標籤仍只寫類型。 */
+  function edgeTypeLabel(e) {
+    return str(e && e.type) || '其他'
+  }
+
+  /** 空白、或「未知／待確認」開頭，畫面當成尚未掌握。 */
+  function isBlankish(v) {
+    var s = str(v)
+    return !s || s === UNKNOWN || s.indexOf('未知') === 0 || s.indexOf('待確認') === 0
+  }
+
+  function companyRoleShort(n, edgeType) {
+    var role = str(n.stake_role)
+    if (role.indexOf('隱名') >= 0) return '隱名股東'
+    if (isBlankish(role)) return str(edgeType)
+    return role.replace(/（.*$/, '').trim() || str(edgeType)
+  }
+
+  function companyRatio(n) {
+    var ratio = str(n.stake_ratio).replace(/（.*$/, '').trim()
+    return !ratio || isBlankish(ratio) ? '比例未知' : ratio
+  }
+
+  /**
+   * 卡片頁尾／副標。公司是「角色・比例」；角色未知時用連線類型（例：投資・比例未知）。
+   * edgeType 可省略，省略時未知角色不硬填「角色未知」。
+   */
+  function nodeSubtitle(n, edgeType) {
+    if (!n) return ''
     if (n.kind === 'company') {
-      var ratio = str(n.stake_ratio).replace(/（.*$/, '')
-      var role = /隱名/.test(str(n.stake_role)) ? '隱名股東' : (str(n.stake_role).replace(/（.*$/, '') || '角色未知')
-      return role + '，' + (!ratio || ratio === UNKNOWN ? '比例未知' : ratio)
+      var role = companyRoleShort(n, edgeType)
+      var ratio = companyRatio(n)
+      return role ? role + '・' + ratio : ratio
     }
     if (n.kind === 'person') return str(n.role) || str(n.relation) || ''
     if (n.kind === 'resource') return [str(n.rtype), str(n.location)].filter(Boolean).join('・')
     return ''
+  }
+
+  /** 公司卡面。收入、業務照原文；status 只有賺／平／虧才出現。 */
+  function cardFace(n, edgeType) {
+    var type = str(edgeType)
+    var income = str(n.income_note) || UNKNOWN
+    var business = str(n.business)
+    return {
+      kicker: type || companyRoleShort(n, ''),
+      name: str(n.name) || '未命名',
+      status: n.status === '賺' || n.status === '平' || n.status === '虧' ? n.status : '',
+      income: income,
+      incomeUnknown: isBlankish(n.income_note),
+      business: isBlankish(business) ? UNKNOWN : business.split('\n')[0],
+      businessUnknown: isBlankish(business),
+      footer: nodeSubtitle(n, type),
+      maintainer: str(n.maintainer),
+    }
+  }
+
+  var UNKNOWN_FACE = [
+    ['status', '近三月狀態'], ['legal_name', '法律主體'], ['tax_id', '統編'], ['business', '業務'],
+    ['stake_ratio', '比例'], ['stake_via', '透過誰持有'], ['stake_written', '書面約定'],
+    ['stake_invested', '投入'], ['income_note', '收入'], ['costs', '支出'],
+  ]
+
+  /** 詳細面板「尚未掌握」：未知欄位併成一行。不包含待問、缺口、補件日。 */
+  function unknownLabels(n) {
+    if (!n || n.kind !== 'company') return []
+    return UNKNOWN_FACE.filter(function (pair) { return isBlankish(n[pair[0]]) }).map(function (pair) { return pair[1] })
+  }
+
+  /* 識別色綁公司 id。主色只用在細線、關係小標、連線末端、圖例、選取光暈。 */
+  var COMPANY_ACCENTS = {
+    lechuan: { main: '#a5782f', text: '#8a6326', soft: '#f3eadb' },
+    rm: { main: '#a65a3c', text: '#a65a3c', soft: '#f4e4dc' },
+    shangmiao: { main: '#3f5e4a', text: '#3f5e4a', soft: '#e3ebe4' },
+    divios: { main: '#6e5f7a', text: '#6e5f7a', soft: '#ebe6ee' },
+    hsinchu3c: { main: '#4f6b82', text: '#4f6b82', soft: '#e2e8ee' },
+  }
+  var ACCENT_FALLBACK = [
+    { main: '#7d6b4f', text: '#7d6b4f', soft: '#efe8dc' },
+    { main: '#5e6f63', text: '#5e6f63', soft: '#e4ebe6' },
+  ]
+  var PERSON_ACCENT = { main: '#7a5c45', text: '#7a5c45', soft: '#f3ebe4' }
+  var RESOURCE_ACCENT = { main: '#5f7a73', text: '#5f7a73', soft: '#e7eeeb' }
+
+  function accentFor(node, map) {
+    if (!node) return ACCENT_FALLBACK[0]
+    if (node.kind === 'person') return PERSON_ACCENT
+    if (node.kind === 'resource') return RESOURCE_ACCENT
+    if (COMPANY_ACCENTS[node.id]) return COMPANY_ACCENTS[node.id]
+    var extras = ((map && map.nodes) || []).filter(function (n) { return n.kind === 'company' && !COMPANY_ACCENTS[n.id] })
+    var idx = 0
+    for (var i = 0; i < extras.length; i++) if (extras[i].id === node.id) { idx = i; break }
+    return ACCENT_FALLBACK[idx % ACCENT_FALLBACK.length]
   }
 
   /**
@@ -463,22 +546,23 @@
 
   /**
    * 預設佈局（世界座標，HY 在 0,0）：公司均分第一圈，人物與資源均分外圈。
-   * aspect = 畫布寬/高，用來把圈拉成橢圓以吃滿畫面。手動拖過的卡（n.pos）保留原位。
+   * aspect = 畫布寬/高。橢圓拉得比畫布緩和，讓 280px 公司卡之間留得下空隙。
+   * 手動拖過的卡（n.pos）保留原位。
    */
   function layout(map, aspect) {
     var a = Math.max(0.4, Math.min(3, aspect || 1.6))
-    var ax = Math.max(0.85, Math.min(1.6, Math.sqrt(a)))
-    var ay = Math.max(0.85, Math.min(1.6, 1 / Math.sqrt(a)))
-    var R1 = 250, R2 = 470
+    var ax = Math.max(0.92, Math.min(1.35, Math.pow(a, 0.35)))
+    var ay = Math.max(0.92, Math.min(1.35, Math.pow(a, -0.35)))
+    var R1 = 320, R2 = 640
     var pos = {}
     var comps = map.nodes.filter(function (n) { return n.kind === 'company' })
     var outer = map.nodes.filter(function (n) { return n.kind === 'person' || n.kind === 'resource' })
-    // 直式畫面（手機）把第一圈轉 45°，讓左右兩張公司卡與 HY 之間留得下關係標籤
+    // 直式畫面（手機關聯圖）把第一圈轉 45°，讓左右兩張公司卡與 HY 之間留得下關係標籤
     var base = a < 1 ? 45 : 0
     // 角度是畫面上的方位角，五家才會繞著中心均分；再用橢圓半徑吃滿寬或高。
     function ring(list, R, offset, minX) {
       var rx = Math.max(R * ax, minX)
-      var ry = R * ay
+      var ry = Math.max(R * ay, minX * 0.72)
       list.forEach(function (n, i) {
         var ang = (-90 + offset + (360 / Math.max(1, list.length)) * i) * Math.PI / 180
         var c = Math.cos(ang), s = Math.sin(ang)
@@ -487,7 +571,7 @@
       })
     }
     ring(comps, R1, base, 300)
-    ring(outer, R2, base + (comps.length ? 180 / Math.max(comps.length, outer.length) : 0), 520)
+    ring(outer, R2, base + (comps.length ? 180 / Math.max(comps.length, outer.length) : 0), 560)
     map.nodes.forEach(function (n) {
       if (n.kind === 'hy') pos[n.id] = { x: 0, y: 0 }
       if (n.pos && isFinite(n.pos.x) && isFinite(n.pos.y)) pos[n.id] = { x: Number(n.pos.x), y: Number(n.pos.y) }
@@ -495,14 +579,14 @@
     return pos
   }
 
-  /** 把一組矩形（世界座標）縮放置中到 w×h 的可視區，留 pad 邊距。 */
+  /** 把一組矩形（世界座標）縮放置中到 w×h 的可視區，留 pad 邊距。上限預設 1.8。 */
   function fit(rects, w, h, pad, maxScale) {
     if (!rects.length || w <= 0 || h <= 0) return { scale: 1, tx: w / 2, ty: h / 2 }
     var minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity
     rects.forEach(function (r) { minX = Math.min(minX, r.x); minY = Math.min(minY, r.y); maxX = Math.max(maxX, r.x + r.w); maxY = Math.max(maxY, r.y + r.h) })
-    var p = pad == null ? 24 : pad
+    var p = pad == null ? 32 : pad
     var bw = Math.max(1, maxX - minX), bh = Math.max(1, maxY - minY)
-    var scale = Math.min((w - 2 * p) / bw, (h - 2 * p) / bh, maxScale || 1.25)
+    var scale = Math.min((w - 2 * p) / bw, (h - 2 * p) / bh, maxScale == null ? 1.8 : maxScale)
     scale = Math.max(0.2, scale)
     return { scale: scale, tx: w / 2 - (minX + bw / 2) * scale, ty: h / 2 - (minY + bh / 2) * scale }
   }
@@ -512,7 +596,11 @@
     EDGE_TYPES: EDGE_TYPES, FIELDS: FIELDS, COMPANY_IDS: COMPANY_IDS, HIDDEN_ROLE: HIDDEN_ROLE,
     show: show, seed: seed, ensureMap: ensureMap, getNode: getNode, companies: companies, statusSummary: statusSummary,
     addNode: addNode, updateNode: updateNode, removeNode: removeNode, edgesOf: edgesOf,
-    addEdge: addEdge, updateEdge: updateEdge, removeEdge: removeEdge, edgeLabel: edgeLabel, nodeSubtitle: nodeSubtitle,
+    addEdge: addEdge, updateEdge: updateEdge, removeEdge: removeEdge,
+    edgeLabel: edgeLabel, edgeTypeLabel: edgeTypeLabel, nodeSubtitle: nodeSubtitle, cardFace: cardFace,
+    isBlankish: isBlankish, unknownLabels: unknownLabels, accentFor: accentFor,
+    COMPANY_ACCENTS: COMPANY_ACCENTS, ACCENT_FALLBACK: ACCENT_FALLBACK,
+    PERSON_ACCENT: PERSON_ACCENT, RESOURCE_ACCENT: RESOURCE_ACCENT,
     staleness: staleness, layout: layout, fit: fit,
   }
 })(typeof window !== 'undefined' ? window : globalThis)
