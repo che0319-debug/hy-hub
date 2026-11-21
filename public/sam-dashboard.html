@@ -595,6 +595,8 @@ input[type="date"] { color-scheme: light; }
 .bm-node.is-link-source .bm-shape{outline:2px dashed var(--a,#26211b);outline-offset:4px}
 .bm-node.is-stale .bm-shape{filter:saturate(.3);opacity:.75}
 .bm-top{display:flex;justify-content:space-between;align-items:flex-start;gap:8px}
+.bm-id{min-width:0;flex:1}
+.bm-topend{display:flex;align-items:flex-start;gap:var(--bm-gap,8px);flex:none}
 .bm-eb{font-size:10.5px;letter-spacing:.24em;color:var(--at,var(--a));font-weight:600}
 .bm-nm{font-family:var(--bm-serif);font-size:23px;font-weight:600;letter-spacing:.03em;margin-top:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:#26211b;line-height:1.2}
 .bm-st{font-size:12px;letter-spacing:.1em;color:#4c4337;border:1px solid rgba(74,58,36,.2);border-radius:999px;padding:1px 10px;margin-top:2px;background:transparent;flex:none;box-shadow:none}
@@ -622,7 +624,7 @@ input[type="date"] { color-scheme: light; }
 .bm-node.is-resource:hover .bm-shape,.bm-node.is-resource.is-selected .bm-shape{box-shadow:0 1px 1px rgba(60,45,25,.04)}
 .bm-node.is-resource.is-selected .bm-shape{border-color:color-mix(in srgb,var(--a) 45%,transparent);box-shadow:0 0 0 4px color-mix(in srgb,var(--a) 12%,transparent),0 1px 1px rgba(60,45,25,.04)}
 #tab-map.is-panel .bm-list{padding-right:440px}
-.bm-more{position:absolute;top:8px;right:8px;width:28px;height:28px;border-radius:50%;border:1px solid rgba(74,58,36,.16);background:rgba(255,253,249,.92);color:#26211b;font:600 16px/1 var(--bm-sans);cursor:pointer;display:flex;align-items:center;justify-content:center;opacity:0;z-index:3;padding:0}
+.bm-more{position:static;width:28px;height:28px;min-width:28px;min-height:28px;border-radius:50%;border:1px solid rgba(74,58,36,.16);background:rgba(255,253,249,.92);color:#26211b;font:600 16px/1 var(--bm-sans);cursor:pointer;display:flex;align-items:center;justify-content:center;opacity:0;z-index:3;padding:0;flex:none}
 .bm-node:hover .bm-more,.bm-node:focus-within .bm-more,.bm-more:focus-visible{opacity:1}
 .bm-cardmenu{position:absolute;z-index:9;min-width:180px;background:#fffdf9;border:1px solid rgba(74,58,36,.12);border-radius:14px;box-shadow:0 12px 28px -8px rgba(60,45,25,.18);padding:6px}
 .bm-banner{position:absolute;top:12px;left:50%;transform:translateX(-50%);z-index:6;display:none;align-items:center;gap:12px;background:#fffdf9;border:1px solid rgba(74,58,36,.16);border-radius:999px;padding:6px 6px 6px 16px;font-size:14px;box-shadow:0 8px 24px -12px rgba(60,45,25,.3);max-width:calc(100% - 24px)}
@@ -739,6 +741,7 @@ input[type="date"] { color-scheme: light; }
   #tab-map.is-panel .bm-bottom{right:16px}
   .bm-tools{justify-self:center}
   .bm-list{padding:4px 16px 24px}
+  .bm-list .bm-more{width:44px;height:44px;min-width:44px;min-height:44px}
   .bm-list .bm-node.is-company .bm-shape{padding:18px 20px}
   .bm-list .bm-mark{left:20px}
   .bm-pact button{min-height:44px}
@@ -1222,6 +1225,7 @@ function bmNodeHtml(n,map,st){
   const k=n.kind, stale=st&&st.stale, accent=BM.accentFor(n,map);
   const cls='bm-node is-'+k+(n.id===bmSelected?' is-selected':'')+(n.id===bmLinkFrom?' is-link-source':'')+(stale?' is-stale':'');
   const style='--a:'+accent.main+';--at:'+accent.text+';--as:'+accent.soft;
+  const more=k==='hy'?'':'<button type="button" class="bm-more" data-more="'+escapeHtml(n.id)+'" aria-label="'+escapeHtml((n.name||'')+' 選單')+'">⋯</button>';
   let inner='';
   if(k==='hy'){
     inner='<div class="bm-nm">HY</div><div class="bm-hubsub">'+BM.companies(map).length+' 家公司</div>';
@@ -1230,20 +1234,19 @@ function bmNodeHtml(n,map,st){
     const face=BM.cardFace(n,edge?edge.type:'');
     const status=face.status?'<span class="bm-st">'+escapeHtml(face.status)+'</span>':'';
     const due=stale?'<span class="bm-due">待更新</span>':'';
-    inner='<div class="bm-mark"></div><div class="bm-top"><div><div class="bm-eb">'+escapeHtml(face.kicker)+'</div><div class="bm-nm">'+escapeHtml(face.name)+'</div></div>'+status+'</div>'
+    inner='<div class="bm-mark"></div><div class="bm-top"><div class="bm-id"><div class="bm-eb">'+escapeHtml(face.kicker)+'</div><div class="bm-nm">'+escapeHtml(face.name)+'</div></div><div class="bm-topend">'+more+status+'</div></div>'
       +'<div class="bm-lab">收入<em>INCOME</em></div><div class="bm-inc"><p class="'+(face.incomeUnknown?'is-unknown':'')+'">'+escapeHtml(face.income)+'</p></div>'
       +'<div class="bm-biz"><span class="k">業務</span><span class="t '+(face.businessUnknown?'is-unknown':'')+'">'+escapeHtml(face.business)+'</span></div>'
       +'<div class="bm-ft"><span>'+due+escapeHtml(face.footer)+'</span><span>'+escapeHtml(face.maintainer)+(n.updated_at?' · '+bmMD(n.updated_at):'')+'</span></div>';
   }else if(k==='person'){
     const rel=String(n.relation||'').trim(), mid=String(n.role||'').trim();
-    inner='<div class="bm-mark"></div><div class="bm-eb">'+escapeHtml(rel||'人物')+'</div><div class="bm-nm">'+escapeHtml(n.name||'未命名')+'</div>'+(mid?'<div class="bm-mid">'+escapeHtml(mid)+'</div>':'')+'<div class="bm-ft"><span>'+(stale?'<span class="bm-due">待更新</span>':'')+'</span><span>'+escapeHtml(n.maintainer||'')+'</span></div>';
+    inner='<div class="bm-mark"></div><div class="bm-top"><div class="bm-id"><div class="bm-eb">'+escapeHtml(rel||'人物')+'</div></div><div class="bm-topend">'+more+'</div></div><div class="bm-nm">'+escapeHtml(n.name||'未命名')+'</div>'+(mid?'<div class="bm-mid">'+escapeHtml(mid)+'</div>':'')+'<div class="bm-ft"><span>'+(stale?'<span class="bm-due">待更新</span>':'')+'</span><span>'+escapeHtml(n.maintainer||'')+'</span></div>';
   }else{
     const where=[n.location,n.state].map(v=>String(v||'').trim()).filter(Boolean).join('・');
-    inner='<div class="bm-mark"></div><div class="bm-eb">'+escapeHtml(n.rtype||'資源')+'</div><div class="bm-nm">'+escapeHtml(n.name||'未命名')+'</div>'+(where?'<div class="bm-mid">'+escapeHtml(where)+'</div>':'')+'<div class="bm-ft"><span></span><span>'+escapeHtml(n.maintainer||'')+'</span></div>';
+    inner='<div class="bm-mark"></div><div class="bm-top"><div class="bm-id"><div class="bm-eb">'+escapeHtml(n.rtype||'資源')+'</div></div><div class="bm-topend">'+more+'</div></div><div class="bm-nm">'+escapeHtml(n.name||'未命名')+'</div>'+(where?'<div class="bm-mid">'+escapeHtml(where)+'</div>':'')+'<div class="bm-ft"><span></span><span>'+escapeHtml(n.maintainer||'')+'</span></div>';
   }
-  const more=k==='hy'?'':'<button type="button" class="bm-more" data-more="'+escapeHtml(n.id)+'" aria-label="'+escapeHtml((n.name||'')+' 選單')+'">⋯</button>';
   const label=(k==='hy'?'中心：HY':(BM.KINDS[k]||'')+'：'+(n.name||''));
-  return '<div class="'+cls+'" style="'+style+'" data-id="'+escapeHtml(n.id)+'" tabindex="0" role="button" aria-label="'+escapeHtml(label)+(stale?'（待更新）':'')+'" aria-pressed="'+(n.id===bmSelected)+'"><div class="bm-shape">'+inner+'</div>'+more+'</div>';
+  return '<div class="'+cls+'" style="'+style+'" data-id="'+escapeHtml(n.id)+'" tabindex="0" role="button" aria-label="'+escapeHtml(label)+(stale?'（待更新）':'')+'" aria-pressed="'+(n.id===bmSelected)+'"><div class="bm-shape">'+inner+'</div></div>';
 }
 function bmLegendHtml(map){
   return map.nodes.filter(n=>n.kind!=='hy').map(n=>{const a=BM.accentFor(n,map);return '<span><i style="background:'+a.main+'"></i>'+escapeHtml(n.name||'')+'</span>'}).join('');
@@ -1356,6 +1359,9 @@ function bmPlace(only){
 function bmApplyView(animate){
   const w=document.getElementById('bmWorld');
   w.classList.toggle('is-animating',!!animate);
+  const s=bmView.scale>0?bmView.scale:1;
+  // 間距在縮放前的座標。畫面距離 = max(8px×scale, 6px)，門檻 4px。
+  w.style.setProperty('--bm-gap',Math.max(8,6/s)+'px');
   w.style.transform='translate('+bmView.tx+'px,'+bmView.ty+'px) scale('+bmView.scale+')';
   if(animate)setTimeout(()=>w.classList.remove('is-animating'),300);
 }

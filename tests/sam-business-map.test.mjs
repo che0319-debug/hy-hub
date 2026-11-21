@@ -451,6 +451,30 @@ test('edge labels keep at least 6px of screen clearance after fit', () => {
   }
 })
 
+test('menu button and status pill stay apart by at least 4px on screen', () => {
+  const html = readFileSync(new URL('../public/sam-dashboard.html', import.meta.url), 'utf8')
+  assert.match(html, /\.bm-topend\{display:flex;align-items:flex-start;gap:var\(--bm-gap,8px\);flex:none\}/)
+  assert.match(html, /\.bm-id\{min-width:0;flex:1\}/)
+  assert.match(html, /\.bm-more\{position:static;width:28px;height:28px;min-width:28px;min-height:28px;/)
+  assert.equal(html.includes('position:absolute;top:8px;right:8px'), false)
+  assert.match(html, /\.bm-list \.bm-more\{width:44px;height:44px;min-width:44px;min-height:44px\}/)
+  assert.match(html, /<div class="bm-topend">'\+more\+status\+'<\/div>/)
+  assert.match(html, /<div class="bm-topend">'\+more\+'<\/div>/)
+  assert.match(html, /<div class="bm-shape">'\+inner\+'<\/div><\/div>'/)
+  assert.equal(html.includes("'</div>'+more+'</div>'"), false)
+  assert.match(html, /w\.style\.setProperty\('--bm-gap',Math\.max\(8,6\/s\)\+'px'\)/)
+  // 畫面間距 = max(8×scale, 6)。任何正縮放都 ≥6px，高於 4px 門檻。
+  function screenGap(scale) {
+    const s = scale > 0 ? scale : 1
+    return Math.max(8, 6 / s) * s
+  }
+  for (const scale of [0.2, 0.381, 0.622, 0.637, 0.852, 0.867, 0.887, 1, 1.093, 1.8]) {
+    const gap = screenGap(scale)
+    assert.ok(gap >= 6 - 1e-9, scale + ' screen gap ' + gap)
+    assert.equal(Math.max(8 * (scale > 0 ? scale : 1), 6), gap)
+  }
+})
+
 test('DIVIOS card uses the user-confirmed legal entity 帝爾 90895872, with unknowns kept unknown', () => {
   const M = load()
   const { map } = M.ensureMap({})
