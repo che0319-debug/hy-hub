@@ -32,7 +32,28 @@ export const RADIO_FIELDS = [
   'P1', 'P2', 'P3', 'P4', 'P5', 'P6',
 ];
 
-const RADIO = new Set(RADIO_FIELDS);
+export const CORE_OWNERS = ['hy', '950157', 'family', 'sam'];
+
+export function resolveOwner(value) {
+  return CORE_OWNERS.includes(value) ? value : 'hy';
+}
+
+// Screenshots and local checks may point the weekly tab at a loopback API.
+// Anything else stays on the page's own API so a query string cannot redirect the token.
+export function localApiBase(fallback, search, stored) {
+  try {
+    const params = new URLSearchParams(search || '');
+    const raw = params.get('api') || stored || '';
+    if (!raw) return fallback || '';
+    const url = new URL(raw, 'http://127.0.0.1/');
+    if (url.protocol === 'http:' && (url.hostname === 'localhost' || url.hostname === '127.0.0.1')) {
+      return url.origin;
+    }
+  } catch (error) {
+    return fallback || '';
+  }
+  return fallback || '';
+}
 
 export function taipeiISOWeek(date = new Date()) {
   const parts = new Intl.DateTimeFormat('en-US', {
@@ -114,21 +135,13 @@ export function applyFields(form, fields) {
 }
 
 export function ensureWeeklyFields(fields) {
-  const source = fields && typeof fields === 'object' ? fields : {};
+  const source = fields && typeof fields === 'object' && !Array.isArray(fields) ? fields : {};
   const out = {};
-  for (const name of WEEKLY_FIELDS) {
-    if (!Object.prototype.hasOwnProperty.call(source, name)) {
-      out[name] = null;
-      continue;
-    }
+  for (const name of Object.keys(source)) {
     const value = source[name];
-    if (RADIO.has(name)) {
-      out[name] = value == null || value === '' ? null : String(value);
-    } else if (value == null) {
-      out[name] = null;
-    } else {
-      out[name] = String(value);
-    }
+    if (value == null) out[name] = null;
+    else if (typeof value === 'string') out[name] = value;
+    else out[name] = value;
   }
   return out;
 }
@@ -163,12 +176,22 @@ export function compactLatestLine(latest) {
   return '最新回應 ' + (when ? when + '（台北）' : '（台北）') + '· 已填 ' + summary.answered + '/' + summary.total;
 }
 
+export function officeStatusLine(office) {
+  if (!office || typeof office !== 'object') return '';
+  if (office.ok === false) return '回應已存，Office 開案失敗';
+  const id = typeof office.project_id === 'string' ? office.project_id.trim() : '';
+  if (office.ok !== true || !/^p-[A-Za-z0-9-]{1,32}$/.test(id)) return '';
+  if (office.action === 'logged') return '已記到 Office ' + id;
+  return '已在 Office 開案 ' + id;
+}
+
 export function acceptResponseMessage(event, iframeWindow, expected) {
   if (!iframeWindow || !event || event.source !== iframeWindow) return null;
   const data = event.data;
   if (!data || typeof data !== 'object') return null;
   if (data.type !== RESPONSE_TYPE) return null;
-  if (!expected || data.week !== expected.week || data.owner !== 'hy' || expected.owner !== 'hy') return null;
+  if (!expected || data.week !== expected.week) return null;
+  if (data.owner !== expected.owner) return { rejected: 'owner_mismatch' };
   if (!data.fields || typeof data.fields !== 'object' || Array.isArray(data.fields)) return null;
   return { week: data.week, owner: data.owner, fields: data.fields };
 }

@@ -11,6 +11,9 @@ import {
   collectFields,
   compactLatestLine,
   ensureWeeklyFields,
+  localApiBase,
+  officeStatusLine,
+  resolveOwner,
   taipeiISOWeek,
 } from '../public/hy-ui/weekly-embed-bridge.js'
 
@@ -74,8 +77,8 @@ test('collects all 52 W47 fields and leaves unselected radios null', () => {
   assert.equal(stored.D3, null)
   assert.equal(stored.D6_once, null)
   assert.equal(stored.D1, '2')
-  assert.equal(ensureWeeklyFields({ D1: '2', extra: 'no' }).extra, undefined)
-  assert.equal(ensureWeeklyFields({}).D12, null)
+  assert.equal(ensureWeeklyFields({ D1: '2', X1: '加一題' }).X1, '加一題')
+  assert.equal('D12' in ensureWeeklyFields({}), false)
 })
 
 test('checkbox groups and refill round-trip', () => {
@@ -147,9 +150,95 @@ test('compact latest line is one short Taipei summary', () => {
   assert.equal(compactLatestLine(latest), '最新回應 2026-11-21 13:35（台北）· 已填 4/6')
   assert.equal(
     compactLatestLine({ ...latest, fields: ensureWeeklyFields(latest.fields) }),
-    '最新回應 2026-11-21 13:35（台北）· 已填 4/52',
+    '最新回應 2026-11-21 13:35（台北）· 已填 4/6',
   )
   assert.equal(compactLatestLine(null), '')
+})
+
+test('office line follows the submit result and stays blank without it', () => {
+  assert.equal(officeStatusLine(undefined), '')
+  assert.equal(officeStatusLine(null), '')
+  assert.equal(officeStatusLine({}), '')
+  assert.equal(officeStatusLine({ ok: true, project_id: 'p-014', action: 'opened' }), '已在 Office 開案 p-014')
+  assert.equal(officeStatusLine({ ok: true, project_id: 'p-021', action: 'followup' }), '已在 Office 開案 p-021')
+  assert.equal(officeStatusLine({ ok: true, project_id: 'p-014', action: 'logged' }), '已記到 Office p-014')
+  assert.equal(officeStatusLine({ ok: false, reason: 'brain_write_failed' }), '回應已存，Office 開案失敗')
+  assert.equal(officeStatusLine({ ok: true, project_id: '先不要排的秘密' }), '')
+  const page = fs.readFileSync(new URL('../public/hy-ui/weekly-embed-page.js', import.meta.url), 'utf8')
+  const html = fs.readFileSync(new URL('../public/personal-dashboard.html', import.meta.url), 'utf8')
+  assert.match(page, /officeStatusLine/)
+  assert.match(page, /renderOffice\(data\.office\)/)
+  assert.match(html, /id="weeklyOffice"/)
+})
+
+test('a form with its own fields collects, refills, and counts those fields', () => {
+  const sample = form([
+    { name: 'A1', type: 'radio', value: '做' },
+    { name: 'A1', type: 'radio', value: '不做' },
+    { name: 'note', type: 'textarea', tag: 'TEXTAREA', value: '' },
+    { name: 'X1', type: 'textarea', tag: 'TEXTAREA', value: '加一題' },
+  ])
+  const fields = collectFields(sample)
+  assert.deepEqual(fields, { A1: null, note: '', X1: '加一題' })
+  assert.equal('D1' in fields, false)
+  applyFields(sample, { A1: '做', note: '小因', X1: null, D12: '不該出現' })
+  assert.deepEqual(collectFields(sample), { A1: '做', note: '小因', X1: '' })
+  const stored = ensureWeeklyFields(fields)
+  assert.deepEqual(Object.keys(stored), ['A1', 'note', 'X1'])
+  assert.equal(
+    compactLatestLine({ submitted_at_taipei: '2026-11-21T13:35:57+08:00', submitted_by: 'hy', fields: stored }),
+    '最新回應 2026-11-21 13:35（台北）· 已填 1/3',
+  )
+})
+
+test('page owner is a parameter and a mismatched form owner is refused', () => {
+  assert.equal(resolveOwner('950157'), '950157')
+  assert.equal(resolveOwner('family'), 'family')
+  assert.equal(resolveOwner('sam'), 'sam')
+  assert.equal(resolveOwner('hy'), 'hy')
+  assert.equal(resolveOwner('nana'), 'hy')
+  assert.equal(resolveOwner(undefined), 'hy')
+  assert.equal(localApiBase('https://hy-agent-v2.onrender.com', '?api=http://127.0.0.1:8765', ''), 'http://127.0.0.1:8765')
+  assert.equal(localApiBase('https://hy-agent-v2.onrender.com', '?api=https://evil.example', ''), 'https://hy-agent-v2.onrender.com')
+  assert.equal(localApiBase('https://hy-agent-v2.onrender.com', '', 'http://localhost:9'), 'http://localhost:9')
+  const frame = {}
+  const fields = { X1: '加一題', A1: null }
+  assert.deepEqual(acceptResponseMessage(
+    { source: frame, data: { type: 'hy-weekly-response', week: '2026-W47', owner: 'family', fields } },
+    frame,
+    { week: '2026-W47', owner: 'family' },
+  ), { week: '2026-W47', owner: 'family', fields })
+  assert.deepEqual(acceptResponseMessage(
+    { source: frame, data: { type: 'hy-weekly-response', week: '2026-W47', owner: 'hy', fields } },
+    frame,
+    { week: '2026-W47', owner: '950157' },
+  ), { rejected: 'owner_mismatch' })
+  const page = fs.readFileSync(new URL('../public/hy-ui/weekly-embed-page.js', import.meta.url), 'utf8')
+  assert.match(page, /resolveOwner\(window\.WEEKLY_EMBED_OWNER\)/)
+  assert.match(page, /owner_mismatch/)
+  assert.match(page, /這份週報的 owner 和這個頁面不符，沒有送出/)
+  assert.match(page, /encodeURIComponent\(state\.owner\)/)
+  assert.equal(page.includes('已填 52'), false)
+  assert.equal(page.includes('/52'), false)
+  const embedCss = /#tab-weekly \.weekly-wrap \{[^}]*max-width:\s*none/
+  for (const [file, owner] of [
+    ['950157-dashboard.html', '950157'],
+    ['family-dashboard.html', 'family'],
+    ['sam-dashboard.html', 'sam'],
+  ]) {
+    const html = fs.readFileSync(new URL('../public/' + file, import.meta.url), 'utf8')
+    assert.match(html, new RegExp("WEEKLY_EMBED_OWNER = '" + owner + "'"))
+    assert.match(html, /hy-ui\/weekly-embed-page\.js/)
+    assert.match(html, /id="weeklyFrame"/)
+    assert.match(html, /id="weeklyOffice"/)
+    assert.match(html, /id="weeklyLatest"/)
+    assert.match(html, /sandbox="allow-scripts allow-forms"/)
+    assert.equal(html.includes('allow-same-origin'), false)
+    assert.equal(html.includes('id="weeklySelect"'), false)
+    assert.equal(html.includes('id="weekSelect"'), false)
+    assert.match(html, embedCss)
+    assert.match(html, /本週週報還沒放上來|weeklyEmptyTitle/)
+  }
 })
 
 test('weekly tab drops the week picker and fills the page width', () => {

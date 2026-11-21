@@ -628,6 +628,15 @@ input[type="date"] { color-scheme: light; }
   .bb-dialog-body{grid-template-columns:1fr}
 }
 .strategy-suggestion-text { font-size:13px; color:var(--text-muted); line-height:1.7; }
+#tab-weekly.active { overflow-y:auto; }
+#tab-weekly .weekly-wrap { padding:8px 8px 16px; width:100%; max-width:none; }
+#tab-weekly .weekly-empty { padding:12px 4px 8px; }
+#tab-weekly .weekly-empty-title { font-size:16px; font-weight:700; color:var(--text); margin-bottom:8px; }
+#tab-weekly .weekly-empty p { font-size:13px; color:var(--text-muted); line-height:1.6; }
+#tab-weekly .weekly-embed-frame { width:100%; overflow:hidden; }
+#tab-weekly .weekly-embed-frame iframe { display:block; width:100%; height:0; min-height:0; border:0; background:var(--card-bg); overflow:hidden; }
+#tab-weekly .weekly-latest { margin:0 0 6px; padding:0 2px; font-size:12px; color:var(--text-muted); line-height:1.4; }
+#tab-weekly .weekly-loading { text-align:left; padding:12px 4px; }
 @media (max-width:767px) {
   .board-wrap { scroll-snap-type:x mandatory; -webkit-overflow-scrolling:touch; padding:12px; }
   .column { scroll-snap-align:start; min-width:85vw; width:85vw; }
@@ -659,7 +668,7 @@ input[type="date"] { color-scheme: light; }
 <div class="tabs">
   <div class="tab active" onclick="switchTab('progress')">📊 進度追蹤</div>
   <div class="tab" onclick="switchTab('map')">🕸️ 事業版圖</div>
-  <div class="tab" onclick="switchTab('weekly')">📅 週覆盤</div>
+  <div class="tab" data-tab="weekly" onclick="switchTab('weekly')">📅 週覆盤</div>
 </div>
 
 <!-- TAB 1: PROGRESS -->
@@ -749,54 +758,17 @@ input[type="date"] { color-scheme: light; }
 <!-- TAB 2: WEEKLY -->
 <div class="tab-content" id="tab-weekly">
   <div class="weekly-wrap">
-    <div class="weekly-header-row">
-      <div class="section-title" style="margin:0">📅 週覆盤</div>
-      <div class="weekly-controls">
-        <select id="weekSelect" onchange="loadWeeklyPackage(this.value)">
-          <option value="latest">載入中...</option>
-        </select>
-        <button class="btn btn-outline" onclick="downloadMarkdown()">📥 下載 Markdown</button>
-        <button class="btn btn-blue" id="coworkBtn" onclick="openCowork()" style="display:none">🔗 開啟 Cowork</button>
+    <div id="weeklyContent">
+      <div id="weeklyStatus" class="weekly-loading">載入中…</div>
+      <div id="weeklyEmpty" class="weekly-empty" hidden>
+        <div id="weeklyEmptyTitle" class="weekly-empty-title"></div>
+        <p id="weeklyEmptyBody"></p>
       </div>
-    </div>
-
-    <div id="weeklyLoading" style="text-align:center;padding:48px;color:var(--text-muted)">⏳ 載入週包中...</div>
-    <div id="weeklyContent" style="display:none">
-
-      <!-- 摘要卡片 -->
-      <div class="weekly-summary-grid" id="weeklySummary"></div>
-
-      <!-- Milestone 變化 -->
-      <div class="weekly-card">
-        <div class="weekly-card-title">📝 本週 Milestone 變化</div>
-        <div id="weeklyChanges"></div>
+      <div id="weeklyLatest" class="weekly-latest" hidden></div>
+      <div id="weeklyOffice" class="weekly-latest" hidden></div>
+      <div class="weekly-embed-frame">
+        <iframe id="weeklyFrame" title="本週週報" sandbox="allow-scripts allow-forms" referrerpolicy="no-referrer" scrolling="no" hidden></iframe>
       </div>
-
-      <!-- 4 週趨勢 -->
-      <div class="weekly-card">
-        <div class="weekly-card-title">📈 近 4 週趨勢</div>
-        <div id="weeklyTrend"></div>
-      </div>
-
-      <!-- 下週預覽 -->
-      <div class="weekly-card">
-        <div class="weekly-card-title" id="weeklyNextTitle">📅 下週預覽</div>
-        <div id="weeklyUpcoming"></div>
-        <div id="weeklyNextCal" style="margin-top:16px"></div>
-      </div>
-
-      <!-- 風險偵測 -->
-      <div class="weekly-card weekly-risk-card" id="weeklyRiskCard">
-        <div class="weekly-card-title">⚠️ 風險偵測</div>
-        <div id="weeklyRisks"></div>
-      </div>
-
-      <!-- 長期停滯 -->
-      <div class="weekly-card">
-        <div class="weekly-card-title">🐢 長期停滯 Milestone</div>
-        <div id="weeklyStalled"></div>
-      </div>
-
     </div>
   </div>
 </div>
@@ -1026,148 +998,8 @@ function renderFuturesTab(p) {
 let weeklyData = null;
 let weeklyInited = false;
 
-async function initWeeklyTab() {
-  if (weeklyInited) return;
-  weeklyInited = true;
-  await loadWeeklyList();
-  await loadWeeklyPackage('latest');
-}
-
-async function loadWeeklyList() {
-  try {
-    // TODO 批次 2：確認 Sam 週包 type 名稱（目前暫用 type=sam，endpoint 待批次 2 建立）
-    const res = await fetch(API + '/api/weekly-package/list?type=sam&limit=12');
-    const json = await res.json();
-    const sel = document.getElementById('weekSelect');
-    sel.innerHTML = '';
-    (json.packages || []).forEach(p => {
-      const opt = document.createElement('option');
-      opt.value = p.week_id;
-      opt.textContent = `${p.week_id} (${p.date_range})`;
-      sel.appendChild(opt);
-    });
-    if (!json.packages || !json.packages.length) {
-      sel.innerHTML = '<option value="latest">尚無週包</option>';
-    }
-  } catch(e) {
-    console.error('loadWeeklyList error', e);
-  }
-}
-
-async function loadWeeklyPackage(weekId) {
-  document.getElementById('weeklyLoading').style.display = 'block';
-  document.getElementById('weeklyContent').style.display = 'none';
-  try {
-    // TODO 批次 2：確認 Sam 週包 type 名稱（目前暫用 type=sam，endpoint 待批次 2 建立）
-    const res = await fetch(API + `/api/weekly-package?type=sam&week=${weekId}`);
-    if (!res.ok) { document.getElementById('weeklyLoading').textContent = '尚無週包資料，請先觸發產出。'; return; }
-    weeklyData = await res.json();
-    renderWeeklyPackage(weeklyData);
-    document.getElementById('weeklyLoading').style.display = 'none';
-    document.getElementById('weeklyContent').style.display = 'block';
-  } catch(e) {
-    document.getElementById('weeklyLoading').textContent = '載入失敗：' + e.message;
-  }
-}
-
-function renderWeeklyPackage(pkg) {
-  const s = pkg.summary || {};
-  const dr = pkg.date_range || {};
-
-  // 摘要卡片
-  document.getElementById('weeklySummary').innerHTML = [
-    { num: s.completed_milestones ?? 0, label: 'Milestone 完成' },
-    { num: s.completed_tasks ?? 0,      label: '任務完成' },
-    { num: (s.meeting_hours ?? 0) + 'h', label: '開會時數' },
-    { num: (s.deep_work_hours ?? 0) + 'h', label: '深度工作' },
-    { num: s.risks_count ?? 0,           label: '風險項目' },
-    { num: s.stalled_count ?? 0,         label: '停滯 Milestone' },
-  ].map(c => `<div class="weekly-stat-card">
-    <div class="weekly-stat-num">${c.num}</div>
-    <div class="weekly-stat-label">${c.label}</div>
-  </div>`).join('');
-
-  // Milestone 變化
-  const changes = pkg.milestone_changes || [];
-  if (changes.length) {
-    const byProject = {};
-    changes.forEach(c => { (byProject[c.project_name] = byProject[c.project_name] || []).push(c); });
-    document.getElementById('weeklyChanges').innerHTML = Object.entries(byProject).map(([pname, cs]) => `
-      <div style="margin-bottom:12px"><strong>${escHtml(pname)}</strong></div>
-      ${cs.map(c => {
-        let txt = '';
-        if (c.type === 'added') txt = `${c.date} ➕ 新增：${c.milestone_title}`;
-        else if (c.type === 'removed') txt = `${c.date} ✅ 完成（刪除）：${c.milestone_title}`;
-        else if (c.field === 'due') txt = `${c.date} ${c.milestone_title} due 更新：${c.old_value} → ${c.new_value}`;
-        else txt = `${c.date} ${c.milestone_title}（${c.field} 更新）`;
-        return `<div class="weekly-change-item">${escHtml(txt)}</div>`;
-      }).join('')}
-    `).join('');
-  } else {
-    document.getElementById('weeklyChanges').innerHTML = '<div class="weekly-empty">本週無 milestone 變化</div>';
-  }
-
-  // 4 週趨勢
-  const trend = pkg.trend_4weeks || [];
-  document.getElementById('weeklyTrend').innerHTML = trend.length ? `
-    <table class="weekly-table">
-      <tr><th>週次</th><th>Milestone 完成</th><th>變化次數</th></tr>
-      ${trend.map(t => `<tr><td>${escHtml(t.week_id)} (${escHtml(t.date_range)})</td><td>${t.milestone_completed}</td><td>${t.changes}</td></tr>`).join('')}
-    </table>` : '<div class="weekly-empty">無趨勢資料</div>';
-
-  // 下週預覽
-  const nw = pkg.next_week || {};
-  const upcoming = nw.upcoming_milestones || [];
-  document.getElementById('weeklyNextTitle').textContent = `📅 下週預覽（預估開會 ${(nw.estimated_hours||{}).meeting||0}h / 深度工作 ${(nw.estimated_hours||{}).deep_work||0}h）`;
-  document.getElementById('weeklyUpcoming').innerHTML = upcoming.length ? `
-    <table class="weekly-table">
-      <tr><th>due</th><th>專案</th><th>Milestone</th><th>距今</th></tr>
-      ${upcoming.map(m => `<tr><td>${escHtml(m.due)}</td><td>${escHtml(m.project)}</td><td>${escHtml(m.title)}</td><td>${m.days_left} 天</td></tr>`).join('')}
-    </table>` : '<div class="weekly-empty">下週無到期 milestone</div>';
-
-  const nwcal = (nw.calendar || []).filter(d => !['週六','週日'].includes(d.weekday));
-  document.getElementById('weeklyNextCal').innerHTML = nwcal.length ? `
-    <table class="weekly-table">
-      <tr><th>日期</th><th>開會時數</th><th>主要事件</th></tr>
-      ${nwcal.map(d => `<tr><td>${escHtml(d.date)} ${escHtml(d.weekday)}</td><td>${d.meeting_hours}h</td><td>${escHtml((d.events||[]).slice(0,2).join('、') || '—')}</td></tr>`).join('')}
-    </table>` : '';
-
-  // 風險
-  const risks = pkg.risks || [];
-  document.getElementById('weeklyRiskCard').style.display = risks.length ? 'block' : 'none';
-  document.getElementById('weeklyRisks').innerHTML = risks.map(r => `
-    <div class="weekly-risk-item">
-      <span class="${r.level === 'high' ? 'risk-high' : 'risk-medium'}">${r.level === 'high' ? '🔴' : '🟡'} ${escHtml(r.message)}</span>
-      ${(r.items||[]).map(i => `<div style="padding-left:16px;color:var(--text-muted);font-size:12px">• ${escHtml(i)}</div>`).join('')}
-    </div>`).join('');
-
-  // 停滯
-  const stalled = pkg.stalled_milestones || [];
-  document.getElementById('weeklyStalled').innerHTML = stalled.length ? `
-    <table class="weekly-table">
-      <tr><th>專案</th><th>Milestone</th><th>上次更新</th><th>停滯天數</th></tr>
-      ${stalled.map(s => `<tr><td>${escHtml(s.project)}</td><td>${escHtml(s.title)}</td><td>${escHtml(s.last_update)}</td><td>${s.days_stalled} 天</td></tr>`).join('')}
-    </table>` : '<div class="weekly-empty">無長期停滯 milestone</div>';
-
-  // Cowork 按鈕
-  const coworkBtn = document.getElementById('coworkBtn');
-  coworkBtn.style.display = 'none'; // 預設隱藏，有 URL 才顯示
-}
-
-function downloadMarkdown() {
-  if (!weeklyData || !weeklyData.raw_markdown) return;
-  const blob = new Blob([weeklyData.raw_markdown], { type: 'text/markdown;charset=utf-8' });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = `${weeklyData.week_id || 'weekly'}.md`;
-  a.click();
-  URL.revokeObjectURL(url);
-}
-
-function openCowork() {
-  // COWORK_URL will be injected server-side in future; for now noop if no url
-  if (weeklyData && weeklyData._cowork_url) window.open(weeklyData._cowork_url, '_blank');
+function initWeeklyTab() {
+  // 週覆盤改由 hy-ui/weekly-embed-page.js。不要再打舊的週包 API。
 }
 
 // ── DATE HELPERS ─────────────────────────────────
@@ -2104,13 +1936,10 @@ loadData();
   const tab = params.get('tab');
   if (tab && ['progress','map','weekly','strategy'].includes(tab)) {
     switchTab(tab);
-    const week = params.get('week');
-    if (tab === 'weekly' && week) {
-      // 等 init 完成後再載入指定週
-      setTimeout(() => loadWeeklyPackage(week), 500);
-    }
   }
 })();
 </script>
+<script>window.WEEKLY_EMBED_OWNER = 'sam';</script>
+<script type="module" src="./hy-ui/weekly-embed-page.js"></script>
 </body>
 </html>

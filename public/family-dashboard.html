@@ -145,6 +145,14 @@ header { background:var(--header-bg); padding:0 24px; display:flex; align-items:
 
 /* ══════════════ WEEKLY REVIEW ══════════════ */
 #tab-weekly.active { overflow-y:auto; }
+#tab-weekly .weekly-wrap { padding:8px 8px 16px; width:100%; max-width:none; }
+#tab-weekly .weekly-empty { padding:12px 4px 8px; }
+#tab-weekly .weekly-empty-title { font-size:16px; font-weight:700; color:var(--text); margin-bottom:8px; }
+#tab-weekly .weekly-empty p { font-size:13px; color:var(--text-muted); line-height:1.6; }
+#tab-weekly .weekly-embed-frame { width:100%; overflow:hidden; }
+#tab-weekly .weekly-embed-frame iframe { display:block; width:100%; height:0; min-height:0; border:0; background:var(--card-bg); overflow:hidden; }
+#tab-weekly .weekly-latest { margin:0 0 6px; padding:0 2px; font-size:12px; color:var(--text-muted); line-height:1.4; }
+#tab-weekly .weekly-loading { text-align:left; padding:12px 4px; }
 .weekly-wrap { padding:20px 24px 48px; max-width:900px; }
 .weekly-toolbar { display:flex; align-items:center; gap:10px; margin-bottom:16px; flex-wrap:wrap; }
 .weekly-toolbar label { font-size:13px; font-weight:600; color:var(--text-muted); }
@@ -337,15 +345,18 @@ header { background:var(--header-bg); padding:0 24px; display:flex; align-items:
 <!-- 週覆盤 -->
 <div class="tab-content" id="tab-weekly">
   <div class="weekly-wrap">
-    <div class="weekly-toolbar">
-      <label>週次：</label>
-      <select class="weekly-select" id="weeklySelect"></select>
-      <div class="weekly-actions">
-        <button class="btn" id="weeklyDownloadBtn" style="display:none">⬇ 下載 Markdown</button>
-        <button class="btn btn-blue" id="weeklyCoworkBtn" style="display:none">🤝 開啟 Cowork</button>
+    <div id="weeklyContent">
+      <div id="weeklyStatus" class="weekly-loading">載入中…</div>
+      <div id="weeklyEmpty" class="weekly-empty" hidden>
+        <div id="weeklyEmptyTitle" class="weekly-empty-title"></div>
+        <p id="weeklyEmptyBody"></p>
+      </div>
+      <div id="weeklyLatest" class="weekly-latest" hidden></div>
+      <div id="weeklyOffice" class="weekly-latest" hidden></div>
+      <div class="weekly-embed-frame">
+        <iframe id="weeklyFrame" title="本週週報" sandbox="allow-scripts allow-forms" referrerpolicy="no-referrer" scrolling="no" hidden></iframe>
       </div>
     </div>
-    <div id="weeklyContent"><div class="weekly-loading">選擇週次以載入資料…</div></div>
   </div>
 </div>
 
@@ -843,209 +854,7 @@ document.getElementById('refreshBtn').addEventListener('click', loadData);
 document.getElementById('saveBtn').addEventListener('click', triggerSave);
 loadData();
 
-// ══════════════ WEEKLY REVIEW ══════════════
-var weeklyData = null;
-
-function renderWeekly(data) {
-  weeklyData = data;
-  var s       = data.summary        || {};
-  var kanban  = data.kanban         || {};
-  var cal     = data.calendar_stats || {};
-  var members = data.member_updates || {};
-  var nw      = data.next_week      || {};
-  var stale   = data.stale_items    || [];
-  var coworkUrl = data.cowork_url   || '';
-
-  var dlBtn = document.getElementById('weeklyDownloadBtn');
-  var coBtn = document.getElementById('weeklyCoworkBtn');
-  dlBtn.style.display = data.raw_markdown ? '' : 'none';
-  coBtn.style.display = coworkUrl ? '' : 'none';
-  coBtn.onclick = function(){ window.open(coworkUrl, '_blank'); };
-
-  var html = '';
-
-  // 摘要卡片
-  html += '<div class="wk-stat-grid">';
-  [
-    { num: s.tasks_new   || 0,           label: 'kanban 本週新增' },
-    { num: s.tasks_done  || 0,           label: 'kanban 本週完成' },
-    { num: s.tasks_stale || 0,           label: 'kanban 停滯' },
-    { num: s.event_count || 0,           label: '家庭活動場數' },
-    { num: (s.total_hours || 0) + 'h',   label: '家庭活動時數' },
-    { num: s.member_update_count || 0,   label: '成員狀態更新' },
-  ].forEach(function(st){
-    html += '<div class="wk-stat-card"><div class="wk-stat-num">'+esc(st.num)+'</div><div class="wk-stat-label">'+esc(st.label)+'</div></div>';
-  });
-  html += '</div>';
-
-  // kanban 變化
-  html += '<div class="wk-section"><div class="wk-section-title">📋 kanban 變化</div>';
-  var knNew  = kanban.new             || [];
-  var knDone = kanban.done            || [];
-  var knStale= kanban.stale           || [];
-  var knPend = kanban.pending_execute || [];
-
-  html += '<div class="wk-sub">本週新增</div>';
-  if (knNew.length) {
-    html += '<ul class="wk-list">';
-    knNew.forEach(function(ms){ html += '<li><span class="wk-item-title">'+esc(ms.title)+'</span><span class="wk-item-meta">'+esc(ms.project_name+(ms.due?' · '+ms.due:''))+'</span></li>'; });
-    html += '</ul>';
-  } else { html += '<div style="font-size:13px;color:var(--text-dim);">（無）</div>'; }
-
-  html += '<div class="wk-sub" style="margin-top:12px;">本週完成</div>';
-  if (knDone.length) {
-    html += '<ul class="wk-list">';
-    knDone.forEach(function(ms){ html += '<li><span class="wk-item-title">'+esc(ms.title)+' ✅</span><span class="wk-item-meta">'+esc(ms.project_name)+'</span></li>'; });
-    html += '</ul>';
-  } else { html += '<div style="font-size:13px;color:var(--text-dim);">（無）</div>'; }
-
-  html += '<div class="wk-sub" style="margin-top:12px;">停滯（連續兩週未推進）</div>';
-  if (kanban.first_run) {
-    html += '<div style="font-size:13px;color:var(--text-dim);">首次產出，無歷史可比對</div>';
-  } else if (knStale.length) {
-    html += '<ul class="wk-list">';
-    knStale.forEach(function(ms){ html += '<li><span class="wk-item-title">'+esc(ms.title)+'</span><span class="wk-item-meta">'+esc(ms.project_name+(ms.due?' · '+ms.due:''))+'</span></li>'; });
-    html += '</ul>';
-  } else { html += '<div style="font-size:13px;color:var(--text-dim);">（無）</div>'; }
-
-  if (knPend.length) {
-    html += '<div class="wk-sub" style="margin-top:12px;">等待 HY 確認 <span class="wk-tag-pending">pending</span></div>';
-    html += '<ul class="wk-list">';
-    knPend.forEach(function(ms){ html += '<li><span class="wk-item-title">'+esc(ms.title)+'</span><span class="wk-item-meta">'+esc(ms.project_name)+'</span></li>'; });
-    html += '</ul>';
-  }
-  html += '</div>';
-
-  // 行事曆實況
-  html += '<div class="wk-section"><div class="wk-section-title">📅 本週家庭行事曆實況</div>';
-  if (cal && cal.total_count !== undefined) {
-    html += '<table class="wk-cal-table"><thead><tr><th>分類</th><th>場數</th><th>時數</th></tr></thead><tbody>';
-    [['pickup','接送相關'],['family','家庭活動'],['medical','醫療/長照'],['other','其他']].forEach(function(c){
-      var d = cal[c[0]] || {};
-      html += '<tr><td>'+esc(c[1])+'</td><td>'+esc(d.count||0)+'</td><td>'+esc(d.hours||0)+'h</td></tr>';
-    });
-    html += '<tr style="font-weight:700;border-top:2px solid var(--border)"><td>合計</td><td>'+esc(cal.total_count)+'</td><td>'+esc(cal.total_hours)+'h</td></tr>';
-    html += '</tbody></table>';
-  } else { html += '<div style="font-size:13px;color:var(--text-dim);">日曆讀取失敗</div>'; }
-  html += '</div>';
-
-  // 成員狀態
-  html += '<div class="wk-section"><div class="wk-section-title">👥 成員狀態變化</div><div class="wk-member-grid">';
-  var memberEntries = Object.entries(members);
-  if (memberEntries.length) {
-    memberEntries.forEach(function(entry){
-      var notes = entry[1] || [];
-      html += '<div class="wk-member-card"><div class="wk-member-name">'+esc(entry[0])+'</div>';
-      if (notes.length) { notes.forEach(function(n){ html += '<div class="wk-member-note">'+esc(n)+'</div>'; }); }
-      else { html += '<div class="wk-member-note" style="color:var(--text-dim);">本週無新紀錄</div>'; }
-      html += '</div>';
-    });
-  } else { html += '<div style="font-size:13px;color:var(--text-dim);">無成員資料</div>'; }
-  html += '</div></div>';
-
-  // 下週關鍵事項
-  var nwStart = (nw.date_range||{}).start||''; var nwEnd = (nw.date_range||{}).end||'';
-  var nwTitle = nwStart ? ' ('+esc(nwStart)+' - '+esc(nwEnd)+')' : '';
-  html += '<div class="wk-section"><div class="wk-section-title">📅 下週關鍵事項'+nwTitle+'</div>';
-  var nwCal = nw.calendar_events||[]; var nwMs = nw.upcoming_milestones||[]; var nwFix = nw.fixed_reminders||[];
-  if (nwCal.length) {
-    html += '<div class="wk-sub">行事曆預告</div><ul class="wk-list">';
-    nwCal.slice(0,10).forEach(function(ev){ html += '<li><span class="wk-item-title">'+esc(ev)+'</span></li>'; });
-    html += '</ul>';
-  }
-  if (nwMs.length) {
-    html += '<div class="wk-sub" style="margin-top:10px;">7天內到期</div><ul class="wk-list">';
-    nwMs.forEach(function(m){ html += '<li><span class="wk-item-title">'+esc(m.title||m)+'</span>'+(m.due?'<span class="wk-item-meta">'+esc(m.due)+'</span>':'')+'</li>'; });
-    html += '</ul>';
-  }
-  if (nwFix.length) {
-    html += '<div class="wk-sub" style="margin-top:10px;">固定提醒</div><ul class="wk-list">';
-    nwFix.forEach(function(r){ html += '<li><span class="wk-item-title">'+esc(r)+'</span></li>'; });
-    html += '</ul>';
-  }
-  if (!nwCal.length && !nwMs.length && !nwFix.length) html += '<div style="font-size:13px;color:var(--text-dim);">無下週資料</div>';
-  html += '</div>';
-
-  // 停滯偵測
-  if (stale.length) {
-    html += '<div class="wk-section"><div class="wk-section-title">⚠ 停滯偵測</div><ul class="wk-list">';
-    stale.forEach(function(it){ html += '<li><span class="wk-item-title">'+esc(it.title)+'</span><span class="wk-item-meta">'+(it.type==='decision'?'決策':'kanban')+'</span></li>'; });
-    html += '</ul></div>';
-  }
-
-  document.getElementById('weeklyContent').innerHTML = html;
-}
-
-function loadWeeklyData(weekId) {
-  document.getElementById('weeklyContent').innerHTML = '<div class="weekly-loading">載入中…</div>';
-  document.getElementById('weeklyDownloadBtn').style.display = 'none';
-  document.getElementById('weeklyCoworkBtn').style.display = 'none';
-  fetch(API + '/api/weekly-package?type=family&week=' + encodeURIComponent(weekId),
-    { cache:'no-store', headers: GET_HEADERS })
-    .then(function(r){ if (!r.ok) throw new Error('HTTP '+r.status); return r.json(); })
-    .then(function(d){ renderWeekly(d); })
-    .catch(function(e){
-      document.getElementById('weeklyContent').innerHTML = '<div class="weekly-loading">⚠ 載入失敗：'+esc(e.message)+'</div>';
-      console.error('[weekly]', e);
-    });
-}
-
-function loadWeeklyList(targetWeek) {
-  fetch(API + '/api/weekly-package/list?type=family', { cache:'no-store', headers: GET_HEADERS })
-    .then(function(r){ if (!r.ok) throw new Error('HTTP '+r.status); return r.json(); })
-    .then(function(data){
-      var weeks = data.packages || data.weeks || [];
-      var sel = document.getElementById('weeklySelect');
-      sel.innerHTML = '';
-      if (!weeks.length) {
-        sel.innerHTML = '<option value="latest">最新</option>';
-      } else {
-        weeks.forEach(function(w){
-          var opt = document.createElement('option');
-          var wid = typeof w === 'string' ? w : (w.week_id || w.week || w);
-          opt.value = wid; opt.textContent = wid;
-          sel.appendChild(opt);
-        });
-      }
-      var found = false;
-      if (targetWeek) {
-        for (var i = 0; i < sel.options.length; i++) {
-          if (sel.options[i].value === targetWeek) { sel.selectedIndex = i; found = true; break; }
-        }
-      }
-      if (!found) sel.selectedIndex = 0;
-      loadWeeklyData(sel.value);
-    })
-    .catch(function(e){
-      document.getElementById('weeklySelect').innerHTML = '<option value="latest">最新</option>';
-      loadWeeklyData('latest');
-      console.error('[weekly list]', e);
-    });
-}
-
-document.getElementById('weeklySelect').addEventListener('change', function(){ loadWeeklyData(this.value); });
-
-document.getElementById('weeklyDownloadBtn').addEventListener('click', function(){
-  if (!weeklyData || !weeklyData.raw_markdown) return;
-  var blob = new Blob([weeklyData.raw_markdown], { type:'text/markdown;charset=utf-8' });
-  var url  = URL.createObjectURL(blob);
-  var a    = document.createElement('a');
-  a.href = url; a.download = (weeklyData.week_id || 'weekly-review') + '.md';
-  document.body.appendChild(a); a.click();
-  document.body.removeChild(a); URL.revokeObjectURL(url);
-});
-
-// URL 深度連結: ?tab=weekly&week=2026-W19
-(function(){
-  var p = new URLSearchParams(window.location.search);
-  if (p.get('tab') === 'weekly') {
-    document.querySelectorAll('.tab').forEach(function(t){ t.classList.remove('active'); });
-    document.querySelectorAll('.tab-content').forEach(function(c){ c.classList.remove('active'); });
-    document.querySelector('[data-tab="weekly"]').classList.add('active');
-    document.getElementById('tab-weekly').classList.add('active');
-    loadWeeklyList(p.get('week') || null);
-  }
-})();
+// 週覆盤改由 hy-ui/weekly-embed-page.js，不再打舊的週包 API。
 
 // ══════════════ FITNESS ══════════════
 var fitData = null;
@@ -1704,5 +1513,7 @@ window.addEventListener('resize', function() {
   }, 150);
 });
 </script>
+<script>window.WEEKLY_EMBED_OWNER = 'family';</script>
+<script type="module" src="./hy-ui/weekly-embed-page.js"></script>
 </body>
 </html>
