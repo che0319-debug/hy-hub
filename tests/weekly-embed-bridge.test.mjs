@@ -4,10 +4,12 @@ import fs from 'node:fs'
 import {
   RADIO_FIELDS,
   WEEKLY_FIELDS,
+  acceptHeightMessage,
   acceptResponseMessage,
   applyFields,
   buildSrcdoc,
   collectFields,
+  compactLatestLine,
   ensureWeeklyFields,
   taipeiISOWeek,
 } from '../public/hy-ui/weekly-embed-bridge.js'
@@ -115,4 +117,54 @@ test('srcdoc bridge is injected without giving the report the parent origin', ()
   assert.match(srcdoc, /__weeklyResponseHandler/)
   const injected = srcdoc.slice(srcdoc.lastIndexOf('<script>'))
   assert.equal(injected.slice(0, injected.lastIndexOf('</script>')).includes('</script'), false)
+})
+
+test('parent accepts height only from the iframe and uses document scrollHeight', () => {
+  const frame = {}
+  const other = {}
+  const event = { source: frame, data: { type: 'hy-weekly-height', height: 1840.4 } }
+  assert.equal(acceptHeightMessage(event, frame), 1841)
+  assert.equal(acceptHeightMessage({ source: frame, data: { type: 'hy-weekly-height', height: 52555 } }, frame), 52555)
+  assert.equal(acceptHeightMessage(event, other), null)
+  assert.equal(acceptHeightMessage({ source: frame, data: { type: 'hy-weekly-response', height: 900 } }, frame), null)
+  assert.equal(acceptHeightMessage({ source: frame, data: { type: 'hy-weekly-height', height: 0 } }, frame), null)
+  assert.equal(acceptHeightMessage({ source: frame, data: { type: 'hy-weekly-height', height: 'tall' } }, frame), null)
+  const srcdoc = buildSrcdoc('<!doctype html><html><body><form id="weekly-response"></form></body></html>')
+  assert.match(srcdoc, /hy-weekly-height/)
+  assert.match(srcdoc, /ResizeObserver/)
+  assert.match(srcdoc, /document\.documentElement/)
+  assert.match(srcdoc, /scrollHeight/)
+  assert.match(srcdoc, /addEventListener\('load'/)
+  assert.match(srcdoc, /document\.images/)
+})
+
+test('compact latest line is one short Taipei summary', () => {
+  const latest = {
+    submitted_at_taipei: '2026-11-21T13:35:57+08:00',
+    submitted_by: 'hy',
+    fields: { D1: '2', D1_note: '先不要排', Q1: '這季算去過了', P1: '做', D3: null, Q2: '' },
+  }
+  assert.equal(compactLatestLine(latest), '最新回應 2026-11-21 13:35（台北）· 已填 4/6')
+  assert.equal(
+    compactLatestLine({ ...latest, fields: ensureWeeklyFields(latest.fields) }),
+    '最新回應 2026-11-21 13:35（台北）· 已填 4/52',
+  )
+  assert.equal(compactLatestLine(null), '')
+})
+
+test('weekly tab drops the week picker and fills the page width', () => {
+  const page = fs.readFileSync(new URL('../public/hy-ui/weekly-embed-page.js', import.meta.url), 'utf8')
+  const html = fs.readFileSync(new URL('../public/personal-dashboard.html', import.meta.url), 'utf8')
+  assert.equal(html.includes('id="weeklySelect"'), false)
+  assert.equal(html.includes('週次：'), false)
+  assert.match(html, /scrolling="no"/)
+  assert.match(html, /overflow:\s*hidden/)
+  assert.match(html, /\.weekly-wrap\s*\{[^}]*max-width:\s*none/)
+  assert.equal(/min-height:\s*70vh/.test(html), false)
+  assert.equal(/max-width:\s*900px/.test(html), false)
+  assert.match(page, /current_week/)
+  assert.equal(page.includes('weeklySelect'), false)
+  assert.equal(page.includes('正在看'), false)
+  assert.match(page, /compactLatestLine/)
+  assert.match(page, /本週週報還沒放上來/)
 })

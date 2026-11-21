@@ -294,14 +294,12 @@ header { background:var(--header-bg); padding:0 24px; display:flex; align-items:
 
 /* ══════════════ WEEKLY REVIEW ══════════════ */
 #tab-weekly.active { overflow-y:auto; }
-.weekly-wrap { padding:20px 24px 48px; max-width:900px; }
+.weekly-wrap { padding:8px 8px 16px; width:100%; max-width:none; }
 .weekly-toolbar { display:flex; align-items:center; gap:10px; margin-bottom:16px; flex-wrap:wrap; }
 .weekly-toolbar label { font-size:13px; font-weight:600; color:var(--text-muted); }
 .weekly-select { background:#fff; border:1.5px solid var(--border); border-radius:6px; color:var(--text); font-size:13px; padding:6px 10px; font-family:'Noto Sans TC',sans-serif; cursor:pointer; }
 .weekly-select:focus { outline:none; border-color:var(--blue); }
 .weekly-actions { margin-left:auto; display:flex; gap:8px; }
-#weeklyDownloadBtn { background:#fff; color:#1a1a1a; border:1.5px solid #6b778c; }
-#weeklyDownloadBtn:hover { background:#f4f5f7; color:#172b4d; border-color:#172b4d; }
 .stat-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:12px; margin-bottom:16px; }
 .stat-card { background:var(--card-bg); border:1px solid var(--border); border-radius:var(--radius); padding:14px 16px; box-shadow:var(--shadow-sm); text-align:center; }
 .stat-num { font-family:'Syne',sans-serif; font-size:28px; font-weight:800; color:var(--blue); line-height:1.1; }
@@ -327,19 +325,23 @@ header { background:var(--header-bg); padding:0 24px; display:flex; align-items:
 .due-item::before { content:''; width:6px; height:6px; border-radius:50%; background:var(--blue); flex-shrink:0; }
 .due-title { flex:1; color:var(--text); }
 .due-date { font-size:11px; color:var(--text-muted); white-space:nowrap; }
-.weekly-loading { text-align:center; padding:48px; color:var(--text-muted); font-size:14px; }
+.weekly-loading { text-align:left; padding:12px 4px; color:var(--text-muted); font-size:13px; }
 .weekly-empty { padding: 12px 4px 8px; }
 .weekly-empty-title { font-size: 16px; font-weight: 700; color: var(--text); margin-bottom: 8px; }
 .weekly-empty p { font-size: 13px; color: var(--text-muted); line-height: 1.6; }
-.weekly-embed-frame iframe { width: 100%; min-height: 70vh; height: 70vh; border: 1px solid var(--border); border-radius: var(--radius); background: var(--card-bg); }
-.weekly-latest { margin: 0 0 16px; }
-.weekly-latest p { font-size: 13px; color: var(--text); margin: 0 0 8px; line-height: 1.5; }
-.weekly-latest-list { list-style: none; display: flex; flex-direction: column; gap: 6px; }
-.weekly-latest-list li { font-size: 13px; color: var(--text); line-height: 1.5; }
-.weekly-k { color: var(--text-muted); margin-right: 8px; font-weight: 700; }
+.weekly-embed-frame { width: 100%; overflow: hidden; }
+.weekly-embed-frame iframe {
+  display: block;
+  width: 100%;
+  height: 0;
+  min-height: 0;
+  border: 0;
+  background: var(--card-bg);
+  overflow: hidden;
+}
+.weekly-latest { margin: 0 0 6px; padding: 0 2px; font-size: 12px; color: var(--text-muted); line-height: 1.4; }
 @media (max-width: 640px) {
-  .weekly-wrap { padding: 12px 12px 40px; }
-  .weekly-select { min-height: 44px; font-size: 16px; }
+  .weekly-wrap { padding: 6px 6px 16px; }
 }
 .cross-stat-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:12px; }
 .cross-stat-card { background:var(--card-bg); border:1px solid var(--border); border-radius:var(--radius); padding:14px 16px; box-shadow:var(--shadow-sm); }
@@ -393,23 +395,15 @@ header { background:var(--header-bg); padding:0 24px; display:flex; align-items:
 <!-- 週覆盤 -->
 <div class="tab-content" id="tab-weekly">
   <div class="weekly-wrap">
-    <div class="weekly-toolbar">
-      <label>週次：</label>
-      <select class="weekly-select" id="weeklySelect"></select>
-      <div class="weekly-actions">
-        <button class="btn btn-ghost" id="weeklyDownloadBtn" style="display:none">⬇ 下載 Markdown</button>
-        <button class="btn btn-blue" id="weeklyCoworkBtn" style="display:none">🤝 開啟 Cowork</button>
-      </div>
-    </div>
     <div id="weeklyContent">
-      <div id="weeklyStatus" class="weekly-loading">選擇週次以載入資料…</div>
+      <div id="weeklyStatus" class="weekly-loading">載入中…</div>
       <div id="weeklyEmpty" class="weekly-empty" hidden>
         <div id="weeklyEmptyTitle" class="weekly-empty-title"></div>
         <p id="weeklyEmptyBody"></p>
       </div>
-      <div id="weeklyLatest" class="section-card weekly-latest" hidden></div>
+      <div id="weeklyLatest" class="weekly-latest" hidden></div>
       <div class="weekly-embed-frame">
-        <iframe id="weeklyFrame" title="本週週報" sandbox="allow-scripts allow-forms" referrerpolicy="no-referrer" hidden></iframe>
+        <iframe id="weeklyFrame" title="本週週報" sandbox="allow-scripts allow-forms" referrerpolicy="no-referrer" scrolling="no" hidden></iframe>
       </div>
     </div>
   </div>
