@@ -155,6 +155,26 @@ export function saveQueue(storage, queue) {
   storage.setItem(QUEUE_KEY, JSON.stringify(normalizeQueue(queue)))
 }
 
+// 只留目前待上架卡的決定。目錄還沒來、不是陣列、或是空的，就原樣留下，避免載入失敗時誤清。
+export function pruneQueueToPending(queue, cards) {
+  const normalized = normalizeQueue(queue)
+  const source = queue && Array.isArray(queue.items) ? queue.items : null
+  const reusable = !!source && source.length === normalized.items.length && source.every((item, index) => {
+    const next = normalized.items[index]
+    return !!item && Object.keys(item).length === 4
+      && item.id === next.id && item.title === next.title
+      && item.decision === next.decision && item.decided_at === next.decided_at
+  })
+  const baseItems = reusable ? source : normalized.items
+  if (!Array.isArray(cards) || cards.length === 0) return { version: 1, items: baseItems }
+  const pendingIds = new Set()
+  for (const card of cards) {
+    if (isPending(card) && typeof card.id === 'string') pendingIds.add(card.id)
+  }
+  if (baseItems.every(item => pendingIds.has(item.id))) return { version: 1, items: baseItems }
+  return { version: 1, items: baseItems.filter(item => pendingIds.has(item.id)) }
+}
+
 export function applyDecision(queue, action) {
   const items = normalizeQueue(queue).items.filter(item => item.id !== action.id)
   if (action.decision === 'approve' || action.decision === 'reject') {
