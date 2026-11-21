@@ -11,6 +11,7 @@ import {
   collectFields,
   compactLatestLine,
   ensureWeeklyFields,
+  officeStatusLine,
   taipeiISOWeek,
 } from '../public/hy-ui/weekly-embed-bridge.js'
 
@@ -150,6 +151,22 @@ test('compact latest line is one short Taipei summary', () => {
     '最新回應 2026-11-21 13:35（台北）· 已填 4/52',
   )
   assert.equal(compactLatestLine(null), '')
+})
+
+test('office line follows the submit result and stays blank without it', () => {
+  assert.equal(officeStatusLine(undefined), '')
+  assert.equal(officeStatusLine(null), '')
+  assert.equal(officeStatusLine({}), '')
+  assert.equal(officeStatusLine({ ok: true, project_id: 'p-014', action: 'opened' }), '已在 Office 開案 p-014')
+  assert.equal(officeStatusLine({ ok: true, project_id: 'p-021', action: 'followup' }), '已在 Office 開案 p-021')
+  assert.equal(officeStatusLine({ ok: true, project_id: 'p-014', action: 'logged' }), '已記到 Office p-014')
+  assert.equal(officeStatusLine({ ok: false, reason: 'brain_write_failed' }), '回應已存，Office 開案失敗')
+  assert.equal(officeStatusLine({ ok: true, project_id: '先不要排的秘密' }), '')
+  const page = fs.readFileSync(new URL('../public/hy-ui/weekly-embed-page.js', import.meta.url), 'utf8')
+  const html = fs.readFileSync(new URL('../public/personal-dashboard.html', import.meta.url), 'utf8')
+  assert.match(page, /officeStatusLine/)
+  assert.match(page, /renderOffice\(data\.office\)/)
+  assert.match(html, /id="weeklyOffice"/)
 })
 
 test('weekly tab drops the week picker and fills the page width', () => {

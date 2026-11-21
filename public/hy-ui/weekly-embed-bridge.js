@@ -163,6 +163,15 @@ export function compactLatestLine(latest) {
   return '最新回應 ' + (when ? when + '（台北）' : '（台北）') + '· 已填 ' + summary.answered + '/' + summary.total;
 }
 
+export function officeStatusLine(office) {
+  if (!office || typeof office !== 'object') return '';
+  if (office.ok === false) return '回應已存，Office 開案失敗';
+  const id = typeof office.project_id === 'string' ? office.project_id.trim() : '';
+  if (office.ok !== true || !/^p-[A-Za-z0-9-]{1,32}$/.test(id)) return '';
+  if (office.action === 'logged') return '已記到 Office ' + id;
+  return '已在 Office 開案 ' + id;
+}
+
 export function acceptResponseMessage(event, iframeWindow, expected) {
   if (!iframeWindow || !event || event.source !== iframeWindow) return null;
   const data = event.data;

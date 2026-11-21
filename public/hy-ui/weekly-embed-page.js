@@ -4,6 +4,7 @@ import {
   buildSrcdoc,
   compactLatestLine,
   ensureWeeklyFields,
+  officeStatusLine,
   taipeiISOWeek,
 } from './weekly-embed-bridge.js';
 
@@ -72,6 +73,7 @@ async function loadWeek(week) {
   resetFrame(frame);
   document.getElementById('weeklyEmpty').hidden = true;
   document.getElementById('weeklyLatest').hidden = true;
+  renderOffice(null);
   showStatus('載入中…');
   let response;
   try {
@@ -117,6 +119,7 @@ function showNotUploaded(week) {
   showStatus('');
   document.getElementById('weeklyFrame').hidden = true;
   document.getElementById('weeklyLatest').hidden = true;
+  renderOffice(null);
   const empty = document.getElementById('weeklyEmpty');
   empty.hidden = false;
   document.getElementById('weeklyEmptyTitle').textContent = '本週週報還沒放上來（' + week + '）';
@@ -139,6 +142,19 @@ function showReport(data) {
 function renderLatest(latest) {
   const box = document.getElementById('weeklyLatest');
   const line = compactLatestLine(latest);
+  if (!line) {
+    box.hidden = true;
+    box.textContent = '';
+    return;
+  }
+  box.hidden = false;
+  box.textContent = line;
+}
+
+function renderOffice(office) {
+  const box = document.getElementById('weeklyOffice');
+  if (!box) return;
+  const line = officeStatusLine(office);
   if (!line) {
     box.hidden = true;
     box.textContent = '';
@@ -184,6 +200,7 @@ async function sendResponse(accepted) {
     }
     window.showToast('已送出', 'success');
     renderLatest(data.latest);
+    renderOffice(data.office);
   } catch (error) {
     window.showToast('沒有送出', 'error');
     window.console.error('[weekly]', error);
