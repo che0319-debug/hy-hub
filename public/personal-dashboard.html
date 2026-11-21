@@ -328,6 +328,19 @@ header { background:var(--header-bg); padding:0 24px; display:flex; align-items:
 .due-title { flex:1; color:var(--text); }
 .due-date { font-size:11px; color:var(--text-muted); white-space:nowrap; }
 .weekly-loading { text-align:center; padding:48px; color:var(--text-muted); font-size:14px; }
+.weekly-empty { padding: 12px 4px 8px; }
+.weekly-empty-title { font-size: 16px; font-weight: 700; color: var(--text); margin-bottom: 8px; }
+.weekly-empty p { font-size: 13px; color: var(--text-muted); line-height: 1.6; }
+.weekly-embed-frame iframe { width: 100%; min-height: 70vh; height: 70vh; border: 1px solid var(--border); border-radius: var(--radius); background: var(--card-bg); }
+.weekly-latest { margin: 0 0 16px; }
+.weekly-latest p { font-size: 13px; color: var(--text); margin: 0 0 8px; line-height: 1.5; }
+.weekly-latest-list { list-style: none; display: flex; flex-direction: column; gap: 6px; }
+.weekly-latest-list li { font-size: 13px; color: var(--text); line-height: 1.5; }
+.weekly-k { color: var(--text-muted); margin-right: 8px; font-weight: 700; }
+@media (max-width: 640px) {
+  .weekly-wrap { padding: 12px 12px 40px; }
+  .weekly-select { min-height: 44px; font-size: 16px; }
+}
 .cross-stat-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:12px; }
 .cross-stat-card { background:var(--card-bg); border:1px solid var(--border); border-radius:var(--radius); padding:14px 16px; box-shadow:var(--shadow-sm); }
 .cross-stat-title { font-size:11px; color:var(--text-muted); font-weight:600; text-transform:uppercase; letter-spacing:.5px; margin-bottom:10px; }
@@ -388,7 +401,17 @@ header { background:var(--header-bg); padding:0 24px; display:flex; align-items:
         <button class="btn btn-blue" id="weeklyCoworkBtn" style="display:none">🤝 開啟 Cowork</button>
       </div>
     </div>
-    <div id="weeklyContent"><div class="weekly-loading">選擇週次以載入資料…</div></div>
+    <div id="weeklyContent">
+      <div id="weeklyStatus" class="weekly-loading">選擇週次以載入資料…</div>
+      <div id="weeklyEmpty" class="weekly-empty" hidden>
+        <div id="weeklyEmptyTitle" class="weekly-empty-title"></div>
+        <p id="weeklyEmptyBody"></p>
+      </div>
+      <div id="weeklyLatest" class="section-card weekly-latest" hidden></div>
+      <div class="weekly-embed-frame">
+        <iframe id="weeklyFrame" title="本週週報" sandbox="allow-scripts allow-forms" referrerpolicy="no-referrer" hidden></iframe>
+      </div>
+    </div>
   </div>
 </div>
 
@@ -424,7 +447,20 @@ header { background:var(--header-bg); padding:0 24px; display:flex; align-items:
 <div class="toast" id="toast"></div>
 
 <script>
-var API         = 'https://hy-agent-v2.onrender.com';
+function hyLocalApiBase() {
+  var fallback = 'https://hy-agent-v2.onrender.com';
+  try {
+    var params = new URLSearchParams(window.location.search);
+    var raw = params.get('api') || window.localStorage.getItem('hy_weekly_api') || '';
+    if (!raw) return fallback;
+    var url = new URL(raw, window.location.href);
+    if (url.protocol !== 'http:' || (url.hostname !== 'localhost' && url.hostname !== '127.0.0.1')) return fallback;
+    return url.origin;
+  } catch (e) {
+    return fallback;
+  }
+}
+var API         = hyLocalApiBase();
 var ACCESS_TOKEN = sessionStorage.getItem('hy_life_os_access_token') || sessionStorage.getItem('hy_world_access_token') || '';
 var HEADERS     = { 'Content-Type':'application/json', 'Authorization':'Bearer '+ACCESS_TOKEN };
 var GET_HEADERS = { 'Authorization':'Bearer '+ACCESS_TOKEN, 'Cache-Control':'no-store' };
@@ -818,253 +854,8 @@ document.getElementById('saveBtn').addEventListener('click', function(){
 });
 loadData();
 
-// ═══════════════ WEEKLY REVIEW ═══════════════
-
-var WEEKLY_API = 'https://hy-agent-v2.onrender.com';
-var weeklyData = null;
-var weeklyListLoaded = false;
-
-function weeklyPct(val, total) {
-  if (!total) return 0;
-  return Math.min(100, Math.round(val / total * 100));
-}
-
-function weeklyBarClass(pct) {
-  if (pct >= 80) return 'green';
-  if (pct >= 50) return 'orange';
-  return 'red';
-}
-
-function renderWeekly(data) {
-  weeklyData = data;
-  var s = data.summary || {};
-  var g = data.goals || {};
-  var tw = data.this_week || {};
-  var next = data.next_week || {};
-  var cross = data.cross_domain || {};
-
-  var coworkUrl = data.cowork_url || '';
-  var dlBtn = document.getElementById('weeklyDownloadBtn');
-  var coBtn = document.getElementById('weeklyCoworkBtn');
-  dlBtn.style.display = data.raw_markdown ? '' : 'none';
-  coBtn.style.display = coworkUrl ? '' : 'none';
-  coBtn.onclick = function() { window.open(coworkUrl, '_blank'); };
-
-  var html = '';
-
-  // ── 摘要卡片 ──
-  html += '<div class="stat-grid">';
-  var cdNext = cross.next_week_due || {};
-  var stats = [
-    { num: s.work_completed || 0, label: '工作 milestone 本週完成' },
-    { num: s.personal_done  || 0, label: '個人本週完成' },
-    { num: s.family_done    || 0, label: '家庭本週完成' },
-    { num: cdNext.work      || 0, label: '下週工作 due' },
-    { num: s.work_wip       || 0, label: '工作進行中' },
-    { num: s.family_wip     || 0, label: '家庭進行中' },
-  ];
-  stats.forEach(function(st) {
-    html += '<div class="stat-card"><div class="stat-num">'+st.num+'</div><div class="stat-label">'+esc(st.label)+'</div></div>';
-  });
-  html += '</div>';
-
-  // ── 四大目標達成 ──
-  html += '<div class="section-card"><div class="section-title">🎯 四大目標達成狀況</div><div class="goal-progress-list">';
-  var gh = g.health  || {};
-  var gf = g.finance || {};
-  var gg = g.growth  || {};
-  var gl = g.leisure || {};
-  var goalRows = [
-    { icon:'💪', label:'健康',  done: gh.exercise_count || 0, total: gh.exercise_target || 0 },
-    { icon:'💰', label:'財務',  done: gf.saved || 0, total: gf.target || 0 },
-    { icon:'📚', label:'成長',  done: (gg.skills||[]).length, noBar: true, extra: gg.current_focus ? '目前專注：'+gg.current_focus : null },
-    { icon:'🎉', label:'休閒',  done: (gl.restaurant_visited||[]).length, total: gl.restaurant_target || 0 },
-  ];
-  goalRows.forEach(function(gr) {
-    html += '<div class="goal-prog-row">';
-    if (gr.noBar) {
-      html += '<div class="goal-prog-header"><span class="goal-prog-name">'+gr.icon+' '+gr.label+'</span><span class="goal-prog-pct">進行中 '+gr.done+' 項</span></div>';
-      if (gr.extra) html += '<div style="font-size:12px;color:var(--text-muted);margin-top:2px;">'+esc(gr.extra)+'</div>';
-    } else {
-      var pct = weeklyPct(gr.done, gr.total);
-      var cls = weeklyBarClass(pct);
-      html += '<div class="goal-prog-header"><span class="goal-prog-name">'+gr.icon+' '+gr.label+'</span><span class="goal-prog-pct">'+gr.done+'/'+gr.total+' ('+pct+'%)</span></div>';
-      html += '<div class="prog-bar-bg"><div class="prog-bar-fill '+cls+'" style="width:'+pct+'%"></div></div>';
-    }
-    html += '</div>';
-  });
-  html += '</div></div>';
-
-  // ── 本週進展（個人 / 工作 / 家庭）──
-  html += '<div class="domain-grid">';
-  var pk = tw.personal_kanban || {};
-  var fk = tw.family_kanban   || {};
-  var domainData = [
-    { label:'👤 個人', done: pk.this_week_done || 0, wip: pk.in_progress || 0, added: pk.this_week_new || 0 },
-    { label:'💼 工作', done: s.work_completed  || 0, wip: s.work_wip     || 0, added: 0 },
-    { label:'🏠 家庭', done: fk.this_week_done || 0, wip: fk.in_progress || 0, added: fk.this_week_new || 0 },
-  ];
-  domainData.forEach(function(dd) {
-    html += '<div class="domain-card"><div class="domain-title">'+dd.label+'</div>';
-    html += '<div class="domain-row"><span class="domain-row-label">本週完成</span><span class="domain-row-val">'+dd.done+'</span></div>';
-    html += '<div class="domain-row"><span class="domain-row-label">進行中</span><span class="domain-row-val">'+dd.wip+'</span></div>';
-    html += '<div class="domain-row"><span class="domain-row-label">本週新增</span><span class="domain-row-val">'+dd.added+'</span></div>';
-    html += '</div>';
-  });
-  html += '</div>';
-
-  // ── 下週關鍵事項 ──
-  html += '<div class="section-card"><div class="section-title">📅 下週關鍵事項</div>';
-  var personalDue = next.personal_due  || [];
-  var workUpcoming = next.work_upcoming || [];
-  var familyDue   = next.family_due    || [];
-  var anyNext = personalDue.length || workUpcoming.length || familyDue.length;
-
-  if (personalDue.length) {
-    html += '<div style="margin-bottom:12px"><div style="font-size:12px;font-weight:700;color:var(--text-muted);margin-bottom:6px;">👤 個人</div><ul class="due-list">';
-    personalDue.forEach(function(it) {
-      html += '<li class="due-item"><span class="due-title">'+esc(it.title||it)+'</span>';
-      if (it.due) html += '<span class="due-date">'+esc(it.due)+'</span>';
-      html += '</li>';
-    });
-    html += '</ul></div>';
-  }
-  if (workUpcoming.length) {
-    html += '<div style="margin-bottom:12px"><div style="font-size:12px;font-weight:700;color:var(--text-muted);margin-bottom:6px;">💼 工作</div><ul class="due-list">';
-    workUpcoming.forEach(function(it) {
-      var titleText = it.project ? '['+it.project+'] '+it.title : (it.title||it);
-      html += '<li class="due-item"><span class="due-title">'+esc(titleText)+'</span>';
-      if (it.due) html += '<span class="due-date">'+esc(it.due)+'</span>';
-      html += '</li>';
-    });
-    html += '</ul></div>';
-  }
-  if (familyDue.length) {
-    html += '<div style="margin-bottom:12px"><div style="font-size:12px;font-weight:700;color:var(--text-muted);margin-bottom:6px;">🏠 家庭</div><ul class="due-list">';
-    familyDue.forEach(function(it) {
-      html += '<li class="due-item"><span class="due-title">'+esc(it.title||it)+'</span>';
-      if (it.due) html += '<span class="due-date">'+esc(it.due)+'</span>';
-      html += '</li>';
-    });
-    html += '</ul></div>';
-  }
-  if (!anyNext) html += '<div style="color:var(--text-dim);font-size:13px;">無待辦事項</div>';
-  html += '</div>';
-
-  // ── 跨域數字概況 ──
-  html += '<div class="section-card"><div class="section-title">📊 跨域數字概況</div>';
-  html += '<div class="cross-stat-grid">';
-  var crossDefs = [
-    { key:'in_progress',    label:'進行中' },
-    { key:'this_week_done', label:'本週完成' },
-    { key:'next_week_due',  label:'下週 due' },
-  ];
-  var domainKeys = [
-    { key:'personal', label:'個人' },
-    { key:'work',     label:'工作' },
-    { key:'family',   label:'家庭' },
-  ];
-  crossDefs.forEach(function(cd) {
-    var cv = cross[cd.key] || {};
-    html += '<div class="cross-stat-card"><div class="cross-stat-title">'+esc(cd.label)+'</div><div class="cross-stat-nums">';
-    domainKeys.forEach(function(dk) {
-      html += '<div class="cross-stat-item"><div class="cross-stat-num">'+(cv[dk.key]||0)+'</div><div class="cross-stat-sub">'+dk.label+'</div></div>';
-    });
-    html += '</div></div>';
-  });
-  html += '</div></div>';
-
-  document.getElementById('weeklyContent').innerHTML = html;
-}
-
-function loadWeeklyData(weekId) {
-  document.getElementById('weeklyContent').innerHTML = '<div class="weekly-loading">載入中…</div>';
-  document.getElementById('weeklyDownloadBtn').style.display = 'none';
-  document.getElementById('weeklyCoworkBtn').style.display = 'none';
-  var url = WEEKLY_API + '/api/weekly-package?type=hy&week=' + encodeURIComponent(weekId);
-  fetch(url, { cache:'no-store', headers:GET_HEADERS })
-    .then(function(r) { if (!r.ok) throw new Error('HTTP '+r.status); return r.json(); })
-    .then(function(data) { renderWeekly(data); })
-    .catch(function(e) {
-      document.getElementById('weeklyContent').innerHTML = '<div class="weekly-loading">⚠ 載入失敗：'+esc(e.message)+'</div>';
-      console.error('[weekly]', e);
-    });
-}
-
-function loadWeeklyList(targetWeek) {
-  fetch(WEEKLY_API + '/api/weekly-package/list?type=hy', { cache:'no-store', headers:GET_HEADERS })
-    .then(function(r) { if (!r.ok) throw new Error('HTTP '+r.status); return r.json(); })
-    .then(function(data) {
-      var weeks = data.weeks || data || [];
-      var sel = document.getElementById('weeklySelect');
-      sel.innerHTML = '';
-      if (!weeks.length) {
-        var opt = document.createElement('option');
-        opt.value = 'latest'; opt.textContent = '最新';
-        sel.appendChild(opt);
-      } else {
-        weeks.forEach(function(w) {
-          var opt = document.createElement('option');
-          var wid = typeof w === 'string' ? w : (w.week_id || w.week || w);
-          opt.value = wid; opt.textContent = wid;
-          sel.appendChild(opt);
-        });
-      }
-      var found = false;
-      if (targetWeek) {
-        for (var i = 0; i < sel.options.length; i++) {
-          if (sel.options[i].value === targetWeek) { sel.selectedIndex = i; found = true; break; }
-        }
-      }
-      if (!found) sel.selectedIndex = 0;
-      weeklyListLoaded = true;
-      loadWeeklyData(sel.value);
-    })
-    .catch(function(e) {
-      var sel = document.getElementById('weeklySelect');
-      sel.innerHTML = '<option value="latest">最新</option>';
-      weeklyListLoaded = true;
-      loadWeeklyData('latest');
-      console.error('[weekly list]', e);
-    });
-}
-
-document.getElementById('weeklySelect').addEventListener('change', function() {
-  loadWeeklyData(this.value);
-});
-
-document.getElementById('weeklyDownloadBtn').addEventListener('click', function() {
-  if (!weeklyData || !weeklyData.raw_markdown) return;
-  var blob = new Blob([weeklyData.raw_markdown], { type:'text/markdown;charset=utf-8' });
-  var url = URL.createObjectURL(blob);
-  var a = document.createElement('a');
-  a.href = url;
-  a.download = (weeklyData.week_id || 'weekly-review') + '.md';
-  document.body.appendChild(a); a.click();
-  document.body.removeChild(a); URL.revokeObjectURL(url);
-});
-
-// ── URL query string: ?tab=weekly&week=2026-W19 ──
-(function() {
-  var params = new URLSearchParams(window.location.search);
-  var tabParam  = params.get('tab');
-  var weekParam = params.get('week');
-
-  if (tabParam === 'weekly') {
-    document.querySelectorAll('.tab').forEach(function(t) { t.classList.remove('active'); });
-    document.querySelectorAll('.tab-content').forEach(function(c) { c.classList.remove('active'); });
-    document.querySelector('[data-tab="weekly"]').classList.add('active');
-    document.getElementById('tab-weekly').classList.add('active');
-    loadWeeklyList(weekParam || null);
-  }
-})();
-
-// Load weekly list when tab is first clicked
-document.querySelector('[data-tab="weekly"]').addEventListener('click', function() {
-  if (!weeklyListLoaded) {
-    loadWeeklyList(null);
-  }
-});
+// 週覆盤改由 hy-ui/weekly-embed-page.js 載入，不改其他分頁。
 
 </script>
+<script type="module" src="./hy-ui/weekly-embed-page.js"></script>
 </body>
