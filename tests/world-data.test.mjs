@@ -1,7 +1,7 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import { deriveOffice, deriveTodos, deriveRunners, deriveSummary, deriveAtlas, deriveAttention, todoMarker, RUNNER_FIG, LIVE_FIGS, OWNER_BOT_ORDER, ownerBotChoices, ownerBotGroups, matchesOwnerFilter, canonicalOwnerBot } from '../src/life-island/worldData.js'
-import { ROSTER, HELPERS } from '../src/botRoster.js'
+import { ROSTER, HELPERS, armyMemberView, armyCountText } from '../src/botRoster.js'
 import { mapOffice, officeTeam } from '../src/botOfficeData.js'
 import { readFileSync } from 'node:fs'
 import { FIGURES, FAMILY_ISLAND, buildingWorld, figureHome, figureFront, islandBotCard } from '../src/life-island/data.js'
@@ -21,13 +21,14 @@ const office = mapOffice({
   decisions: [{ id: 'd1', project: 'c', status: 'open', title: '要不要補件', kind: 'approval', questions: [] }],
 }, { cards: [] })
 
-test('名冊：四位小幫手＋執行者、Atlas 與 Emma，id 不重複', () => {
+test('名冊：四位小幫手＋執行者、Atlas、Emma 與 K 組，id 不重複', () => {
   assert.equal(HELPERS.length, 4)
   assert.equal(ROSTER.filter(r => r.group === 'executor').length, 3)
   assert.equal(ROSTER.filter(r => r.group === 'coo').length, 1)
   assert.equal(ROSTER.filter(r => r.group === 'tutor').length, 1)
-  assert.equal(ROSTER.length, 11)
-  assert.equal(new Set(ROSTER.map(r => r.id)).size, 11)
+  assert.equal(ROSTER.filter(r => r.group === 'kteam').length, 4)
+  assert.equal(ROSTER.length, 15)
+  assert.equal(new Set(ROSTER.map(r => r.id)).size, 15)
   assert.deepEqual(HELPERS.map(h => h.agent), ['hy', '950157', 'family', 'sam'])
 })
 
@@ -179,6 +180,76 @@ test('Emma 在名冊與隱地島人生修練館旁，Office 身分是 english', 
   mat.dispose()
 })
 
+test('K 組掛在 950157 底下，各自計數，選核心不混進成員卡', () => {
+  const ids = ['cw', 'tiffany', 'frank', 'terry']
+  const posts = {
+    cw: 'K100 電子皮膚 Leader Bot',
+    tiffany: 'K100 觸覺計畫含 A+',
+    frank: 'K200 AI／FEM／數位雙生',
+    terry: 'K300 面板級封裝',
+  }
+  for (const id of ids) {
+    const person = ROSTER.find(r => r.id === id)
+    const fig = FIGURES.find(f => f.id === id)
+    assert.equal(person.agent, id)
+    assert.equal(person.name, id === 'cw' ? 'CW' : id[0].toUpperCase() + id.slice(1))
+    assert.equal(person.post, posts[id])
+    assert.equal(person.role, posts[id])
+    assert.equal(person.intro, posts[id])
+    assert.equal(person.parent, 'p950157')
+    assert.equal(person.island, 'biz')
+    assert.equal(person.zone, 'hq')
+    assert.equal(person.staticInfo, true)
+    assert.equal(person.persona, null)
+    assert.equal(person.source, null)
+    assert.equal(person.board, null)
+    assert.equal(person.kind, 'p950157')
+    assert.equal(HELPERS.includes(person), false)
+    assert.equal(LIVE_FIGS.has(id), false)
+    assert.equal(canonicalOwnerBot(id), id)
+    assert.equal(fig.kind, 'p950157')
+    assert.equal(fig.staticInfo, true)
+    assert.deepEqual(figureHome(fig), buildingWorld('biz', 'hq'))
+    const live = new Proxy({}, { get() { throw new Error(`${id} must not read live data`) } })
+    assert.deepEqual(islandBotCard(fig, live, false), {
+      staticInfo: true, name: person.name, role: posts[id], intro: posts[id],
+    })
+    assert.equal(officeTeam({ id, owner_bot: id }).find(m => m.role === '負責 Bot').name, person.name)
+  }
+  const off = deriveOffice({
+    projects: [
+      { id: 'cw1', title: '電子皮膚', ownerBot: 'cw', stage: 'running' },
+      { id: 'tf1', title: '觸覺', ownerBot: 'tiffany', stage: 'review' },
+      { id: 'fr1', title: '雙生', ownerBot: 'frank', stage: 'assigned' },
+      { id: 'te1', title: '封裝', ownerBot: 'terry', stage: 'done' },
+      { id: 'core', title: '950157 自己的', ownerBot: '950157', stage: 'running' },
+      { id: 'alias', title: '顯示名不是身分', ownerBot: 'CW', stage: 'running' },
+    ],
+    decisions: [{ id: 'd-cw', projectId: 'cw1', status: 'open', title: '要不要做' }],
+    totals: { pending: 0 },
+  })
+  assert.equal(off.byAgent.cw.counts.running, 1)
+  assert.equal(off.byAgent.cw.counts.total, 1)
+  assert.equal(off.byAgent.cw.asks, 1)
+  assert.equal(off.byAgent.tiffany.counts.review, 1)
+  assert.equal(off.byAgent.frank.counts.waiting, 1)
+  assert.equal(off.byAgent.terry.counts.done, 1)
+  assert.equal(off.byAgent.terry.counts.running, 0)
+  assert.equal(off.byAgent['950157'].counts.running, 1)
+  assert.equal(off.byAgent['950157'].counts.total, 1)
+  assert.equal(off.byAgent.CW, undefined)
+  assert.equal(off.unowned, 1)
+  assert.equal(matchesOwnerFilter('cw', '950157'), false)
+  assert.equal(matchesOwnerFilter('frank', '950157'), false)
+  assert.equal(matchesOwnerFilter('950157', '950157'), true)
+  assert.equal(matchesOwnerFilter('terry', 'terry'), true)
+  const cw = armyMemberView(ROSTER.find(r => r.id === 'cw'), { loaded: true, byAgent: off.byAgent })
+  assert.equal(armyCountText(cw.office, true), '執行中 1・待審 0・完成 0')
+  assert.equal(cw.office.total, 1)
+  const terry = armyMemberView(ROSTER.find(r => r.id === 'terry'), { loaded: true, byAgent: off.byAgent })
+  assert.equal(armyCountText(terry.office, true), '執行中 0・待審 0・完成 1')
+})
+
 test('HY 隊長徽章是藍點，不是 Sam 的橘', () => {
   assert.equal(LEADER_BADGE_COLOR, 0x2d85f7)
   assert.notEqual(LEADER_BADGE_COLOR, BOT_COLORS.sam)
@@ -254,13 +325,13 @@ test('負責 Bot 篩選依核心分組，選核心不含組員', () => {
   assert.deepEqual(groups.map(group => [group.lead.value, group.members.map(member => member.value)]), [
     ['sam', ['nana']],
     ['family', ['fitness']],
-    ['950157', []],
+    ['950157', ['cw', 'tiffany', 'frank', 'terry']],
     ['hy', ['english']],
   ])
   assert.deepEqual(groups.map(group => [group.lead.label, group.members.map(member => member.label)]), [
     ['Sam', ['Nana']],
     ['小因', ['Wade']],
-    ['950157', []],
+    ['950157', ['CW', 'Tiffany', 'Frank', 'Terry']],
     ['HY', ['Emma']],
   ])
   assert.equal(groups.some(group => group.lead.value === 'atlas' || group.members.some(member => member.value === 'atlas')), false)
@@ -270,6 +341,9 @@ test('負責 Bot 篩選依核心分組，選核心不含組員', () => {
   assert.equal(matchesOwnerFilter('nana', 'sam'), false)
   assert.equal(matchesOwnerFilter('nana', 'nana'), true)
   assert.equal(matchesOwnerFilter('english', 'all'), true)
+  assert.equal(matchesOwnerFilter('cw', '950157'), false)
+  assert.equal(matchesOwnerFilter('950157', '950157'), true)
+  assert.equal(matchesOwnerFilter('tiffany', 'tiffany'), true)
   const home = readFileSync(new URL('../src/pages/OfficeHome.jsx', import.meta.url), 'utf8')
   assert.match(home, /ownerBotGroups\(\)/)
   assert.match(home, /matchesOwnerFilter\(ownerOf\(p\), bot\)/)
@@ -316,6 +390,7 @@ test('deriveRunners：沒有資料就是空物件；未知 runner 忽略', () =>
 
 test('LIVE_FIGS：四位小幫手、Atlas（營運長）與三位執行者', () => {
   for (const id of ['hy', 'p950157', 'xiaoyin', 'sam', 'atlas', 'gpt', 'claude', 'grokbuild']) assert.ok(LIVE_FIGS.has(id), id)
+  for (const id of ['cw', 'tiffany', 'frank', 'terry', 'emma', 'wade', 'nana']) assert.equal(LIVE_FIGS.has(id), false, id)
   assert.ok(!Object.values(RUNNER_FIG).includes('atlas'))   // Atlas 不再對應任何工作通道
   assert.equal(RUNNER_FIG['chatgpt-work'], 'gpt')
 })

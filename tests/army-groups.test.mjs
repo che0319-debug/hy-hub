@@ -6,18 +6,18 @@ import { OWNER_BOT_ORDER, canonicalOwnerBot, deriveOffice } from '../src/life-is
 
 const read = file => readFileSync(new URL(file, import.meta.url), 'utf8')
 
-test('軍團四欄：核心在上，組員在對應核心下，一共 8 張', () => {
+test('軍團四欄：核心在上，組員在對應核心下，一共 12 張', () => {
   const groups = armyGroups()
   assert.equal(CORE_BOTS, HELPERS)
   assert.deepEqual(groups.map(g => g.lead.id), ['hy', 'p950157', 'xiaoyin', 'sam'])
   assert.deepEqual(groups.map(g => g.lead.name), ['HY', '950157', '小因', 'Sam'])
   assert.deepEqual(groups.find(g => g.lead.id === 'hy').members.map(m => m.id), ['atlas', 'emma'])
-  assert.deepEqual(groups.find(g => g.lead.id === 'p950157').members.map(m => m.id), [])
+  assert.deepEqual(groups.find(g => g.lead.id === 'p950157').members.map(m => m.id), ['cw', 'tiffany', 'frank', 'terry'])
   assert.deepEqual(groups.find(g => g.lead.id === 'xiaoyin').members.map(m => m.id), ['wade'])
   assert.deepEqual(groups.find(g => g.lead.id === 'sam').members.map(m => m.id), ['nana'])
-  assert.deepEqual(armyCardIds(), ['hy', 'atlas', 'emma', 'p950157', 'xiaoyin', 'wade', 'sam', 'nana'])
-  assert.equal(armyCardIds().length, 8)
-  for (const id of ['emma', 'wade', 'nana', 'atlas']) assert.equal(HELPERS.some(h => h.id === id), false)
+  assert.deepEqual(armyCardIds(), ['hy', 'atlas', 'emma', 'p950157', 'cw', 'tiffany', 'frank', 'terry', 'xiaoyin', 'wade', 'sam', 'nana'])
+  assert.equal(armyCardIds().length, 12)
+  for (const id of ['emma', 'wade', 'nana', 'atlas', 'cw', 'tiffany', 'frank', 'terry']) assert.equal(HELPERS.some(h => h.id === id), false)
   assert.equal(ROSTER.find(r => r.id === 'emma').agent, 'english')
   assert.equal(ROSTER.find(r => r.id === 'wade').agent, 'fitness')
   assert.equal(ROSTER.find(r => r.id === 'nana').agent, 'nana')
@@ -25,6 +25,12 @@ test('軍團四欄：核心在上，組員在對應核心下，一共 8 張', ()
   assert.equal(OWNER_BOT_ORDER.includes('english'), true)
   assert.equal(OWNER_BOT_ORDER.includes('fitness'), true)
   assert.equal(OWNER_BOT_ORDER.includes('nana'), true)
+  assert.equal(OWNER_BOT_ORDER.includes('cw'), true)
+  assert.equal(OWNER_BOT_ORDER.includes('tiffany'), true)
+  assert.equal(OWNER_BOT_ORDER.includes('frank'), true)
+  assert.equal(OWNER_BOT_ORDER.includes('terry'), true)
+  assert.equal(canonicalOwnerBot('cw'), 'cw')
+  assert.equal(canonicalOwnerBot('terry'), 'terry')
   assert.equal(OWNER_BOT_ORDER.includes('emma'), false)
   assert.equal(OWNER_BOT_ORDER.includes('wade'), false)
   assert.equal(OWNER_BOT_ORDER.includes('atlas'), false)
@@ -75,6 +81,22 @@ test('沒有 Office 資料時組員計數是 0；有歸屬資料就顯示真實�
   assert.equal(wade.doing, '名下還沒有專案')
   const nana = armyMemberView(ROSTER.find(r => r.id === 'nana'), { loaded: true, byAgent: deriveOffice({ projects: [{ id: 'ny', title: '川泱', ownerBot: 'nana', stage: 'done' }], decisions: [], totals: { pending: 0 } }).byAgent })
   assert.equal(armyCountText(nana.office, true), '執行中 0・待審 0・完成 1')
+  const kOffice = deriveOffice({
+    projects: [
+      { id: 'cw1', title: '電子皮膚', ownerBot: 'cw', stage: 'running' },
+      { id: 'tf1', title: '觸覺', ownerBot: 'tiffany', stage: 'review' },
+      { id: 'core', title: '本業自己的', ownerBot: '950157', stage: 'running' },
+    ],
+    decisions: [],
+    totals: { pending: 0 },
+  })
+  const cw = armyMemberView(ROSTER.find(r => r.id === 'cw'), { loaded: true, byAgent: kOffice.byAgent })
+  assert.equal(armyCountText(cw.office, true), '執行中 1・待審 0・完成 0')
+  assert.equal(cw.office.total, 1)
+  const tiffany = armyMemberView(ROSTER.find(r => r.id === 'tiffany'), { loaded: true, byAgent: kOffice.byAgent })
+  assert.equal(armyCountText(tiffany.office, true), '執行中 0・待審 1・完成 0')
+  assert.equal(kOffice.byAgent['950157'].counts.running, 1)
+  assert.equal(kOffice.unowned, 0)
 })
 
 test('軍團頁把組員排在核心下面，Atlas 可收合，記憶區仍在卡片下方', () => {

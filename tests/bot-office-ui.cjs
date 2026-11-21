@@ -26,7 +26,7 @@ for(const spec of [{name:'desktop',width:1280,height:900},{name:'mobile',width:3
   const chips=await page.locator('[aria-label="屬性"] button').allTextContents();
   assert.deepEqual(chips,['全部','規劃中','待你決定','執行中','待審','完成']);
   const bots=await page.locator('[aria-label="負責 Bot"] button').allTextContents();
-  assert.deepEqual(bots,['全部','Sam','Nana','小因','Wade','950157','HY','Emma']);
+  assert.deepEqual(bots,['全部','Sam','Nana','小因','Wade','950157','CW','Tiffany','Frank','Terry','HY','Emma']);
   const groups=await page.locator('.ao-owner-group').evaluateAll(els=>els.map(el=>({
     lead:el.querySelector(':scope > button').textContent,
     members:[...el.querySelectorAll('.ao-owner-members button')].map(b=>b.textContent),
@@ -34,7 +34,7 @@ for(const spec of [{name:'desktop',width:1280,height:900},{name:'mobile',width:3
   assert.deepEqual(groups,[
     {lead:'Sam',members:['Nana']},
     {lead:'小因',members:['Wade']},
-    {lead:'950157',members:[]},
+    {lead:'950157',members:['CW','Tiffany','Frank','Terry']},
     {lead:'HY',members:['Emma']},
   ]);
   assert.equal(await page.locator('[aria-label="負責 Bot"]').getByRole('button',{name:'Atlas',exact:true}).count(),0);
