@@ -150,6 +150,19 @@ export function latestSummary(latest) {
   };
 }
 
+export function formatTaipeiStamp(value) {
+  const raw = String(value || '');
+  const match = raw.match(/^(\d{4}-\d{2}-\d{2})[T ](\d{2}:\d{2})/);
+  return match ? match[1] + ' ' + match[2] : raw;
+}
+
+export function compactLatestLine(latest) {
+  if (!latest) return '';
+  const summary = latestSummary(latest);
+  const when = formatTaipeiStamp(summary.submittedAtTaipei);
+  return '最新回應 ' + (when ? when + '（台北）' : '（台北）') + '· 已填 ' + summary.answered + '/' + summary.total;
+}
+
 export function acceptResponseMessage(event, iframeWindow, expected) {
   if (!iframeWindow || !event || event.source !== iframeWindow) return null;
   const data = event.data;
@@ -163,10 +176,10 @@ export function acceptResponseMessage(event, iframeWindow, expected) {
 export function acceptHeightMessage(event, iframeWindow) {
   if (!iframeWindow || !event || event.source !== iframeWindow) return null;
   const data = event.data;
-  if (!data || data.type !== HEIGHT_TYPE) return null;
+  if (!data || typeof data !== 'object' || data.type !== HEIGHT_TYPE) return null;
   const height = Number(data.height);
-  if (!Number.isFinite(height)) return null;
-  return Math.max(480, Math.min(Math.ceil(height) + 32, 40000));
+  if (!Number.isFinite(height) || height <= 0) return null;
+  return Math.max(1, Math.min(Math.ceil(height), 200000));
 }
 
 export function bridgeRuntimeSource() {
@@ -175,14 +188,15 @@ export function bridgeRuntimeSource() {
     var applyFields = ${applyFields.toString()};
     var pending = 0;
     var lastSent = 0;
+    function measureHeight(){
+      var root = document.documentElement;
+      return root ? root.scrollHeight : 0;
+    }
     function postHeight(){
       if (pending) return;
       pending = setTimeout(function(){
         pending = 0;
-        var root = document.documentElement;
-        var body = document.body;
-        var height = Math.max(root ? root.scrollHeight : 0, body ? body.scrollHeight : 0);
-        parent.postMessage({type:'hy-weekly-height', height: height}, '*');
+        parent.postMessage({type:'hy-weekly-height', height: measureHeight()}, '*');
       }, 60);
     }
     function onSubmit(event){
@@ -200,6 +214,14 @@ export function bridgeRuntimeSource() {
         fields: collectFields(form)
       }, '*');
     }
+    function watchImages(){
+      var images = document.images || [];
+      for (var i = 0; i < images.length; i++) {
+        if (images[i].complete) continue;
+        images[i].addEventListener('load', postHeight);
+        images[i].addEventListener('error', postHeight);
+      }
+    }
     function install(){
       var form = document.getElementById('weekly-response');
       if (form) {
@@ -214,8 +236,13 @@ export function bridgeRuntimeSource() {
         postHeight();
       });
       postHeight();
+      window.addEventListener('load', postHeight);
       window.addEventListener('resize', postHeight);
-      if (window.ResizeObserver && document.body) new ResizeObserver(postHeight).observe(document.body);
+      watchImages();
+      if (window.ResizeObserver) {
+        var target = document.documentElement || document.body;
+        if (target) new ResizeObserver(postHeight).observe(target);
+      }
     }
     if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', install);
     else install();
