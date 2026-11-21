@@ -65,6 +65,12 @@
   .ob-split > .ob-reader > .ob-reader-body {
     max-height: calc(100vh - 16px);
     overflow-y: auto;
+    overscroll-behavior: contain;
+  }
+  /* 卡片外框 .hy-card.is-focus 帶 overflow:hidden，放在有 max-height 的直向 flex 裡會被壓扁、內文被裁掉，
+     外層就沒有東西可以捲。不讓子項縮，內容才會撐出外層的捲軸。 */
+  .ob-split > .ob-reader > .ob-reader-body > * {
+    flex-shrink: 0;
   }
 }
 .ob-copy {

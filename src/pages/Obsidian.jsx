@@ -71,6 +71,13 @@ function CardReader({ card, markdown, error, loading, titles, onOpen, queue, onD
         {card?.confidence && <span className="hy-pill" data-s="ai">{card.confidence}</span>}
       </div>
       <h2 className="hy-card-title" style={{ marginTop: 8 }}>{cardTitle(card)}</h2>
+      {pending && (
+        <div className="ob-actions ob-actions-top" aria-label="審核（上方）">
+          <button type="button" className="hy-btn is-primary" style={btn} onClick={() => onDecide(card, 'approve')}>核准</button>
+          <button type="button" className="hy-btn" style={btn} onClick={() => onDecide(card, 'reject')}>退回</button>
+          {decision && <button type="button" className="hy-btn" style={btn} onClick={() => onDecide(card, 'clear')}>取消勾選</button>}
+        </div>
+      )}
       {onShowLocal && (
         <div className="ob-actions">
           <button type="button" className="hy-btn" style={btn} onClick={onShowLocal}>看局部圖</button>
