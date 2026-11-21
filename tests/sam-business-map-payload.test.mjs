@@ -7,7 +7,17 @@ import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 const root = dirname(dirname(fileURLToPath(import.meta.url)))
-const beforeCode = execFileSync('git', ['show', 'd4fe330:public/sam-business-map.js'], { cwd: root, encoding: 'utf8' })
+const fixtureUrl = new URL('./fixtures/sam-business-map-before-b1.js', import.meta.url)
+const fixtureCode = readFileSync(fixtureUrl, 'utf8')
+let beforeCode = fixtureCode
+try {
+  const fromGit = execFileSync('git', ['show', 'd4fe330:public/sam-business-map.js'], { cwd: root, encoding: 'utf8' })
+  if (fromGit !== fixtureCode) throw new Error('tests/fixtures/sam-business-map-before-b1.js 不是 d4fe330 的 sam-business-map.js')
+  beforeCode = fromGit
+} catch (error) {
+  // CI 淺層 checkout 沒有 d4fe330。fixture 是該版的複本，本機有 git 時上面會核對它沒有走樣。
+  if (error && error.message && error.message.includes('不是 d4fe330')) throw error
+}
 const afterCode = readFileSync(new URL('../public/sam-business-map.js', import.meta.url), 'utf8')
 
 function load(code) {
