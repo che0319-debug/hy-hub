@@ -3,7 +3,7 @@
 // 3D 造型在 life-island/bots.js。新增或更名一位，改這個檔，再補造型。
 //
 // agent：Bot Office 的 owner_bot。四大核心的 agent 也是 memory-health 的 key。executor 沒有就是 null。
-// Emma／Wade／Nana 有自己的 Office 身分，但不進 HELPERS、待辦來源或記憶。
+// Emma／Wade／Nana 與 K 組（CW／Tiffany／Frank／Terry）有自己的 Office 身分，但不進 HELPERS、待辦來源或記憶。
 // persona：人設與記憶頁（/agent/:id）的 id。source：待辦資料裡的 _source 標記。
 // ownerId：Wade 在 HY Life OS 既有的身分代號，與 agent 對齊為 fitness。
 // staticInfo：Life 島卡片只顯示 intro，不讀待辦、記憶或 roster 狀態。
@@ -33,6 +33,20 @@ export const ROSTER = [
   { id: 'emma', group: 'tutor', name: 'Emma', role: '英文小老師', post: '英文小老師', island: 'life', zone: 'dojo', kind: 'emma',
     agent: 'english', persona: null, source: null, board: null, staticInfo: true, parent: 'hy',
     intro: '英文小老師，在隱地島人生修練館附近。' },
+  // K 組跟 950157 同一座科研島總部，不另開島。Office 身分與名冊 id 相同。
+  // 3D kind 與軍團頭像先重用 p950157（藍圓）。這是權宜，尚未另做造型。不進待辦或記憶。
+  { id: 'cw', group: 'kteam', name: 'CW', role: 'K100 電子皮膚 Leader Bot', post: 'K100 電子皮膚 Leader Bot', island: 'biz', zone: 'hq', kind: 'p950157',
+    agent: 'cw', persona: null, source: null, board: null, staticInfo: true, parent: 'p950157',
+    intro: 'K100 電子皮膚 Leader Bot' },
+  { id: 'tiffany', group: 'kteam', name: 'Tiffany', role: 'K100 觸覺計畫含 A+', post: 'K100 觸覺計畫含 A+', island: 'biz', zone: 'hq', kind: 'p950157',
+    agent: 'tiffany', persona: null, source: null, board: null, staticInfo: true, parent: 'p950157',
+    intro: 'K100 觸覺計畫含 A+' },
+  { id: 'frank', group: 'kteam', name: 'Frank', role: 'K200 AI／FEM／數位雙生', post: 'K200 AI／FEM／數位雙生', island: 'biz', zone: 'hq', kind: 'p950157',
+    agent: 'frank', persona: null, source: null, board: null, staticInfo: true, parent: 'p950157',
+    intro: 'K200 AI／FEM／數位雙生' },
+  { id: 'terry', group: 'kteam', name: 'Terry', role: 'K300 面板級封裝', post: 'K300 面板級封裝', island: 'biz', zone: 'hq', kind: 'p950157',
+    agent: 'terry', persona: null, source: null, board: null, staticInfo: true, parent: 'p950157',
+    intro: 'K300 面板級封裝' },
 ]
 
 export const HELPERS = ROSTER.filter(r => r.group === 'helper')

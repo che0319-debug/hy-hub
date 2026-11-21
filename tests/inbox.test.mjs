@@ -33,17 +33,27 @@ test('資料還沒載入（null）時不產生卡片，也不出錯', () => {
   assert.equal(inboxCounts(items).total, 0)
 })
 
-test('Inbox 負責 Bot 含 Emma、Wade、Nana，Atlas 仍只是問題來源', () => {
+test('Inbox 負責 Bot 含 Emma、Wade、Nana 與 K 組，Atlas 仍只是問題來源', () => {
   assert.deepEqual(INBOX_OWNERS, [
     ['hy', 'HY'], ['english', 'Emma'], ['sam', 'Sam'], ['nana', 'Nana'],
-    ['family', '小因'], ['fitness', 'Wade'], ['950157', '950157'], ['atlas', 'Atlas'],
+    ['family', '小因'], ['fitness', 'Wade'], ['950157', '950157'],
+    ['cw', 'CW'], ['tiffany', 'Tiffany'], ['frank', 'Frank'], ['terry', 'Terry'],
+    ['atlas', 'Atlas'],
   ])
   const items = buildInbox({
-    decisions: [{ id: 'd-en', title: '英文課時間？', projectId: 'p-en', ownerBot: 'english', category: 'approval' }],
-    projects: [{ id: 'p-en', title: '英文課', ownerBot: 'english' }],
+    decisions: [
+      { id: 'd-en', title: '英文課時間？', projectId: 'p-en', ownerBot: 'english', category: 'approval' },
+      { id: 'd-cw', title: '電子皮膚？', projectId: 'p-cw', ownerBot: 'cw', category: 'approval' },
+    ],
+    projects: [
+      { id: 'p-en', title: '英文課', ownerBot: 'english' },
+      { id: 'p-cw', title: '電子皮膚', ownerBot: 'cw' },
+    ],
     bots: {},
   })
   assert.deepEqual(filterInbox(items, { owner: 'english' }).map(item => item.id), ['bo:d-en'])
+  assert.deepEqual(filterInbox(items, { owner: 'cw' }).map(item => item.id), ['bo:d-cw'])
+  assert.deepEqual(filterInbox(items, { owner: '950157' }), [])
   assert.deepEqual(filterInbox(items, { owner: 'hy' }), [])
   assert.equal(filterInbox(buildInbox(base), { owner: 'atlas' })[0].source, 'Atlas')
 })

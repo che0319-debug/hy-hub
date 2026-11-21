@@ -72,6 +72,10 @@ test('未指定 owner 的專案含 done，有效 owner 排除，怪值當成空'
     { value: 'family', label: '小因' },
     { value: 'fitness', label: 'Wade' },
     { value: '950157', label: '950157' },
+    { value: 'cw', label: 'CW' },
+    { value: 'tiffany', label: 'Tiffany' },
+    { value: 'frank', label: 'Frank' },
+    { value: 'terry', label: 'Terry' },
     { value: 'hy', label: 'HY' },
     { value: 'english', label: 'Emma' },
   ])
