@@ -17,7 +17,7 @@ const normDue = due => (due ? String(due).replace(/\//g, '-') : '')
 export const OWNER_BOT_GROUPS = [
   { lead: 'sam', members: ['nana'] },
   { lead: 'family', members: ['fitness'] },
-  { lead: '950157', members: [] },
+  { lead: '950157', members: ['cw', 'tiffany', 'frank', 'terry'] },
   { lead: 'hy', members: ['english'] },
 ]
 export const OWNER_BOT_ORDER = OWNER_BOT_GROUPS.flatMap(group => [group.lead, ...group.members])
