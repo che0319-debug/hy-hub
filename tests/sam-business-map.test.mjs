@@ -315,10 +315,22 @@ test('card face, edge chip and company accent follow the B1 display rules', () =
 test('dashboard loads B1 fonts and does not keep the old status chips or dot grid', () => {
   const html = readFileSync(new URL('../public/sam-dashboard.html', import.meta.url), 'utf8')
   assert.match(html, /Newsreader/)
-  assert.match(html, /Noto\+Serif\+TC/)
-  assert.match(html, /Noto\+Sans\+TC/)
-  assert.match(html, /family=Inter/)
+  assert.match(html, /Noto\+Serif\+TC:wght@500;600;700/)
+  assert.match(html, /Noto\+Sans\+TC:wght@400;500;600;700/)
+  assert.match(html, /family=Inter:wght@400;500;600;700/)
+  assert.match(html, /display=swap/)
+  assert.match(html, /preconnect" href="https:\/\/fonts\.googleapis\.com"/)
+  assert.match(html, /preconnect" href="https:\/\/fonts\.gstatic\.com" crossorigin/)
+  assert.match(html, /'Songti TC'/)
+  assert.match(html, /'PMingLiU'/)
+  assert.match(html, /'Noto Serif CJK TC'/)
+  assert.match(html, /'Source Han Serif TC'/)
+  assert.match(html, /'PingFang TC'/)
+  assert.match(html, /'Microsoft JhengHei'/)
+  assert.match(html, /'Noto Sans CJK TC'/)
   assert.match(html, /lang="zh-Hant"/)
+  assert.match(html, /\.bm-eyebrow\{[^}]*white-space:nowrap/)
+  assert.match(html, /BUSINESS MAP · /)
   assert.equal(html.includes('id="bmStats"'), false)
   assert.equal(html.includes('radial-gradient(#d8dee8'), false)
   assert.match(html, /max-width:1024px/)
@@ -383,6 +395,60 @@ test('edge labels stay outside the HY halo and off the cards at every aspect', (
   M.addEdge(map, 'hy', person.id, { type: '人脈', confirmed: true })
   M.addEdge(map, 'hy', resource.id, { type: '使用', confirmed: true })
   for (const aspect of [820 / 1040, 1440 / 760, 390 / 620]) check(map, aspect)
+})
+
+test('edge labels keep at least 6px of screen clearance after fit', () => {
+  const M = load()
+  assert.equal(M.labelGapForScale(1), M.LABEL_GAP)
+  assert.ok(M.labelGapForScale(0.4) >= 6 / 0.4)
+  const haloR = M.HY_RADIUS + M.HY_GLOW
+  function clearance(rect) {
+    const x = Math.max(rect.x, Math.min(0, rect.x + rect.w))
+    const y = Math.max(rect.y, Math.min(0, rect.y + rect.h))
+    return Math.hypot(x, y) - haloR
+  }
+  function sep(a, b) {
+    const dx = Math.max(b.x - (a.x + a.w), a.x - (b.x + b.w))
+    const dy = Math.max(b.y - (a.y + a.h), a.y - (b.y + b.h))
+    return dx > 0 && dy > 0 ? Math.hypot(dx, dy) : Math.max(dx, dy)
+  }
+  function screenGaps(vw, vh, detail) {
+    const { map } = M.ensureMap({})
+    const header = vw <= 767 ? 92 : 56
+    const title = vw <= 767 ? 156 : 84
+    const reserve = detail && vw > 1024 ? 420 : 0
+    const stageH = Math.max(160, vh - header - title)
+    const bottomInset = vw <= 900 ? 96 : 56
+    const innerW = Math.max(80, vw - reserve - 64)
+    const innerH = Math.max(80, stageH - 32 - bottomInset)
+    const aspect = (vw - reserve) / stageH
+    const pos = M.layout(map, aspect)
+    const nodes = map.nodes.map(n => M.nodeBox(n, pos[n.id]))
+    let scale = M.fit(nodes, innerW, innerH, 0, 1.8).scale
+    let labels = M.edgeLabelLayout(map, pos, M.labelGapForScale(scale))
+    const withLabels = nodes.concat(labels.map(l => ({ x: l.x - l.w / 2, y: l.y - l.h / 2, w: l.w, h: l.h })))
+    scale = M.fit(withLabels, innerW, innerH, 0, 1.8).scale
+    labels = M.edgeLabelLayout(map, pos, M.labelGapForScale(scale))
+    const cards = map.nodes.filter(n => n.kind !== 'hy').map(n => M.nodeBox(n, pos[n.id]))
+    let minHalo = Infinity
+    let minCard = Infinity
+    for (const lab of labels) {
+      const rect = { x: lab.x - lab.w / 2, y: lab.y - lab.h / 2, w: lab.w, h: lab.h }
+      const halo = clearance(rect) * scale
+      minHalo = Math.min(minHalo, halo)
+      assert.ok(halo >= 6 - 0.05, vw + (detail ? ' detail' : '') + ' ' + lab.text + ' halo ' + halo)
+      for (const c of cards) {
+        const d = sep(rect, c) * scale
+        minCard = Math.min(minCard, d)
+        assert.ok(d >= 6 - 0.05, vw + (detail ? ' detail' : '') + ' ' + lab.text + ' card ' + d)
+      }
+    }
+    return { minHalo, minCard, scale }
+  }
+  for (const [vw, vh] of [[390, 844], [820, 1180], [1024, 1180], [1280, 720], [1440, 900]]) {
+    screenGaps(vw, vh, false)
+    if (vw > 1024) screenGaps(vw, vh, true)
+  }
 })
 
 test('DIVIOS card uses the user-confirmed legal entity 帝爾 90895872, with unknowns kept unknown', () => {

@@ -589,8 +589,18 @@
     return a.x < b.x + b.w + g && a.x + a.w + g > b.x && a.y < b.y + b.h + g && a.y + a.h + g > b.y
   }
 
-  function labelBlocked(rect, hyPos, cards, placed, cardGap, labelGap) {
-    if (hyPos && rectHitsCircle(rect, hyPos.x, hyPos.y, HY_RADIUS + HY_GLOW + LABEL_GAP)) return true
+  /* 畫面縮放後，標籤到光暈外緣、到卡片都要留至少這個螢幕像素。演算法用它換算世界座標間距。 */
+  var SCREEN_GAP = 8
+
+  /** 依目前縮放把螢幕間距換成世界座標。沒縮放時沿用 LABEL_GAP（光暈外 8px）。 */
+  function labelGapForScale(scale) {
+    var s = (isFinite(scale) && scale > 0) ? scale : 1
+    return Math.max(LABEL_GAP, SCREEN_GAP / s)
+  }
+
+  function labelBlocked(rect, hyPos, cards, placed, cardGap, labelGap, haloPad) {
+    var halo = HY_RADIUS + HY_GLOW + (haloPad == null ? LABEL_GAP : haloPad)
+    if (hyPos && rectHitsCircle(rect, hyPos.x, hyPos.y, halo)) return true
     for (var i = 0; i < cards.length; i++) if (rectsOverlap(rect, cards[i], cardGap)) return true
     for (var j = 0; j < placed.length; j++) {
       var p = placed[j]
@@ -602,15 +612,19 @@
   /**
    * 連線標籤中心。優先沿連線，放在 HY 光暈外、卡片之間的空檔；
    * 空檔不夠時再往連線兩側推，避免壓到 HY 圓（含 22px 光暈）或被卡片蓋住。
+   * minGap 是世界座標最小間距（光暈與卡片都用）。省略時光暈用 LABEL_GAP、卡片用 CARD_GAP。
    * 回傳 {id, text, x, y, w, h}，x/y 是標籤中心（對齊畫面的 translate -50%,-50%）。
    */
-  function edgeLabelLayout(map, pos) {
+  function edgeLabelLayout(map, pos, minGap) {
     var hyPos = pos[HY_ID] || null
     var cards = []
     map.nodes.forEach(function (n) {
       if (!n || n.kind === 'hy' || !pos[n.id]) return
       cards.push(nodeBox(n, pos[n.id]))
     })
+    var explicit = typeof minGap === 'number' && isFinite(minGap)
+    var haloPad = explicit ? Math.max(LABEL_GAP, minGap) : LABEL_GAP
+    var cardPad = explicit ? Math.max(CARD_GAP, minGap) : CARD_GAP
     var placed = []
     var out = []
     map.edges.forEach(function (e) {
@@ -645,26 +659,27 @@
       function consider(dist, off, cardGap, labelGap) {
         if (dist < 0 || dist > len) return
         var box = at(dist, off)
-        if (labelBlocked(box.rect, hyPos, cards, placed, cardGap, labelGap)) return
+        if (labelBlocked(box.rect, hyPos, cards, placed, cardGap, labelGap, haloPad)) return
         var score = Math.abs(off) * 10000 + (anchored ? dist : Math.abs(dist - len / 2))
         if (score < bestScore) { bestScore = score; best = box }
       }
       var d
-      for (d = 4; d <= len - 4; d += 2) consider(d, 0, CARD_GAP, 2)
+      for (d = 4; d <= len - 4; d += 2) consider(d, 0, cardPad, 2)
       if (!best) {
         var off
-        for (off = 4; off <= 120; off += 4) {
+        var offMax = explicit ? 360 : 120
+        for (off = 4; off <= offMax; off += 4) {
           for (d = 4; d <= len - 4; d += 4) {
-            consider(d, off, CARD_GAP, 2)
-            consider(d, -off, CARD_GAP, 2)
+            consider(d, off, cardPad, 2)
+            consider(d, -off, cardPad, 2)
           }
           if (best) break
         }
       }
-      if (!best) {
+      if (!best && !explicit) {
         for (d = 4; d <= len - 4; d += 4) consider(d, 0, 0, 0)
       }
-      if (!best) best = at(anchored ? Math.min(len - 4, HY_RADIUS + HY_GLOW + LABEL_GAP + size.w / 2) : len / 2, 0)
+      if (!best) best = at(anchored ? Math.min(len - 4, HY_RADIUS + HY_GLOW + haloPad + size.h / 2 + 2) : len / 2, 0)
       delete best.rect
       placed.push(best)
       out.push(best)
@@ -726,8 +741,8 @@
     addNode: addNode, updateNode: updateNode, removeNode: removeNode, edgesOf: edgesOf,
     addEdge: addEdge, updateEdge: updateEdge, removeEdge: removeEdge,
     edgeLabel: edgeLabel, edgeTypeLabel: edgeTypeLabel, nodeSubtitle: nodeSubtitle, cardFace: cardFace,
-    labelSize: labelSize, nodeBox: nodeBox, edgeLabelLayout: edgeLabelLayout,
-    HY_RADIUS: HY_RADIUS, HY_GLOW: HY_GLOW, LABEL_GAP: LABEL_GAP,
+    labelSize: labelSize, nodeBox: nodeBox, edgeLabelLayout: edgeLabelLayout, labelGapForScale: labelGapForScale,
+    HY_RADIUS: HY_RADIUS, HY_GLOW: HY_GLOW, LABEL_GAP: LABEL_GAP, SCREEN_GAP: SCREEN_GAP,
     isBlankish: isBlankish, unknownLabels: unknownLabels, accentFor: accentFor,
     COMPANY_ACCENTS: COMPANY_ACCENTS, ACCENT_FALLBACK: ACCENT_FALLBACK,
     PERSON_ACCENT: PERSON_ACCENT, RESOURCE_ACCENT: RESOURCE_ACCENT,
