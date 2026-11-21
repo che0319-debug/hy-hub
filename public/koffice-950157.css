@@ -1,7 +1,7 @@
 #tab-koffice{overflow:auto;background:var(--hy-bg);color:var(--hy-ink)}
 #koffice{padding:16px;font-size:var(--hy-fs-body)}
-.ko-grid{display:grid;grid-template-columns:minmax(0,68fr) minmax(320px,32fr);gap:var(--hy-gap);align-items:start}
-.ko-office{min-width:0}.ko-stage{position:relative;width:100%;aspect-ratio:16/9;overflow:hidden;border-radius:var(--hy-r-card);background:var(--hy-sunken)}
+.ko-grid{display:grid;grid-template-columns:minmax(0,72fr) minmax(320px,28fr);gap:var(--hy-gap);align-items:start}
+.ko-office{min-width:0}.ko-stage{position:relative;width:100%;overflow:hidden;border-radius:var(--hy-r-card);background:var(--hy-sunken)}
 .ko-stage img{width:100%;height:100%;object-fit:contain;display:block}.ko-overlay{position:absolute;inset:0;width:100%;height:100%}
 .ko-room{fill:transparent;stroke:transparent;cursor:pointer;outline:none}.ko-room:focus-visible,.ko-room:hover{stroke:var(--hy-brand);stroke-width:.5;fill:var(--hy-ai-bg);fill-opacity:.18}
 .ko-label{position:absolute;transform:translate(-50%,-100%);border-radius:var(--hy-r-pill);padding:3px 8px;background:var(--hy-surface);color:var(--hy-ink);font-size:12px;font-weight:700;white-space:nowrap;pointer-events:none}
@@ -13,3 +13,6 @@
 @media(max-width:639px){#koffice{padding:8px}.ko-grid,.ko-cards{display:contents}.ko-grid{display:flex;flex-direction:column}.ko-office{order:2;width:100%}.ko-cards{display:contents}.ko-decisions{order:1}.ko-goal{order:3}.ko-programs{order:4}.ko-bp-card{order:5}.ko-card{width:100%}.ko-label{font-size:11px;padding:2px 5px}.ko-timeline{grid-template-columns:38px repeat(11,minmax(0,1fr)) 20px}.ko-ticks{padding-left:38px}.ko-bp{font-size:12px}}
 
 .ko-tl-end{font-size:var(--hy-fs-tiny);color:var(--hy-muted);text-align:right}
+.ko-canvas{position:absolute}
+@media (max-width:639px){.ko-stage{width:calc(100% + 16px);margin:0 -8px;border-radius:0}.ko-person-detail{padding:0 4px}}
+@media (min-width:1024px){.ko-card{display:grid;grid-template-columns:minmax(0,1fr) auto;column-gap:8px;align-items:start}.ko-card>*{grid-column:1/-1}.ko-card>h2{grid-column:1;grid-row:1;align-self:center;margin:0 0 6px}.ko-card>.ko-actions{grid-column:2;grid-row:1;margin:0 0 6px;flex-wrap:nowrap}}
