@@ -1,13 +1,13 @@
-// HY Obsidian：列出目錄、打開卡片、看關係圖。待上架勾選只寫這台裝置。
+// HY Obsidian：列出目錄、打開卡片、看關係圖。待上架勾選會存到雲端，本機留作後備。
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import { authHeaders } from '../auth'
 import {
-  FOLDERS, applyDecision, cardTitle, decisionFor, fetchBrainCard, fetchBrainIndex,
-  filterCards, folderLabel, folderOf, isPending, linkifyWikilinks, loadQueue,
-  parseFrontmatter, pruneQueueToPending, queueMarkdown, saveQueue, sortedDecisions, splitPendingReview, wikiIdFromHref,
+  FOLDERS, applyDecision, cardTitle, decisionFor, fetchBrainCard, fetchBrainIndex, fetchReviewQueue,
+  filterCards, folderLabel, folderOf, hasPendingSync, isPending, linkifyWikilinks, loadQueue, mergeQueues,
+  parseFrontmatter, postReviewDecisions, pruneQueueToPending, queueMarkdown, saveQueue, sortedDecisions, splitPendingReview, wikiIdFromHref,
 } from '../lib/obsidian'
 import ObsidianGraph from './ObsidianGraph'
 import '../../public/hy-ui/hy-ui.css'
@@ -68,6 +68,7 @@ function CardReader({ card, markdown, error, loading, titles, onOpen, queue, onD
       <div className="hy-summary">
         <span className="hy-pill" data-s={pending ? 'you' : 'wait'}>{pending ? '待上架' : folderLabel(folderOf(card))}</span>
         {decision && <span className="hy-pill" data-s={decision.decision === 'approve' ? 'done' : 'wait'}>{decisionLabel(decision.decision)}</span>}
+        {decision?.pending && <span className="hy-pill" data-s="you">尚未存上雲端</span>}
         {card?.confidence && <span className="hy-pill" data-s="ai">{card.confidence}</span>}
       </div>
       <h2 className="hy-card-title" style={{ marginTop: 8 }}>{cardTitle(card)}</h2>
@@ -118,7 +119,7 @@ function CardReader({ card, markdown, error, loading, titles, onOpen, queue, onD
           {decision && <button type="button" className="hy-btn" style={btn} onClick={() => onDecide(card, 'clear')}>取消勾選</button>}
         </div>
       )}
-      {pending && <p className="hy-note" style={{ marginTop: 8 }}>這只記下你的決定。正式分類還沒改，要等 Atlas 搬檔。</p>}
+      {pending && <p className="hy-note" style={{ marginTop: 8 }}>退回＝不要，不會退給 HY 改。正式分類還沒改，要等 Atlas 搬檔。</p>}
     </article>
   )
 }
@@ -131,19 +132,19 @@ function QueuePanel({ queue, onCopy, copied, copyText }) {
         <h2 className="hy-card-title">待處理清單</h2>
         <span className="hy-pill" data-s={items.length ? 'you' : 'wait'}>{items.length ? `${items.length} 筆決定` : '尚未勾選'}</span>
       </div>
-      <p className="hy-lede" style={{ marginTop: 8 }}>核准或退回只記在這台裝置，不會改正式分類，也不會寫進雲端硬碟。</p>
+      <p className="hy-lede" style={{ marginTop: 8 }}>退回＝不要，不會退給 HY 改。勾選會存到雲端；還沒存上時可先複製清單。正式分類仍等 Atlas 搬。</p>
       {!items.length && <p className="hy-empty" style={{ marginTop: 12 }}>還沒有決定。打開下面的卡，勾核准或退回。</p>}
       {items.length > 0 && (
         <ul className="hy-list">
           {items.map(item => (
-            <li key={item.id}><span>{item.decision === 'approve' ? '核准' : '退回'} · {item.title}</span><span className="ob-id">{item.id}</span></li>
+            <li key={item.id}><span>{item.decision === 'approve' ? '核准' : '退回'} · {item.title}</span><span className="ob-id">{item.id}{item.pending ? ' · 尚未存上雲端' : ''}</span></li>
           ))}
         </ul>
       )}
       <div className="ob-actions">
         <button type="button" className="hy-btn" style={btn} onClick={onCopy}>複製清單</button>
         {copied && <span className="hy-pill" data-s="done">已複製</span>}
-        <p className="hy-lede ob-queue-hint">審完請按『複製清單』，把內容貼給 Atlas，Atlas 才會搬卡。</p>
+        <p className="hy-lede ob-queue-hint">複製清單是後備。已存雲端的決定，Atlas 直接讀得到。</p>
       </div>
       {copyText && <textarea className="ob-copy" readOnly value={copyText} aria-label="待處理清單原文" />}
     </section>
@@ -163,6 +164,8 @@ export default function Obsidian() {
   const [cardError, setCardError] = useState('')
   const [cardLoading, setCardLoading] = useState(false)
   const [queue, setQueue] = useState(() => loadQueue(window.localStorage))
+  const [syncMessage, setSyncMessage] = useState('')
+  const [cloudEpoch, setCloudEpoch] = useState(0)
   const [copied, setCopied] = useState(false)
   const [copyText, setCopyText] = useState('')
   const [showReviewed, setShowReviewed] = useState(false)
@@ -170,6 +173,12 @@ export default function Obsidian() {
   const scrollPending = useRef(false)
   const [loadedId, setLoadedId] = useState('')
   const readerRef = useRef(null)
+  const queueRef = useRef(queue)
+  const cloudRef = useRef(null)
+  const flushRef = useRef({ running: false, queued: null })
+  const didInitialFlush = useRef(false)
+
+  useEffect(() => { queueRef.current = queue }, [queue])
 
   useEffect(() => {
     const controller = new AbortController()
@@ -184,16 +193,56 @@ export default function Obsidian() {
     return () => controller.abort()
   }, [])
 
-  // 目錄成功而且不是空的，才拿掉已不在待上架的舊決定。沒有移除就不寫回。
   useEffect(() => {
-    if (cards === null || loadError || cards.length === 0) return
+    const controller = new AbortController()
+    fetchReviewQueue({ base: API_BASE, headers: authHeaders(), signal: controller.signal })
+      .then(remote => {
+        cloudRef.current = remote
+        setQueue(prev => {
+          const merged = mergeQueues(prev, remote)
+          queueRef.current = merged
+          saveQueue(window.localStorage, merged)
+          return merged
+        })
+        setCloudEpoch(value => value + 1)
+      })
+      .catch(error => {
+        if (error.name === 'AbortError') return
+        cloudRef.current = null
+        setSyncMessage('雲端清單暫時讀不到。這台裝置上的勾選還在，可先複製清單。')
+        if (!didInitialFlush.current) {
+          didInitialFlush.current = true
+          flush(queueRef.current)
+        }
+      })
+    return () => controller.abort()
+  }, [])
+
+  // 目錄成功而且不是空的，才拿掉已不在待上架的舊決定。沒有移除就不寫回。
+  // 雲端讀失敗時不進這裡的清空；prune 在目錄是空的、還沒來、或載入失敗時原樣留下。
+  useEffect(() => {
+    if (cards === null || loadError || cards.length === 0) {
+      const catalogSettled = !!loadError || (Array.isArray(cards) && cards.length === 0)
+      if (catalogSettled && !didInitialFlush.current && (cloudRef.current || loadError)) {
+        didInitialFlush.current = true
+        flush(queueRef.current)
+      }
+      return
+    }
     const next = pruneQueueToPending(queue, cards)
     const same = next.items.length === queue.items.length
-      && next.items.every((item, index) => item.id === queue.items[index].id)
-    if (same) return
-    setQueue(next)
-    saveQueue(window.localStorage, next)
-  }, [cards, loadError, queue])
+      && next.items.every((item, index) => item.id === queue.items[index]?.id && item.pending === queue.items[index]?.pending)
+      && (next.clears || []).length === (queue.clears || []).length
+    if (!same) {
+      queueRef.current = next
+      setQueue(next)
+      saveQueue(window.localStorage, next)
+    }
+    if (cloudRef.current && !didInitialFlush.current) {
+      didInitialFlush.current = true
+      flush(same ? queue : next)
+    }
+  }, [cards, loadError, queue, cloudEpoch])
 
   useEffect(() => {
     if (!selectedId) { setMarkdown(''); setCardError(''); setCardLoading(false); return }
@@ -273,11 +322,73 @@ export default function Obsidian() {
     setRoute({ next: 'graph', card: id, graphScope: 'local' })
   }
 
+  async function flush(next) {
+    flushRef.current.queued = next
+    if (flushRef.current.running) return
+    flushRef.current.running = true
+    try {
+      while (flushRef.current.queued) {
+        const current = flushRef.current.queued
+        flushRef.current.queued = null
+        if (!hasPendingSync(current)) {
+          setSyncMessage(message => message.startsWith('雲端清單暫時讀不到') ? message : '')
+          continue
+        }
+        const headers = authHeaders()
+        if (!headers.Authorization) {
+          setSyncMessage('尚未登入，決定先留在這台裝置。可先複製清單。')
+          continue
+        }
+        try {
+          let result
+          try {
+            result = await postReviewDecisions(current, { base: API_BASE, headers })
+          } catch (error) {
+            if (error.code === 'brain_conflict') {
+              result = await postReviewDecisions(current, { base: API_BASE, headers })
+            } else if (error.code === 'brain_stale_write' && Array.isArray(error.payload?.items)) {
+              result = error.payload
+            } else {
+              throw error
+            }
+          }
+          if (flushRef.current.queued) {
+            flushRef.current.queued = mergeQueues(flushRef.current.queued, result)
+            continue
+          }
+          const absorbed = mergeQueues(current, result)
+          queueRef.current = absorbed
+          setQueue(absorbed)
+          saveQueue(window.localStorage, absorbed)
+          setSyncMessage(prev => {
+            if (hasPendingSync(absorbed)) return '有決定還沒存上雲端，可先複製清單。'
+            if (typeof prev === 'string' && prev.startsWith('雲端清單暫時讀不到')) return prev
+            return ''
+          })
+        } catch (error) {
+          if (error.name === 'AbortError') continue
+          setSyncMessage(error.message || '還沒存上雲端，可先複製清單。')
+        }
+      }
+    } finally {
+      flushRef.current.running = false
+    }
+  }
+
   function decide(card, decision) {
-    const next = applyDecision(queue, { id: card.id, title: cardTitle(card), decision, now: new Date().toISOString() })
+    const next = applyDecision(queueRef.current, {
+      id: card.id,
+      title: cardTitle(card),
+      decision,
+      now: new Date().toISOString(),
+      written_by: card?.written_by,
+      path: card?.path,
+    })
+    queueRef.current = next
     setQueue(next)
     saveQueue(window.localStorage, next)
     setCopied(false)
+    flush(next)
   }
 
   async function copyQueue() {
@@ -314,7 +425,7 @@ export default function Obsidian() {
       <div className="hy-pagehead">
         <div>
           <h1 className="hy-title">HY Obsidian</h1>
-          <p className="hy-lede">看卡片與關係圖。待上架可以勾核准或退回，正式分類仍由 Atlas 搬。</p>
+          <p className="hy-lede">看卡片與關係圖。待上架勾核准或退回會存到雲端，正式分類仍由 Atlas 搬。</p>
         </div>
         {cards && <span className="hy-pill" data-s={pendingCards.length ? 'you' : 'done'}>{pendingCards.length ? `${pendingCards.length} 張待上架` : '沒有待上架'}</span>}
       </div>
@@ -326,6 +437,7 @@ export default function Obsidian() {
 
       {cards === null && <p className="hy-lede">讀取目錄…</p>}
       {loadError && <div className="hy-alert is-bad" role="alert">{loadError}</div>}
+      {syncMessage && <div className="hy-alert" role="status">{syncMessage}</div>}
       {cards && !cards.length && !loadError && <div className="hy-empty">目錄裡還沒有卡片。鏡像完成後，這裡會列出待上架的卡。</div>}
 
       {view === 'pending' && cards && <QueuePanel queue={queue} onCopy={copyQueue} copied={copied} copyText={copyText} />}

@@ -5,7 +5,12 @@ import {
   applyDecision, brainErrorMessage, fetchBrainCard, fetchBrainIndex, filterCards,
   isPending, linkifyWikilinks, loadQueue, normalizeQueue, parseFrontmatter,
   pruneQueueToPending, queueMarkdown, splitPendingReview, wikiIdFromHref,
+  decisionsPayload, fetchReviewQueue, hasPendingSync, mergeQueues, postReviewDecisions, reviewErrorMessage,
 } from '../src/lib/obsidian.js'
+
+function storedItem(fields) {
+  return { written_by: null, path: null, pending: false, ...fields }
+}
 
 const sample = `---
 id: know-sample
@@ -43,7 +48,7 @@ test('清單正規化會丟掉正文與不合法編號', () => {
     { id: 'know-sample', title: '範例', decision: 'approve', decided_at: 't', body: '不要留下', content: '也不留' },
     { id: '../secret', title: '壞', decision: 'approve' },
   ] })
-  assert.deepEqual(queue.items, [{ id: 'know-sample', title: '範例', decision: 'approve', decided_at: 't' }])
+  assert.deepEqual(queue.items, [storedItem({ id: 'know-sample', title: '範例', decision: 'approve', decided_at: 't' })])
 })
 
 test('待上架分成未審與已審，數量不含清單外的決定', () => {
@@ -80,12 +85,12 @@ test('待上架分成未審與已審，數量不含清單外的決定', () => {
 })
 
 test('已上架、已歸檔、目錄沒有的決定會被拿掉，留下的欄位不變', () => {
-  const kept = { id: 'know-a', title: '甲', decision: 'reject', decided_at: 't1' }
+  const kept = storedItem({ id: 'know-a', title: '甲', decision: 'reject', decided_at: 't1' })
   const queue = { items: [
     kept,
-    { id: 'know-b', title: '乙', decision: 'approve', decided_at: 't2' },
-    { id: 'know-c', title: '丙', decision: 'approve', decided_at: 't3' },
-    { id: 'know-missing', title: '不見了', decision: 'approve', decided_at: 't4' },
+    storedItem({ id: 'know-b', title: '乙', decision: 'approve', decided_at: 't2' }),
+    storedItem({ id: 'know-c', title: '丙', decision: 'approve', decided_at: 't3' }),
+    storedItem({ id: 'know-missing', title: '不見了', decision: 'approve', decided_at: 't4' }),
   ] }
   const cards = [
     { id: 'know-a', title: '甲', path: '00_待上架/know-a.md', state: 'archived' },
@@ -105,7 +110,7 @@ test('目錄還沒來、不是陣列、或是空的，決定原樣留下', () =>
   const queue = { items: [
     { id: 'know-a', title: '甲', decision: 'approve', decided_at: 't', body: '不要留' },
   ] }
-  const expected = [{ id: 'know-a', title: '甲', decision: 'approve', decided_at: 't' }]
+  const expected = [storedItem({ id: 'know-a', title: '甲', decision: 'approve', decided_at: 't' })]
   for (const cards of [null, undefined, { length: 3 }, '00_待上架', []]) {
     assert.deepEqual(pruneQueueToPending(queue, cards).items, expected)
   }
@@ -126,9 +131,9 @@ test('目錄有卡但沒有待上架時，舊決定全部清掉', () => {
 })
 
 test('沒有需要移除時，items 與原來相同', () => {
-  const queue = { version: 1, items: [
-    { id: 'know-a', title: '甲', decision: 'approve', decided_at: 't1' },
-    { id: 'know-b', title: '乙', decision: 'reject', decided_at: 't2' },
+  const queue = { version: 1, clears: [], items: [
+    storedItem({ id: 'know-a', title: '甲', decision: 'approve', decided_at: 't1' }),
+    storedItem({ id: 'know-b', title: '乙', decision: 'reject', decided_at: 't2' }),
   ] }
   const cards = [
     { id: 'know-a', path: '00_待上架/know-a.md' },
@@ -208,7 +213,14 @@ test('畫面不送寫入金鑰，也不讀對照表', () => {
   assert.match(page, /收起已審（\$\{reviewSplit\.reviewedCount\}）/)
   assert.match(page, /aria-pressed=\{showReviewed\}/)
   assert.match(page, /待上架的卡都審完了。/)
-  assert.match(page, /審完請按『複製清單』，把內容貼給 Atlas，Atlas 才會搬卡。/)
+  assert.match(page, /複製清單是後備。已存雲端的決定，Atlas 直接讀得到。/)
+  assert.match(page, /退回＝不要，不會退給 HY 改/)
+  assert.match(page, /postReviewDecisions/)
+  assert.match(page, /fetchReviewQueue/)
+  assert.match(page, /尚未存上雲端/)
+  assert.doesNotMatch(page, /不會寫進雲端/)
+  assert.doesNotMatch(page, /只記在這台裝置/)
+  assert.doesNotMatch(lib, /不會寫進雲端/)
   assert.match(page, /openListedCard/)
   assert.match(page, /prefers-reduced-motion: reduce/)
   const css = readFileSync(new URL('../src/pages/obsidian.css', import.meta.url), 'utf8')
@@ -220,4 +232,125 @@ test('畫面不送寫入金鑰，也不讀對照表', () => {
   storage.value = '{"items":[{"id":"know-sample","title":"範例","decision":"approve","decided_at":"t","body":"x"}]}'
   const loaded = loadQueue({ getItem: key => key.endsWith('v1') ? storage.value : null })
   assert.equal(loaded.items[0].body, undefined)
+  assert.equal(loaded.items[0].pending, true)
+})
+
+test('舊勾選與雲端合併，不丟掉還沒送出的決定', () => {
+  const legacy = {
+    items: [{ id: 'know-a', title: '甲', decision: 'approve', decided_at: '2026-11-19T00:00:00.000Z' }],
+  }
+  const loaded = loadQueue({ getItem: () => JSON.stringify(legacy) })
+  assert.equal(loaded.items[0].pending, true)
+  const emptyCloud = mergeQueues(loaded, { version: 1, updated: null, items: [] })
+  assert.equal(emptyCloud.items[0].id, 'know-a')
+  assert.equal(emptyCloud.items[0].pending, true)
+  assert.equal(hasPendingSync(emptyCloud), true)
+  const sameCloud = mergeQueues(loaded, {
+    updated: '2026-11-19T00:00:00.000Z',
+    items: [{ id: 'know-a', title: '甲', decision: 'approve', decided_at: '2026-11-19T00:00:00.000Z', written_by: 'HY Bot', path: '00_待上架/know-a.md' }],
+  })
+  assert.equal(sameCloud.items[0].pending, false)
+  assert.equal(sameCloud.items[0].written_by, 'HY Bot')
+  const newerLocal = applyDecision(sameCloud, {
+    id: 'know-a', title: '甲', decision: 'reject', now: '2026-11-22T00:00:00.000Z', written_by: 'HY Bot', path: '00_待上架/know-a.md',
+  })
+  const merged = mergeQueues(newerLocal, sameCloud.items && { updated: '2026-11-19T00:00:00.000Z', items: sameCloud.items })
+  assert.equal(merged.items[0].decision, 'reject')
+  assert.equal(merged.items[0].pending, true)
+  const remoteNewer = mergeQueues(newerLocal, {
+    updated: '2026-11-22T03:00:00.000Z',
+    items: [{ id: 'know-a', title: '甲', decision: 'approve', decided_at: '2026-11-22T02:00:00.000Z', written_by: null, path: null }],
+  })
+  assert.equal(remoteNewer.items[0].decision, 'approve')
+  assert.equal(remoteNewer.items[0].pending, false)
+})
+
+test('取消勾選留到雲端確認後才忘掉，失敗時清單還能複製', () => {
+  const approved = applyDecision({ items: [] }, {
+    id: 'know-a', title: '甲', decision: 'approve', now: '2026-11-22T00:00:00.000Z', path: '00_待上架/know-a.md',
+  })
+  const cleared = applyDecision(approved, { id: 'know-a', decision: 'clear', now: '2026-11-22T01:00:00.000Z' })
+  assert.deepEqual(cleared.items, [])
+  assert.equal(cleared.clears[0].pending, true)
+  const waiting = mergeQueues(cleared, {
+    updated: '2026-11-22T00:00:00.000Z',
+    items: [{ id: 'know-a', title: '甲', decision: 'approve', decided_at: '2026-11-22T00:00:00.000Z', written_by: null, path: '00_待上架/know-a.md' }],
+  })
+  assert.deepEqual(waiting.items, [])
+  assert.equal(waiting.clears.length, 1)
+  const payload = decisionsPayload(waiting)
+  assert.deepEqual(payload.decisions, [{ id: 'know-a', decision: 'clear', decided_at: '2026-11-22T01:00:00.000Z' }])
+  assert.equal(payload.decisions[0].pending, undefined)
+  const done = mergeQueues(waiting, { updated: '2026-11-22T01:00:00.000Z', items: [] })
+  assert.deepEqual(done.clears, [])
+  const text = queueMarkdown(approved)
+  assert.match(text, /不會退給 HY 改/)
+  assert.match(text, /尚未存上雲端/)
+  assert.match(text, /位置：00_待上架\/know-a.md/)
+  assert.doesNotMatch(text, /X-Brain-Write-Key/)
+})
+
+test('目錄載入失敗時不因雲端失敗而清掉本機決定', () => {
+  const local = {
+    items: [{ id: 'know-a', title: '甲', decision: 'reject', decided_at: 't', pending: true }],
+    clears: [{ id: 'know-b', decided_at: 't2', pending: true }],
+  }
+  for (const cards of [null, undefined, []]) {
+    const next = pruneQueueToPending(local, cards)
+    assert.equal(next.items.length, 1)
+    assert.equal(next.items[0].decision, 'reject')
+    assert.equal(next.clears.length, 1)
+  }
+})
+
+test('審卡 API 只用登入標頭，失敗時保留本機決定', async () => {
+  const queue = applyDecision({ items: [] }, {
+    id: 'know-sample', title: '範例', decision: 'reject', now: '2026-11-22T01:44:00.000Z', written_by: 'HY Bot', path: '00_待上架/know-sample.md',
+  })
+  const seen = []
+  const saved = await postReviewDecisions(queue, {
+    headers: { Authorization: 'Bearer test' },
+    fetcher: async (url, options) => {
+      seen.push([url, options])
+      return new Response(JSON.stringify({
+        version: 1,
+        updated: '2026-11-22T01:44:00.000Z',
+        items: [{ ...queue.items[0], pending: false }],
+      }), { status: 200 })
+    },
+  })
+  assert.equal(seen[0][0], '/api/brain/review-queue')
+  assert.equal(seen[0][1].method, 'POST')
+  assert.equal(seen[0][1].headers.Authorization, 'Bearer test')
+  assert.equal(seen[0][1].headers['X-Brain-Write-Key'], undefined)
+  const body = JSON.parse(seen[0][1].body)
+  assert.equal(body.decisions[0].decision, 'reject')
+  assert.equal(body.decisions[0].written_by, 'HY Bot')
+  assert.equal(body.decisions[0].pending, undefined)
+  const absorbed = mergeQueues(queue, saved)
+  assert.equal(absorbed.items[0].pending, false)
+  assert.match(reviewErrorMessage(500, {}), /還沒存上雲端，可先複製清單/)
+  const failed = []
+  await assert.rejects(postReviewDecisions(queue, {
+    headers: { Authorization: 'Bearer test' },
+    fetcher: async () => new Response(JSON.stringify({ error: 'brain_data_unavailable' }), { status: 503 }),
+  }), error => {
+    failed.push(error)
+    return /還沒存上雲端/.test(error.message)
+  })
+  assert.equal(queue.items[0].decision, 'reject')
+  assert.equal(queue.items[0].pending, true)
+  const cloud = await fetchReviewQueue({
+    headers: { Authorization: 'Bearer test' },
+    fetcher: async (url, options) => {
+      assert.equal(url, '/api/brain/review-queue')
+      assert.equal(options.headers.Authorization, 'Bearer test')
+      assert.equal(options.method, undefined)
+      return new Response(JSON.stringify({ version: 1, updated: null, items: [] }), { status: 200 })
+    },
+  })
+  assert.deepEqual(cloud.items, [])
+  await assert.rejects(fetchReviewQueue({
+    fetcher: async () => new Response(JSON.stringify({ error: 'unauthorized' }), { status: 401 }),
+  }), /重新登入/)
 })
