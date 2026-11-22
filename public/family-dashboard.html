@@ -252,7 +252,10 @@ header { background:var(--header-bg); padding:0 24px; display:flex; align-items:
 /* 手機共用：頁首只留標章與動作鈕、可點區域 ≥44px、分頁列可橫向捲動（2026-10 手機版 PR3） */
 @media (max-width:640px) {
   header { padding:0 12px; gap:8px; }
-  .logo-sub, .last-updated { display:none; }
+  .logo-sub { display:none; }
+  .last-updated { display:none; }
+  .last-updated.is-alert { display:inline; max-width:42vw; overflow:hidden; text-overflow:ellipsis; }
+  .login-hint { font-size:12px; color:#1d4ed8; margin-left:8px; white-space:nowrap; }
   header .btn { min-height:44px; white-space:nowrap; }
   .tabs { padding:0 8px; overflow-x:auto; }
   .tab { padding:14px 12px; white-space:nowrap; }
@@ -268,6 +271,7 @@ header { background:var(--header-bg); padding:0 24px; display:flex; align-items:
   </div>
   <div class="header-right">
     <span class="last-updated" id="lastUpdated">載入中…</span>
+    <a class="login-hint" id="loginHint" href="./#/line/family" target="_top" hidden>請先登入網站</a>
     <button class="btn btn-ghost" id="refreshBtn">↺ 重新整理</button>
     <button class="btn btn-blue" id="saveBtn">✓ 儲存</button>
   </div>
@@ -538,10 +542,44 @@ header { background:var(--header-bg); padding:0 24px; display:flex; align-items:
 <div class="toast" id="toast"></div>
 
 <script>
-var API         = 'https://hy-agent-v2.onrender.com';
-var ACCESS_TOKEN = sessionStorage.getItem('hy_life_os_access_token') || sessionStorage.getItem('hy_world_access_token') || '';
-var HEADERS     = { 'Content-Type':'application/json', 'Authorization':'Bearer '+ACCESS_TOKEN };
-var GET_HEADERS = { 'Authorization':'Bearer '+ACCESS_TOKEN, 'Cache-Control':'no-store' };
+var API = 'https://hy-agent-v2.onrender.com';
+
+function getAccessToken(){
+  return sessionStorage.getItem('hy_life_os_access_token') || sessionStorage.getItem('hy_world_access_token') || '';
+}
+function setAccessToken(token){
+  if (token) sessionStorage.setItem('hy_life_os_access_token', token);
+}
+function getHeaders(extra){
+  var h = { 'Cache-Control':'no-store' };
+  if (extra) Object.keys(extra).forEach(function(k){ h[k] = extra[k]; });
+  var tok = getAccessToken();
+  if (tok) h['Authorization'] = 'Bearer ' + tok;
+  return h;
+}
+function postHeaders(){
+  return getHeaders({ 'Content-Type':'application/json' });
+}
+function refreshAccessToken(){
+  return fetch(API + '/api/auth/refresh', { method:'POST', credentials:'include', cache:'no-store' })
+    .then(function(r){ return r.json().catch(function(){ return {}; }).then(function(d){ return { ok:r.ok, data:d }; }); })
+    .then(function(res){
+      if (res.ok && res.data && res.data.accessToken){
+        setAccessToken(res.data.accessToken);
+        return true;
+      }
+      return false;
+    })
+    .catch(function(){ return false; });
+}
+function isAuthStatus(status){ return status === 401 || status === 403; }
+function setBoardStatus(text, kind){
+  var el = document.getElementById('lastUpdated');
+  el.textContent = text;
+  el.classList.toggle('is-alert', kind === 'auth' || kind === 'offline');
+  var hint = document.getElementById('loginHint');
+  if (hint) hint.hidden = kind !== 'auth';
+}
 
 var familyData  = {};
 var kanban      = { projects:[] };
@@ -716,12 +754,12 @@ function toggleExecute(mid){
   var _proj = kanban.projects.find(function(p){ return p.milestones.some(function(x){ return x.id===mid; }); });
   if (m.delegated_to_family) {
     fetch(API + '/api/dispatch-session', {
-      method: 'POST', headers: HEADERS,
+      method: 'POST', headers: postHeaders(),
       body: JSON.stringify({ title: m.title, sourceMilestone: _proj ? _proj.name : null, assignee: '小因', milestoneId: mid, desc: m.description || '' })
     }).catch(function(e){ console.warn('[dispatch] POST failed:', e); });
   } else {
     fetch(API + '/api/dispatch-session/' + encodeURIComponent(mid), {
-      method: 'DELETE', headers: GET_HEADERS
+      method: 'DELETE', headers: getHeaders()
     }).catch(function(e){ console.warn('[dispatch] DELETE failed:', e); });
   }
 }
@@ -803,14 +841,23 @@ document.addEventListener('keydown', function(e){
 // ═══════════════ API ═══════════════
 
 function saveData(ctx, cb){
-  if (!dataLoaded) { showToast('離線模式，禁止儲存','error'); if (cb) cb(); return; }
+  if (!dataLoaded) { showToast(document.getElementById('loginHint') && !document.getElementById('loginHint').hidden ? '尚未登入，禁止儲存' : '離線模式，禁止儲存','error'); if (cb) cb(); return; }
   var payload=JSON.parse(JSON.stringify(familyData));
   if (!payload.summary) payload.summary={};
   payload.summary.last_updated=new Date().toISOString();
   if (payload._kanban) payload._kanban.last_updated=payload.summary.last_updated;
-  fetch(API+'/api/family-progress',{ method:'POST', headers:HEADERS, body:JSON.stringify(payload), cache:'no-store' })
-    .then(function(r){ if (!r.ok) throw new Error('HTTP '+r.status); return r.json(); })
-    .then(function(){ familyData=payload; document.getElementById('lastUpdated').textContent='更新：'+payload.summary.last_updated.slice(0,10); if (ctx) showToast('✓ 已儲存到 GitHub','success'); if (cb) cb(); })
+  function postBoard(retried){
+    return fetch(API+'/api/family-progress',{ method:'POST', headers:postHeaders(), body:JSON.stringify(payload), cache:'no-store' })
+      .then(function(r){
+        if (isAuthStatus(r.status) && !retried){
+          return refreshAccessToken().then(function(ok){ if (ok) return postBoard(true); var e=new Error('HTTP '+r.status); e.status=r.status; throw e; });
+        }
+        if (!r.ok){ var e=new Error('HTTP '+r.status); e.status=r.status; throw e; }
+        return r.json();
+      });
+  }
+  postBoard(false)
+    .then(function(){ familyData=payload; setBoardStatus('更新：'+payload.summary.last_updated.slice(0,10), 'ok'); if (ctx) showToast('✓ 已儲存到 GitHub','success'); if (cb) cb(); })
     .catch(function(e){ showToast('❌ 儲存失敗','error'); console.error('[family-dashboard] save:',e); if (cb) cb(); });
 }
 
@@ -820,13 +867,26 @@ function triggerSave(){
 }
 
 function loadData(){
-  document.getElementById('lastUpdated').textContent='載入中…';
-  fetch(API+'/api/family-progress?t='+Date.now(),{ cache:'no-store', headers:GET_HEADERS })
-    .then(function(r){ if (!r.ok) throw new Error('HTTP '+r.status); return r.json(); })
+  setBoardStatus('載入中…', 'loading');
+  function getBoard(retried){
+    return fetch(API+'/api/family-progress?t='+Date.now(),{ cache:'no-store', headers:getHeaders() })
+      .then(function(r){
+        if (isAuthStatus(r.status) && !retried){
+          return refreshAccessToken().then(function(ok){
+            if (ok) return getBoard(true);
+            var e=new Error('HTTP '+r.status); e.status=r.status; throw e;
+          });
+        }
+        if (!r.ok){ var e=new Error('HTTP '+r.status); e.status=r.status; throw e; }
+        return r.json();
+      });
+  }
+  var start = getAccessToken() ? Promise.resolve(false) : refreshAccessToken();
+  start.then(function(){ return getBoard(false); })
     .then(function(d){
       familyData=d; initKanban();
       var lu=(familyData.summary&&familyData.summary.last_updated)||'—';
-      document.getElementById('lastUpdated').textContent='更新：'+lu.slice(0,10);
+      setBoardStatus('更新：'+lu.slice(0,10), 'ok');
       dataLoaded = true;
       document.getElementById('saveBtn').disabled = false;
       renderBoard();
@@ -835,7 +895,8 @@ function loadData(){
       familyData={};
       dataLoaded = false;
       document.getElementById('saveBtn').disabled = true;
-      document.getElementById('lastUpdated').textContent='⚠ 離線模式（禁止儲存）';
+      setBoardStatus(isAuthStatus(e && e.status) ? '⚠ 尚未登入，無法載入看板' : '⚠ 離線模式（禁止儲存）',
+                     isAuthStatus(e && e.status) ? 'auth' : 'offline');
       console.error('[family-dashboard] load:',e);
       initKanban(); renderBoard();
     });
@@ -885,7 +946,7 @@ function fitAllData() {
 }
 
 function loadFitnessData() {
-  fetch(API + '/api/fitness?months=4', { cache:'no-store', headers:GET_HEADERS })
+  fetch(API + '/api/fitness?months=4', { cache:'no-store', headers:getHeaders() })
     .then(function(r){ if (!r.ok) throw new Error('HTTP '+r.status); return r.json(); })
     .then(function(d){ fitData = d; fitSelectedDate = today; renderFitnessAll(today); })
     .catch(function(e){
@@ -1420,7 +1481,7 @@ document.getElementById('fitAddMealSave').addEventListener('click', function() {
 });
 
 function fitPostEntry(kind, date, payload, modalId) {
-  fetch(API+'/api/fitness', { method:'POST', headers:HEADERS, body:JSON.stringify({ kind:kind, date:date, payload:payload }) })
+  fetch(API+'/api/fitness', { method:'POST', headers:postHeaders(), body:JSON.stringify({ kind:kind, date:date, payload:payload }) })
     .then(function(r){ if (!r.ok) throw new Error('HTTP '+r.status); return r.json(); })
     .then(function(d){
       document.getElementById(modalId).classList.remove('open');
@@ -1432,7 +1493,7 @@ function fitPostEntry(kind, date, payload, modalId) {
 
 function fitDeleteEntry(kind, date, id) {
   if (!confirm('確定要刪除這筆記錄？')) return;
-  fetch(API+'/api/fitness?kind='+encodeURIComponent(kind)+'&date='+encodeURIComponent(date)+'&id='+encodeURIComponent(id), { method:'DELETE', headers:GET_HEADERS })
+  fetch(API+'/api/fitness?kind='+encodeURIComponent(kind)+'&date='+encodeURIComponent(date)+'&id='+encodeURIComponent(id), { method:'DELETE', headers:getHeaders() })
     .then(function(r){ if (!r.ok) throw new Error('HTTP '+r.status); return r.json(); })
     .then(function(){ showToast('✓ 已刪除','success'); loadFitnessData(); })
     .catch(function(e){ showToast('❌ 刪除失敗: '+e.message,'error'); });
@@ -1481,7 +1542,7 @@ document.getElementById('fitGoalSave').addEventListener('click', function() {
   if (!newProfile.goal) newProfile.goal = {};
   newProfile.goal.targetValue = tv;
   newProfile.goal.targetDate = td;
-  fetch(API+'/api/fitness-profile', { method:'POST', headers:HEADERS, body:JSON.stringify(newProfile) })
+  fetch(API+'/api/fitness-profile', { method:'POST', headers:postHeaders(), body:JSON.stringify(newProfile) })
     .then(function(r){ if (!r.ok) throw new Error('HTTP '+r.status); return r.json(); })
     .then(function(){ document.getElementById('fitGoalModal').classList.remove('open'); showToast('✓ 目標已更新','success'); loadFitnessData(); })
     .catch(function(e){ showToast('❌ 儲存失敗: '+e.message,'error'); });
