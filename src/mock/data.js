@@ -206,8 +206,8 @@ export const goalsData = {
       totalGoal: '財務自由覆蓋率 100%（被動 ≥ 支出）', current: '覆蓋率 10%（mock）',
       goals: [ { id: 'g-2', title: '資產 > 100 萬',  current: '30 萬', required: false, achieved: false, owner: 'HY', collaborator: 'sam' } ] },
     // ── 地基層 base ──
-    { id: 'dim-health',  layer: 'base',    name: '健康',       weight: 15, progress: 50,
-      totalGoal: '身體檢查都正常',                  current: '進度 50%（mock）',
+    { id: 'dim-health',  layer: 'base',    name: '形象',       weight: 15, progress: 50,
+      totalGoal: '形象',                  current: '進度 50%（mock）',
       goals: [ { id: 'g-3', title: '每週運動 2 次',  current: '', required: false, achieved: false, owner: 'HY', collaborator: 'xiaoyin' } ] },
     { id: 'dim-family',  layer: 'base',    name: '家庭',       weight: 15, progress: 30,
       totalGoal: '家庭安心與和諧',                  current: '進度 30%（mock）',

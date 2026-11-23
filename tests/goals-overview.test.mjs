@@ -13,6 +13,7 @@ test('summary reads actual assessment fields, preserves null and real zero, and 
  const d=fixture(),r=goalPageSummary(d)
  assert.equal(r.assessed,1);assert.equal(r.dimensions[2].score,55)
  assert.equal(r.dimensions.filter(x=>x.score===null).length,6)
+ assert.equal(r.dimensions[2].id,'dim-health');assert.equal(r.dimensions[2].name,'形象')
  assert.equal(r.dimensions[4].name,'本業');assert.equal(r.dimensions[4].bot,'本業')
  assert.equal(r.dimensions[0].nowSummary,d.dimensions[0].nowSummary)
  assert.equal(r.dimensions[0].nextStep,d.dimensions[0].nextStep)
@@ -45,6 +46,7 @@ test('actual page renders seven four-line cards, one assessment counter, and ini
  assert.equal((html.match(/class="goals-four-lines"/g)||[]).length,7)
  assert.equal((html.match(/<dt>/g)||[]).length,49) // 28 summary + 21 hidden full-detail labels.
  assert.ok(text.includes('已評分 1/7 維'));assert.ok(text.includes('55'))
+ assert.ok(text.includes('形象'));assert.ok(!text.includes('健康'))
  for(const forbidden of ['950157','mock','人生自由指數','舊現況不可顯示','舊子項不可顯示','0%'])assert.ok(!text.includes(forbidden),forbidden)
  assert.ok(!/<details[^>]*\sopen(?:\s|>)/.test(html))
  assert.equal((html.match(/<summary>細節<\/summary>/g)||[]).length,7)
