@@ -1,7 +1,7 @@
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
-import {ownerColor,projectColor,visible,bounds,drag,moveParent,descendants,initialCollapsed,nextCheckpoint,formatNextNode,nameIsDelayed,spanRange,viewWindow,inlineMarksByHost,layoutMarkLabels,day} from '../public/gantt-model.mjs';
+import {ownerColor,projectColor,visible,bounds,drag,moveParent,descendants,initialCollapsed,nextCheckpoint,formatNextNode,nameIsDelayed,spanRange,viewWindow,inlineMarksByHost,layoutMarkLabels,day,spanTickLabel,extendTaskParents,diffOps,historyCanUndo} from '../public/gantt-model.mjs';
 import {buildAplusItems,mergeGantt} from '../scripts/merge-aplus-gantt.mjs';
 const p={id:'p',kind:'project',parent_id:null,project_id:'p',order:0};
 const t={id:'t',kind:'task',parent_id:'p',project_id:'p',order:0,owner:'HY',start:'2026-10-10',end:'2026-10-20'};
@@ -30,7 +30,10 @@ test('drag move, resize and checkpoint dates clamp safely',()=>{
 });
 test('existing tabs remain and gantt never calls progress storage',()=>{
  const html=readFileSync(new URL('../public/950157-dashboard.html',import.meta.url),'utf8');for(const tab of ['progress','weekly','research','gantt'])assert.match(html,new RegExp('id="tab-'+tab+'"'));
+ assert.match(html,/get\('tab'\) !== 'gantt'/);
  const js=readFileSync(new URL('../public/gantt-950157.mjs',import.meta.url),'utf8');assert.doesNotMatch(js,/\/api\/950157-progress/);assert.match(js,/\/api\/950157-gantt/);
+ assert.match(js,/method:'PATCH'/);
+ assert.doesNotMatch(js,/name="started"|name="delayed"/);
 });
 
 test('schedule has five metadata columns and no status editor',()=>{
@@ -74,10 +77,13 @@ test('next checkpoint, milestone dates, delay name and full-span window',()=>{
  const byName=Object.fromEntries(aplus.filter(r=>r.kind==='checkpoint').map(r=>[r.name,r.date]));
  assert.deepEqual(byName,milestoneDates);
  assert.equal(aplus.filter(r=>r.kind==='checkpoint'&&r.inline===true).length,23);
- assert.equal(nameIsDelayed({kind:'project',delayed:true}),true);
- assert.equal(nameIsDelayed({kind:'task',delayed:true}),true);
- assert.equal(nameIsDelayed({kind:'checkpoint',delayed:true}),false);
- assert.equal(nameIsDelayed({kind:'project',delayed:false}),false);
+ assert.equal(nameIsDelayed({kind:'task',end:'2026-11-01',delayed:false},'2026-11-23'),true);
+ assert.equal(nameIsDelayed({kind:'task',end:'2026-11-23'},'2026-11-23'),false);
+ assert.equal(nameIsDelayed({kind:'task',end:'2026-11-24',delayed:true},'2026-11-23'),false);
+ assert.equal(nameIsDelayed({kind:'checkpoint',date:'2026-11-01'},'2026-11-23'),true);
+ assert.equal(nameIsDelayed({kind:'checkpoint',date:'2026-11-23'},'2026-11-23'),false);
+ assert.equal(nameIsDelayed(p,'2026-11-23',[p,{...t,end:'2026-11-01'}]),true);
+ assert.equal(nameIsDelayed(p,'2026-11-23',[p,{...t,end:'2026-12-01'}]),false);
  assert.equal(aplus.find(r=>r.id==='aplus').delayed,false);
  assert.equal(aplus.find(r=>r.id==='aplus-line-5').start,'2026-11-09');
  assert.equal(aplus.find(r=>r.id==='aplus-line-5').end,'2028-09-25');
@@ -118,4 +124,35 @@ test('builder skips the noise row and marks line checkpoints inline',()=>{
  assert.ok(built.find(r=>r.id==='aplus-ms-tech-1').inline);
  assert.ok(!built.some(r=>r.name==='123'));
  assert.equal(built.find(r=>r.id==='aplus-r6').owner,'Tiffany');
+});
+
+test('span tick uses 2027/01 instead of 27/1',()=>{
+ assert.equal(spanTickLabel(2027,1,40),'2027/01');
+ assert.equal(spanTickLabel(2027,1,20),'2027/01');
+ assert.equal(spanTickLabel(2027,1,60),'2027-01');
+ assert.equal(spanTickLabel(2027,2,40),'2月');
+ assert.equal(spanTickLabel(2027,2,20),'2');
+ const js=readFileSync(new URL('../public/gantt-950157.mjs',import.meta.url),'utf8');
+ assert.match(js,/spanTickLabel/);
+ assert.doesNotMatch(js,/String\(y\)\.slice\(2\)/);
+});
+test('task parent end extends to the latest child and project dates stay computed',()=>{
+ const parent={id:'t',kind:'task',parent_id:'p',project_id:'p',order:0,start:'2026-10-10',end:'2026-10-20'};
+ const child={id:'s',kind:'task',parent_id:'t',project_id:'p',order:0,start:'2026-10-12',end:'2026-11-30'};
+ const items=[p,parent,child];
+ const out=extendTaskParents(items,'s');
+ assert.equal(out.find(r=>r.id==='t').end,'2026-11-30');
+ assert.equal(out.find(r=>r.id==='p').start,undefined);
+});
+test('diff ops describe add, update, complete delete and undo availability',()=>{
+ const before=[p,t,c];
+ const after=[{...p,name:'改名'},{...t,end:'2026-11-01'}];
+ const ops=diffOps(before,after,{c:'complete'});
+ assert.ok(ops.some(op=>op.op==='complete'&&op.id==='c'));
+ assert.ok(ops.some(op=>op.op==='update'&&op.id==='p'&&op.fields.name==='改名'));
+ assert.ok(ops.some(op=>op.op==='update'&&op.id==='t'&&op.fields.end==='2026-11-01'));
+ const added=diffOps([p],[p,{...t}]);
+ assert.ok(added.some(op=>op.op==='add'&&op.item.id==='t'));
+ assert.equal(historyCanUndo([]),false);
+ assert.equal(historyCanUndo([{undoable:false},{undoable:true}]),true);
 });

@@ -7,17 +7,19 @@
     "rgb(180, 35, 24)",
     "rgb(17, 104, 63)"
   ],
-  "puts": 3,
+  "puts": 5,
   "unexpected": [],
   "errors": [],
   "viewports": [
     1280,
+    390,
     1760
   ],
   "coverage": [
-    "started date red",
-    "delayed date red",
-    "independent flag toggles and persistence",
+    "calendar delay red",
+    "complete confirm permanent delete",
+    "undo last step",
+    "span jump to end",
     "multi-project",
     "deep hierarchy",
     "collapse",

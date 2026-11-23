@@ -91,8 +91,68 @@ export function formatNextNode(node) {
   if(!node?.date||!node.name)return '';
   return `下一個節點：${node.name} ${Number(node.date.slice(5,7))}/${Number(node.date.slice(8,10))}`;
 }
-export function nameIsDelayed(row) {
-  return !!row&&row.kind!=='checkpoint'&&row.delayed===true;
+export function nameIsDelayed(row, today, items) {
+  if (!row || !today) return false;
+  let end=null;
+  if (row.kind==='checkpoint') end=row.date;
+  else if (row.kind==='project') end=items?bounds(items,row)[1]:row.end;
+  else end=row.end;
+  return !!end && today>end;
+}
+export function spanTickLabel(y,m,w) {
+  const mm=String(m).padStart(2,'0');
+  if (w>=52) return `${y}-${mm}`;
+  if (m===1) return `${y}/${mm}`;
+  if (w>=32) return `${m}月`;
+  return String(m);
+}
+export function extendTaskParents(items,id) {
+  const rows=items.map(r=>({...r}));
+  const byId=new Map(rows.map(r=>[r.id,r]));
+  let node=byId.get(id);
+  const seen=new Set();
+  while(node?.parent_id){
+    const parent=byId.get(node.parent_id);
+    if(!parent||seen.has(parent.id))break;
+    seen.add(parent.id);
+    if(parent.kind==='task'){
+      const ends=rows.filter(r=>r.parent_id===parent.id).map(r=>r.kind==='checkpoint'?r.date:r.end).filter(Boolean);
+      if(ends.length){
+        const latest=ends.reduce((a,b)=>a>b?a:b);
+        if(!parent.end||parent.end<latest){
+          parent.end=latest;
+          if(parent.start&&parent.start>latest)parent.start=latest;
+        }
+      }
+    }
+    node=parent;
+  }
+  return rows;
+}
+export function diffOps(beforeItems,afterItems,reasons={}) {
+  const before=new Map((beforeItems||[]).map(r=>[r.id,r]));
+  const after=new Map((afterItems||[]).map(r=>[r.id,r]));
+  const ops=[];
+  for(const [id] of before){
+    if(!after.has(id)){
+      const reason=reasons[id]||'manual';
+      ops.push({op:reason==='complete'?'complete':'delete',id,reason});
+    }
+  }
+  for(const [id,row] of after){
+    if(!before.has(id)){ops.push({op:'add',item:{...row}});continue;}
+    const old=before.get(id),fields={};
+    for(const key of new Set([...Object.keys(old),...Object.keys(row)])){
+      if(JSON.stringify(old[key])!==JSON.stringify(row[key]))fields[key]=row[key];
+    }
+    if(Object.keys(fields).length)ops.push({op:'update',id,fields});
+  }
+  return ops;
+}
+export function historyCanUndo(history) {
+  if(!Array.isArray(history)||!history.length)return false;
+  for(let i=history.length-1;i>=0;i--)if(history[i]?.undoable)return true;
+  return false;
 }
 export function barTone(row) {
   if(!row)return null;
