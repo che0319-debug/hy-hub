@@ -8,9 +8,10 @@ export const DIMENSIONS = {
   'dim-leisure': { owner: 'hy', bot: 'HY', building: 'lakeside' },
   'dim-growth': { owner: 'hy', bot: 'HY', building: 'dojo' },
 }
+export const DIMENSION_NAMES = { 'dim-biz':'事業','dim-fin':'財務','dim-health':'形象','dim-family':'家庭','dim-job':'本業','dim-leisure':'休閒','dim-growth':'成長' }
 export const BUILDING_DIMENSIONS = Object.fromEntries(Object.entries(DIMENSIONS).map(([id, d]) => [d.building, id]))
 export const LAYERS = [{ id: 'engine', name: '引擎層', note: '事業與財務' },
-  { id: 'base', name: '地基層', note: '健康、家庭與本業' }, { id: 'sustain', name: '續航層', note: '休閒與成長' }]
+  { id: 'base', name: '地基層', note: '形象、家庭與本業' }, { id: 'sustain', name: '續航層', note: '休閒與成長' }]
 export const ACTIVITY = { green: { text: '7 天內有行動', tone: 'done' }, yellow: { text: '8–21 天有行動', tone: 'you' },
   red: { text: '超過 21 天的紀錄', tone: 'bad' }, unknown: { text: '行動日期待補', tone: 'wait' } }
 const taipeiDay = value => { if (typeof value !== 'string' || !value) return null; const time = Date.parse(value.length === 10 ? value + 'T00:00:00+08:00' : value); return Number.isFinite(time) ? Math.floor((time + 8 * 3600000) / 86400000) : null }
@@ -32,7 +33,7 @@ export function dimensionView(d, now = Date.now()) {
   const initialized = !!d.initializedAt || history.some(h => h.kind === 'initial')
   const score = initialized && Number.isInteger(d.progress) && d.progress >= 0 && d.progress <= 100 ? d.progress : null
   const vision = d.tenYearVision || { text: d.totalGoal || '', source: 'legacy', confirmedByUser: false }
-  return { ...d, ...DIMENSIONS[d.id], score, scoreText: score === null ? '未評分' : `${score} / 100`,
+  return { ...d, ...DIMENSIONS[d.id], name: DIMENSION_NAMES[d.id], score, scoreText: score === null ? '未評分' : `${score} / 100`,
     scoreSourceText: score === null ? '待負責 Bot 提供真實證據' : 'v2 起算 · Bot 依證據評分',
     activity: activityOf(d.lastActionAt, now), evidenceStatus: d.evidenceStatus || 'insufficient',
     vision, visionLabel: vision.confirmedByUser ? '已確認' : vision.source === 'hy' ? '待你點頭' : '草稿・待你改',

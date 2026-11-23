@@ -8,14 +8,14 @@ import { InboxProvider } from '../../src/inbox/InboxContext'
 const now = new Date()
 const days = n => new Date(now.valueOf() - n * 86400000).toISOString()
 const ids=['dim-biz','dim-fin','dim-health','dim-family','dim-job','dim-leisure','dim-growth']
-const names=['事業','財務','健康','家庭','本業（950157）','休閒','成長']
+const names=['事業','財務','形象','家庭','本業（950157）','休閒','成長']
 const owners=['sam','sam','family','family','950157','hy','hy']
 const layers=['engine','engine','base','base','base','sustain','sustain']
 const params=new URLSearchParams(location.search)
 const documentFixture={revision:1,lifePrinciples:{text:'合成測試資料：整份人生準則範例。'},dimensions:ids.map((id,i)=>({
  id,name:names[i],advisorBot:owners[i],layer:layers[i],progress:[46,52,61,30,73,35,62][i],
  initializedAt:i===3?undefined:days(30),lastActionAt:i===3?undefined:days([2,14,1,0,25,8,3][i]),
- totalGoal:['建立穩定的事業基礎','財務自由覆蓋率 100%','身體檢查都正常','家庭安心與和諧','可準時下班','滿足新體驗','提升新知識'][i],
+ totalGoal:['建立穩定的事業基礎','財務自由覆蓋率 100%','形象','家庭安心與和諧','可準時下班','滿足新體驗','提升新知識'][i],
  evidenceStatus:i===3?'insufficient':i===1?'source_down':'ok',statusReason:i===3?'等待口述來源使用許可':i===1?'本月資料尚未讀取':'',
  nowSummary:'合成測試資料：已有可追溯的階段紀錄。',nextStep:['完成一項可驗收的事業行動','補齊本月收支來源','完成本週運動紀錄','由負責 Bot 補齊可用證據','記錄本週準時下班情況','安排一次新的休閒體驗','整理一份可重用的學習筆記'][i],
  history:i===3?[]:[{id:'initial-'+id,kind:'initial',at:days(30),scoreAfter:[46,52,61,30,73,35,62][i]-3,delta:0,reason:'合成測試：依階段成果錨點建立首評。',evidence:[{source:'synthetic',ref:'fixture-initial-'+id,at:days(30)}]},

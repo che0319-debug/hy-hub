@@ -7,6 +7,12 @@ import { ALL_BUILDINGS, BUILDING_BLOCK } from '../src/life-island/data.js'
 const now=Date.parse('2026-11-08T13:00:00Z')
 const fixture=()=>({dimensions:Object.keys(DIMENSIONS).map((id,i)=>({id,name:id,progress:i,layer:['engine','engine','base','base','base','sustain','sustain'][i],totalGoal:'synthetic draft',unknown:'keep'}))})
 
+test('dim-health 顯示名為形象，識別碼維持 dim-health',()=>{
+ const d=fixture().dimensions.find(x=>x.id==='dim-health');d.name='健康'
+ const v=dimensionView(d,now)
+ assert.equal(v.id,'dim-health');assert.equal(v.name,'形象')
+ assert.equal(DIMENSIONS['dim-health'].owner,'family')
+})
 test('七維到七棟唯一對應，保留原資料與未評分舊分',()=>{
  const f=fixture();validateGoals(f)
  assert.equal(new Set(Object.values(BUILDING_DIMENSIONS)).size,7)
