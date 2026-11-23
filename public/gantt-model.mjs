@@ -151,8 +151,7 @@ export function diffOps(beforeItems,afterItems,reasons={}) {
 }
 export function historyCanUndo(history) {
   if(!Array.isArray(history)||!history.length)return false;
-  for(let i=history.length-1;i>=0;i--)if(history[i]?.undoable)return true;
-  return false;
+  return history[history.length-1]?.undoable===true;
 }
 export function barTone(row) {
   if(!row)return null;

@@ -155,4 +155,5 @@ test('diff ops describe add, update, complete delete and undo availability',()=>
  assert.ok(added.some(op=>op.op==='add'&&op.item.id==='t'));
  assert.equal(historyCanUndo([]),false);
  assert.equal(historyCanUndo([{undoable:false},{undoable:true}]),true);
+ assert.equal(historyCanUndo([{undoable:true},{undoable:false}]),false);
 });
