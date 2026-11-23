@@ -16,17 +16,62 @@ const fixture={revision:'demo1',items:[
  r('u','task','p2','p2','模型與實作驗證','HY','2026-11-03','2026-11-20',{started:true}),
  r('v','task','p2','p2','樣品測試與整理','Alex','2026-11-10','2026-11-26',{order:1}),
 ]};
+function applyPatch(doc,ops,rev){
+  let items=doc.items.map(r=>({...r}));
+  const history=[...(doc.history||[])];
+  if(ops.length===1&&ops[0].op==='undo'){
+    const last=[...history].reverse().find(h=>h.undoable);
+    if(!last)return doc;
+    const removed=new Set((last.removed||[]).map(r=>r.id));
+    items=items.filter(r=>!removed.has(r.id));
+    for(const r of last.removed||[])items.push({...r});
+    for(const [id,fields] of Object.entries(last.updated||{})){
+      const row=items.find(r=>r.id===id);if(row)Object.assign(row,fields.before);
+    }
+    items=items.filter(r=>!(last.added||[]).includes(r.id));
+    if(last)last.undoable=false;
+    history.push({id:'h'+rev,at:'2026-11-23T00:00:00+08:00',actor:'已登入使用者',action:'undo',summary:'復原上一步',changes:[],undoable:true,removed:last.added?items.filter(r=>last.added.includes(r.id)):[] ,added:(last.removed||[]).map(r=>r.id),updated:Object.fromEntries(Object.entries(last.updated||{}).map(([id,f])=>[id,{before:f.after,after:f.before}]))});
+    return {revision:'rev'+rev,items,history};
+  }
+  const removed=[],added=[],updated={};
+  const before=Object.fromEntries(items.map(r=>[r.id,{...r}]));
+  for(const op of ops){
+    if(op.op==='add'){items.push({...op.item});added.push(op.item.id);}
+    else if(op.op==='update'){const row=items.find(r=>r.id===op.id);if(row){updated[op.id]={before:before[op.id],after:{...row,...op.fields}};Object.assign(row,op.fields);}}
+    else if(op.op==='delete'||op.op==='complete'){
+      const gone=new Set();
+      const stack=[op.id];
+      while(stack.length){const id=stack.pop();if(gone.has(id))continue;gone.add(id);for(const r of items)if(r.parent_id===id)stack.push(r.id);}
+      for(const r of items)if(gone.has(r.id))removed.push({...r});
+      items=items.filter(r=>!gone.has(r.id));
+    }
+  }
+  history.push({id:'h'+rev,at:'2026-11-23T00:00:00+08:00',actor:'已登入使用者',action:ops[0]?.op||'update',summary:'測試變更',changes:[],undoable:true,removed,added,updated});
+  return {revision:'rev'+rev,items,history};
+}
 (async()=>{
 const browser=await chromium.launch({headless:true,...(process.env.CHROMIUM_PATH?{executablePath:process.env.CHROMIUM_PATH}:{}),args:['--no-sandbox','--disable-dev-shm-usage','--disable-gpu']});
 let saved=structuredClone(fixture),failure=null,puts=0,unexpected=[];
 const context=await browser.newContext({viewport:{width:1280,height:900}});
+await context.addInitScript(()=>{window.GANTT_TODAY='2026-11-23';window.GANTT_SAVE_MS=60000;});
 await context.route('**/*',async route=>{
  const url=new URL(route.request().url());
  if(['127.0.0.1','localhost'].includes(url.hostname))return route.continue();
  if(url.pathname==='/api/950157-gantt'){
-  const put=route.request().method()==='PUT';if(put)puts++;
+  const method=route.request().method();
+  if(method==='PUT'||method==='PATCH')puts++;
   if(failure)return route.fulfill({status:failure,contentType:'application/json',body:'{"detail":"test failure"}'});
-  if(put){const data=route.request().postDataJSON();assert.equal(data.revision,saved.revision);saved={...data,revision:'rev'+puts};}
+  if(method==='PUT'||method==='PATCH'){
+    const data=route.request().postDataJSON();
+    assert.equal(data.revision,saved.revision);
+    if(method==='PATCH'){
+      saved=applyPatch(saved,data.ops,puts);
+    }else{
+      const history=[...(saved.history||[])];
+      history.push({id:'h'+puts,at:'2026-11-23T00:00:00+08:00',actor:'已登入使用者',action:'replace',summary:'整份儲存',changes:[],undoable:true});
+      saved={revision:'rev'+puts,items:data.items,history};
+    }
+  }
   return route.fulfill({contentType:'application/json',body:JSON.stringify(saved)});
  }
  if(url.hostname==='cdnjs.cloudflare.com')return route.fulfill({contentType:'application/javascript',body:'window.Sortable={create:()=>({destroy(){}})};'});
@@ -35,35 +80,32 @@ await context.route('**/*',async route=>{
  if(url.pathname==='/api/950157-progress'){if(route.request().method()!=='GET')unexpected.push(url.pathname);return route.fulfill({contentType:'application/json',body:'{"projects":[]}'});}
  return route.fulfill({contentType:'application/json',body:'{"weeks":[],"projects":[],"items":[]}'});
 });
-const page=await context.newPage(),errors=[];page.on('pageerror',e=>{errors.push(e.message);console.log('PAGE ERROR',e.message)});page.on('dialog',d=>d.accept());
+const page=await context.newPage(),errors=[],dialogs=[];page.on('pageerror',e=>{errors.push(e.message);console.log('PAGE ERROR',e.message)});page.on('dialog',d=>{dialogs.push(d.message());return d.accept();});
 console.log('opening');await page.goto(base,{waitUntil:'domcontentloaded',timeout:15000});console.log('opened',await page.title());await page.locator('.g-row[data-id="p"]').waitFor();
 async function anchor(){await page.locator('#g-anchor').fill('2026-11-01');await page.locator('#g-anchor').press('Tab');}
 console.log('rows loaded');await anchor();assert.equal(await page.locator('.g-row[data-id]').count(),10);assert.equal(await page.locator('.g-head .g-cell').count(),6);assert.equal(await page.locator('[data-key=status],dialog [name=status]').count(),0);assert.equal(await page.locator('.g-row.is-project .g-bar').count(),2);assert.equal(await page.locator('.g-mark').count(),3);
 const colors=await page.locator('.g-mark').evaluateAll(els=>els.map(e=>getComputedStyle(e).color));assert.deepEqual(new Set(colors),new Set(['rgb(17, 104, 63)','rgb(180, 35, 24)','rgb(0, 0, 0)']));
 for(const [a,b] of [['t','u'],['p','p2']])assert.equal(await page.locator(`[data-id=${a}] .g-bar`).evaluate(e=>e.style.background),await page.locator(`[data-id=${b}] .g-bar`).evaluate(e=>e.style.background));
 
-// Date text is independent from owner bars, checkpoint colors and calendar time.
+// Calendar delay: today 2026-11-23 is after t/s/s2 end dates, but not v (11/26).
 const red='rgb(180, 35, 24)';
-for(const part of ['g-start','g-end'])assert.equal(await page.locator('[data-id=t] .'+part).evaluate(el=>getComputedStyle(el).color),red);
-assert.notEqual(await page.locator('[data-id=s] .g-start').evaluate(el=>getComputedStyle(el).color),red);
-await page.locator('[data-id=t] [data-key=name]').click();await page.locator('[data-action=edit]').click();
-assert.ok(await page.locator('dialog [name=started]').isChecked());assert.ok(await page.locator('dialog [name=delayed]').isChecked());
-await page.locator('dialog [name=started]').uncheck();await page.getByRole('button',{name:'套用變更'}).click();
-assert.notEqual(await page.locator('[data-id=t] .g-start').evaluate(el=>getComputedStyle(el).color),red);
+assert.equal(await page.locator('[data-id=t] .g-name.is-delayed [data-key=name]').evaluate(el=>getComputedStyle(el).color),red);
 assert.equal(await page.locator('[data-id=t] .g-end').evaluate(el=>getComputedStyle(el).color),red);
-await page.locator('[data-action=edit]').click();await page.locator('dialog [name=started]').check();await page.locator('dialog [name=delayed]').uncheck();await page.getByRole('button',{name:'套用變更'}).click();
-assert.equal(await page.locator('[data-id=t] .g-start').evaluate(el=>getComputedStyle(el).color),red);
-assert.notEqual(await page.locator('[data-id=t] .g-end').evaluate(el=>getComputedStyle(el).color),red);
-await page.locator('[data-action=edit]').click();await page.locator('dialog [name=delayed]').check();await page.getByRole('button',{name:'套用變更'}).click();
+assert.equal(await page.locator('[data-id=s] .g-name.is-delayed').count(),1);
+assert.equal(await page.locator('[data-id=v] .g-name.is-delayed').count(),0);
+assert.equal(await page.locator('dialog [name=started],dialog [name=delayed]').count(),0);
+await page.locator('[data-id=t] [data-key=name]').click();await page.locator('[data-action=edit]').click();
+assert.equal(await page.locator('dialog [name=started],dialog [name=delayed]').count(),0);
+await page.getByRole('button',{name:'取消'}).click();
 
 assert.ok((await page.locator('.g-row[data-id]').evaluateAll(rows=>rows.map(r=>{const cs=[...r.children].map(c=>c.getBoundingClientRect());return cs.every(c=>Math.abs(c.y-cs[0].y)<.5&&Math.abs(c.height-44)<.5)}))).every(Boolean));
 await page.locator('[data-toggle=t]').click();assert.equal(await page.locator('.g-row[data-id]').count(),6);await page.locator('[data-toggle=t]').click();
-async function pointer(selector,dx){const el=page.locator(selector);await el.scrollIntoViewIfNeeded();const b=await el.boundingBox(),x=b.x+b.width/2,y=b.y+b.height/2;await page.mouse.move(x,y);await page.mouse.down();await page.mouse.move(x+dx,y,{steps:5});await page.mouse.up();}
+async function pointer(selector,dx){const el=page.locator(selector).first();await el.waitFor({state:'visible'});await el.scrollIntoViewIfNeeded();const b=await el.boundingBox();if(!b)throw new Error('no box for '+selector);const x=b.x+b.width/2,y=b.y+b.height/2;await page.mouse.move(x,y);await page.mouse.down();await page.mouse.move(x+dx,y,{steps:5});await page.mouse.up();}
 console.log('drag tests');await pointer('[data-id=t] .g-bar',18);assert.equal(await page.locator('[data-id=t] [data-key=start]').inputValue(),'2026-11-04');assert.equal(await page.locator('[data-id=t] [data-key=end]').inputValue(),'2026-11-19');
 await pointer('[data-id=t] .g-handle.left',9);assert.equal(await page.locator('[data-id=t] [data-key=start]').inputValue(),'2026-11-05');
 await pointer('[data-id=t] .g-handle.right',-9);assert.equal(await page.locator('[data-id=t] [data-key=end]').inputValue(),'2026-11-18');
 await pointer('[data-id=c] .g-mark',18);assert.equal(await page.locator('[data-id=c] [data-key=date]').inputValue(),'2026-11-20');assert.match(await page.locator('[data-id=p]').innerText(),/2026-11-20/);
-await page.locator('[data-action=save]').click();await page.getByRole('status').filter({hasText:'已儲存'}).waitFor();assert.equal(puts,1);assert.equal(saved.items.find(r=>r.id==='t').started,true);assert.equal(saved.items.find(r=>r.id==='t').delayed,true);
+await page.locator('[data-action=save]').click();await page.getByRole('status').filter({hasText:'已儲存'}).waitFor();assert.ok(puts>=1);assert.equal(saved.items.find(r=>r.id==='t').start,'2026-11-05');assert.equal(saved.items.find(r=>r.id==='t').end,'2026-11-18');
 await page.reload();await page.locator('[data-id=t]').waitFor();assert.equal(await page.locator('[data-id=t] [data-key=start]').inputValue(),'2026-11-05');
 const second=await context.newPage();await second.goto(base);await second.locator('[data-id=t]').waitFor();assert.equal(await second.locator('[data-id=t] [data-key=start]').inputValue(),'2026-11-05');await second.close();
 await page.locator('[data-id=s2] [data-key=name]').click();await page.locator('[data-action=task]').click();await page.locator('dialog [name=name]').fill('第五層測試工作');await page.locator('dialog [name=start]').fill('2026-11-07');await page.locator('dialog [name=end]').fill('2026-11-08');await page.getByRole('button',{name:'套用變更'}).click();assert.equal(await page.locator('.g-row[data-id]').count(),11);
@@ -73,7 +115,31 @@ await page.locator('[data-action=edit]').click();await page.locator('dialog [nam
 await page.locator('[data-id=p] [data-key=name]').click();await page.locator('[data-action=checkpoint]').click();await page.locator('dialog [name=name]').fill('新增查核測試');await page.locator('dialog [name=date]').fill('2026-11-22');await page.locator('dialog [name=checkpoint_type]').selectOption('major');await page.getByRole('button',{name:'套用變更'}).click();assert.equal(await page.locator('.g-row[data-id]').count(),11);
 await page.locator('[data-action=edit]').click();await page.locator('dialog [name=name]').fill('修改查核測試');await page.locator('dialog [name=date]').fill('2026-11-23');await page.locator('dialog [name=checkpoint_type]').selectOption('general');await page.getByRole('button',{name:'套用變更'}).click();await page.locator('[data-action=delete]').click();assert.equal(await page.locator('.g-row[data-id]').count(),10);
 
-failure=409;await page.locator('[data-action=save]').click();await page.getByRole('status').filter({hasText:'其他裝置'}).waitFor();assert.ok(await page.locator('[data-action=save]').isEnabled());
+await page.locator('.g-scroll').evaluate(el=>{el.scrollLeft=0;el.scrollTop=0});await page.evaluate(()=>document.fonts.ready);await page.screenshot({path:path.join(out,'edit-desktop-1280.png'),fullPage:true});
+
+// Complete checkbox permanently removes the row after confirm; undo brings it back.
+const beforeComplete=await page.locator('.g-row[data-id]').count();
+dialogs.length=0;
+await page.locator('[data-id=s2] [data-key=complete]').click();
+await page.locator('[data-id=s2]').waitFor({state:'detached'});
+assert.equal(await page.locator('.g-row[data-id]').count(),beforeComplete-1);
+assert.ok(dialogs.some(m=>m.includes('永久刪除')&&m.includes('不會進封存')));
+await page.locator('[data-action=save]').click();
+await page.getByRole('status').filter({hasText:'已儲存'}).waitFor();
+await page.locator('[data-action=undo]').click();
+await page.locator('[data-id=s2]').waitFor();
+assert.equal(await page.locator('.g-row[data-id]').count(),beforeComplete);
+await page.getByRole('status').filter({hasText:'已復原'}).waitFor();
+await page.screenshot({path:path.join(out,'undo-desktop-1280.png'),fullPage:true});
+
+await page.locator('#g-mode').selectOption('span');
+assert.match(await page.locator('#g-range').innerText(),/2026-11/);
+await page.locator('[data-action=end]').click();
+assert.ok(await page.locator('.g-scroll').evaluate(el=>el.scrollLeft>0));
+await page.locator('#g-mode').selectOption('month');
+
+failure=409;await page.locator('[data-id=t] [data-key=name]').fill('觸覺模組設計（衝突測試）');await page.locator('[data-id=t] [data-key=name]').press('Tab');await page.locator('[data-action=save]').click();await page.getByRole('status').filter({hasText:'其他裝置'}).waitFor();assert.ok(await page.locator('[data-action=save]').isEnabled());
+
 failure=503;await page.locator('[data-action=save]').click();await page.getByRole('status').filter({hasText:'儲存失敗'}).waitFor();await page.locator('[data-action=load]').click();await page.getByRole('status').filter({hasText:'讀取失敗'}).waitFor();assert.ok(await page.locator('[data-action=save]').isDisabled());const count=puts;await page.locator('#saveBtn').click();assert.equal(puts,count);
 failure=null;await page.locator('[data-action=load]').click();await page.locator('[data-id=t]').waitFor();
 for(const tab of ['progress','weekly','research','gantt']){await page.locator(`[data-tab=${tab}]`).click();assert.ok(await page.locator(`#tab-${tab}`).isVisible());}
@@ -83,6 +149,6 @@ if(!process.env.GANTT_DESKTOP_ONLY){await page.setViewportSize({width:390,height
 await page.locator('.g-scroll').evaluate(el=>el.scrollLeft=358);await page.screenshot({path:path.join(out,'mobile-timeline-390.png'),fullPage:true});
 }
 await page.setViewportSize({width:1760,height:1000});await page.locator('.g-scroll').evaluate(el=>el.scrollLeft=0);await page.screenshot({path:path.join(out,'demo-complete.png'),fullPage:true});
-assert.equal(unexpected.length,0);assert.equal(errors.length,0,errors.join('\n'));fs.writeFileSync(path.join(out,'qa.json'),JSON.stringify({passed:true,rows:10,projects:2,checkpointColors:colors,puts,unexpected,errors,viewports:process.env.GANTT_DESKTOP_ONLY?[1280,1760]:[1280,390,1760],coverage:['started date red','delayed date red','independent flag toggles and persistence','multi-project','deep hierarchy','collapse','reparent','order','delete','colors','alignment','move','left resize','right resize','checkpoint drag','parent dates','save reload','second device','409 conflict','503 save','read failure lock','header isolation','existing tabs','month week','mobile scroll']},null,2));
+assert.equal(unexpected.length,0);assert.equal(errors.length,0,errors.join('\n'));fs.writeFileSync(path.join(out,'qa.json'),JSON.stringify({passed:true,rows:10,projects:2,checkpointColors:colors,puts,unexpected,errors,viewports:process.env.GANTT_DESKTOP_ONLY?[1280,1760]:[1280,390,1760],coverage:['calendar delay red','complete confirm permanent delete','undo last step','span jump to end','multi-project','deep hierarchy','collapse','reparent','order','delete','colors','alignment','move','left resize','right resize','checkpoint drag','parent dates','save reload','second device','409 conflict','503 save','read failure lock','header isolation','existing tabs','month week','mobile scroll']},null,2));
 await browser.close();console.log('Gantt browser QA passed. '+out);
 })().catch(e=>{console.error(e);process.exit(1)});

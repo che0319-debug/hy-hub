@@ -967,6 +967,14 @@ document.querySelector('[data-tab="research"]').addEventListener('click', loadRe
   loadResearch();
 })();
 
+(function() {
+  if (new URLSearchParams(window.location.search).get('tab') !== 'gantt') return;
+  document.querySelectorAll('.tab').forEach(function(t) { t.classList.remove('active'); });
+  document.querySelectorAll('.tab-content').forEach(function(c) { c.classList.remove('active'); });
+  document.querySelector('[data-tab="gantt"]').classList.add('active');
+  document.getElementById('tab-gantt').classList.add('active');
+})();
+
 </script>
 <script type="module" src="gantt-950157.mjs"></script>
 <script type="module" src="koffice-950157.mjs"></script>

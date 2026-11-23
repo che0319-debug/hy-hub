@@ -20,3 +20,10 @@
 .g-grid.is-span .g-tick{top:20px;height:24px;line-height:24px}
 .g-node{position:absolute;transform:translateX(-50%);font-size:10px;line-height:12px;font-weight:700;white-space:nowrap;pointer-events:none;z-index:3;color:#172033;text-shadow:0 0 3px #fff,0 0 3px #fff}.g-node.lane-0{top:0}.g-node.lane-1{bottom:0}
 .g-mark.is-inline{width:16px;height:14px;font-size:13px;line-height:14px;z-index:4}.g-mark.is-picked{outline:2px solid var(--hy-ink);outline-offset:1px}
+.g-complete{display:flex;align-items:center;flex:0 0 22px;margin:0}
+.g-complete input{width:16px;min-width:16px;height:16px;min-height:16px;padding:0;accent-color:var(--hy-brand);cursor:pointer}
+.g-history{font-size:12px;color:var(--hy-muted);display:grid;gap:2px}
+.g-history-title{font-weight:700;color:var(--hy-ink)}
+.g-history-row{line-height:1.4}
+.g-range{font-size:12px;color:var(--hy-muted);white-space:nowrap}
+@media(max-width:640px){.g-name.is-delayed input[data-key=name],.g-name.is-delayed{color:var(--hy-bad);font-weight:700}}
