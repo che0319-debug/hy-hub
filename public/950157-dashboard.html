@@ -419,7 +419,7 @@ header { background:var(--header-bg); padding:0 24px; display:flex; align-items:
   </div>
 </div>
 
-<!-- 技術雷達（階段 1 唯讀；原研究 v0 檔案 research/950157-research.json 保留不刪） -->
+<!-- 技術雷達（階段 1-v2 唯讀 hy-data；不讀 lab-data；原研究 v0 檔案 research/950157-research.json 保留不刪） -->
 <div class="tab-content" id="tab-radar">
   <div class="radar-root" id="radarRoot"><div class="radar-loading">載入中…</div></div>
 </div>
@@ -959,7 +959,7 @@ function loadResearch() {
       document.getElementById('researchContent').innerHTML = '<div class="weekly-loading">研究資料載入失敗（' + rEsc(e.message) + '）</div>';
     });
 }
-// 研究 v0 載入改由 radar-tab-950157.mjs 接手（?tab=research 與 ?tab=radar 都會打開新分頁）
+// 研究 v0 載入改由 radar-tab-950157.js 接手（?tab=research 與 ?tab=radar 都會打開新分頁）
 
 
 // ?tab=radar 或舊的 ?tab=research：先打開技術雷達分頁（內容由 radar-tab-950157.js 載入）
