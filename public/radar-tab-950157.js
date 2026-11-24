@@ -1,12 +1,26 @@
-// 技術雷達分頁 v1：唯讀顯示 lab-data。寫入、掃描、主軸管理尚未接上。
+// 技術雷達分頁 v1.1：唯讀顯示 OS hy-data，不讀 lab-data。寫入、掃描、主軸管理尚未接上。
 const PROD_API = 'https://hy-agent-v2.onrender.com/api/radar/feed';
 
 function radarApiUrl() {
-  if (window.__RADAR_API__) return window.__RADAR_API__;
+  let url = '';
+  if (window.__RADAR_API__) url = window.__RADAR_API__;
+  else {
+    const host = location.hostname;
+    if (host === '127.0.0.1' || host === 'localhost') url = '/api/radar/feed';
+    else url = (window.API || '') + '/api/radar/feed' || PROD_API;
+  }
   const host = location.hostname;
-  if (host === '127.0.0.1' || host === 'localhost') return '/api/radar/feed';
-  const base = window.API || '';
-  return (base || '') + '/api/radar/feed' || PROD_API;
+  if (host === '127.0.0.1' || host === 'localhost') {
+    const demo = new URLSearchParams(location.search).get('radar_demo');
+    if (demo) url += (url.includes('?') ? '&' : '?') + 'demo=' + encodeURIComponent(demo);
+  }
+  return url;
+}
+
+function friendlyError(data, fallback) {
+  if (data && typeof data.error === 'string' && data.error.trim()) return data.error;
+  if (data && typeof data.message === 'string' && data.message.trim()) return data.message;
+  return fallback || '現在讀不到技術雷達資料。請稍後再試，或通知 Atlas 檢查。';
 }
 
 function esc(v) {
@@ -92,7 +106,7 @@ function titleHtml(item) {
 function laterBtns(citeLabel) {
   const cite = citeLabel ? `引用到 ${citeLabel}` : '引用到專案';
   return `<div class="radar-flex">
-    <button class="radar-btn" type="button" disabled title="階段 2 才開放">加入文獻庫</button>
+    <button class="radar-btn" type="button" disabled title="階段 2：只在雷達標成已保留，不上傳 Drive；原始網址留給你開啟">加入文獻庫</button>
     <button class="radar-btn" type="button" disabled title="階段 2 才開放">升級為訊號</button>
     <button class="radar-btn" type="button" disabled title="階段 2 才開放">略過</button>
     <button class="radar-btn radar-btn-link" type="button" disabled title="階段 2 才開放">↗ ${esc(cite)}</button>
@@ -166,8 +180,15 @@ function renderAxis(ax, data, flt) {
   const alerts = (data.alerts || []).filter((x) => onItem(x, ax.id) && signalVisible(x, flt.kind));
   const deadlines = (data.deadlines || []).filter((x) => onItem(x, ax.id) && signalVisible(x, flt.kind));
   const kws = ax.keywords || [];
-  const kwHtml = kws.slice(0, 8).map((k) => `<span class="radar-chip radar-t-gray">${esc(k)}</span>`).join(' ')
-    + (kws.length ? `<span class="radar-muted radar-small">…共 ${kws.length} 個</span>` : '<span class="radar-muted radar-small">尚未有正式關鍵字</span>');
+  const pending = ax.candidate_pending || 0;
+  let kwHtml = kws.slice(0, 8).map((k) => `<span class="radar-chip radar-t-gray">${esc(k)}</span>`).join(' ');
+  if (kws.length) kwHtml += `<span class="radar-muted radar-small">…共 ${kws.length} 個正式關鍵字</span>`;
+  else kwHtml += '<span class="radar-muted radar-small">尚未有正式關鍵字</span>';
+  if (pending) kwHtml += ` <span class="radar-chip radar-t-blue">候選 ${pending} 組，等 ${esc(ax.owner_bot || '負責 Bot')} 採用</span>`;
+  const cand = (ax.keyword_candidates || []).filter((c) => c.decision === 'pending').slice(0, 6);
+  if (cand.length) {
+    kwHtml += '<div class="radar-kw-cands">' + cand.map((c) => `<span class="radar-chip radar-t-gray" title="${esc(c.reason || '')}">${esc(c.text)}</span>`).join(' ') + (pending > cand.length ? `<span class="radar-muted radar-small">…還有 ${pending - cand.length} 組</span>` : '') + '</div>';
+  }
   const last = ax.last_run ? `上次 ${esc(ax.last_run)}` : '上次 尚未掃描';
   const next = ax.next_run ? `下次 ${esc(ax.next_run)}` : '';
   const office = ax.office_project
@@ -176,12 +197,11 @@ function renderAxis(ax, data, flt) {
   const officeNote = ax.office_project_note
     ? `<span class="radar-muted radar-small">${esc(ax.office_project_note)}</span>`
     : '';
-  const virtClass = ax.virtual ? ' radar-virt' : '';
-  const emptyNew = ax.virtual && !radar.length && !news.length && !alerts.length && !deadlines.length;
+  const emptyAll = !radar.length && !news.length && !alerts.length && !deadlines.length;
 
   let body = '';
-  if (emptyNew) {
-    body = `<div class="radar-empty">新主軸，尚未寫進 lab-data，也還沒有資料。主軸管理做好、核准後才會新增。這裡只先顯示空版面。</div>`;
+  if (emptyAll) {
+    body = `<div class="radar-empty">這條主軸目前沒有新知或方向訊號。資料從零開始，不沿用 Lab 舊資料。</div>`;
   } else {
     const sig = [...alerts.map(renderAlert), ...deadlines.map(renderDeadline), ...radar.map((x) => renderRadar(x, cite))];
     const newsHtml = news.map((x) => renderNews(x, cite));
@@ -191,7 +211,7 @@ function renderAxis(ax, data, flt) {
     body += newsHtml.length ? newsHtml.join('') : '<div class="radar-empty">這個篩選下沒有科技新知。</div>';
   }
 
-  return `<section class="radar-card${virtClass}" id="ax-${esc(ax.id)}" data-axis="${esc(ax.id)}">
+  return `<section class="radar-card" id="ax-${esc(ax.id)}" data-axis="${esc(ax.id)}">
     <div class="radar-card-h radar-axis-h">
       <h2 class="radar-sec">${esc(ax.display_name || ax.name)}</h2>
       <div class="radar-flex">
@@ -218,13 +238,14 @@ function renderAll(data, flt) {
     const on = (flt.axis === id) || (id === 'all' && flt.axis === 'all');
     if (id === 'all') return `<button type="button" class="radar-flt${on ? ' on' : ''}" data-axis="all">全部</button>`;
     const ax = axes.find((a) => a.id === id);
-    return `<button type="button" class="radar-flt${on ? ' on' : ''}" data-axis="${esc(id)}">${esc(ax.display_name)} <b>${ax.open_signals}</b>／${ax.new_news}</button>`;
+    const axisName = (ax && (ax.display_name || ax.name)) || '';
+    return `<button type="button" class="radar-flt${on ? ' on' : ''}" data-axis="${esc(id)}">${esc(axisName)} <b>${ax.open_signals}</b>／${ax.new_news}</button>`;
   }).join('');
 
   return `<div class="radar-head">
       <div>
         <div class="radar-h1">📡 技術雷達</div>
-        <p class="radar-sub">取代原「🔬 研究」分頁。資料收集與方向訊號，按主軸歸類，供 Office 主軸研發專案引用。本階段唯讀。</p>
+        <p class="radar-sub">取代原「🔬 研究」分頁。資料存在 OS 的 hy-data，從零收集，不沿用 Lab 舊資料。按主軸歸類，供 Office 主軸研發專案引用。本階段唯讀。</p>
       </div>
       <div class="radar-flex">
         <span class="radar-totals">新知 ${c.news || 0}　方向訊號 ${c.radar || 0}　警示 ${c.alerts || 0}　截止日 ${c.deadlines || 0}</span>
@@ -252,11 +273,23 @@ function renderAll(data, flt) {
             return `<button type="button" class="radar-flt${on ? ' on' : ''}" data-kind="${esc(val)}">${esc(k)}</button>`;
           }).join('')}
         </div>
-        <p class="radar-muted radar-small">數字＝待處理訊號／未處理新知。舊資料（含沒有網址、示意筆）原樣保留。</p>
+        <p class="radar-muted radar-small">數字＝待處理訊號／未處理新知。資料從零開始，不沿用 Lab 舊資料。</p>
       </div>
     </section>
+    ${data.message && !(data.axes && data.axes.length) ? `<div class="radar-empty">${esc(data.message)}</div>` : ''}
     ${shown.map((ax) => renderAxis(ax, data, flt)).join('')}`;
 }
+
+function renderUnavailable(message) {
+  return `<div class="radar-head">
+      <div>
+        <div class="radar-h1">📡 技術雷達</div>
+        <p class="radar-sub">資料存在 OS 的 hy-data，從零收集，不沿用 Lab 舊資料。</p>
+      </div>
+    </div>
+    <div class="radar-error">${esc(message)}</div>`;
+}
+
 
 function bind(root, data) {
   root.querySelectorAll('[data-axis]').forEach((btn) => {
@@ -307,7 +340,8 @@ async function loadRadar() {
   const root = document.getElementById('radarRoot');
   if (!root) return;
   if (loaded && cache) {
-    draw(root, cache, params());
+    if (cache.unavailable || cache.ok === false) root.innerHTML = renderUnavailable(friendlyError(cache));
+    else draw(root, cache, params());
     return;
   }
   root.innerHTML = '<div class="radar-loading">載入中…</div>';
@@ -321,14 +355,23 @@ async function loadRadar() {
       if (tok) headers.Authorization = 'Bearer ' + tok;
     }
     const res = await fetch(radarApiUrl(), { cache: 'no-store', headers });
-    if (!res.ok) throw new Error('HTTP ' + res.status);
-    const data = await res.json();
-    if (!data || data.ok === false) throw new Error((data && data.error) || '資料格式不正確');
+    let data = null;
+    try { data = await res.json(); } catch (parseErr) { data = null; }
+    if (data && (data.unavailable || data.ok === false)) {
+      cache = data;
+      loaded = true;
+      root.innerHTML = renderUnavailable(friendlyError(data));
+      return;
+    }
+    if (!res.ok || !data) {
+      root.innerHTML = renderUnavailable('現在讀不到技術雷達資料。請稍後再試，或先登入後再看。沒有沿用 Lab 舊資料。');
+      return;
+    }
     cache = data;
     loaded = true;
     draw(root, data, params());
   } catch (err) {
-    root.innerHTML = `<div class="radar-error">技術雷達資料載入失敗（${esc(err.message)}）。請確認已登入；若仍失敗，可能是後端還沒設定 lab-data 讀取金鑰。</div>`;
+    root.innerHTML = renderUnavailable('現在讀不到技術雷達資料。請稍後再試，或通知 Atlas 檢查。沒有沿用 Lab 舊資料。');
   }
 }
 
