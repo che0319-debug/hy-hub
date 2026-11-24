@@ -80,6 +80,8 @@
   .radar-h1 { font-size: 18px; }
   .radar-sec { font-size: 15px; }
   .radar-btn { min-height: 44px; }
+  .radar-chip { white-space: normal; overflow-wrap: anywhere; }
+  .radar-kw-cands .radar-chip { max-width: 100%; }
 }
 
 .radar-kw-cands { display:flex; flex-wrap:wrap; gap:6px; margin-top:8px; width:100%; }
@@ -91,3 +93,4 @@
 .radar-cand.is-adopted { background:#f3faf4; border-color:#b7dfc2; }
 .radar-axis-hits { margin:6px 0 4px; }
 .radar-btn-adopt { cursor:pointer; }
+.radar-scan-count { background:#E8F0FE; color:#163E87; border:1px solid #C5D7F5; }
