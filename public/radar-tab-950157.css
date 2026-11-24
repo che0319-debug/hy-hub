@@ -84,3 +84,10 @@
 
 .radar-kw-cands { display:flex; flex-wrap:wrap; gap:6px; margin-top:8px; width:100%; }
 .radar-error { margin:16px 20px 24px; padding:16px 18px; background:#fff5f5; border:1px solid #f0c2c2; border-radius:10px; color:#9b1c1c; line-height:1.6; }
+
+.radar-t-orange { background:#fff4e5; color:#9a5b00; border:1px solid #f0d0a0; }
+.radar-cand { width:100%; border:1px solid #eadfce; border-radius:10px; padding:8px 10px; background:#fffdf8; }
+.radar-cand.is-hold { background:#fff6ea; border-color:#f0d0a0; }
+.radar-cand.is-adopted { background:#f3faf4; border-color:#b7dfc2; }
+.radar-axis-hits { margin:6px 0 4px; }
+.radar-btn-adopt { cursor:pointer; }
