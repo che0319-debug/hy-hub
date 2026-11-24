@@ -1,0 +1,347 @@
+// 技術雷達分頁 v1：唯讀顯示 lab-data。寫入、掃描、主軸管理尚未接上。
+const PROD_API = 'https://hy-agent-v2.onrender.com/api/radar/feed';
+
+function radarApiUrl() {
+  if (window.__RADAR_API__) return window.__RADAR_API__;
+  const host = location.hostname;
+  if (host === '127.0.0.1' || host === 'localhost') return '/api/radar/feed';
+  const base = window.API || '';
+  return (base || '') + '/api/radar/feed' || PROD_API;
+}
+
+function esc(v) {
+  return String(v == null ? '' : v).replace(/[&<>"']/g, (c) => ({
+    '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+  }[c]));
+}
+
+function onItem(item, axisId) {
+  if (!axisId || axisId === 'all') return true;
+  const axes = item.axes && item.axes.length ? item.axes : (item.axis ? [item.axis] : []);
+  return axes.includes(axisId);
+}
+
+function params() {
+  const q = new URLSearchParams(location.search);
+  return {
+    axis: q.get('radar_axis') || 'all',
+    rel: q.get('radar_rel') || 'mid', // mid = 高＋中；high = 只看高
+    kind: q.get('radar_kind') || 'all'
+  };
+}
+
+function setParams(next) {
+  const url = new URL(location.href);
+  url.searchParams.set('tab', 'radar');
+  if (next.axis && next.axis !== 'all') url.searchParams.set('radar_axis', next.axis);
+  else url.searchParams.delete('radar_axis');
+  if (next.rel && next.rel !== 'mid') url.searchParams.set('radar_rel', next.rel);
+  else url.searchParams.delete('radar_rel');
+  if (next.kind && next.kind !== 'all') url.searchParams.set('radar_kind', next.kind);
+  else url.searchParams.delete('radar_kind');
+  history.replaceState(null, '', url);
+}
+
+function newsVisible(item, rel, kind) {
+  if (kind === '未處理' && item.state !== 'new') return false;
+  if (kind === '論文' || kind === '專利' || kind === '新聞') {
+    if (item.kind !== kind) return false;
+  }
+  const r = item.relevance || '';
+  if (rel === 'high') return r === '高';
+  if (rel === 'mid') return r !== '低'; // 高＋中；沒標相關度的也顯示，避免藏資料
+  return true;
+}
+
+function signalVisible(item, kind) {
+  if (kind === '未處理') return item.state === 'open' || !item.state;
+  if (kind === '論文' || kind === '專利' || kind === '新聞') return false;
+  return true;
+}
+
+function relChip(rel) {
+  if (rel === '高') return '<span class="radar-chip radar-t-blue">相關度 高</span>';
+  if (rel === '中') return '<span class="radar-chip radar-t-gray">相關度 中</span>';
+  if (rel === '低') return '<span class="radar-chip radar-t-gray">相關度 低</span>';
+  return '';
+}
+
+function urgencyChip(u) {
+  if (!u) return '';
+  const cls = u === '高' ? 'radar-t-red' : 'radar-t-orange';
+  return `<span class="radar-chip ${cls}">急迫度 ${esc(u)}</span>`;
+}
+
+function kindChip(kind, map) {
+  const cls = map[kind] || 'radar-t-gray';
+  return kind ? `<span class="radar-chip ${cls}">${esc(kind)}</span>` : '';
+}
+
+const NEWS_KIND_CLASS = { '論文': 'radar-t-purple', '專利': 'radar-t-orange', '新聞': 'radar-t-blue' };
+const RADAR_KIND_CLASS = { '競爭者': 'radar-t-orange', '技術': 'radar-t-blue', '市場': 'radar-t-green', '政策': 'radar-t-purple', '補助': 'radar-t-red' };
+
+function titleHtml(item) {
+  const title = esc(item.title || item.text || '（無標題）');
+  const url = String(item.url || '').trim();
+  if (url && /^https?:\/\//i.test(url)) {
+    return `<h3><a href="${esc(url)}" target="_blank" rel="noopener noreferrer">${title}</a></h3>`;
+  }
+  return `<h3>${title}</h3>`;
+}
+
+function laterBtns(citeLabel) {
+  const cite = citeLabel ? `引用到 ${citeLabel}` : '引用到專案';
+  return `<div class="radar-flex">
+    <button class="radar-btn" type="button" disabled title="階段 2 才開放">加入文獻庫</button>
+    <button class="radar-btn" type="button" disabled title="階段 2 才開放">升級為訊號</button>
+    <button class="radar-btn" type="button" disabled title="階段 2 才開放">略過</button>
+    <button class="radar-btn radar-btn-link" type="button" disabled title="階段 2 才開放">↗ ${esc(cite)}</button>
+    <button class="radar-btn radar-btn-link" type="button" disabled title="階段 2 才開放">＋ 提議開專案卡</button>
+  </div>`;
+}
+
+function renderNews(item, citeLabel) {
+  return `<article class="radar-item">
+    <div class="radar-flex">
+      ${kindChip(item.kind, NEWS_KIND_CLASS)}
+      <span class="radar-muted radar-small">${esc(item.source || '')}</span>
+      <span class="radar-muted radar-mono radar-small">${esc(item.date || '')}</span>
+      <span class="radar-ml">${relChip(item.relevance)}</span>
+    </div>
+    ${titleHtml(item)}
+    <p class="radar-small">${esc(item.summary || '')}</p>
+    ${laterBtns(citeLabel)}
+  </article>`;
+}
+
+function renderRadar(item, citeLabel) {
+  const assess = item.assessment || '';
+  return `<article class="radar-item">
+    <div class="radar-flex">
+      ${kindChip(item.kind, RADAR_KIND_CLASS)}
+      ${urgencyChip(item.urgency)}
+      ${item.demo ? '<span class="radar-chip radar-t-gray">示意</span>' : ''}
+    </div>
+    ${titleHtml(item)}
+    ${item.impact ? `<p class="radar-muted radar-small">影響：${esc(item.impact)}</p>` : ''}
+    ${assess ? `<div class="radar-reply"><b>AI 判讀：</b>${esc(assess)}</div>` : ''}
+    <div class="radar-flex">
+      <button class="radar-btn radar-btn-link" type="button" disabled title="階段 2 才開放">↗ 引用到 ${esc(citeLabel || '專案')}</button>
+      <button class="radar-btn radar-btn-link" type="button" disabled title="階段 2 才開放">＋ 提議開專案卡</button>
+    </div>
+  </article>`;
+}
+
+function renderAlert(item) {
+  return `<article class="radar-item">
+    <div class="radar-flex">
+      <span class="radar-chip radar-t-red">警示</span>
+      ${item.demo ? '<span class="radar-chip radar-t-gray">示意</span>' : ''}
+    </div>
+    ${titleHtml(item)}
+    ${item.text && item.text !== item.title ? `<p class="radar-small">${esc(item.text)}</p>` : ''}
+  </article>`;
+}
+
+function renderDeadline(item) {
+  return `<article class="radar-item">
+    <div class="radar-flex">
+      <span class="radar-chip radar-t-orange">截止日</span>
+      <span class="radar-muted radar-mono radar-small">${esc(item.date || '')}</span>
+      ${item.demo ? '<span class="radar-chip radar-t-gray">示意</span>' : ''}
+    </div>
+    ${titleHtml(item)}
+  </article>`;
+}
+
+function citeLabel(ax) {
+  if (ax.office_project) return `${ax.office_project} ${ax.display_name || ax.name}`;
+  return `${ax.display_name || ax.name}（id ??）`;
+}
+
+function renderAxis(ax, data, flt) {
+  const cite = citeLabel(ax);
+  const news = (data.news || []).filter((x) => onItem(x, ax.id) && newsVisible(x, flt.rel, flt.kind));
+  const radar = (data.radar || []).filter((x) => onItem(x, ax.id) && signalVisible(x, flt.kind));
+  const alerts = (data.alerts || []).filter((x) => onItem(x, ax.id) && signalVisible(x, flt.kind));
+  const deadlines = (data.deadlines || []).filter((x) => onItem(x, ax.id) && signalVisible(x, flt.kind));
+  const kws = ax.keywords || [];
+  const kwHtml = kws.slice(0, 8).map((k) => `<span class="radar-chip radar-t-gray">${esc(k)}</span>`).join(' ')
+    + (kws.length ? `<span class="radar-muted radar-small">…共 ${kws.length} 個</span>` : '<span class="radar-muted radar-small">尚未有正式關鍵字</span>');
+  const last = ax.last_run ? `上次 ${esc(ax.last_run)}` : '上次 尚未掃描';
+  const next = ax.next_run ? `下次 ${esc(ax.next_run)}` : '';
+  const office = ax.office_project
+    ? `<span class="radar-chip radar-t-blue">Office：${esc(ax.office_project)}</span>`
+    : `<span class="radar-chip radar-t-blue">Office：id ??</span>`;
+  const officeNote = ax.office_project_note
+    ? `<span class="radar-muted radar-small">${esc(ax.office_project_note)}</span>`
+    : '';
+  const virtClass = ax.virtual ? ' radar-virt' : '';
+  const emptyNew = ax.virtual && !radar.length && !news.length && !alerts.length && !deadlines.length;
+
+  let body = '';
+  if (emptyNew) {
+    body = `<div class="radar-empty">新主軸，尚未寫進 lab-data，也還沒有資料。主軸管理做好、核准後才會新增。這裡只先顯示空版面。</div>`;
+  } else {
+    const sig = [...alerts.map(renderAlert), ...deadlines.map(renderDeadline), ...radar.map((x) => renderRadar(x, cite))];
+    const newsHtml = news.map((x) => renderNews(x, cite));
+    body += `<div class="radar-pad radar-row"><h3 class="radar-small" style="font-weight:700">方向訊號</h3></div>`;
+    body += sig.length ? sig.join('') : '<div class="radar-empty">這個篩選下沒有方向訊號、警示或截止日。</div>';
+    body += `<div class="radar-pad radar-row"><h3 class="radar-small" style="font-weight:700">科技新知</h3></div>`;
+    body += newsHtml.length ? newsHtml.join('') : '<div class="radar-empty">這個篩選下沒有科技新知。</div>';
+  }
+
+  return `<section class="radar-card${virtClass}" id="ax-${esc(ax.id)}" data-axis="${esc(ax.id)}">
+    <div class="radar-card-h radar-axis-h">
+      <h2 class="radar-sec">${esc(ax.display_name || ax.name)}</h2>
+      <div class="radar-flex">
+        ${ax.owner_bot ? `<span class="radar-chip radar-t-purple">負責 ${esc(ax.owner_bot)}</span>` : ''}
+        ${office}
+        ${officeNote}
+      </div>
+      <div class="radar-flex radar-ml">
+        <span class="radar-chip radar-t-green">${esc(ax.scan_display || '每週二 10:00')}</span>
+        <span class="radar-muted radar-small">${last}${next ? '・' + next : ''}</span>
+        <button class="radar-btn" type="button" disabled title="階段 3 才開放；週二例行等分頁上線再建">手動掃描這條主軸</button>
+      </div>
+    </div>
+    <div class="radar-kw radar-flex">${kwHtml}</div>
+    ${body}
+  </section>`;
+}
+
+function renderAll(data, flt) {
+  const c = data.counts || {};
+  const axes = data.axes || [];
+  const shown = flt.axis === 'all' ? axes : axes.filter((a) => a.id === flt.axis);
+  const fltBtns = ['all', ...axes.map((a) => a.id)].map((id) => {
+    const on = (flt.axis === id) || (id === 'all' && flt.axis === 'all');
+    if (id === 'all') return `<button type="button" class="radar-flt${on ? ' on' : ''}" data-axis="all">全部</button>`;
+    const ax = axes.find((a) => a.id === id);
+    return `<button type="button" class="radar-flt${on ? ' on' : ''}" data-axis="${esc(id)}">${esc(ax.display_name)} <b>${ax.open_signals}</b>／${ax.new_news}</button>`;
+  }).join('');
+
+  return `<div class="radar-head">
+      <div>
+        <div class="radar-h1">📡 技術雷達</div>
+        <p class="radar-sub">取代原「🔬 研究」分頁。資料收集與方向訊號，按主軸歸類，供 Office 主軸研發專案引用。本階段唯讀。</p>
+      </div>
+      <div class="radar-flex">
+        <span class="radar-totals">新知 ${c.news || 0}　方向訊號 ${c.radar || 0}　警示 ${c.alerts || 0}　截止日 ${c.deadlines || 0}</span>
+      </div>
+    </div>
+    <p class="radar-note">${esc(data.schedule_note || '')} 加入文獻庫、引用、掃描按鈕此階段只顯示、不能按。</p>
+    <section class="radar-card">
+      <div class="radar-card-h">
+        <h2 class="radar-sec">技術雷達</h2>
+        <div class="radar-flex radar-ml">
+          <span class="radar-chip radar-t-green">自動：每週二 10:00 掃描四條主軸</span>
+          <button class="radar-btn" type="button" disabled title="階段 3 才開放；週二例行等分頁上線再建">手動掃描全部主軸</button>
+        </div>
+      </div>
+      <div class="radar-filters">
+        <div class="radar-filters-row"><span class="radar-muted radar-small">主軸：</span>${fltBtns}</div>
+        <div class="radar-filters-row">
+          <span class="radar-muted radar-small">相關度：</span>
+          <button type="button" class="radar-flt${flt.rel === 'mid' ? ' on' : ''}" data-rel="mid">高＋中</button>
+          <button type="button" class="radar-flt${flt.rel === 'high' ? ' on' : ''}" data-rel="high">只看高</button>
+          <span class="radar-muted radar-small" style="margin-left:8px">類型：</span>
+          ${['未處理', '論文', '專利', '新聞', '全部'].map((k) => {
+            const val = k === '全部' ? 'all' : k;
+            const on = flt.kind === val || (k === '全部' && flt.kind === 'all');
+            return `<button type="button" class="radar-flt${on ? ' on' : ''}" data-kind="${esc(val)}">${esc(k)}</button>`;
+          }).join('')}
+        </div>
+        <p class="radar-muted radar-small">數字＝待處理訊號／未處理新知。舊資料（含沒有網址、示意筆）原樣保留。</p>
+      </div>
+    </section>
+    ${shown.map((ax) => renderAxis(ax, data, flt)).join('')}`;
+}
+
+function bind(root, data) {
+  root.querySelectorAll('[data-axis]').forEach((btn) => {
+    if (btn.tagName !== 'BUTTON') return;
+    btn.addEventListener('click', () => {
+      const flt = params();
+      flt.axis = btn.getAttribute('data-axis') || 'all';
+      setParams(flt);
+      draw(root, data, flt);
+    });
+  });
+  root.querySelectorAll('[data-rel]').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      const flt = params();
+      flt.rel = btn.getAttribute('data-rel') || 'mid';
+      setParams(flt);
+      draw(root, data, flt);
+    });
+  });
+  root.querySelectorAll('[data-kind]').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      const flt = params();
+      flt.kind = btn.getAttribute('data-kind') || 'all';
+      setParams(flt);
+      draw(root, data, flt);
+    });
+  });
+}
+
+function draw(root, data, flt) {
+  root.innerHTML = renderAll(data, flt);
+  bind(root, data);
+}
+
+function activateRadarTab() {
+  document.querySelectorAll('.tab').forEach((t) => t.classList.remove('active'));
+  document.querySelectorAll('.tab-content').forEach((c) => c.classList.remove('active'));
+  const tab = document.querySelector('[data-tab="radar"]');
+  const pane = document.getElementById('tab-radar');
+  if (tab) tab.classList.add('active');
+  if (pane) pane.classList.add('active');
+}
+
+let loaded = false;
+let cache = null;
+
+async function loadRadar() {
+  const root = document.getElementById('radarRoot');
+  if (!root) return;
+  if (loaded && cache) {
+    draw(root, cache, params());
+    return;
+  }
+  root.innerHTML = '<div class="radar-loading">載入中…</div>';
+  try {
+    const headers = { 'Cache-Control': 'no-store' };
+    const preset = window.GET_HEADERS;
+    if (preset && preset.Authorization) {
+      headers.Authorization = preset.Authorization;
+    } else {
+      const tok = sessionStorage.getItem('hy_life_os_access_token') || sessionStorage.getItem('hy_world_access_token') || '';
+      if (tok) headers.Authorization = 'Bearer ' + tok;
+    }
+    const res = await fetch(radarApiUrl(), { cache: 'no-store', headers });
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    const data = await res.json();
+    if (!data || data.ok === false) throw new Error((data && data.error) || '資料格式不正確');
+    cache = data;
+    loaded = true;
+    draw(root, data, params());
+  } catch (err) {
+    root.innerHTML = `<div class="radar-error">技術雷達資料載入失敗（${esc(err.message)}）。請確認已登入；若仍失敗，可能是後端還沒設定 lab-data 讀取金鑰。</div>`;
+  }
+}
+
+function init() {
+  const tab = document.querySelector('[data-tab="radar"]');
+  if (tab) tab.addEventListener('click', loadRadar);
+  const q = new URLSearchParams(location.search);
+  const want = q.get('tab');
+  if (want === 'radar' || want === 'research') {
+    activateRadarTab();
+    loadRadar();
+  }
+}
+
+window.loadRadar = loadRadar;
+init();

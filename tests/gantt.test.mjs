@@ -29,7 +29,10 @@ test('drag move, resize and checkpoint dates clamp safely',()=>{
  assert.equal(drag(c,'move',-7).date,'2026-10-18');assert.equal(drag(c,'move',999999).date,'2200-12-31');
 });
 test('existing tabs remain and gantt never calls progress storage',()=>{
- const html=readFileSync(new URL('../public/950157-dashboard.html',import.meta.url),'utf8');for(const tab of ['progress','weekly','research','gantt'])assert.match(html,new RegExp('id="tab-'+tab+'"'));
+ const html=readFileSync(new URL('../public/950157-dashboard.html',import.meta.url),'utf8');for(const tab of ['progress','weekly','radar','gantt'])assert.match(html,new RegExp('id="tab-'+tab+'"'));
+ assert.match(html,/data-tab="radar"/);
+ assert.match(html,/技術雷達/);
+ assert.match(html,/\?tab=research|tab === 'research'|want === 'research'/);
  assert.match(html,/get\('tab'\) !== 'gantt'/);
  const js=readFileSync(new URL('../public/gantt-950157.mjs',import.meta.url),'utf8');assert.doesNotMatch(js,/\/api\/950157-progress/);assert.match(js,/\/api\/950157-gantt/);
  assert.match(js,/method:'PATCH'/);

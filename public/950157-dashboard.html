@@ -7,6 +7,7 @@
 <link rel="stylesheet" href="hy-ui/hy-ui.css">
 <link rel="stylesheet" href="gantt-950157.css">
 <link rel="stylesheet" href="koffice-950157.css">
+<link rel="stylesheet" href="radar-tab-950157.css">
 <link href="https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=Noto+Sans+TC:wght@400;500;700&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Sortable/1.15.2/Sortable.min.js"></script>
 <style>
@@ -339,6 +340,7 @@ header { background:var(--header-bg); padding:0 24px; display:flex; align-items:
 }
 /* ══════════════ RESEARCH v0 ══════════════ */
 #tab-research.active { overflow-y:auto; }
+#tab-radar.active { overflow-y:auto; }
 .research-wrap { padding:20px 24px 48px; max-width:900px; }
 .research-meta { font-size:12px; color:var(--text-muted); margin-bottom:12px; }
 .research-priority { background:var(--blue-light); border:1px solid var(--border); border-left:4px solid var(--brand-color); border-radius:var(--radius); padding:14px 16px; margin-bottom:16px; }
@@ -385,7 +387,7 @@ header { background:var(--header-bg); padding:0 24px; display:flex; align-items:
 <div class="tabs">
   <div class="tab active" data-tab="progress">📊 進度追蹤</div>
   <div class="tab" data-tab="weekly">📅 週覆盤</div>
-  <div class="tab" data-tab="research">🔬 研究</div>
+  <div class="tab" data-tab="radar">📡 技術雷達</div>
   <div class="tab" data-tab="gantt">AI 甘特圖</div>
   <div class="tab" data-tab="koffice">🏢 K組總覽</div>
 </div>
@@ -417,9 +419,9 @@ header { background:var(--header-bg); padding:0 24px; display:flex; align-items:
   </div>
 </div>
 
-<!-- 研究 v0 -->
-<div class="tab-content" id="tab-research">
-  <div class="research-wrap" id="researchContent"><div class="weekly-loading">載入中…</div></div>
+<!-- 技術雷達（階段 1 唯讀；原研究 v0 檔案 research/950157-research.json 保留不刪） -->
+<div class="tab-content" id="tab-radar">
+  <div class="radar-root" id="radarRoot"><div class="radar-loading">載入中…</div></div>
 </div>
 
 <div class="tab-content" id="tab-gantt"><section id="gantt" aria-label="AI 甘特圖"></section></div>
@@ -957,14 +959,19 @@ function loadResearch() {
       document.getElementById('researchContent').innerHTML = '<div class="weekly-loading">研究資料載入失敗（' + rEsc(e.message) + '）</div>';
     });
 }
-document.querySelector('[data-tab="research"]').addEventListener('click', loadResearch);
+// 研究 v0 載入改由 radar-tab-950157.mjs 接手（?tab=research 與 ?tab=radar 都會打開新分頁）
+
+
+// ?tab=radar 或舊的 ?tab=research：先打開技術雷達分頁（內容由 radar-tab-950157.js 載入）
 (function() {
-  if (new URLSearchParams(window.location.search).get('tab') !== 'research') return;
+  var tabName = new URLSearchParams(window.location.search).get('tab');
+  if (tabName !== 'radar' && tabName !== 'research') return;
   document.querySelectorAll('.tab').forEach(function(t) { t.classList.remove('active'); });
   document.querySelectorAll('.tab-content').forEach(function(c) { c.classList.remove('active'); });
-  document.querySelector('[data-tab="research"]').classList.add('active');
-  document.getElementById('tab-research').classList.add('active');
-  loadResearch();
+  var tab = document.querySelector('[data-tab="radar"]');
+  var pane = document.getElementById('tab-radar');
+  if (tab) tab.classList.add('active');
+  if (pane) pane.classList.add('active');
 })();
 
 (function() {
@@ -980,5 +987,6 @@ document.querySelector('[data-tab="research"]').addEventListener('click', loadRe
 <script type="module" src="koffice-950157.mjs"></script>
 <script>window.WEEKLY_EMBED_OWNER = '950157';</script>
 <script type="module" src="./hy-ui/weekly-embed-page.js"></script>
+<script src="radar-tab-950157.js"></script>
 </body>
 </html>

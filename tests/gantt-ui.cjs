@@ -142,7 +142,7 @@ failure=409;await page.locator('[data-id=t] [data-key=name]').fill('觸覺模組
 
 failure=503;await page.locator('[data-action=save]').click();await page.getByRole('status').filter({hasText:'儲存失敗'}).waitFor();await page.locator('[data-action=load]').click();await page.getByRole('status').filter({hasText:'讀取失敗'}).waitFor();assert.ok(await page.locator('[data-action=save]').isDisabled());const count=puts;await page.locator('#saveBtn').click();assert.equal(puts,count);
 failure=null;await page.locator('[data-action=load]').click();await page.locator('[data-id=t]').waitFor();
-for(const tab of ['progress','weekly','research','gantt']){await page.locator(`[data-tab=${tab}]`).click();assert.ok(await page.locator(`#tab-${tab}`).isVisible());}
+for(const tab of ['progress','weekly','radar','gantt']){await page.locator(`[data-tab=${tab}]`).click();assert.ok(await page.locator(`#tab-${tab}`).isVisible());}
 await anchor();await page.locator('#g-mode').selectOption('week');assert.equal(await page.locator('.g-mark').count(),3);await page.locator('#g-mode').selectOption('month');
 await page.locator('.g-scroll').evaluate(el=>{el.scrollLeft=0;el.scrollTop=0});await page.evaluate(()=>document.fonts.ready);await page.screenshot({path:path.join(out,'desktop-1280.png'),fullPage:true});
 if(!process.env.GANTT_DESKTOP_ONLY){await page.setViewportSize({width:390,height:900});await page.screenshot({path:path.join(out,'mobile-390.png'),fullPage:true});assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=390),'no outer horizontal scroll');
