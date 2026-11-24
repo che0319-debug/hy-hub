@@ -1,4 +1,4 @@
-// 技術雷達分頁 v1.1：唯讀顯示 OS hy-data，不讀 lab-data。寫入、掃描、主軸管理尚未接上。
+// 技術雷達分頁 v2 預覽：掃描寫入、關鍵字採用、跨主軸去重。本機可採用關鍵字；週二例行尚未建立。
 const PROD_API = 'https://hy-agent-v2.onrender.com/api/radar/feed';
 
 function radarApiUrl() {
@@ -29,7 +29,63 @@ function esc(v) {
   }[c]));
 }
 
+
+function isLocalPreview() {
+  const host = location.hostname;
+  return host === '127.0.0.1' || host === 'localhost';
+}
+
+function formatTaipei(value) {
+  if (!value) return '';
+  const s = String(value).replace('T', ' ').replace(/\+08:00$/, '');
+  return s.replace(/:\d\d$/, '').trim() + ' 台北時間';
+}
+
+function itemAxisIds(item) {
+  if (item.axes && item.axes.length) return item.axes.map(String);
+  if (item.axis) return [String(item.axis)];
+  return [];
+}
+
+function axisChips(item, axes) {
+  const ids = itemAxisIds(item);
+  if (ids.length < 2) return '';
+  const names = ids.map((id) => {
+    const ax = (axes || []).find((a) => a.id === id);
+    return `<span class="radar-chip radar-t-blue">命中 ${esc((ax && (ax.display_name || ax.name)) || id)}</span>`;
+  });
+  return `<div class="radar-flex radar-axis-hits">${names.join(' ')}</div>`;
+}
+
+function candidateCard(c, ax) {
+  const hold = c.scan_hold || (c.scan_hold_reason || '').indexOf('暫不掃') >= 0;
+  const adopted = c.decision === 'adopted';
+  const rejected = c.decision === 'rejected';
+  let marks = '';
+  if (hold) marks += `<span class="radar-chip radar-t-orange">待核對、暫不掃</span>`;
+  if (adopted) marks += `<span class="radar-chip radar-t-green">已採用</span>`;
+  if (rejected) marks += `<span class="radar-chip radar-t-gray">不採用</span>`;
+  const rec = [];
+  if (c.proposed_by) rec.push(`提出者 ${esc(c.proposed_by)}`);
+  if (adopted && c.adopted_by) rec.push(`採用者 ${esc(c.adopted_by)}`);
+  if (adopted && c.adopted_at) rec.push(esc(formatTaipei(c.adopted_at)));
+  const recHtml = rec.length ? `<p class="radar-muted radar-small">${rec.join('　')}</p>` : '';
+  const can = isLocalPreview() && !hold;
+  let btns = '';
+  if (can) {
+    if (!adopted) btns += `<button type="button" class="radar-btn radar-btn-adopt" data-adopt="${esc(c.id)}" data-decision="adopted" data-actor="${esc(ax.owner_bot || 'HY')}">採用</button>`;
+    if (isLocalPreview()) btns += `<button type="button" class="radar-btn radar-btn-adopt" data-adopt="${esc(c.id)}" data-decision="adopted" data-actor="HY">由 HY 採用</button>`;
+    if (adopted) btns += `<button type="button" class="radar-btn radar-btn-adopt" data-adopt="${esc(c.id)}" data-decision="pending" data-actor="HY">改回候選</button>`;
+  }
+  const btnHtml = btns ? `<div class="radar-flex">${btns}</div>` : '';
+  return `<div class="radar-cand${hold ? ' is-hold' : ''}${adopted ? ' is-adopted' : ''}">
+    <div class="radar-flex"><span class="radar-chip radar-t-gray">${esc(c.text)}</span>${marks}</div>
+    ${recHtml}${btnHtml}
+  </div>`;
+}
+
 function onItem(item, axisId) {
+
   if (!axisId || axisId === 'all') return true;
   const axes = item.axes && item.axes.length ? item.axes : (item.axis ? [item.axis] : []);
   return axes.includes(axisId);
@@ -94,14 +150,16 @@ function kindChip(kind, map) {
 const NEWS_KIND_CLASS = { '論文': 'radar-t-purple', '專利': 'radar-t-orange', '新聞': 'radar-t-blue' };
 const RADAR_KIND_CLASS = { '競爭者': 'radar-t-orange', '技術': 'radar-t-blue', '市場': 'radar-t-green', '政策': 'radar-t-purple', '補助': 'radar-t-red' };
 
-function titleHtml(item) {
+function titleHtml(item, axes) {
   const title = esc(item.title || item.text || '（無標題）');
   const url = String(item.url || '').trim();
-  if (url && /^https?:\/\//i.test(url)) {
-    return `<h3><a href="${esc(url)}" target="_blank" rel="noopener noreferrer">${title}</a></h3>`;
-  }
-  return `<h3>${title}</h3>`;
+  const link = url && /^https?:\/\//i.test(url)
+    ? `<h3><a href="${esc(url)}" target="_blank" rel="noopener noreferrer">${title}</a></h3>`
+    : `<h3>${title}</h3>`;
+  return `${link}${axisChips(item, axes)}`;
 }
+
+let currentAxes = [];
 
 function laterBtns(citeLabel) {
   const cite = citeLabel ? `引用到 ${citeLabel}` : '引用到專案';
@@ -122,7 +180,7 @@ function renderNews(item, citeLabel) {
       <span class="radar-muted radar-mono radar-small">${esc(item.date || '')}</span>
       <span class="radar-ml">${relChip(item.relevance)}</span>
     </div>
-    ${titleHtml(item)}
+    ${titleHtml(item, currentAxes)}
     <p class="radar-small">${esc(item.summary || '')}</p>
     ${laterBtns(citeLabel)}
   </article>`;
@@ -136,7 +194,7 @@ function renderRadar(item, citeLabel) {
       ${urgencyChip(item.urgency)}
       ${item.demo ? '<span class="radar-chip radar-t-gray">示意</span>' : ''}
     </div>
-    ${titleHtml(item)}
+    ${titleHtml(item, currentAxes)}
     ${item.impact ? `<p class="radar-muted radar-small">影響：${esc(item.impact)}</p>` : ''}
     ${assess ? `<div class="radar-reply"><b>AI 判讀：</b>${esc(assess)}</div>` : ''}
     <div class="radar-flex">
@@ -152,7 +210,7 @@ function renderAlert(item) {
       <span class="radar-chip radar-t-red">警示</span>
       ${item.demo ? '<span class="radar-chip radar-t-gray">示意</span>' : ''}
     </div>
-    ${titleHtml(item)}
+    ${titleHtml(item, currentAxes)}
     ${item.text && item.text !== item.title ? `<p class="radar-small">${esc(item.text)}</p>` : ''}
   </article>`;
 }
@@ -164,7 +222,7 @@ function renderDeadline(item) {
       <span class="radar-muted radar-mono radar-small">${esc(item.date || '')}</span>
       ${item.demo ? '<span class="radar-chip radar-t-gray">示意</span>' : ''}
     </div>
-    ${titleHtml(item)}
+    ${titleHtml(item, currentAxes)}
   </article>`;
 }
 
@@ -181,15 +239,26 @@ function renderAxis(ax, data, flt) {
   const deadlines = (data.deadlines || []).filter((x) => onItem(x, ax.id) && signalVisible(x, flt.kind));
   const kws = ax.keywords || [];
   const pending = ax.candidate_pending || 0;
-  let kwHtml = kws.slice(0, 8).map((k) => `<span class="radar-chip radar-t-gray">${esc(k)}</span>`).join(' ');
-  if (kws.length) kwHtml += `<span class="radar-muted radar-small">…共 ${kws.length} 個正式關鍵字</span>`;
+  const total = ax.candidate_total || (ax.keyword_candidates || []).length;
+  const hold = ax.candidate_hold || 0;
+  const adoptedN = ax.candidate_adopted || 0;
+  let kwHtml = kws.slice(0, 8).map((k) => `<span class="radar-chip radar-t-green">${esc(k)}</span>`).join(' ');
+  if (kws.length) kwHtml += `<span class="radar-muted radar-small">正式關鍵字 ${kws.length} 個</span>`;
   else kwHtml += '<span class="radar-muted radar-small">尚未有正式關鍵字</span>';
-  if (pending) kwHtml += ` <span class="radar-chip radar-t-blue">候選 ${pending} 組，等 ${esc(ax.owner_bot || '負責 Bot')} 採用</span>`;
-  const cand = (ax.keyword_candidates || []).filter((c) => c.decision === 'pending').slice(0, 6);
-  if (cand.length) {
-    kwHtml += '<div class="radar-kw-cands">' + cand.map((c) => `<span class="radar-chip radar-t-gray" title="${esc(c.reason || '')}">${esc(c.text)}</span>`).join(' ') + (pending > cand.length ? `<span class="radar-muted radar-small">…還有 ${pending - cand.length} 組</span>` : '') + '</div>';
+  kwHtml += ` <span class="radar-chip radar-t-blue">候選 ${total} 組</span>`;
+  if (pending) kwHtml += ` <span class="radar-muted radar-small">待採用 ${pending} 組，可由 ${esc(ax.owner_bot || '負責 Bot')} 或 HY 採用</span>`;
+  if (adoptedN) kwHtml += ` <span class="radar-chip radar-t-green">已採用 ${adoptedN} 組</span>`;
+  if (hold) kwHtml += ` <span class="radar-chip radar-t-orange">待核對、暫不掃 ${hold} 組</span>`;
+  kwHtml += ` <span class="radar-muted radar-small">每週筆數 ${esc(ax.weekly_item_limit == null ? '??' : ax.weekly_item_limit)}</span>`;
+  const cands = ax.keyword_candidates || [];
+  const held = cands.filter((c) => c.scan_hold || (c.scan_hold_reason || '').indexOf('暫不掃') >= 0);
+  const adopted = cands.filter((c) => c.decision === 'adopted');
+  const pendingList = cands.filter((c) => c.decision === 'pending' && !(c.scan_hold || (c.scan_hold_reason || '').indexOf('暫不掃') >= 0));
+  const shownCands = held.concat(adopted, pendingList.slice(0, 4));
+  if (shownCands.length) {
+    kwHtml += '<div class="radar-kw-cands">' + shownCands.map((c) => candidateCard(c, ax)).join('') + (pendingList.length > 4 ? `<span class="radar-muted radar-small">…還有 ${pendingList.length - 4} 組待採用候選</span>` : '') + '</div>';
   }
-  const last = ax.last_run ? `上次 ${esc(ax.last_run)}` : '上次 尚未掃描';
+  const last = ax.last_run ? `上次 ${esc(ax.last_run)}` : (data.last_scan && data.last_scan.at ? `上次 ${esc(formatTaipei(data.last_scan.at))}` : '上次 尚未掃描');
   const next = ax.next_run ? `下次 ${esc(ax.next_run)}` : '';
   const office = ax.office_project
     ? `<span class="radar-chip radar-t-blue">Office：${esc(ax.office_project)}</span>`
@@ -245,13 +314,13 @@ function renderAll(data, flt) {
   return `<div class="radar-head">
       <div>
         <div class="radar-h1">📡 技術雷達</div>
-        <p class="radar-sub">取代原「🔬 研究」分頁。資料存在 OS 的 hy-data，從零收集，不沿用 Lab 舊資料。按主軸歸類，供 Office 主軸研發專案引用。本階段唯讀。</p>
+        <p class="radar-sub">取代原「🔬 研究」分頁。資料存在 OS 的 hy-data，從零收集，不沿用 Lab 舊資料。關鍵字由負責 Bot 採用，HY 也可以看、也可以改。專利分類號待核對、暫不掃。每週筆數先留 ??。</p>
       </div>
       <div class="radar-flex">
         <span class="radar-totals">新知 ${c.news || 0}　方向訊號 ${c.radar || 0}　警示 ${c.alerts || 0}　截止日 ${c.deadlines || 0}</span>
       </div>
     </div>
-    <p class="radar-note">${esc(data.schedule_note || '')} 加入文獻庫、引用、掃描按鈕此階段只顯示、不能按。</p>
+    <p class="radar-note">${esc(data.schedule_note || '')} 週二例行等這一階段做好再建立。手動掃描全部主軸先不開放。</p>
     <section class="radar-card">
       <div class="radar-card-h">
         <h2 class="radar-sec">技術雷達</h2>
@@ -317,9 +386,39 @@ function bind(root, data) {
       draw(root, data, flt);
     });
   });
+  root.querySelectorAll('[data-adopt]').forEach((btn) => {
+    btn.addEventListener('click', () => adoptOne(root, btn));
+  });
+}
+
+async function adoptOne(root, btn) {
+  const candidateId = btn.getAttribute('data-adopt');
+  const decision = btn.getAttribute('data-decision') || 'adopted';
+  const actor = btn.getAttribute('data-actor') || 'HY';
+  btn.disabled = true;
+  try {
+    let url = '/api/radar/keywords/adopt';
+    const demo = new URLSearchParams(location.search).get('radar_demo');
+    if (demo) url += '?demo=' + encodeURIComponent(demo);
+    const headers = { 'Content-Type': 'application/json', 'Cache-Control': 'no-store', 'X-Radar-Actor': actor };
+    const res = await fetch(url, { method: 'POST', headers, body: JSON.stringify({ candidate_id: candidateId, decision, actor }) });
+    const body = await res.json().catch(() => null);
+    if (!body || body.ok === false) {
+      root.insertAdjacentHTML('afterbegin', `<div class="radar-error">${esc(friendlyError(body, '現在無法採用這組關鍵字。'))}</div>`);
+      return;
+    }
+    loaded = false;
+    cache = null;
+    await loadRadar();
+  } catch (err) {
+    root.insertAdjacentHTML('afterbegin', '<div class="radar-error">現在無法採用這組關鍵字。請稍後再試。</div>');
+  } finally {
+    btn.disabled = false;
+  }
 }
 
 function draw(root, data, flt) {
+  currentAxes = data.axes || [];
   root.innerHTML = renderAll(data, flt);
   bind(root, data);
 }
