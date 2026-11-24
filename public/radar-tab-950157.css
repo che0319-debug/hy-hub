@@ -1,0 +1,83 @@
+/* 技術雷達分頁：樣式限制在 .radar-root，避免影響儀表板其他分頁。底稿對齊 Lab 情報雷達。 */
+#tab-radar.active { overflow-y: auto; }
+.radar-root {
+  --radar-navy: #13294B;
+  --radar-blue: #1E4FA8;
+  --radar-blue-d: #163E87;
+  --radar-bg: #F3F6FA;
+  --radar-surface: #FFFFFF;
+  --radar-line: #DCE3EC;
+  --radar-line2: #E8EDF3;
+  --radar-text: #16202E;
+  --radar-muted: #5A6678;
+  background: var(--radar-bg);
+  color: var(--radar-text);
+  padding: 16px 20px 48px;
+  width: 100%;
+  max-width: 1240px;
+  margin: 0 auto;
+  font-size: 14px;
+  line-height: 1.55;
+}
+.radar-root * { box-sizing: border-box; }
+.radar-root a { color: var(--radar-blue); }
+.radar-root a:hover { color: #123A80; }
+.radar-root h2, .radar-root h3, .radar-root p { margin: 0; }
+.radar-loading, .radar-error { padding: 24px 8px; color: var(--radar-muted); }
+.radar-error { color: #962015; }
+
+.radar-head { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 12px; margin-bottom: 8px; }
+.radar-h1 { font-size: 22px; font-weight: 700; color: var(--radar-navy); }
+.radar-sub { font-size: 13px; color: var(--radar-muted); margin-top: 4px; }
+.radar-totals { font-size: 13px; color: var(--radar-navy); background: #DFF2E7; padding: 6px 12px; border-radius: 999px; font-weight: 500; }
+
+.radar-card { background: var(--radar-surface); border: 1px solid var(--radar-line); border-radius: 10px; margin-bottom: 16px; }
+.radar-card-h { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; padding: 14px 18px; }
+.radar-sec { font-size: 16px; font-weight: 700; color: var(--radar-navy); }
+.radar-row { border-top: 1px solid var(--radar-line2); }
+.radar-pad { padding: 12px 18px; }
+.radar-empty { padding: 18px 18px; color: var(--radar-muted); font-size: 13px; border-top: 1px solid var(--radar-line2); }
+.radar-flex { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.radar-col { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.radar-ml { margin-left: auto; }
+.radar-muted { color: var(--radar-muted); }
+.radar-small { font-size: 12px; }
+.radar-mono { font-family: ui-monospace, 'IBM Plex Mono', monospace; }
+
+.radar-chip { display: inline-flex; align-items: center; font-size: 12px; line-height: 1; padding: 5px 9px; border-radius: 999px; font-weight: 500; white-space: nowrap; }
+.radar-t-blue { background: #E3ECFB; color: #1B4797; }
+.radar-t-orange { background: #FDE8D7; color: #8A2E0A; }
+.radar-t-green { background: #DFF2E7; color: #14593A; }
+.radar-t-red { background: #FBE3E0; color: #962015; }
+.radar-t-gray { background: #ECEFF3; color: #465265; }
+.radar-t-purple { background: #ECE6FA; color: #4C2C92; }
+
+.radar-btn { display: inline-flex; align-items: center; justify-content: center; gap: 6px; min-height: 40px; padding: 0 14px; border-radius: 8px; border: 1px solid #C9D3E0; background: #fff; color: var(--radar-text); font-size: 13px; font-weight: 500; font-family: inherit; cursor: pointer; text-decoration: none; white-space: nowrap; }
+.radar-btn:hover:not(:disabled) { background: var(--radar-bg); }
+.radar-btn:disabled { opacity: .55; cursor: not-allowed; }
+.radar-btn-link { min-height: 36px; border: 0; background: transparent; color: var(--radar-blue); padding: 0 8px; }
+.radar-btn-link:hover:not(:disabled) { text-decoration: underline; background: transparent; }
+
+.radar-flt { min-height: 36px; padding: 0 14px; border: 1px solid #C9D3E0; border-radius: 999px; background: #fff; font-size: 13px; color: #3A4658; cursor: pointer; font-family: inherit; }
+.radar-flt b { font-weight: 700; margin-left: 2px; }
+.radar-flt.on { background: var(--radar-navy); border-color: var(--radar-navy); color: #fff; font-weight: 700; }
+
+.radar-filters { display: flex; flex-direction: column; gap: 8px; padding: 12px 18px; }
+.radar-filters-row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+
+.radar-item { display: flex; flex-direction: column; gap: 8px; padding: 12px 18px; border-top: 1px solid var(--radar-line2); }
+.radar-item h3 { font-size: 15px; font-weight: 700; color: var(--radar-text); }
+.radar-reply { padding: 10px 12px; border-radius: 8px; background: #F4F7FB; font-size: 13px; }
+.radar-more { padding: 10px 18px; color: var(--radar-muted); font-size: 13px; border-top: 1px solid var(--radar-line2); }
+.radar-kw { padding: 0 18px 10px; }
+.radar-note { font-size: 12px; color: var(--radar-muted); padding: 0 2px 10px; }
+.radar-axis-h { align-items: flex-start; }
+.radar-virt { background: #F7F9FC; }
+
+@media (max-width: 767px) {
+  .radar-root { padding: 12px 10px 40px; }
+  .radar-card-h, .radar-pad, .radar-item, .radar-filters { padding-left: 12px; padding-right: 12px; }
+  .radar-h1 { font-size: 18px; }
+  .radar-sec { font-size: 15px; }
+  .radar-btn { min-height: 44px; }
+}
