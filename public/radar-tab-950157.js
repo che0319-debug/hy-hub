@@ -238,7 +238,8 @@ function renderAll(data, flt) {
     const on = (flt.axis === id) || (id === 'all' && flt.axis === 'all');
     if (id === 'all') return `<button type="button" class="radar-flt${on ? ' on' : ''}" data-axis="all">全部</button>`;
     const ax = axes.find((a) => a.id === id);
-    return `<button type="button" class="radar-flt${on ? ' on' : ''}" data-axis="${esc(id)}">${esc(ax.display_name)} <b>${ax.open_signals}</b>／${ax.new_news}</button>`;
+    const axisName = (ax && (ax.display_name || ax.name)) || '';
+    return `<button type="button" class="radar-flt${on ? ' on' : ''}" data-axis="${esc(id)}">${esc(axisName)} <b>${ax.open_signals}</b>／${ax.new_news}</button>`;
   }).join('');
 
   return `<div class="radar-head">
