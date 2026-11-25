@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>家庭控制台</title>
-<link href="https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=Noto+Sans+TC:wght@400;500;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=Noto+Sans+TC:wght@400;500;700&family=Noto+Serif+TC:wght@700&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Sortable/1.15.2/Sortable.min.js"></script>
 <style>
 :root {
@@ -250,6 +250,12 @@ header { background:var(--header-bg); padding:0 24px; display:flex; align-items:
 .fit-add-btn { background:#f8f9fa; border:1.5px solid var(--border); border-radius:6px; padding:7px 14px; font-size:12px; color:var(--text-muted); cursor:pointer; font-family:'Noto Sans TC',sans-serif; transition:all .15s; white-space:nowrap; }
 .fit-add-btn:hover { border-color:var(--blue); color:var(--blue); background:#f0f4ff; }
 /* 手機共用：頁首只留標章與動作鈕、可點區域 ≥44px、分頁列可橫向捲動（2026-10 手機版 PR3） */
+
+/* 家庭總覽 */
+#tab-overview.active { overflow:hidden; }
+#tab-overview { flex:1; min-height:0; }
+#tab-overview .fo-root { width:100%; }
+
 @media (max-width:640px) {
   header { padding:0 12px; gap:8px; }
   .logo-sub { display:none; }
@@ -278,9 +284,15 @@ header { background:var(--header-bg); padding:0 24px; display:flex; align-items:
 </header>
 
 <div class="tabs">
+  <div class="tab" data-tab="overview">🏠 家庭總覽</div>
   <div class="tab active" data-tab="tasks">✅ 任務清單</div>
   <div class="tab" data-tab="fitness">🏋️ 健身</div>
   <div class="tab" data-tab="weekly">📋 週覆盤</div>
+</div>
+
+<!-- 家庭總覽 -->
+<div class="tab-content" id="tab-overview">
+  <div class="fo-root"></div>
 </div>
 
 <!-- 任務清單 Kanban -->
@@ -1555,12 +1567,45 @@ document.getElementById('fitGoalCancel').addEventListener('click', function(){ d
   document.getElementById(id).addEventListener('click', function(e){ if (e.target===this) this.classList.remove('open'); });
 });
 
-// Load fitness data when tab first activated
+// Load fitness / overview when tab first activated; hide header save on overview
+var overviewLoaded = false;
+function syncHeaderSave(){
+  var save = document.getElementById('saveBtn');
+  if (!save) return;
+  var active = document.querySelector('.tabs .tab.active');
+  save.style.display = (active && active.dataset.tab === 'overview') ? 'none' : '';
+}
 document.querySelectorAll('.tab').forEach(function(tab) {
   tab.addEventListener('click', function() {
     if (tab.dataset.tab === 'fitness' && !fitData) loadFitnessData();
+    if (tab.dataset.tab === 'overview' && !overviewLoaded) {
+      overviewLoaded = true;
+      if (typeof loadFamilyOverview === 'function') loadFamilyOverview(document.getElementById('tab-overview'));
+    }
+    syncHeaderSave();
   });
 });
+syncHeaderSave();
+
+// ?tab=overview／weekly／fitness：打開對應分頁（週覆盤腳本仍會處理 weekly 的載入）
+(function(){
+  var allowed = {overview:1, weekly:1, fitness:1, tasks:1};
+  var tabName = new URLSearchParams(window.location.search).get('tab');
+  if (!tabName || !allowed[tabName]) return;
+  var tab = document.querySelector('[data-tab="'+tabName+'"]');
+  var pane = document.getElementById('tab-'+tabName);
+  if (!tab || !pane) return;
+  document.querySelectorAll('.tab').forEach(function(t){ t.classList.remove('active'); });
+  document.querySelectorAll('.tab-content').forEach(function(c){ c.classList.remove('active'); });
+  tab.classList.add('active');
+  pane.classList.add('active');
+  if (tabName === 'overview' && !overviewLoaded) {
+    overviewLoaded = true;
+    if (typeof loadFamilyOverview === 'function') loadFamilyOverview(document.getElementById('tab-overview'));
+  }
+  if (tabName === 'fitness' && !fitData) loadFitnessData();
+  syncHeaderSave();
+})();
 
 // Resize: re-render charts so dynamic SVG_W picks up new container width
 var _fitResizeTimer = null;
@@ -1574,6 +1619,7 @@ window.addEventListener('resize', function() {
   }, 150);
 });
 </script>
+<script src="./family-overview-tab.js"></script>
 <script>window.WEEKLY_EMBED_OWNER = 'family';</script>
 <script type="module" src="./hy-ui/weekly-embed-page.js"></script>
 </body>
