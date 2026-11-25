@@ -55,3 +55,11 @@ test('總覽腳本有來源標示與手機樣式', () => {
   assert.match(js, /\.fo-root/)
   assert.doesNotMatch(js, /Noto Sans CJK/)
 })
+
+test('?tab=overview 會等總覽腳本載入後才標成已載入', () => {
+  const src = html.indexOf('src="./family-overview-tab.js"')
+  const flag = html.indexOf('var overviewLoaded')
+  assert.ok(src >= 0 && flag >= 0 && src < flag, 'family-overview-tab.js 必須在分頁 IIFE 之前載入')
+  assert.match(html, /!overviewLoaded && typeof loadFamilyOverview === 'function'/)
+  assert.doesNotMatch(html, /overviewLoaded = true;\s*if \(typeof loadFamilyOverview/)
+})

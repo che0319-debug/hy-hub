@@ -553,6 +553,7 @@ header { background:var(--header-bg); padding:0 24px; display:flex; align-items:
 
 <div class="toast" id="toast"></div>
 
+<script src="./family-overview-tab.js"></script>
 <script>
 var API = 'https://hy-agent-v2.onrender.com';
 
@@ -1578,9 +1579,9 @@ function syncHeaderSave(){
 document.querySelectorAll('.tab').forEach(function(tab) {
   tab.addEventListener('click', function() {
     if (tab.dataset.tab === 'fitness' && !fitData) loadFitnessData();
-    if (tab.dataset.tab === 'overview' && !overviewLoaded) {
+    if (tab.dataset.tab === 'overview' && !overviewLoaded && typeof loadFamilyOverview === 'function') {
       overviewLoaded = true;
-      if (typeof loadFamilyOverview === 'function') loadFamilyOverview(document.getElementById('tab-overview'));
+      loadFamilyOverview(document.getElementById('tab-overview'));
     }
     syncHeaderSave();
   });
@@ -1599,9 +1600,9 @@ syncHeaderSave();
   document.querySelectorAll('.tab-content').forEach(function(c){ c.classList.remove('active'); });
   tab.classList.add('active');
   pane.classList.add('active');
-  if (tabName === 'overview' && !overviewLoaded) {
+  if (tabName === 'overview' && !overviewLoaded && typeof loadFamilyOverview === 'function') {
     overviewLoaded = true;
-    if (typeof loadFamilyOverview === 'function') loadFamilyOverview(document.getElementById('tab-overview'));
+    loadFamilyOverview(document.getElementById('tab-overview'));
   }
   if (tabName === 'fitness' && !fitData) loadFitnessData();
   syncHeaderSave();
@@ -1619,7 +1620,6 @@ window.addEventListener('resize', function() {
   }, 150);
 });
 </script>
-<script src="./family-overview-tab.js"></script>
 <script>window.WEEKLY_EMBED_OWNER = 'family';</script>
 <script type="module" src="./hy-ui/weekly-embed-page.js"></script>
 </body>
