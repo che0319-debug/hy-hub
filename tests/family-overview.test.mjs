@@ -63,3 +63,18 @@ test('?tab=overview 會等總覽腳本載入後才標成已載入', () => {
   assert.match(html, /!overviewLoaded && typeof loadFamilyOverview === 'function'/)
   assert.doesNotMatch(html, /overviewLoaded = true;\s*if \(typeof loadFamilyOverview/)
 })
+
+test('總覽桌機左右拉滿，內文與小註字級放大', () => {
+  assert.match(js, /\.fo-root \.wrap\{[^}]*max-width:\s*none/)
+  assert.doesNotMatch(js, /\.fo-root \.wrap\{[^}]*max-width:\s*1200px/)
+  assert.match(js, /\.fo-root\{[^}]*font-size:\s*16px/)
+  assert.match(js, /\.fo-root \.caption\{font-size:\s*13px/)
+  assert.match(js, /\.fo-root \.ex\{[^}]*font-size:\s*13px/)
+  assert.match(js, /\.fo-root \.life text\{[^}]*font-size:\s*14px/)
+  assert.match(js, /\.fo-root \.life \.marker\{[^}]*font-size:\s*13px/)
+  assert.match(js, /\.fo-root \.slot\{[^}]*font-size:\s*13px/)
+  assert.match(js, /\.fo-root h1\{[^}]*font-size:\s*42px/)
+  // 手機不把表格縮到 13px 以下
+  assert.match(js, /table\.chk\{[^}]*min-width:\s*640px/)
+  assert.doesNotMatch(js, /@media\(max-width:640px\)\{[^}]*ch-block table\{font-size:\s*11px/)
+})
