@@ -1,21 +1,15 @@
-// 技術雷達分頁 v2 預覽：掃描寫入、關鍵字採用、跨主軸去重。本機可採用關鍵字；週二例行尚未建立。
+// 技術雷達分頁：掃描只掃已採用的關鍵字。正式頁可由該軸負責 Bot 或 HY 逐組採用／取消採用。週二例行尚未建立。
 const PROD_API = 'https://hy-agent-v2.onrender.com/api/radar/feed';
 
 function radarApiUrl() {
-  let url = '';
-  if (window.__RADAR_API__) url = window.__RADAR_API__;
-  else {
-    const host = location.hostname;
-    if (host === '127.0.0.1' || host === 'localhost') url = '/api/radar/feed';
-    else url = (window.API || '') + '/api/radar/feed' || PROD_API;
-  }
-  const host = location.hostname;
-  if (host === '127.0.0.1' || host === 'localhost') {
+  let url = window.__RADAR_API__ || ((isLocalPreview() ? '' : (window.API || 'https://hy-agent-v2.onrender.com')) + '/api/radar/feed');
+  if (isLocalPreview()) {
     const demo = new URLSearchParams(location.search).get('radar_demo');
     if (demo) url += (url.includes('?') ? '&' : '?') + 'demo=' + encodeURIComponent(demo);
   }
   return url;
 }
+
 
 function friendlyError(data, fallback) {
   if (data && typeof data.error === 'string' && data.error.trim()) return data.error;
@@ -34,6 +28,34 @@ function isLocalPreview() {
   const host = location.hostname;
   return host === '127.0.0.1' || host === 'localhost';
 }
+
+function radarOrigin() {
+  if (window.__RADAR_ORIGIN__) return window.__RADAR_ORIGIN__;
+  if (isLocalPreview()) return '';
+  return (window.API || 'https://hy-agent-v2.onrender.com');
+}
+
+function adoptApiUrl() {
+  let url = window.__RADAR_ADOPT_API__ || (radarOrigin() + '/api/radar/keywords/adopt');
+  if (isLocalPreview()) {
+    const demo = new URLSearchParams(location.search).get('radar_demo');
+    if (demo) url += (url.includes('?') ? '&' : '?') + 'demo=' + encodeURIComponent(demo);
+  }
+  return url;
+}
+
+function radarAuthHeaders(extra) {
+  const headers = Object.assign({ 'Cache-Control': 'no-store' }, extra || {});
+  const preset = window.GET_HEADERS;
+  if (preset && preset.Authorization) headers.Authorization = preset.Authorization;
+  else {
+    const tok = (typeof sessionStorage !== 'undefined' && (sessionStorage.getItem('hy_life_os_access_token') || sessionStorage.getItem('hy_world_access_token'))) || '';
+    if (tok) headers.Authorization = 'Bearer ' + tok;
+  }
+  return headers;
+}
+
+const expandedAxes = new Set();
 
 function formatTaipei(value) {
   if (!value) return '';
@@ -70,17 +92,23 @@ function candidateCard(c, ax) {
   if (adopted && c.adopted_by) rec.push(`採用者 ${esc(c.adopted_by)}`);
   if (adopted && c.adopted_at) rec.push(esc(formatTaipei(c.adopted_at)));
   const recHtml = rec.length ? `<p class="radar-muted radar-small">${rec.join('　')}</p>` : '';
-  const can = isLocalPreview() && !hold;
+  const holdNote = hold ? '<p class="radar-muted radar-small">此組標示「待核對、暫不掃」，核對完才納入掃描範圍的候選側。採用後會寫入正式清單。</p>' : '';
   let btns = '';
-  if (can) {
-    if (!adopted) btns += `<button type="button" class="radar-btn radar-btn-adopt" data-adopt="${esc(c.id)}" data-decision="adopted" data-actor="${esc(ax.owner_bot || 'HY')}">採用</button>`;
-    if (isLocalPreview()) btns += `<button type="button" class="radar-btn radar-btn-adopt" data-adopt="${esc(c.id)}" data-decision="adopted" data-actor="HY">由 HY 採用</button>`;
-    if (adopted) btns += `<button type="button" class="radar-btn radar-btn-adopt" data-adopt="${esc(c.id)}" data-decision="pending" data-actor="HY">改回候選</button>`;
+  if (c.id) {
+    const owner = ax.owner_bot || 'HY';
+    if (!adopted && !rejected) {
+      btns += `<button type="button" class="radar-btn radar-btn-adopt" data-adopt="${esc(c.id)}" data-decision="adopted" data-actor="${esc(owner)}">採用</button>`;
+      if (owner !== 'HY') btns += `<button type="button" class="radar-btn radar-btn-adopt" data-adopt="${esc(c.id)}" data-decision="adopted" data-actor="HY">由 HY 採用</button>`;
+    }
+    if (adopted) {
+      btns += `<button type="button" class="radar-btn radar-btn-adopt" data-adopt="${esc(c.id)}" data-decision="pending" data-actor="${esc(owner)}">取消採用</button>`;
+      if (owner !== 'HY') btns += `<button type="button" class="radar-btn radar-btn-adopt" data-adopt="${esc(c.id)}" data-decision="pending" data-actor="HY">由 HY 取消採用</button>`;
+    }
   }
   const btnHtml = btns ? `<div class="radar-flex">${btns}</div>` : '';
   return `<div class="radar-cand${hold ? ' is-hold' : ''}${adopted ? ' is-adopted' : ''}">
     <div class="radar-flex"><span class="radar-chip radar-t-gray">${esc(c.text)}</span>${marks}</div>
-    ${recHtml}${btnHtml}
+    ${recHtml}${holdNote}${btnHtml}
   </div>`;
 }
 
@@ -249,14 +277,24 @@ function renderAxis(ax, data, flt) {
   if (pending) kwHtml += ` <span class="radar-muted radar-small">待採用 ${pending} 組，可由 ${esc(ax.owner_bot || '負責 Bot')} 或 HY 採用</span>`;
   if (adoptedN) kwHtml += ` <span class="radar-chip radar-t-green">已採用 ${adoptedN} 組</span>`;
   if (hold) kwHtml += ` <span class="radar-chip radar-t-orange">待核對、暫不掃 ${hold} 組</span>`;
+  const scanN = (ax.scan_keyword_count != null) ? ax.scan_keyword_count : kws.length;
+  kwHtml += ` <span class="radar-chip radar-scan-count">將掃描 ${scanN} 組</span>`;
   kwHtml += ` <span class="radar-muted radar-small">每週筆數 ${esc(ax.weekly_item_limit == null ? '??' : ax.weekly_item_limit)}</span>`;
   const cands = ax.keyword_candidates || [];
   const held = cands.filter((c) => c.scan_hold || (c.scan_hold_reason || '').indexOf('暫不掃') >= 0);
   const adopted = cands.filter((c) => c.decision === 'adopted');
   const pendingList = cands.filter((c) => c.decision === 'pending' && !(c.scan_hold || (c.scan_hold_reason || '').indexOf('暫不掃') >= 0));
-  const shownCands = held.concat(adopted, pendingList.slice(0, 4));
+  const expanded = expandedAxes.has(ax.id);
+  const shownCands = expanded ? held.concat(adopted, pendingList) : held.concat(adopted, pendingList.slice(0, 4));
+  const hiddenN = expanded ? 0 : Math.max(0, pendingList.length - 4);
   if (shownCands.length) {
-    kwHtml += '<div class="radar-kw-cands">' + shownCands.map((c) => candidateCard(c, ax)).join('') + (pendingList.length > 4 ? `<span class="radar-muted radar-small">…還有 ${pendingList.length - 4} 組待採用候選</span>` : '') + '</div>';
+    let more = '';
+    if (pendingList.length > 4) {
+      more = expanded
+        ? `<button type="button" class="radar-btn radar-btn-link" data-expand-cands="${esc(ax.id)}" aria-expanded="true">收合候選</button>`
+        : `<button type="button" class="radar-btn radar-btn-link" data-expand-cands="${esc(ax.id)}" aria-expanded="false">還有 ${hiddenN} 組待採用候選</button>`;
+    }
+    kwHtml += '<div class="radar-kw-cands">' + shownCands.map((c) => candidateCard(c, ax)).join('') + more + '</div>';
   }
   const last = ax.last_run ? `上次 ${esc(ax.last_run)}` : (data.last_scan && data.last_scan.at ? `上次 ${esc(formatTaipei(data.last_scan.at))}` : '上次 尚未掃描');
   const next = ax.next_run ? `下次 ${esc(ax.next_run)}` : '';
@@ -389,6 +427,15 @@ function bind(root, data) {
   root.querySelectorAll('[data-adopt]').forEach((btn) => {
     btn.addEventListener('click', () => adoptOne(root, btn));
   });
+  root.querySelectorAll('[data-expand-cands]').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      const id = btn.getAttribute('data-expand-cands');
+      if (!id) return;
+      if (expandedAxes.has(id)) expandedAxes.delete(id);
+      else expandedAxes.add(id);
+      draw(root, data, params());
+    });
+  });
 }
 
 async function adoptOne(root, btn) {
@@ -397,10 +444,8 @@ async function adoptOne(root, btn) {
   const actor = btn.getAttribute('data-actor') || 'HY';
   btn.disabled = true;
   try {
-    let url = '/api/radar/keywords/adopt';
-    const demo = new URLSearchParams(location.search).get('radar_demo');
-    if (demo) url += '?demo=' + encodeURIComponent(demo);
-    const headers = { 'Content-Type': 'application/json', 'Cache-Control': 'no-store', 'X-Radar-Actor': actor };
+    const url = adoptApiUrl();
+    const headers = radarAuthHeaders({ 'Content-Type': 'application/json', 'X-Radar-Actor': actor });
     const res = await fetch(url, { method: 'POST', headers, body: JSON.stringify({ candidate_id: candidateId, decision, actor }) });
     const body = await res.json().catch(() => null);
     if (!body || body.ok === false) {
@@ -445,14 +490,7 @@ async function loadRadar() {
   }
   root.innerHTML = '<div class="radar-loading">載入中…</div>';
   try {
-    const headers = { 'Cache-Control': 'no-store' };
-    const preset = window.GET_HEADERS;
-    if (preset && preset.Authorization) {
-      headers.Authorization = preset.Authorization;
-    } else {
-      const tok = sessionStorage.getItem('hy_life_os_access_token') || sessionStorage.getItem('hy_world_access_token') || '';
-      if (tok) headers.Authorization = 'Bearer ' + tok;
-    }
+    const headers = radarAuthHeaders();
     const res = await fetch(radarApiUrl(), { cache: 'no-store', headers });
     let data = null;
     try { data = await res.json(); } catch (parseErr) { data = null; }
@@ -486,4 +524,14 @@ function init() {
 }
 
 window.loadRadar = loadRadar;
+window.RadarTab = {
+  candidateCard,
+  renderAxis,
+  renderAll,
+  radarApiUrl,
+  adoptApiUrl,
+  radarAuthHeaders,
+  isLocalPreview,
+  expandedAxes
+};
 init();
